@@ -1,0 +1,124 @@
+Every tweet, order, message and payment needs an identifier. On a single database, `AUTO_INCREMENT` solves it. Once writes are spread across many shards, services and regions, you need IDs that are **unique without coordination** — and often you want more: sortable by time, compact, and not leaking business information.
+
+## Requirements to clarify
+
+| Property | Why it matters |
+| --- | --- |
+| **Uniqueness** | Non-negotiable. Collisions corrupt data. |
+| **Scale / throughput** | How many IDs per second, from how many generators? |
+| **Size** | 64-bit integers fit in a `BIGINT` and index efficiently; 128-bit IDs are larger in every index and foreign key. |
+| **Time-sortable** | Lets you sort or paginate by ID, and gives B-Tree inserts good locality (new IDs append at the end). |
+| **No coordination** | Generating an ID shouldn't require a network call on the hot path. |
+| **Unguessable** | Sequential IDs reveal volume ("order 1,000,231") and enable enumeration of URLs. |
+
+## Option 1 — Database auto-increment
+
+- ✅ Simple, compact, strictly ordered.
+- ❌ Single point of failure and bottleneck; doesn't work across shards.
+
+**Multi-master variant:** with N databases, each uses `auto_increment_increment = N` and a different offset (server 1 generates 1, 3, 5…; server 2 generates 2, 4, 6…). Works, but adding servers is awkward and IDs aren't time-ordered across servers.
+
+## Option 2 — UUID (v4)
+
+128 random bits (122 of them random). Generate anywhere, no coordination.
+
+- ✅ Trivially distributed; collision probability is negligible — about 2.7 × 10^18 IDs for a 50% chance of a single collision, i.e., a billion UUIDs per second for roughly 86 years (often loosely quoted as "100 years").
+- ❌ 128 bits — larger indexes; 36-character string form if stored as text.
+- ❌ **Random order** → inserts scatter across a B-Tree index, causing page splits and poor cache locality (see [Indexing](/system-design/hld/database-indexing)).
+- ❌ Not sortable by time.
+
+## Option 3 — Ticket server
+
+A dedicated service (or a database with one auto-increment table) hands out IDs. Flickr ran two such MySQL servers, one issuing odd and one even numbers.
+
+- ✅ Compact numeric IDs, simple.
+- ❌ Extra network call per ID, and a component that must be highly available.
+- **Optimisation: range allocation** — each app server requests a **block** of IDs (e.g., 1,000) at once and hands them out locally; it returns to the ticket server only when the block runs out. This cuts calls by 1,000× and survives brief ticket-server outages. Used widely (e.g., for URL shortener key ranges).
+
+## Option 4 — Snowflake-style IDs
+
+Twitter's Snowflake (2010) packs a timestamp, a machine ID and a sequence into a **64-bit integer**:
+
+```text
+ 1 bit   | 41 bits                         | 10 bits      | 12 bits
+ sign 0  | milliseconds since custom epoch | machine ID   | sequence per ms
+```
+
+- **41 bits of milliseconds** ≈ 69 years from the chosen epoch.
+- **10 bits of machine ID** → 1,024 generators (often split into datacenter + worker bits).
+- **12 bits of sequence** → 4,096 IDs per millisecond **per machine** (≈ 4 million per second per machine).
+
+Generation is purely local: read the clock, increment the sequence (reset each millisecond; if it overflows, wait for the next millisecond).
+
+**Twitter's original layout** split the 10 machine bits into **5 bits of datacenter ID + 5 bits of worker ID** (32 datacenters × 32 workers) and used a custom epoch of 1288834974657 ms — 4 November 2010, 01:42:54 UTC. 2^41 − 1 milliseconds is about **69.7 years**, so a recent custom epoch postpones overflow. The bit split is tunable: fewer sequence bits and more timestamp bits suit low-throughput, long-lived systems; more worker bits suit very large fleets. Changing worker or datacenter IDs on a running system must be done carefully — a reused ID can collide with IDs issued moments earlier.
+
+- ✅ 64-bit, **roughly time-sortable**, no coordination per ID, very high throughput.
+- ❌ Needs **unique machine IDs** — assign them via configuration, a coordination service (ZooKeeper/etcd lease), or the pod ordinal in a StatefulSet.
+- ❌ **Clock dependence** — if the clock moves backwards (NTP correction), the generator could repeat IDs. Implementations refuse to generate (or wait) until the clock passes the last timestamp used.
+- ❌ Only *k-sorted*: IDs from different machines in the same millisecond aren't ordered relative to real time.
+
+Variants: Instagram generated IDs inside PostgreSQL (41-bit time + 13-bit logical shard ID + 10-bit sequence), which also **encodes the shard** — you can route a lookup by ID straight to its shard. Discord, Mastodon and many others use Snowflake-like schemes.
+
+## Option 5 — ULID and UUIDv7
+
+Modern standards that combine UUID-style decentralisation with time ordering:
+
+- **UUIDv7** (RFC 9562, 2024): 48-bit Unix millisecond timestamp followed by random bits, in standard 128-bit UUID format. Time-sortable, B-Tree friendly, no machine ID needed.
+- **ULID**: 48-bit timestamp + 80 random bits, encoded as a 26-character Crockford Base32 string that sorts lexicographically.
+
+Good default when 128 bits is acceptable and you don't want to manage machine IDs.
+
+## Comparison
+
+| Scheme | Size | Sortable by time | Coordination | Throughput | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Auto-increment | 64-bit | Yes (single node) | Central DB | Limited | Doesn't shard |
+| UUIDv4 | 128-bit | No | None | Unlimited | Index-unfriendly |
+| Ticket server + ranges | 64-bit | Roughly | Occasional | High | Simple; needs HA service |
+| Snowflake | 64-bit | Roughly (k-sorted) | Machine ID assignment | ~4M/s per node | Clock-sensitive |
+| UUIDv7 / ULID | 128-bit | Roughly | None | Unlimited | Great modern default |
+
+## Exposing IDs publicly
+
+Sequential or time-based IDs leak information (creation time, volume) and allow enumeration (`/invoices/1001`, `/invoices/1002`). Options:
+
+- Keep the internal numeric ID, but expose a separate **random public ID** (or an encoded/encrypted form of the internal ID).
+- Always enforce **authorization** on every lookup — never rely on IDs being hard to guess.
+- For short user-facing codes (URL shorteners, invite codes), use **Base62** encoding of a numeric ID or random value. See [Design a URL Shortener](/system-design/hld/design-url-shortener).
+
+<Callout type="interview">
+A strong answer names the trade-off: "I'll use Snowflake-style 64-bit IDs: they're compact, time-sortable so we can paginate by ID, and generated locally. Machine IDs come from an etcd lease. If we didn't want to manage machine IDs, UUIDv7 would work at the cost of 128-bit keys."
+</Callout>
+
+## Interview questions
+
+<QA q="Why might random UUIDv4 primary keys hurt database performance, and what would you use instead?">
+In clustered B-Tree indexes, rows are stored in key order; random keys insert at random positions, causing page splits, fragmentation and poor buffer-cache locality, and their 16-byte size enlarges every index. Time-ordered IDs — Snowflake, UUIDv7, ULID — insert near the end of the index, keeping hot pages in memory, while still being generated without a central counter.
+</QA>
+
+<QA q="What happens in a Snowflake generator if the system clock goes backwards?">
+It could reuse a timestamp it already used and, with a reset sequence, produce duplicate IDs. Implementations track the last timestamp issued; if the current time is earlier, they either wait until the clock catches up (for small jumps) or refuse to generate and raise an error (for large jumps), alerting operators. Running NTP in slewing mode (gradual adjustment rather than steps) reduces the risk.
+</QA>
+
+<QA q="How do you assign unique machine IDs to Snowflake generators in an auto-scaling environment?">
+Have each instance acquire a worker ID lease from a coordination service such as etcd or ZooKeeper at startup (e.g., create the first free key among /workers/0..1023 with a TTL that it renews). If the instance dies, the lease expires and the ID becomes reusable — but only after a safety delay longer than any clock skew, so a recycled ID can't collide with recent IDs from the previous owner. In Kubernetes, StatefulSet ordinals provide stable IDs.
+</QA>
+
+<Takeaways>
+
+- Distributed ID generation must be unique without per-ID coordination; also consider size, sortability and guessability.
+- UUIDv4 is simple but large and index-unfriendly; ticket servers with range allocation give compact IDs cheaply.
+- Snowflake packs time, machine and sequence into 64 bits: sortable, fast, but needs machine IDs and clock care.
+- UUIDv7/ULID give time-sortable 128-bit IDs with no machine-ID management.
+- Don't expose sequential IDs as a security boundary; always authorise lookups.
+
+</Takeaways>
+
+## Further reading
+
+- Twitter Engineering, "Announcing Snowflake" (2010).
+- Instagram Engineering, "Sharding & IDs at Instagram" (2012).
+- Flickr Code, "Ticket Servers: Distributed Unique Primary Keys on the Cheap" (2010).
+- RFC 9562, "Universally Unique IDentifiers (UUIDs)" (2024) — defines UUIDv7.
+- [ULID specification](https://github.com/ulid/spec).
+- Related: [Time, Clocks & Ordering](/system-design/hld/time-and-ordering), [Partitioning & Sharding](/system-design/hld/sharding).

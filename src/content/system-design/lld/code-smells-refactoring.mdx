@@ -1,0 +1,198 @@
+<Related ids={['interview-grade-code', 'solid-principles', 'core-design-principles', 'strategy-pattern', 'decorator-pattern']} />
+
+Two interview situations need this lesson. In some rounds you're handed **existing code** and asked to "review and improve it". In every machine-coding round, the interviewer adds a requirement late and watches **how you change your own code**. Both test the same skill: recognising *smells* — surface symptoms of deeper design problems — and removing them with small, safe, named **refactorings** that don't change behaviour.
+
+The vocabulary comes from Martin Fowler's *Refactoring*. Using the names ("this is feature envy; I'll move the method") signals experience and makes your reasoning easy to follow.
+
+## The smells that matter most in LLD code
+
+| Smell | What you see | Refactoring |
+| --- | --- | --- |
+| **Long method** | One method computes, validates, formats and saves; comments separate "sections" | *Extract Method* for each section; name it after the comment |
+| **Large class / god class** | `ParkingManager` with 40 methods and 25 fields | *Extract Class* by responsibility (pricing, allocation, tickets) |
+| **Primitive obsession** | `long fee`, `String type`, `int status`; rules like "paise, never negative" repeated everywhere | *Replace Primitive with Object* (`Money`, `VehicleType` enum, `TicketId`) |
+| **Repeated switches** | `if (type.equals("car"))` in pricing, allocation and display | *Replace Conditional with Polymorphism* — a strategy or enum behaviour |
+| **Long parameter list / data clumps** | `calc(type, ev, pass, in, out)`; the same five values travel together | *Introduce Parameter Object* (`Stay`), or a builder |
+| **Feature envy** | A method that mostly reads another object's fields (`ticket.getEntry()`, `ticket.getType()`…) | *Move Method* to the object that owns the data |
+| **Message chains** | `order.getCustomer().getAddress().getCity()` | *Hide Delegate* (`order.shippingCity()`) |
+| **Shotgun surgery** | One change (add a vehicle type) edits eight files | Gather the knowledge in one place (enum data, a registry) |
+| **Divergent change** | One class changes for unrelated reasons (tax rules and PDF layout) | *Extract Class* along the reasons for change (SRP) |
+| **Speculative generality** | `AbstractVehicleFactoryProvider` with one implementation, "for later" | *Inline Class*, *Collapse Hierarchy* (YAGNI) |
+| **Refused bequest** | A subclass overrides parent methods to throw `UnsupportedOperationException` | *Replace Inheritance with Delegation*; fix the hierarchy (LSP) |
+| **Temporal coupling** | `init()` must be called before `run()`, or it breaks | Constructor or builder that produces a ready object |
+| **Hidden dependencies** | `Instant.now()`, `new Random()`, `Singleton.getInstance()` inside logic | Inject `Clock`, `Random`, collaborators |
+| **Comments explaining what** | `// calculate weekend surcharge` above six lines | Extract a method named `weekendSurcharge` and delete the comment |
+| **Mutable shared data** | A public `List` returned and modified by callers | Encapsulate the collection; return unmodifiable views |
+
+Not every smell must be fixed. Smells are prompts to look closer — sometimes a 30-line method is the clearest form.
+
+## A worked example: one method, many smells
+
+This is the kind of code you might be handed (or write in a hurry):
+
+```java
+public class ParkingManager {
+    public long calc(String type, boolean ev, boolean pass, LocalDateTime in, LocalDateTime out) {
+        if (pass) return 0;
+        long mins = Duration.between(in, out).toMinutes();
+        long hrs = mins / 60;
+        if (mins % 60 != 0) hrs = hrs + 1;
+        if (hrs == 0) hrs = 1;
+        long fee;
+        if (in.toLocalDate().equals(LocalDate.of(2026, 12, 31))) {
+            fee = 30000;                                     // event night flat rate
+        } else {
+            if (type.equals("bike")) fee = hrs * 2000;
+            else if (type.equals("car")) fee = hrs * 4000;
+            else if (type.equals("truck")) fee = hrs * 10000;
+            else throw new RuntimeException("bad type");
+        }
+        if (in.getDayOfWeek() == DayOfWeek.SATURDAY || in.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            fee = fee + fee * 25 / 100;
+        }
+        if (ev) fee = fee - fee * 20 / 100;
+        return fee;
+    }
+}
+```
+
+**Smells**, in the order a reviewer would call them out:
+
+1. **Long parameter list / data clump** — five values that always travel together, two of them bare booleans.
+2. **Primitive obsession** — `String type` (what about `"Car"`?), `long` paise with magic numbers (`2000`, `30000`).
+3. **Long method** — duration rounding, rule selection, surcharges and discounts in one block.
+4. **Switch on type** — adding a vehicle type means editing this method (and probably others).
+5. **Hard-coded data** — the event date and the rates are in code.
+6. **Generic exception** — `RuntimeException("bad type")`.
+7. **No validation** — exit before entry silently produces a fee.
+
+### Step 1: introduce a parameter object (with validation and behaviour)
+
+```java
+public record Stay(VehicleType type, boolean electric, boolean monthlyPass, LocalDateTime entry, LocalDateTime exit) {
+    public Stay {
+        Objects.requireNonNull(type);
+        if (exit.isBefore(entry)) throw new IllegalArgumentException("exit before entry");
+    }
+    long billableHours() {
+        long minutes = Duration.between(entry, exit).toMinutes();
+        return Math.max(1, (minutes + 59) / 60);              // round up, minimum one hour
+    }
+    boolean startsOnWeekend() {
+        DayOfWeek d = entry.getDayOfWeek();
+        return d == DayOfWeek.SATURDAY || d == DayOfWeek.SUNDAY;
+    }
+}
+```
+
+The data clump becomes a value object, the stringly-typed vehicle becomes an enum, validation happens once at construction, and the rounding logic moves to the object that has the data (curing a small case of feature envy).
+
+### Step 2: replace the conditional with rules
+
+Three different ways of computing the **base** fee (pass, event night, hourly) become rules tried in order; the first that applies wins:
+
+```java
+public interface FeeRule { Optional<Money> baseFee(Stay s); }
+
+public record MonthlyPassRule() implements FeeRule {
+    public Optional<Money> baseFee(Stay s) { return s.monthlyPass() ? Optional.of(Money.ZERO) : Optional.empty(); }
+}
+
+public record EventFlatRule(Set<LocalDate> eventDays, Money flat) implements FeeRule {
+    public Optional<Money> baseFee(Stay s) {
+        return eventDays.contains(s.entry().toLocalDate()) ? Optional.of(flat) : Optional.empty();
+    }
+}
+
+public record HourlyRule(Map<VehicleType, Money> rates) implements FeeRule {
+    public Optional<Money> baseFee(Stay s) { return Optional.of(rates.get(s.type()).times(s.billableHours())); }
+}
+```
+
+### Step 3: adjustments as a list
+
+The weekend surcharge and EV discount modify whatever base fee was chosen, in a fixed order:
+
+```java
+public interface Adjustment { Money apply(Money fee, Stay s); }
+
+public record WeekendSurcharge(int percent) implements Adjustment {
+    public Money apply(Money fee, Stay s) { return s.startsOnWeekend() ? fee.plusPercent(percent) : fee; }
+}
+
+public record EvDiscount(int percent) implements Adjustment {
+    public Money apply(Money fee, Stay s) { return s.electric() ? fee.minusPercent(percent) : fee; }
+}
+
+public final class FeeCalculator {
+    private final List<FeeRule> rules;
+    private final List<Adjustment> adjustments;
+
+    public Money fee(Stay stay) {
+        Money fee = rules.stream().map(r -> r.baseFee(stay)).flatMap(Optional::stream).findFirst()
+                .orElseThrow(() -> new IllegalStateException("no fee rule applies"));
+        for (Adjustment a : adjustments) fee = a.apply(fee, stay);
+        return fee;
+    }
+}
+```
+
+### What changed — and what didn't
+
+- **Behaviour didn't change.** The reference solution runs the old and new versions side by side on 20,000 random stays (all vehicle types, passes, EV flags, weekends, the event night) and checks they return identical fees. That's how refactoring should be done: small steps, each verified.
+- Adding a vehicle type is a new enum constant and a rate; a festival surcharge is a new `Adjustment`; event days are configuration.
+- Each piece is testable alone, and invalid input is rejected instead of priced.
+
+Is it more code? Yes — about three times as many lines. In an interview, say why it's worth it here (pricing is the axis that keeps changing) and when it wouldn't be (a fee rule that will never change).
+
+## How to refactor safely, under time pressure
+
+1. **Pin the behaviour first.** A few tests, or a quick "old vs new on random inputs" comparison like the one above. Without it, you're rewriting, not refactoring.
+2. **One small step at a time** — extract, rename, move — running the code after each. Big-bang rewrites are where bugs come from.
+3. **Separate refactoring from feature work.** First restructure so the new requirement fits easily (behaviour unchanged), then add the feature. Kent Beck: "make the change easy, then make the easy change."
+4. **Stop when the smell is gone.** Don't keep abstracting.
+
+<Callout type="interview">
+When the interviewer adds a requirement that your code doesn't absorb cleanly, narrate it: "Right now pricing is a switch, so this would be shotgun surgery. Let me first extract a `FeeRule` interface — no behaviour change — and then the new rule is one class." That shows you can evolve a design, which is the real job.
+</Callout>
+
+## Interview questions
+
+<QA q="What's the difference between refactoring and rewriting?">
+Refactoring changes the structure of code without changing its observable behaviour, in small verified steps — each step leaves the code working. Rewriting replaces code wholesale and risks changing behaviour in unnoticed ways. Refactoring relies on tests (or another behaviour check) to prove nothing changed; feature changes are made separately, before or after.
+</QA>
+
+<QA q="You're handed a 300-line method in a review. Where do you start?">
+First pin its behaviour with a few tests around the main paths. Then look for the sections the comments or blank lines already mark, and extract each into a well-named method — that alone usually reveals the structure. Next, introduce a parameter object if many values travel together, and replace repeated conditionals on a type with polymorphism or a strategy. Keep each step small and run the tests after each one.
+</QA>
+
+<QA q="Isn't introducing interfaces for every rule over-engineering?">
+It can be. The test is whether that axis actually changes. Pricing rules, discounts and allocation policies change often in real products, so isolating them pays off quickly. A computation that will never vary should stay a simple method. Say which axes you expect to change and why — and that you'd add the abstraction when the second variant appears if it isn't obvious yet.
+</QA>
+
+<Practice task="Name the smells in this signature and propose the refactoring: void createUser(String name, String email, String phone, String street, String city, String pin, boolean isAdmin, boolean sendWelcomeEmail)">
+
+Long parameter list with **data clumps** (street, city and pin are an `Address`), **primitive obsession** (`email`, `phone` and `pin` deserve value objects with validation), and **flag arguments** (`isAdmin` and `sendWelcomeEmail` each switch behaviour). Introduce `Address` and `ContactDetails` value objects (or a `NewUserRequest` with a builder); replace `isAdmin` with a `Role` enum; split the welcome email out — either a separate call or an event the notification side listens to.
+
+</Practice>
+
+<Practice task="A Bird class has fly(); Penguin extends Bird and throws UnsupportedOperationException from fly(). Which smell is this, and what are two ways to fix it?">
+
+**Refused bequest** — and an LSP violation, since code using `Bird.fly()` breaks for penguins. Fix the hierarchy: remove `fly()` from `Bird` and add a `FlyingBird` subtype (or a `Flyable` interface) for birds that fly. Or replace inheritance with composition: birds have a `MovementStrategy` (fly, swim, walk). Either way, subtypes only add capabilities.
+
+</Practice>
+
+<Takeaways>
+
+- Smells are symptoms; refactorings are small, named, behaviour-preserving fixes.
+- The big ones in LLD: long methods, god classes, primitive obsession, repeated type switches, data clumps, feature envy, hidden dependencies.
+- Pin behaviour before refactoring; verify after every small step.
+- Make the change easy, then make the easy change — and say so in the interview.
+
+</Takeaways>
+
+## Further reading
+
+- Martin Fowler, *Refactoring: Improving the Design of Existing Code* (2nd ed., 2018) — the catalogue of smells and refactorings.
+- Joshua Kerievsky, *Refactoring to Patterns* (2004).
+- Michael Feathers, *Working Effectively with Legacy Code* (2004) — getting untested code under test.

@@ -1,0 +1,131 @@
+A one-page revision sheet for the night before (or the hour before) a design interview. Every entry links back to the lesson that explains it in depth.
+
+## The interview flow
+
+| Step | Time (45 min) | Deliverable |
+| --- | --- | --- |
+| Requirements | 5–7 min | 3–4 functional, key non-functional (scale, latency, consistency, durability), out of scope |
+| Estimation | 3–5 min | QPS (read/write), storage, bandwidth — each ending with "so…" |
+| API | 3–5 min | Core endpoints, pagination, idempotency |
+| Data model | 3–5 min | Entities, keys, store choice with a reason |
+| High-level design | 10–12 min | End-to-end diagram covering every functional requirement |
+| Deep dives | 10–15 min | The 2–3 hardest parts; failure modes |
+
+Decision template: **requirement → options → choice → cost**. ([Framework](/system-design/hld/hld-interview-framework))
+
+## Numbers
+
+| Fact | Value |
+| --- | --- |
+| Seconds per day | 86,400 ≈ 10^5 |
+| 1M requests/day | ≈ 12 QPS |
+| Memory reference / SSD random read / disk seek | ~100 ns / ~16–100 µs / ~2–10 ms |
+| Same-DC round trip / cross-continent | ~0.5 ms / 100–250 ms |
+| New HTTPS connection | ~3 round trips (TCP + TLS 1.3 + request) |
+| Redis | 100K+ ops/s per node |
+| Relational DB | ~10K+ simple reads/s; ~1K–10K writes/s per primary |
+| Kafka broker | hundreds of MB/s |
+| Base62 codes, 7 chars | ~3.5 trillion |
+| Snowflake ID | 41-bit ms time, 10-bit machine, 12-bit sequence (4,096/ms/machine) |
+| HyperLogLog (Redis) | 12 KB, ~0.81% error |
+| Bloom filter | ~10 bits/element → ~1% false positives |
+| Availability 99.9% / 99.99% | ~8.8 h / ~53 min downtime per year |
+| CDN egress (large volume) | ~$0.02/GB → 1 PB ≈ $20K |
+| WebSocket connection memory | ~10 KB each → 1M ≈ 10 GB |
+| Interview time split (Xu) | Scope 3–10 · High-level 10–15 · Deep dive 10–25 · Wrap-up 3–5 min |
+
+([Estimation](/system-design/hld/back-of-the-envelope-estimation))
+
+## Choosing storage
+
+| Need | Choose |
+| --- | --- |
+| Transactions, relationships, ad-hoc queries | PostgreSQL / MySQL |
+| Key lookups, very low latency, counters, sessions | Redis / DynamoDB |
+| Massive write throughput, time-ordered per key | Cassandra / ScyllaDB / Bigtable |
+| Flexible documents read as a whole | MongoDB / DynamoDB |
+| Multi-hop relationships | Graph DB (or sharded SQL + cache at scale) |
+| Full-text search, facets | Elasticsearch / OpenSearch |
+| Files, images, video | Object storage + CDN |
+| Analytics over billions of rows | Columnar warehouse / OLAP (BigQuery, ClickHouse, Druid) |
+| Global strong consistency + SQL | Spanner / CockroachDB / YugabyteDB |
+
+([SQL vs NoSQL](/system-design/hld/sql-vs-nosql), [Blob Storage](/system-design/hld/blob-storage), [Batch & Stream](/system-design/hld/batch-and-stream-processing))
+
+## Scaling data
+
+| Technique | Use when | Watch out for |
+| --- | --- | --- |
+| Index | Slow queries on a column | Write overhead; composite column order |
+| Cache (cache-aside + TTL) | Read-heavy, skewed access | Invalidation races, stampedes, hot keys |
+| Read replicas | Read throughput | Replication lag → read-your-writes |
+| Sharding | Writes or data beyond one node | Shard key choice, hot partitions, cross-shard queries |
+| Consistent hashing | Nodes join/leave | Use virtual nodes |
+| CDN | Static/public content, global users | Cache keys, never cache personalised responses |
+
+## Consistency cheat sheet
+
+| Concept | One-liner |
+| --- | --- |
+| CAP | During a partition, choose consistency or availability |
+| PACELC | Else (normally), choose latency or consistency |
+| Linearizable | Acts like a single copy in real time — locks, uniqueness, balances |
+| Causal | Cause before effect for everyone; available under partition |
+| Read-your-writes | Authors see their own changes — route to primary briefly |
+| Eventual | Converges eventually — feeds, counters, caches |
+| Quorum | W + R > N → read overlaps latest write (usually) |
+| Isolation | Read Committed default; only Serializable stops write skew |
+
+([CAP](/system-design/hld/cap-and-pacelc), [Consistency](/system-design/hld/consistency-models), [Transactions](/system-design/hld/transactions-and-isolation))
+
+## Communication
+
+| Need | Use |
+| --- | --- |
+| Public CRUD API | REST + cursor pagination + idempotency keys |
+| Internal low-latency calls | gRPC |
+| Flexible client-driven fetching | GraphQL / BFF |
+| Server → client stream | SSE |
+| Bidirectional real-time | WebSockets |
+| Background tasks, one consumer each | Queue (SQS, RabbitMQ) |
+| Events for many consumers, replay | Log (Kafka) — order per partition key |
+| Reliable "write DB + publish event" | Transactional outbox / CDC |
+| Multi-service workflow | Saga (orchestrated), idempotent steps, compensations |
+
+## Reliability toolkit
+
+- **Redundancy** across AZs; no single points of failure (LB pairs, replicas, multi-AZ).
+- **Timeouts** on every call; **retries** only for idempotent ops, with exponential backoff + jitter, at one layer.
+- **Circuit breakers**, **bulkheads**, **load shedding**, **graceful degradation**.
+- **Rate limiting**: token bucket (bursts OK) or sliding window counter; Redis + Lua for distributed; fail open vs closed per rule.
+- **Leases + fencing tokens** for single-writer guarantees.
+- **SLOs** and burn-rate alerts; golden signals; trace IDs across hops.
+
+([Fault Tolerance](/system-design/hld/availability-and-fault-tolerance), [Rate Limiting](/system-design/hld/rate-limiting), [Consensus](/system-design/hld/consensus), [Observability](/system-design/hld/observability))
+
+## Case study one-liners
+
+| Problem | The key insight |
+| --- | --- |
+| [URL shortener](/system-design/hld/design-url-shortener) | 7-char Base62 from range-allocated IDs (permuted) or random + conditional insert; 302 + async analytics; cache hot links |
+| [Rate limiter](/system-design/hld/design-rate-limiter) | Token bucket in Redis via atomic Lua; local caching/leasing; fail-open policy |
+| [Notifications](/system-design/hld/design-notification-system) | Per-priority, per-channel queues; dedup at each boundary; preferences + provider failover |
+| [Autocomplete](/system-design/hld/design-typeahead) | Precomputed top-k per prefix, in-memory shards, snapshot swaps, edge cache |
+| [Web crawler](/system-design/hld/design-web-crawler) | Frontier = priority queues + per-host politeness queues; Bloom filter + SimHash dedup |
+| [News feed](/system-design/hld/design-news-feed) | Hybrid fan-out: push for most, pull for celebrities; cache IDs, hydrate |
+| [Chat](/system-design/hld/design-chat-system) | WebSocket gateways + session registry; per-conversation sequence numbers; persist then push; sync by cursor |
+| [File storage](/system-design/hld/design-file-storage) | Content-hashed blocks for delta sync/dedup; journal + cursors; conflicted copies |
+| [Ride-hailing](/system-design/hld/design-ride-hailing) | In-memory city-sharded geo index; CAS on driver state; trip state machine |
+| [Video streaming](/system-design/hld/design-video-streaming) | Chunked parallel transcoding; HLS/DASH + client ABR; CDN dominates |
+| [Ticket booking](/system-design/hld/design-ticket-booking) | Atomic conditional seat holds with expiry; virtual waiting room |
+| [Payments](/system-design/hld/design-payment-system) | Idempotency everywhere; UNKNOWN state on timeouts; double-entry ledger; reconciliation |
+| [Ad click aggregator](/system-design/hld/design-ad-click-aggregator) | Kafka → Flink event-time windows + dedup → OLAP; batch reconciliation for billing |
+| [Job scheduler](/system-design/hld/design-job-scheduler) | Partitioned schedulers with leases; unique execution per occurrence; worker leases |
+| [Collaborative editor](/system-design/hld/design-collaborative-editor) | OT or CRDT; one session owner per doc; op log + snapshots |
+| [Key-value store](/system-design/hld/design-key-value-store) | Consistent hashing + N replicas + quorums + hinted handoff + Merkle repair + LSM |
+
+## Final-minute checklist
+
+Requirements confirmed · numbers drive decisions · every functional requirement has a path through the diagram · consistency chosen per data type · no single point of failure · retries are idempotent · hot keys handled · failure walk-through done · observability and security mentioned · trade-offs stated out loud.
+
+([Recurring Design Patterns](/system-design/hld/hld-design-patterns))

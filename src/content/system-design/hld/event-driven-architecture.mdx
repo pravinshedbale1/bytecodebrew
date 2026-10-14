@@ -1,0 +1,157 @@
+In an **event-driven architecture**, services communicate by publishing facts about what happened ("OrderPlaced", "PaymentFailed") rather than calling each other directly. Combined with two related patterns — **CQRS** (separate models for writes and reads) and **event sourcing** (store events as the source of truth) — it's the backbone of many large systems. These patterns are powerful and frequently over-applied; this lesson focuses on when each one earns its complexity.
+
+## Commands, events and queries
+
+| Message type | Meaning | Naming | Example |
+| --- | --- | --- | --- |
+| **Command** | A request to do something; may be rejected | Imperative | `PlaceOrder`, `ChargeCard` |
+| **Event** | A fact that already happened; can't be rejected | Past tense | `OrderPlaced`, `CardCharged` |
+| **Query** | A request for data; no side effects | Question | `GetOrderStatus` |
+
+Commands have one intended handler. Events are broadcast — the publisher doesn't know or care who listens.
+
+## Event-driven communication
+
+```mermaid
+flowchart LR
+  OS[Order service] -->|OrderPlaced| BUS[["Event broker<br/>(Kafka)"]]
+  BUS --> INV[Inventory]
+  BUS --> NOTIF[Notifications]
+  BUS --> ANALYTICS[Analytics]
+  BUS --> SEARCH[Search indexer]
+```
+
+**Benefits**
+
+- **Loose coupling** — add a new consumer (fraud detection) without touching the order service.
+- **Resilience** — consumers that are down catch up later from the log.
+- **Scalability** — consumers scale independently; spikes are absorbed by the broker.
+- **Auditability** — the event stream is a record of what happened.
+
+**Costs**
+
+- **Eventual consistency** — consumers see changes after a delay.
+- **Harder to follow** — the flow isn't visible in one place; you need tracing and event catalogues.
+- **Schema evolution** — events are contracts with unknown consumers; version them carefully (schema registry).
+- **Ordering and duplicates** — consumers must be idempotent and handle per-key ordering. See [Message Queues](/system-design/hld/message-queues).
+
+### Event payload styles
+
+- **Event notification** — thin event (`OrderPlaced {orderId}`); consumers call back for details. Small, but creates load and coupling back to the source.
+- **Event-carried state transfer** — the event carries the data consumers need (`OrderPlaced {orderId, items, total, userId}`). Consumers can keep local copies and work even if the source is down. Larger events; consumers hold replicated data.
+
+### Choreography vs orchestration
+
+When a business process spans services, either each service reacts to events (choreography) or a coordinator directs the steps (orchestration). Covered in detail in [Distributed Transactions](/system-design/hld/distributed-transactions).
+
+## CQRS — Command Query Responsibility Segregation
+
+Most systems use one model for both writing and reading. **CQRS** separates them:
+
+- The **write model** handles commands, enforces invariants, and is normalised for correctness.
+- One or more **read models** are denormalised projections optimised for specific queries, updated from the write model's events.
+
+```mermaid
+flowchart LR
+  C[Client] -->|commands| W[Write model / service]
+  W --> WDB[("Write DB<br/>normalised")]
+  WDB -. events / CDC .-> P[Projector]
+  P --> R1[("Read model A<br/>e.g., Elasticsearch")]
+  P --> R2[("Read model B<br/>e.g., Redis / denormalised table")]
+  C -->|queries| Q[Query service] --> R1
+  Q --> R2
+```
+
+**When CQRS is worth it**
+
+- Read and write workloads differ massively in shape or scale (e.g., a product catalogue written by a few merchants and searched by millions).
+- Reads need different storage engines (full-text search, graph queries, analytics) than writes.
+- Many different views of the same data (dashboards, feeds, search).
+
+**Costs**
+
+- Read models lag behind writes (eventual consistency) — handle read-your-writes for the author explicitly.
+- More infrastructure and code: projectors, rebuild tooling, monitoring of lag.
+
+<Callout type="tip">
+You're often already doing "CQRS-lite" without the label: a PostgreSQL write path with changes streamed (CDC) into Elasticsearch for search is CQRS. Saying so in an interview shows you understand the pattern rather than just its name.
+</Callout>
+
+## Event sourcing
+
+In a conventional system, you store **current state** (`balance = 70`) and overwrite it. With **event sourcing**, you store the **sequence of events** that led to it, and current state is derived by replaying them.
+
+```text
+AccountOpened     { id: A1 }
+MoneyDeposited    { amount: 100 }
+MoneyWithdrawn    { amount: 50 }
+MoneyDeposited    { amount: 20 }
+→ current balance = 70
+```
+
+- The **event store** is append-only; events are immutable.
+- Current state is computed by folding events, and cached in **snapshots** (e.g., every 100 events) so you don't replay from the beginning each time.
+- Read models are built as projections of the event stream — event sourcing and CQRS usually go together.
+
+**Benefits**
+
+- **Complete audit trail** by construction — essential in finance, healthcare, compliance-heavy domains.
+- **Temporal queries** — "what was the state on March 1st?"
+- **Rebuild and add read models** at any time by replaying history; fix a projection bug by replaying.
+- Natural fit for event-driven integration — the events already exist.
+
+**Costs and pitfalls**
+
+- **Schema evolution of events is hard** — old events live forever; you need upcasting/versioning strategies.
+- **Querying current state** requires projections; ad-hoc queries are harder than in a relational table.
+- **Deleting data** (e.g., GDPR erasure) conflicts with immutability — solved with techniques like crypto-shredding (encrypt per-user data and delete the key).
+- **Learning curve and complexity** — significant for teams new to it.
+
+| | State-based storage | Event sourcing |
+| --- | --- | --- |
+| Source of truth | Current state | Ordered event log |
+| History | Lost unless separately logged | Complete, by design |
+| Querying | Easy (SQL on current state) | Via projections |
+| Fixing bad data | Update the row | Append a correcting event; rebuild projections |
+| Complexity | Low | High |
+| Good fit | Most CRUD domains | Ledgers, orders with rich lifecycles, audit-heavy domains, collaborative apps |
+
+<Callout type="warning">
+Don't event-source an entire system by default. Apply it to the specific aggregates where history is the point (a ledger, an order lifecycle) and keep ordinary CRUD for everything else.
+</Callout>
+
+## Change data capture as the bridge
+
+**Change data capture (CDC)** reads the database's replication log (PostgreSQL WAL, MySQL binlog) and emits every committed change as an event — e.g., with Debezium into Kafka. It gives you event-driven integration and CQRS read models **without** changing the writing application and without the dual-write problem, because the database log is the single source of truth.
+
+## Interview questions
+
+<QA q="What's the difference between event sourcing and simply publishing events?">
+Publishing events (event-driven architecture) means services emit notifications about changes, while each service's source of truth is still its current-state database. Event sourcing means the event log itself is the source of truth: state is derived by replaying events, and nothing is overwritten. You can do event-driven architecture without event sourcing — most systems do — but event sourcing naturally produces events to publish.
+</QA>
+
+<QA q="A user updates their profile and the read model hasn't caught up. How do you handle it with CQRS?">
+Options: return the updated data directly from the command response and have the client display it; route the author's subsequent reads to the write model for a short window; or have the client pass the version or sequence number of its write and make the query service wait until its projection has processed at least that version (or fall back to the write model). Other users can tolerate the brief lag.
+</QA>
+
+<QA q="When would you use event sourcing in a system design?">
+When the history of changes is itself valuable or required: financial ledgers and wallets, order or claim lifecycles with many state transitions, audit-heavy regulated domains, or collaborative systems where operations are replayed. Also when you need to rebuild or add new read models from history. I'd apply it to those specific aggregates, use snapshots for fast loading, project read models for queries, and plan for event schema versioning — and avoid it for simple CRUD data.
+</QA>
+
+<Takeaways>
+
+- Commands request, events announce, queries ask; events decouple publishers from consumers.
+- Event-driven systems gain decoupling, resilience and extensibility at the cost of eventual consistency and harder tracing.
+- CQRS separates write and read models; use it when read and write needs diverge.
+- Event sourcing stores events as the source of truth — great for audit and history, costly in complexity and schema evolution.
+- CDC turns database changes into events without dual writes.
+
+</Takeaways>
+
+## Further reading
+
+- Martin Fowler, "What do you mean by 'Event-Driven'?" (2017), "CQRS" (2011) and "Event Sourcing" (2005) — martinfowler.com.
+- Greg Young, "CQRS Documents" (2010).
+- Martin Kleppmann, *Designing Data-Intensive Applications* — ch. 11, sections on change data capture and event sourcing.
+- [Debezium documentation](https://debezium.io/documentation/) — change data capture.
+- Related: [Message Queues & Event Streaming](/system-design/hld/message-queues), [Design a Payment System](/system-design/hld/design-payment-system).

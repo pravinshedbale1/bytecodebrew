@@ -1,0 +1,230 @@
+Every design pattern and every LLD answer is built from a handful of object-oriented ideas. Interviewers probe them directly ("What's the difference between an abstract class and an interface?") and indirectly, through the quality of your models. This lesson covers the four pillars with Java examples, then the practical details that separate solid OO code from textbook OO code: interfaces vs abstract classes, `equals`/`hashCode`, and immutability.
+
+## Objects and classes
+
+A **class** is a blueprint that defines **state** (fields) and **behaviour** (methods). An **object** is an instance with its own state. Good OO design is about deciding *which object owns which data and which behaviour* — keeping data and the logic that uses it together.
+
+```java
+public class BankAccount {
+    private final String id;
+    private long balanceInPaise;          // state
+
+    public BankAccount(String id) { this.id = id; }
+
+    public void deposit(long amount) {    // behaviour that guards the state
+        if (amount <= 0) throw new IllegalArgumentException("amount must be positive");
+        balanceInPaise += amount;
+    }
+}
+```
+
+## Pillar 1 — Encapsulation
+
+**Bundle data with the methods that operate on it, and hide the internal representation.** Callers interact through a small public interface; invariants are enforced in one place.
+
+```java
+// ❌ Leaky: anyone can set an invalid balance; logic for "withdraw" lives in every caller
+public class Account { public long balance; }
+
+// ✅ Encapsulated: the invariant "balance never goes negative" is enforced here, once
+public class Account {
+    private long balance;
+
+    public void withdraw(long amount) {
+        if (amount > balance) throw new InsufficientFundsException(balance, amount);
+        balance -= amount;
+    }
+
+    public long balance() { return balance; }
+}
+```
+
+Encapsulation is not "make every field private and generate getters and setters". A class with a public setter for every field is still leaky. Expose **behaviour** (`withdraw`, `close`, `markPaid`), not raw state.
+
+<Callout type="tip" title="Tell, don't ask">
+Instead of asking an object for its data and making decisions outside it (`if (account.getBalance() >= x) account.setBalance(...)`), tell it what to do (`account.withdraw(x)`). Logic that needs an object's data usually belongs inside that object.
+</Callout>
+
+## Pillar 2 — Abstraction
+
+**Expose what an object does, hide how it does it.** Clients depend on a simplified model.
+
+```java
+public interface PaymentGateway {
+    PaymentResult charge(Money amount, PaymentMethod method);
+}
+```
+
+The checkout code doesn't care whether this talks to Razorpay, Stripe or a test stub. Abstraction is what makes substitution, testing and extension possible. Encapsulation hides *data*; abstraction hides *complexity and implementation choices*.
+
+## Pillar 3 — Inheritance
+
+**A subclass acquires the fields and methods of its superclass and can extend or override them.** It models an *is-a* relationship.
+
+```java
+public abstract class Vehicle {
+    private final String plate;
+    protected Vehicle(String plate) { this.plate = plate; }
+    public String plate() { return plate; }
+    public abstract SpotSize requiredSpot();
+}
+
+public class Car extends Vehicle {
+    public Car(String plate) { super(plate); }
+    @Override public SpotSize requiredSpot() { return SpotSize.MEDIUM; }
+}
+```
+
+Inheritance is powerful but creates the **tightest coupling** in OO: subclasses depend on the superclass's implementation details, and changes ripple down. Use it for genuine *is-a* relationships with shared behaviour, and prefer composition otherwise (see [Core Design Principles](/system-design/lld/core-design-principles)).
+
+<Callout type="warning" title="The fragile base class problem">
+A subclass that overrides `add()` to count insertions breaks if the superclass's `addAll()` is later changed to call `add()` internally — every element is now counted twice. The subclass depended on an implementation detail it couldn't see. This is why *Effective Java* advises: "Design and document for inheritance or else prohibit it" (make classes `final` by default).
+</Callout>
+
+## Pillar 4 — Polymorphism
+
+**One interface, many implementations: the same call behaves differently depending on the object's runtime type.**
+
+```java
+List<Shape> shapes = List.of(new Circle(2), new Rectangle(3, 4));
+double total = shapes.stream().mapToDouble(Shape::area).sum();   // each computes its own area
+```
+
+Two kinds in Java:
+
+| | Compile-time (static) | Runtime (dynamic) |
+| --- | --- | --- |
+| Mechanism | **Method overloading** — same name, different parameter lists | **Method overriding** — subclass redefines a superclass/interface method |
+| Resolved | By the compiler, from declared argument types | By the JVM, from the object's actual type (dynamic dispatch) |
+| Example | `print(int)`, `print(String)` | `shape.area()` |
+
+Polymorphism is what eliminates `switch (type)` chains: instead of the caller branching on type, each type carries its own behaviour. Almost every design pattern is an application of runtime polymorphism.
+
+## Interface vs abstract class
+
+| | Interface | Abstract class |
+| --- | --- | --- |
+| Purpose | A **capability/contract** ("can be compared", "can pay") | A **partial implementation** for closely related classes |
+| Multiple inheritance | A class can implement many | A class can extend only one |
+| State | No instance fields (only constants) | Can have fields and constructors |
+| Methods | Abstract, `default`, `static`, `private` (Java 9+) | Any: abstract and concrete |
+| Access modifiers | Abstract, `default` and `static` methods are public; `private` helper methods allowed (Java 9+) | Any |
+| Use when | Defining roles that unrelated classes can play; variation points | Sharing code and state among a family; template methods |
+
+**Rule of thumb:** start with an interface for the contract; add an abstract base class *behind* it only if several implementations share substantial code (e.g., `PaymentGateway` interface + `AbstractHttpPaymentGateway` with shared retry logic).
+
+<Callout type="note" title="Default methods">
+Java 8 `default` methods let interfaces evolve without breaking implementers (e.g., `Collection.stream()`). They are not a replacement for abstract classes: interfaces still can't hold instance state. If two interfaces provide the same default method, the implementing class must override it to resolve the conflict.
+</Callout>
+
+## Access modifiers
+
+| Modifier | Class | Package | Subclass | Everyone |
+| --- | --- | --- | --- | --- |
+| `private` | ✓ | | | |
+| *(package-private)* | ✓ | ✓ | | |
+| `protected` | ✓ | ✓ | ✓ | |
+| `public` | ✓ | ✓ | ✓ | ✓ |
+
+Default to the **most restrictive** level that works. `protected` fields are a form of public API to every subclass, forever.
+
+## equals and hashCode
+
+Value-based equality matters whenever objects go into `HashMap`s or `HashSet`s — which is constantly in LLD code.
+
+**The contract:** if `a.equals(b)` then `a.hashCode() == b.hashCode()`. Breaking it makes objects "disappear" from hash-based collections.
+
+```java
+public final class Money {
+    private final long amountMinor;
+    private final Currency currency;
+
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Money m)) return false;
+        return amountMinor == m.amountMinor && currency.equals(m.currency);
+    }
+
+    @Override public int hashCode() { return Objects.hash(amountMinor, currency); }
+}
+```
+
+- **Entities** (a `User`, an `Order`) usually have identity-based equality on their ID.
+- **Value objects** (`Money`, `Coordinate`, `DateRange`) have equality on all their fields.
+- Never use **mutable fields** in `hashCode` for objects stored in hash collections — if the field changes, the object is lost in the wrong bucket.
+- Java 16+ **records** generate correct `equals`, `hashCode` and `toString` for value types: `record Money(long amountMinor, Currency currency) {}`.
+
+## Immutability
+
+An immutable object's state can't change after construction. Benefits: inherently **thread-safe**, safe to share and cache, safe as map keys, easier to reason about.
+
+How to make a class immutable:
+
+1. Make the class `final` (or use a `record`).
+2. Make all fields `private final`.
+3. No setters; "modifiers" return new instances (`money.plus(other)`).
+4. **Defensive copies** of mutable inputs and outputs.
+
+```java
+public final class Itinerary {
+    private final List<Stop> stops;
+
+    public Itinerary(List<Stop> stops) {
+        this.stops = List.copyOf(stops);          // defensive copy; unmodifiable
+    }
+
+    public List<Stop> stops() { return stops; }   // safe: already unmodifiable
+
+    public Itinerary withStop(Stop s) {
+        var copy = new ArrayList<>(stops);
+        copy.add(s);
+        return new Itinerary(copy);
+    }
+}
+```
+
+Prefer immutable **value objects** for money, dates, coordinates and identifiers; keep mutability in a few entities whose state legitimately changes (an order's status) and guard it.
+
+## Composition: objects made of objects
+
+Most real behaviour comes from objects **collaborating**: an `Order` has `LineItem`s, uses a `PricingPolicy`, and is persisted by an `OrderRepository`. Inheritance answers "what is it?"; composition answers "what does it have and use?" — and composition is the mechanism behind most design patterns. See [Class Relationships & UML](/system-design/lld/class-relationships-uml).
+
+## Interview questions
+
+<QA q="What's the difference between abstraction and encapsulation?">
+Encapsulation is about hiding an object's internal state and enforcing invariants by only allowing access through methods — it protects data. Abstraction is about exposing only the essential operations of a concept and hiding implementation details and complexity — it simplifies use and enables substitution. Encapsulation is a mechanism (private fields, controlled methods); abstraction is a design goal (interfaces, abstract types). They reinforce each other.
+</QA>
+
+<QA q="When would you choose an abstract class over an interface in Java?">
+When several closely related classes share state or substantial implementation (fields, constructors, a template method with common steps) and you want to provide that shared code in one place. Otherwise prefer an interface: it allows multiple inheritance of type, keeps implementers free to extend something else, and defines a clean contract. A common combination is an interface for the contract plus an optional abstract base implementing it.
+</QA>
+
+<QA q="What happens if you override equals but not hashCode?">
+Two objects that are equal may have different hash codes, violating the contract. Hash-based collections use the hash code to choose a bucket before calling equals, so a HashSet can contain "duplicate" equal objects and HashMap.get with an equal key can return null. Always override both, using the same fields — or use a record.
+</QA>
+
+<QA q="Is overloading polymorphism? What about overriding a static method?">
+Overloading is compile-time (static) polymorphism: the compiler picks the method from the declared argument types. Overriding is runtime polymorphism via dynamic dispatch. Static methods can't be overridden — a subclass static method with the same signature hides the superclass method, and which one runs depends on the declared reference type, not the runtime object.
+</QA>
+
+<Practice task="This class has public fields: class Account { public long balance; public String status; }. Rewrite it with real encapsulation for withdraw, deposit and freeze.">
+
+Make the fields private, drop any setters, and expose behaviour that guards the invariants: `deposit(long amount)` (positive amounts only), `withdraw(long amount)` (positive, not frozen, enough balance — otherwise a specific exception), `freeze()` and `unfreeze()`, and a read-only `balance()`. Replace `String status` with an enum or a boolean, and consider a `Money` value object instead of `long`. Callers now *tell* the account what to do instead of reading and writing its fields.
+
+</Practice>
+
+<Takeaways>
+
+- Encapsulation guards state and invariants; abstraction hides implementation behind contracts.
+- Inheritance models is-a and couples tightly; polymorphism replaces type-switching with dispatch.
+- Interfaces define roles and variation points; abstract classes share code within a family.
+- Override equals and hashCode together; use records for value types.
+- Prefer immutable value objects; confine mutability to a few well-guarded entities.
+
+</Takeaways>
+
+## Further reading
+
+- Joshua Bloch, *Effective Java* (3rd ed., 2018) — Items 10–11 (equals/hashCode), 17 (minimise mutability), 18–19 (composition over inheritance; design for inheritance or prohibit it), 20 (prefer interfaces to abstract classes).
+- Alexander Shvets, *Dive Into Design Patterns* — "Introduction to OOP" (pillars and relations between objects).
+- Next: [Class Relationships & UML](/system-design/lld/class-relationships-uml).

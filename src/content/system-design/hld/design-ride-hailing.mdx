@@ -1,0 +1,224 @@
+<Related ids={['geospatial-indexing', 'real-time-communication', 'transactions-and-isolation', 'message-queues', 'consensus', 'distributed-transactions', 'multi-region-architecture', 'caching']} />
+
+Design a ride-hailing service like Uber, Ola or Lyft: riders request a trip, nearby drivers are matched, the driver navigates to the rider, and both see each other's live location until the trip ends and payment completes. It combines a **high-frequency location firehose**, **geospatial search**, a **matching problem with contention** (one driver can't accept two rides), and a long-lived **trip state machine**.
+
+## 1. Clarify the problem
+
+| Question | Assumption |
+| --- | --- |
+| Core flows? | Request ride, get fare estimate, match driver, live tracking, complete trip, pay |
+| Scale? | 20M rides/day globally; 5M drivers online at peak; drivers send location every 4 s |
+| Matching? | Nearest suitable available driver by ETA, offered one driver at a time with a timeout |
+| Pricing? | Fare estimate + surge pricing by area |
+| Out of scope | Pooling/shared rides, scheduled rides, driver onboarding |
+
+## 2. Requirements
+
+**Functional:** riders see nearby drivers and a fare estimate; request a ride; match to a driver who accepts; live location of driver for rider; trip lifecycle; payment at the end.
+
+**Non-functional:**
+
+- **Low-latency matching** — match within a few seconds.
+- **No double assignment** — a driver gets at most one active trip; a ride gets at most one driver.
+- **High availability** — riders and drivers depend on it in real time; trip state must survive failures.
+- **Scale** for the location firehose.
+
+## 3. Capacity estimation
+
+```text
+Location updates: 5M drivers ÷ 4 s = 1.25M updates/s at peak
+Update size ~100 B → 125 MB/s ingest
+
+Ride requests: 20M/day ÷ 10^5 ≈ 200/s average; peaks in a big city at rush hour → ~2,000/s globally
+Nearby-driver queries: riders opening the app ~10× ride requests → a few thousand/s, plus matching queries
+
+Trips storage: 20M × ~5 KB (trip record + events) ≈ 100 GB/day
+Location history: 1.25M/s × 100 B ≈ 10 TB/day → to cheap storage (compressed)
+```
+
+**So:** location updates are by far the highest-volume workload — keep current locations **in memory**, sharded geographically, and stream history asynchronously. Matching volume is modest but needs strong consistency per driver.
+
+## 4. API
+
+```text
+Driver app (persistent connection — WebSocket or MQTT/gRPC stream):
+  → location { lat, lng, heading, speed, ts }           every ~4 s
+  ← offer { tripId, pickup, eta, fare, expiresIn: 15s }
+  → accept { tripId } / decline { tripId }
+  → trip status updates (arrived, started, completed)
+
+Rider app:
+  GET  /v1/estimates?pickup=…&dropoff=…        → fare + ETA per product
+  POST /v1/rides  { pickup, dropoff, product, estimateId }   Idempotency-Key  → 201 { rideId, status: MATCHING }
+  WebSocket/SSE subscription for ride status and driver location
+  POST /v1/rides/{id}/cancel
+```
+
+## 5. Data model
+
+```text
+drivers           (driver_id, vehicle, rating, status: offline/available/offered/on_trip, city)
+driver_location   in-memory geo index: cell → set of driver_ids; driver_id → (lat, lng, ts)   [TTL]
+rides             (ride_id, rider_id, driver_id, status, pickup, dropoff, product,
+                   fare_estimate, surge_multiplier, created_at, version)
+ride_events       (ride_id, seq, type, payload, ts)   -- append-only lifecycle log
+location_history  (driver_id, time bucket) → compressed points        -- cold storage / analytics
+```
+
+Rides need transactional state transitions → a relational/NewSQL store (sharded by city or ride_id). Driver status needs an atomic compare-and-set.
+
+## 6. High-level design
+
+```mermaid
+flowchart LR
+  DRV[Driver apps] <-->|persistent conn| DGW[Driver gateway]
+  RID[Rider apps] <-->|HTTPS + WS/SSE| RGW[Rider gateway]
+  DGW --> LOC["Location service"]
+  LOC --> GEO[("Geo index (in-memory)<br/>sharded by city / cell")]
+  LOC --> K[["Kafka: locations"]]
+  K --> HIST[("Location history")]
+  K --> SURGE["Supply/demand + surge"]
+  RGW --> RIDE["Ride service<br/>(trip state machine)"]
+  RIDE --> RDB[("Rides DB")]
+  RIDE --> MATCH["Matching / dispatch"]
+  MATCH --> GEO
+  MATCH --> ETA["ETA / routing service"]
+  MATCH --> DSTATE[("Driver state<br/>(atomic CAS)")]
+  MATCH --> DGW
+  RIDE --> PRICE["Pricing"] --> SURGE
+  RIDE --> PAY["Payments"]
+  RIDE -. events .-> K2[["Kafka: ride events"]] --> NOTIF[Notifications / analytics]
+  LOC -. driver location for active trip .-> RGW
+```
+
+## 7. Deep dives
+
+### Ingesting locations and finding nearby drivers
+
+- Drivers keep a persistent connection to a **driver gateway**; updates go to the **location service**.
+- The location service maps each point to a cell (geohash, S2 or H3) and updates an **in-memory geo index** sharded by city/region: `cell → {driver_ids}`, plus `driver_id → latest position` with a TTL (drivers who stop reporting disappear).
+- Only update cell membership when the driver crosses a cell boundary; otherwise just update the position.
+- "Nearby drivers" = look up the rider's cell and neighbouring rings of cells, filter by availability and product, sort by straight-line distance, then compute **road ETAs** for the top few candidates via the routing service.
+- History is streamed to Kafka → storage, never written synchronously.
+
+See [Geospatial Indexing](/system-design/hld/geospatial-indexing).
+
+### Matching without double booking
+
+Sequence for a ride request:
+
+```mermaid
+sequenceDiagram
+  participant R as Rider
+  participant RS as Ride service
+  participant M as Matching
+  participant DS as Driver state store
+  participant D as Driver app
+  R->>RS: POST /rides (idempotency key)
+  RS->>RS: create ride (MATCHING)
+  RS->>M: find driver
+  M->>M: candidates by ETA from geo index
+  M->>DS: CAS driver d1: available → offered(ride)
+  DS-->>M: OK
+  M->>D: offer (expires in 15 s)
+  D-->>M: accept
+  M->>DS: CAS d1: offered(ride) → on_trip(ride)
+  M->>RS: assign d1 (ride: MATCHING → ACCEPTED, version check)
+  RS-->>R: driver assigned + live tracking
+```
+
+- **Lock the driver, not just the ride**: an atomic **compare-and-set** on driver status (`available → offered` with the ride ID) ensures a driver is offered only one ride at a time, even if two matching workers pick them concurrently. The loser picks the next candidate.
+- **Offer timeouts**: if the driver doesn't accept within ~15 s, revert `offered → available` (conditional on still holding this offer) and try the next candidate.
+- **Ride transitions** use optimistic concurrency (version column) so a cancel and an accept racing each other resolve cleanly — exactly one wins.
+- **Matching per city** can be owned by a partitioned set of dispatch workers (each city/zone owned by one worker via leases) — this also enables **batch matching**: collect requests for a second or two and solve an assignment problem that minimises total ETA, rather than greedy nearest-driver.
+
+### Trip state machine
+
+```mermaid
+stateDiagram-v2
+  [*] --> MATCHING
+  MATCHING --> ACCEPTED: driver accepts
+  MATCHING --> NO_DRIVERS: timeout
+  MATCHING --> CANCELLED: rider cancels
+  ACCEPTED --> ARRIVED: driver at pickup
+  ACCEPTED --> CANCELLED: rider/driver cancels
+  ARRIVED --> IN_PROGRESS: trip started
+  IN_PROGRESS --> COMPLETED: trip ended
+  COMPLETED --> PAID: payment captured
+```
+
+Every transition is persisted with an event (append-only `ride_events`) — useful for support, disputes and analytics. Side effects (notifications, payment) are triggered from events via the outbox pattern.
+
+### Live tracking for the rider
+
+During an active trip, the rider subscribes (WebSocket/SSE) to the trip channel. The location service publishes the assigned driver's updates to that channel (via pub/sub keyed by trip). Clients **interpolate** between 4-second updates for smooth movement. If the connection drops, the client reconnects and gets the latest position.
+
+### Pricing and surge
+
+- Fare estimate = base + per-km + per-minute (from routing ETA) × surge multiplier. Return an **estimate ID** that locks the quoted price for a few minutes, so the price the rider accepted is honoured.
+- **Surge**: a streaming job aggregates supply (available drivers) and demand (open requests, app opens) per cell (H3 hexagons) per minute and computes multipliers, smoothed across neighbouring cells and time to avoid jitter.
+
+### Payments
+
+At completion, compute the final fare, then charge the stored payment method via the payment service with an **idempotency key = ride ID** (so retries never double-charge). Often a pre-authorisation is placed at booking and captured at the end. See [Design a Payment System](/system-design/hld/design-payment-system).
+
+### Geography and availability
+
+Partition everything **by city/region**: geo indexes, dispatch ownership, even data stores. Cities are naturally independent, which limits blast radius and lets you run regional deployments near users. A city's dispatch owner fails over via lease expiry to another worker, rebuilding the in-memory geo index from the next round of driver updates (which arrive every 4 s — the state self-heals quickly).
+
+## 8. Failure modes
+
+| Failure | Mitigation |
+| --- | --- |
+| Geo index node lost | Rebuilt within seconds from incoming updates; replicas for hot cities |
+| Driver loses connectivity mid-trip | Trip continues; app buffers locations and uploads when back; ride state is server-side |
+| Two dispatchers pick the same driver | Atomic CAS on driver status — only one succeeds |
+| Driver never responds to offer | Offer timeout reverts status; next candidate |
+| Payment provider down | Ride completes; charge retried asynchronously with the same idempotency key |
+
+## 9. Trade-offs summary
+
+| Decision | Choice | Why |
+| --- | --- | --- |
+| Current locations | In-memory geo index sharded by city, TTL | 1M+ updates/s; freshness over durability |
+| Location history | Async via Kafka | Keep the hot path light |
+| Driver assignment | CAS on driver status + offer timeouts | Prevent double booking without global locks |
+| Matching | Greedy nearest-ETA (batch optimisation as upgrade) | Simple; batching improves global efficiency |
+| Partitioning | By city/region | Natural isolation and locality |
+
+## 10. What interviewers look for
+
+- **Mid-level**: location updates, finding nearby drivers with a geo index, ride request flow, WebSockets for tracking.
+- **Senior**: in-memory sharded geo index, atomic driver assignment and offer timeouts, trip state machine, idempotent ride creation and payment, surge computation via streaming.
+- **Staff**: batch matching optimisation, city-level partitioning and failover, ETA service cost, multi-region strategy, marketplace dynamics.
+
+## Interview questions
+
+<QA q="How do you prevent two riders from being assigned the same driver?">
+Make driver assignment an atomic state transition on the driver's record: compare-and-set from available to offered (tagged with the ride ID) in a strongly consistent store, or have a single dispatch owner per city that serialises assignments. Only one transition can succeed; competing matchers move to the next candidate. Offer expiry conditionally reverts the state only if it still references the same ride.
+</QA>
+
+<QA q="Why not store driver locations in the main database?">
+At over a million updates per second, writing each to a durable database would be enormously expensive, and almost all of those writes are overwritten seconds later. Only the latest position matters for matching, and it self-heals from the next update if lost. So keep current positions in a sharded in-memory geo index with TTLs and stream history asynchronously to cheap storage for trips and analytics.
+</QA>
+
+<QA q="How would batch matching improve over greedy matching?">
+Greedy matching assigns each request the nearest available driver as it arrives, which can be globally inefficient — taking a driver who would have been perfect for the next request. Collecting requests and available drivers in a short window (a second or two) and solving an assignment problem minimises total pickup ETA across all of them, improving average wait times and driver utilisation at the cost of a small added delay.
+</QA>
+
+<Takeaways>
+
+- The location firehose dominates: keep current positions in an in-memory, city-sharded geo index with TTLs.
+- Find candidates by cells and rings, then rank by routed ETA for the top few.
+- Assign drivers with atomic compare-and-set plus offer timeouts; manage trips as a persisted state machine.
+- Track live locations over WebSocket/SSE via pub/sub per trip; compute surge with stream aggregation over hex cells.
+- Partition by city for scale and isolation; make ride creation and payment idempotent.
+
+</Takeaways>
+
+## Further reading
+
+- Uber Engineering, "H3: Uber's Hexagonal Hierarchical Spatial Index" (2018).
+- [Ringpop](https://github.com/uber-node/ringpop-node) — Uber's open-source library for consistent hashing and gossip-based membership, built for its dispatch services.
+- Lyft Engineering, "Matchmaking in Lyft Line" (2016) — the evolution of matching algorithms.
+- Related: [Geospatial Indexing](/system-design/hld/geospatial-indexing), [Design a Payment System](/system-design/hld/design-payment-system).

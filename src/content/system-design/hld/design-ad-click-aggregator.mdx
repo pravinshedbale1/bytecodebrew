@@ -1,0 +1,162 @@
+<Related ids={['batch-and-stream-processing', 'message-queues', 'probabilistic-data-structures', 'sharding', 'sql-vs-nosql', 'availability-and-fault-tolerance', 'time-and-ordering']} />
+
+Design a system that records ad clicks and serves aggregated metrics — clicks per ad per minute, filtered by country, device or campaign — to advertisers' dashboards and to the billing system. Billions of clicks per day, results within about a minute, and because advertisers **pay per click**, the counts must be correct: no double counting, no lost clicks, and fraud filtered out.
+
+## 1. Clarify the problem
+
+| Question | Assumption |
+| --- | --- |
+| Inputs? | Click events: click_id, ad_id, campaign_id, user/device, IP, country, timestamp |
+| Queries? | Clicks per ad/campaign over time ranges, at minute granularity, with filters (country, device) |
+| Freshness? | Dashboards within ~1 minute; billing numbers finalised daily |
+| Scale? | 10B clicks/day; peak 300K clicks/s; 10M active ads |
+| Correctness? | Exactly-once counting; fraud/bot filtering; auditable |
+| Also? | Redirect the user to the advertiser's landing page quickly |
+
+## 2. Requirements
+
+**Functional:** record clicks and redirect users; aggregate counts per ad per minute with dimensions; query aggregates over time ranges; top-N ads per campaign/time window.
+
+**Non-functional:** fast redirect (click path latency under ~50 ms); aggregation latency about a minute; correctness (exactly-once, late events handled); fault tolerance with replay; scalability to 300K events/s.
+
+## 3. Capacity estimation
+
+```text
+Clicks: 10B/day ≈ 115K/s average, 300K/s peak
+Raw event ~200 B → 2 TB/day raw (compressed far less); retain raw events for replay/audit (e.g., 1 year in object storage)
+
+Aggregates: 10M ads × 1,440 minutes = 14.4B ad-minute buckets/day if every ad clicked every minute
+In practice most ads are sparse; with dimensions (country × device) multiply by active combinations
+→ store only non-zero buckets; roll up to hourly/daily for older data
+```
+
+**So:** a classic streaming aggregation problem: Kafka for ingestion, a stateful stream processor for minute windows, an OLAP store for queries, and raw events retained for reprocessing and reconciliation.
+
+## 4. API
+
+```text
+Click path:
+  GET /click?ad=…&imp=<impression_id>&sig=<signature>
+  → 302 Location: <advertiser landing URL>     (event recorded asynchronously)
+
+Query API:
+  GET /v1/ads/{adId}/clicks?from=…&to=…&granularity=minute&filter=country:IN
+  → { buckets: [{ ts, count }, …] }
+  GET /v1/campaigns/{id}/top-ads?window=1h&n=10
+```
+
+Click URLs are **signed** (HMAC over ad ID and impression ID) so they can't be forged, and the impression ID ties a click to a served ad (used for dedup and fraud detection).
+
+## 5. High-level design
+
+```mermaid
+flowchart LR
+  U[User clicks ad] --> CS["Click service<br/>(validate, redirect)"]
+  CS -->|302| LP[Advertiser landing page]
+  CS --> K[["Kafka: raw clicks<br/>(partitioned by ad_id)"]]
+  K --> RAW[("Raw event archive<br/>object storage")]
+  K --> FL["Stream processor (Flink)<br/>dedup → fraud filter →<br/>1-min tumbling windows by event time"]
+  FL --> K2[["Kafka: aggregates"]]
+  K2 --> OLAP[("OLAP store<br/>ClickHouse / Druid / Pinot")]
+  OLAP --> QAPI[Query API] --> DASH[Advertiser dashboards]
+  RAW --> BATCH["Daily batch job (Spark)<br/>exact recount + fraud model"]
+  BATCH --> RECON["Reconciliation<br/>stream vs batch"]
+  RECON --> BILL[("Billing-grade daily totals")]
+```
+
+## 6. Deep dives
+
+### Ingestion and the click path
+
+The click service does minimal work: validate the signature, produce the event to Kafka (asynchronously with a local buffer, or synchronously with `acks=all` if loss is unacceptable), and return the redirect. Kafka is partitioned by `ad_id` so all clicks for an ad go to the same partition — the stream processor can aggregate per ad without a cross-partition shuffle. Hot ads (a viral campaign) can skew partitions; mitigate with a composite key (`ad_id` + small random salt) and a second aggregation stage that merges salted partial counts.
+
+### Aggregation by event time
+
+- **Tumbling one-minute windows** keyed by `(ad_id, minute, country, device)`.
+- Use **event time** (click timestamp), not processing time — mobile clicks can arrive late.
+- **Watermarks** allow a bounded lateness (e.g., 2–5 minutes); late events beyond that are written to a side output and handled by the batch correction.
+- Emit results when the watermark passes the window end; update the OLAP store by **upsert on (ad_id, minute, dims)** so re-emitted corrected results overwrite rather than double-add.
+
+See [Batch & Stream Processing](/system-design/hld/batch-and-stream-processing).
+
+### Exactly-once counting
+
+Duplicates come from several sources: client retries, the click service retrying a Kafka produce, stream processor restarts.
+
+- **Dedup by click ID** (or impression ID — one billable click per impression) in the stream processor: keep a keyed state of seen IDs for the dedup window (e.g., 1 hour), or a Bloom filter per window to cut memory with a tiny false-positive rate.
+- **Idempotent producer** in Kafka to avoid producer-side duplicates.
+- **Flink checkpoints** (state + Kafka offsets, captured atomically) give exactly-once state on recovery.
+- **Idempotent sink**: writes keyed by `(ad_id, window, dims)` with overwrite semantics, or a transactional sink (Kafka transactions → two-phase-commit sink).
+
+### Fraud and invalid traffic
+
+Advertisers won't pay for bot clicks. Real-time rules in the stream (click rate per IP/device, clicks without a matching impression, impossible click-through intervals, known bad IP ranges) filter obvious fraud; a heavier ML model runs in the daily batch job. Dashboards may show "preliminary" numbers that are corrected after batch fraud detection.
+
+### Serving queries
+
+Store aggregates in a columnar **OLAP database** optimised for time-series aggregations and filters (ClickHouse, Druid, Pinot). Partition by time, order by ad/campaign. **Roll up** minute data to hourly and daily granularity after a few days to bound storage and speed up long-range queries. Top-N queries per campaign run directly on the OLAP store or are precomputed in the stream (heap of top ads per window).
+
+### Reconciliation and billing
+
+Streaming numbers are fast but can be slightly off (late data beyond the watermark, rare failures). For **billing**:
+
+- A daily batch job recomputes exact counts from the immutable raw archive (with the full fraud model).
+- Reconciliation compares batch vs streaming totals per ad; differences beyond a threshold trigger alerts, and the batch numbers become the billing source of truth.
+- Because raw events are retained, any bug in aggregation logic can be fixed and **replayed** (Kappa-style).
+
+## 7. Failure modes
+
+| Failure | Mitigation |
+| --- | --- |
+| Stream processor crash | Restore from checkpoint; replay from committed Kafka offsets |
+| Kafka broker failure | Replication factor 3, `acks=all`, min in-sync replicas 2 |
+| Aggregation bug discovered | Fix and replay raw events from Kafka (long retention) or the archive |
+| Hot ad partition | Salted keys + two-stage aggregation |
+| OLAP store unavailable | Aggregates buffered in Kafka; dashboards degrade, billing unaffected |
+
+## 8. Trade-offs summary
+
+| Decision | Choice | Why |
+| --- | --- | --- |
+| Ingestion | Kafka, partitioned by ad_id | Durable, replayable, per-ad locality |
+| Aggregation | Flink, event-time windows, watermarks | Correct minute buckets despite late data |
+| Dedup | Click/impression ID in keyed state (Bloom filter optional) | Exactly-once counting |
+| Serving | OLAP store with rollups | Fast filtered time-range queries |
+| Billing correctness | Batch recount + reconciliation | Streaming for freshness, batch for truth |
+
+## 9. What interviewers look for
+
+- **Mid-level**: queue + aggregation workers + database for counts, query API.
+- **Senior**: event-time windows and watermarks, dedup for exactly-once, partitioning and hot keys, OLAP store choice, raw event retention for replay.
+- **Staff**: Lambda vs Kappa trade-offs, reconciliation for billing, fraud pipelines, storage rollups and cost, data correctness SLAs with advertisers.
+
+## Interview questions
+
+<QA q="Why aggregate by event time rather than processing time?">
+Clicks can reach the system late — mobile devices offline, network delays, consumer lag after an outage. Aggregating by processing time puts those clicks into the wrong minute and makes results depend on system health rather than reality, and replays would produce different answers. Event-time windows with watermarks assign each click to the minute it actually happened and give the same results on replay.
+</QA>
+
+<QA q="How do you avoid counting the same click twice?">
+Give each click (or impression) a unique ID and deduplicate in the stream processor using keyed state over a dedup window, or a Bloom filter for memory efficiency. Use Kafka's idempotent producer, Flink checkpoints that snapshot state and offsets together for exactly-once processing, and an idempotent or transactional sink keyed by window, so retries overwrite rather than add. A daily batch recount from raw events verifies the result.
+</QA>
+
+<QA q="A bug in the aggregation logic inflated counts for a day. How do you fix it?">
+Because raw events are retained in Kafka (long retention) and the object-storage archive, deploy the fixed job and replay that day's events into a fresh output (or recompute with the batch job), then overwrite the affected aggregates in the OLAP store (idempotent upserts keyed by window) and correct the billing totals through reconciliation, notifying affected advertisers if invoices were issued.
+</QA>
+
+<Takeaways>
+
+- Keep the click path fast: validate, enqueue to Kafka, redirect.
+- Aggregate with a stateful stream processor in event-time windows with watermarks; partition by ad and handle hot keys.
+- Achieve exactly-once with dedup by click ID, checkpoints and idempotent sinks.
+- Serve dashboards from an OLAP store with rollups.
+- Retain raw events for replay, and reconcile streaming results with batch recounts for billing.
+
+</Takeaways>
+
+## Further reading
+
+- Akidau et al., "The Dataflow Model" (VLDB 2015) — event time, windows, watermarks.
+- Ananthanarayanan et al., "Photon: Fault-tolerant and Scalable Joining of Continuous Data Streams" (SIGMOD 2013) — Google's click/query join for ads.
+- Apache Flink documentation — "Event Time and Watermarks" and "Fault Tolerance via State Snapshots".
+- Alex Xu and Sahn Lam, *System Design Interview*, Vol. 2 (2022) — ch. "Ad Click Event Aggregation".

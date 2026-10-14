@@ -1,0 +1,187 @@
+HTTP is fundamentally **client-initiated**: the client asks, the server answers. But many features need the server to push data the moment something happens — a new chat message, a ride's live location, a stock price, a notification, collaborative edits. This lesson covers the four main techniques, their trade-offs, and how to scale systems that hold millions of open connections.
+
+## Short polling
+
+The client asks for updates at a fixed interval.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  loop every 5 seconds
+    C->>S: GET /messages?since=…
+    S-->>C: [] (usually nothing new)
+  end
+```
+
+- ✅ Trivial to implement; works everywhere; stateless servers.
+- ❌ **Wasteful** — most requests return nothing, yet each carries full HTTP overhead.
+- ❌ **Latency up to the polling interval** — a 5-second interval means updates can be up to 5 s late. Shortening the interval multiplies the load.
+
+**Use when:** updates are infrequent and a delay is acceptable — e.g., checking an export job's status every 10 seconds.
+
+## Long polling
+
+The client sends a request; the server **holds it open** until there's new data (or a timeout, e.g., 30 s), then responds. The client immediately sends another request.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /messages?since=…
+  Note over S: holds request until data arrives…
+  S-->>C: [new message]
+  C->>S: GET /messages?since=… (immediately)
+  Note over S: holds…
+  S-->>C: 204 (timeout, no data)
+  C->>S: GET /messages?since=…
+```
+
+- ✅ Near-real-time delivery with plain HTTP; works through almost any proxy or firewall.
+- ✅ No wasted responses when idle (beyond periodic timeouts).
+- ❌ Each message still costs a full request/response cycle; bursts of messages cause many reconnects.
+- ❌ Servers hold many open requests — need an async/event-driven server model.
+- ❌ Ordering and missed messages between requests must be handled (use a `since` cursor).
+
+**Use when:** you need moderate real-time behaviour and must work in restrictive network environments, or as a fallback for WebSockets.
+
+## Server-Sent Events (SSE)
+
+A standard browser API (`EventSource`) for a **one-way stream from server to client** over a single long-lived HTTP response.
+
+```text
+GET /stream/notifications
+Accept: text/event-stream
+
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+
+id: 101
+event: notification
+data: {"type":"like","postId":"p_9"}
+
+id: 102
+event: notification
+data: {"type":"comment","postId":"p_9"}
+```
+
+- ✅ Simple text protocol over standard HTTP — works with existing load balancers, auth and HTTP/2.
+- ✅ **Automatic reconnection** built into browsers, with `Last-Event-ID` so the server can resume where it left off.
+- ❌ **Server → client only.** Client-to-server messages need separate HTTP requests.
+- ❌ Text only (binary must be encoded); browsers limit concurrent connections per domain over HTTP/1.1 (not an issue with HTTP/2).
+
+**Use when:** the server pushes and the client mostly listens — live feeds, notifications, dashboards, progress updates, and streaming LLM responses (token-by-token output is commonly delivered via SSE).
+
+## WebSockets
+
+A **full-duplex, persistent** connection. It starts as an HTTP request with an `Upgrade` header, then switches to a lightweight framed protocol where either side can send messages at any time.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /ws (Upgrade: websocket)
+  S-->>C: 101 Switching Protocols
+  C->>S: {"type":"message","text":"hi"}
+  S-->>C: {"type":"message","from":"bob","text":"hello"}
+  S-->>C: {"type":"typing","from":"bob"}
+  C->>S: {"type":"ping"}
+```
+
+- ✅ True bidirectional, low-latency messaging with tiny per-message overhead (2–14 bytes of framing).
+- ✅ Supports binary and text.
+- ❌ **Stateful connections** — complicate load balancing, deployments and horizontal scaling.
+- ❌ No built-in reconnection, message acknowledgement, or resumption — you must build these.
+- ❌ Some corporate proxies interfere; need heartbeats to keep idle connections alive through NATs and load balancers.
+
+**Use when:** both sides send frequent messages with low latency — chat, multiplayer games, collaborative editing, live trading.
+
+## Comparison
+
+| | Short polling | Long polling | SSE | WebSocket |
+| --- | --- | --- | --- | --- |
+| Direction | Client pull | Client pull (server-held) | Server → client | Bidirectional |
+| Latency | Up to interval | Near real-time | Real-time | Real-time |
+| Overhead per message | Full HTTP request | Full HTTP request | Small | Very small |
+| Connection | Short-lived | Repeated long requests | One long-lived HTTP response | One persistent upgraded connection |
+| Reconnection | N/A | Client loop | Built in (`Last-Event-ID`) | Manual |
+| Infrastructure friendliness | Excellent | Good | Good | Requires LB/proxy support |
+| Typical uses | Job status | Fallback, legacy | Notifications, feeds, LLM streaming | Chat, games, collaboration |
+
+<Callout type="interview">
+Don't default to WebSockets. Ask: does the client need to send frequent messages too? If not, **SSE is simpler**. For a notification system or live scores, SSE (or even long polling) is often the better answer. Choose WebSockets for chat, games and collaborative editing — and then talk about how you'll scale the connections.
+</Callout>
+
+## Scaling persistent connections
+
+A single well-tuned server can hold hundreds of thousands of idle connections (memory per connection is the main limit — often a few KB to tens of KB). The hard part isn't holding connections — it's **routing a message to the server that holds the recipient's connection**.
+
+### The routing problem
+
+User A is connected to Gateway 1; user B to Gateway 7. When A sends B a message, how does it reach Gateway 7?
+
+```mermaid
+flowchart LR
+  A[User A] --- G1[WS Gateway 1]
+  B[User B] --- G7[WS Gateway 7]
+  G1 --> MS[Message Service]
+  MS --> DB[(Message Store)]
+  MS --> PS[["Pub/Sub<br/>(Redis / Kafka)"]]
+  PS --> G7
+  MS -. lookup .-> REG[("Connection registry<br/>user → gateway")]
+```
+
+Two common approaches:
+
+1. **Connection registry** — when a user connects, record `user_id → gateway_id` in a fast store (Redis). To deliver a message, look up the gateway and send it there directly (via RPC or a per-gateway queue).
+2. **Pub/sub fan-out** — each gateway subscribes to channels for its connected users (or for rooms/conversations). Publishers send to the channel; whichever gateway holds the subscriber delivers it. Simpler routing, but broadcasting to many gateways costs more.
+
+Large systems like WhatsApp, Slack and Discord use variations of these patterns.
+
+### Other scaling concerns
+
+- **Separate connection gateways from business logic.** Gateways only hold sockets and forward messages; stateless services behind them do the work. Gateways can then scale on connection count, services on CPU.
+- **Load balancing** — use L4 or L7 balancers that support long-lived connections, balance with **least connections**, and set generous idle timeouts. Sticky sessions are unnecessary if the registry handles routing.
+- **Heartbeats** — ping/pong every 20–60 s to detect dead connections and keep NAT mappings alive; update presence based on heartbeats.
+- **Reconnection storms** — when a gateway restarts or deploys, all its clients reconnect at once. Use **exponential backoff with jitter** on clients and drain gateways gradually.
+- **Delivery guarantees** — a message sent while the recipient is offline or reconnecting must not be lost. Persist messages first, deliver via the socket as an optimisation, and let clients **sync from the last acknowledged sequence number** on reconnect.
+- **Mobile clients** — apps in the background lose their sockets; fall back to push notifications (APNs/FCM) for delivery.
+
+## Webhooks: server-to-server push
+
+For pushing events to **other systems** (not browsers), the standard is a **webhook** — your system makes an HTTP POST to a URL the consumer registered (e.g., Stripe notifying a merchant that a payment succeeded). Key concerns: sign payloads (HMAC) so receivers can verify them, retry with backoff on failures, make deliveries idempotent with event IDs, and let consumers replay missed events.
+
+## Interview questions
+
+<QA q="You're designing live notifications for a social app. WebSockets or SSE?">
+SSE is usually the better fit. Notifications flow server → client; the client's own actions (liking, commenting) are ordinary HTTP requests. SSE runs over standard HTTP, works with existing load balancers and HTTP/2, and has built-in reconnection with Last-Event-ID for resumption. WebSockets would add stateful bidirectional infrastructure that the feature doesn't need. On mobile in the background, use push notifications instead.
+</QA>
+
+<QA q="How do you deliver a chat message to a user connected to a different WebSocket server?">
+Maintain a connection registry (user ID → gateway server) in Redis, updated on connect/disconnect, or have gateways subscribe to pub/sub channels for their connected users or conversations. The message service persists the message, then looks up the recipient's gateway (or publishes to the channel), and that gateway pushes it down the socket. If the user is offline, the message stays stored and a push notification is sent; on reconnect, the client syncs from its last acknowledged message ID.
+</QA>
+
+<QA q="What happens when a WebSocket gateway with 200,000 connections crashes, and how do you handle it?">
+All 200K clients disconnect and attempt to reconnect at about the same moment, hitting the remaining gateways and the auth/session services with a spike. Clients should reconnect with exponential backoff plus random jitter to spread the load; the load balancer distributes them across healthy gateways; the registry entries for the dead gateway are cleaned up via heartbeats/TTLs. Because messages are persisted before delivery, clients resync missed messages from their last acknowledged sequence number — nothing is lost.
+</QA>
+
+<QA q="Why might long polling still be used today?">
+It works over plain HTTP request/response through virtually any proxy, firewall or legacy infrastructure, requires no special server or load-balancer support, and is easy to reason about. It's used as a fallback when WebSockets are blocked (libraries like Socket.IO fall back to it) and for moderate-frequency updates where per-message overhead doesn't matter.
+</QA>
+
+<Takeaways>
+
+- Short polling is simple but wasteful; long polling gives near-real-time over plain HTTP.
+- SSE is the simplest option for server-to-client streams, with built-in reconnection.
+- WebSockets provide full-duplex, low-overhead messaging but make connections stateful.
+- Scaling persistent connections is about routing: a connection registry or pub/sub between gateways.
+- Persist first, push second: clients must be able to resync after disconnects.
+
+</Takeaways>
+
+## Further reading
+
+- RFC 6455, "The WebSocket Protocol"; WHATWG HTML Standard — "Server-sent events".
+- Ilya Grigorik, [*High Performance Browser Networking*](https://hpbn.co) — chapters on XHR polling, SSE and WebSocket.
+- Discord Engineering, "How Discord Scaled Elixir to 5,000,000 Concurrent Users" (2017).
+- Related case studies: [Design a Chat System](/system-design/hld/design-chat-system), [Design a Collaborative Editor](/system-design/hld/design-collaborative-editor).

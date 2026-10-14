@@ -1,0 +1,292 @@
+In LLD interviews, concurrency is where good designs separate from great ones. The prompt rarely says "make it thread-safe" — but a parking lot has many gates, a booking system has many users clicking the same seat, a cache serves many threads, a rate limiter is hit concurrently. Interviewers expect you to **spot shared mutable state** and protect it correctly, with the right tool for the job.
+
+This lesson is the Java toolkit, focused on what you'll actually use in machine-coding rounds.
+
+## Why concurrency bugs happen
+
+Three properties must hold for correct concurrent code:
+
+1. **Atomicity** — a compound action (read-check-write) happens as one indivisible step.
+2. **Visibility** — a write by one thread becomes visible to others.
+3. **Ordering** — operations aren't observed in an unexpected order due to compiler/CPU reordering.
+
+The **Java Memory Model** guarantees visibility and ordering only across **happens-before** edges: unlocking a lock happens-before the next lock of it; a write to a `volatile` field happens-before subsequent reads; `Thread.start()` and `join()`; actions in a `final`-field constructor before the object is published safely.
+
+### The classic race: check-then-act
+
+```java
+// ❌ Two gates can both see the spot free and both assign it
+if (spot.isFree()) {
+    spot.assign(vehicle);
+}
+```
+
+### The classic race: read-modify-write
+
+```java
+private int availableSpots;
+void park() { availableSpots--; }      // ❌ load, decrement, store — interleavings lose updates
+```
+
+## The toolkit
+
+### `synchronized` — intrinsic locks
+
+```java
+public final class ParkingFloor {
+    private final List<ParkingSpot> spots;
+
+    public synchronized Optional<ParkingSpot> assignSpot(Vehicle v) {
+        for (ParkingSpot s : spots) {
+            if (s.isFree() && s.fits(v)) {
+                s.occupy(v);                  // check-then-act is now atomic
+                return Optional.of(s);
+            }
+        }
+        return Optional.empty();
+    }
+}
+```
+
+Gives both **mutual exclusion** and **visibility**. Simple and correct; the default choice. Keep critical sections short and never call slow external services (network, payment) while holding a lock.
+
+### `ReentrantLock` — explicit locks
+
+Use when you need features `synchronized` lacks:
+
+```java
+private final ReentrantLock lock = new ReentrantLock(true);   // fair ordering, if needed
+
+public boolean tryBook(SeatId seat, Duration timeout) throws InterruptedException {
+    if (!lock.tryLock(timeout.toMillis(), TimeUnit.MILLISECONDS)) return false;   // don't wait forever
+    try {
+        return doBook(seat);
+    } finally {
+        lock.unlock();                                         // always in finally
+    }
+}
+```
+
+Features: `tryLock` with timeout, interruptible locking, fairness, multiple `Condition`s.
+
+### `ReadWriteLock` — many readers, one writer
+
+```java
+private final ReadWriteLock rw = new ReentrantReadWriteLock();
+private final Map<String, Product> catalog = new HashMap<>();
+
+public Product find(String sku) {
+    rw.readLock().lock();
+    try { return catalog.get(sku); } finally { rw.readLock().unlock(); }
+}
+
+public void update(Product p) {
+    rw.writeLock().lock();
+    try { catalog.put(p.sku(), p); } finally { rw.writeLock().unlock(); }
+}
+```
+
+Good for read-heavy shared state (catalogues, config, routing tables). For very read-heavy data, an immutable snapshot swapped atomically (`AtomicReference<Map<...>>`) is often simpler and faster.
+
+### `volatile` — visibility without atomicity
+
+```java
+private volatile boolean running = true;     // a flag set by one thread, read by others
+public void stop() { running = false; }
+```
+
+`volatile` guarantees visibility and prevents reordering around the variable, but `count++` on a volatile is **still not atomic**. Use it for flags and safe publication of immutable objects.
+
+### Atomic variables — lock-free counters and CAS
+
+```java
+private final AtomicInteger available = new AtomicInteger(100);
+
+public boolean tryTakeSpot() {
+    while (true) {
+        int current = available.get();
+        if (current == 0) return false;
+        if (available.compareAndSet(current, current - 1)) return true;   // CAS retry loop
+    }
+}
+```
+
+`AtomicInteger`, `AtomicLong`, `AtomicReference`, and `LongAdder` (better for heavily contended counters like metrics). **Compare-and-set** is the primitive behind optimistic concurrency.
+
+### Concurrent collections
+
+| Need | Use | Avoid |
+| --- | --- | --- |
+| Shared map | `ConcurrentHashMap` | `Collections.synchronizedMap` (coarse lock), plain `HashMap` |
+| Atomic "get or create" | `map.computeIfAbsent(k, f)` | `if (!map.containsKey(k)) map.put(...)` — race |
+| Atomic update of a value | `map.compute` / `merge` | get → modify → put |
+| Read-mostly list (listeners) | `CopyOnWriteArrayList` | Synchronised list iterated while modified |
+| Producer–consumer queue | `ArrayBlockingQueue`, `LinkedBlockingQueue` | Hand-rolled wait/notify |
+| Sorted concurrent map | `ConcurrentSkipListMap` | `TreeMap` + external lock |
+| Delayed tasks | `DelayQueue`, `ScheduledExecutorService` | Sleep loops |
+
+```java
+// Per-key token buckets for a rate limiter, created atomically on first use
+private final ConcurrentHashMap<String, TokenBucket> buckets = new ConcurrentHashMap<>();
+TokenBucket bucketFor(String key) { return buckets.computeIfAbsent(key, k -> new TokenBucket(capacity, rate)); }
+
+// Atomic counter per key
+counts.merge(userId, 1, Integer::sum);
+```
+
+<Callout type="warning">
+`ConcurrentHashMap` makes **individual operations** atomic — not sequences of them. `if (!map.containsKey(k)) map.put(k, v)` is still a race. Use `putIfAbsent`, `computeIfAbsent`, `compute` or `merge`. Also: don't do slow work or modify the same map inside `compute*` functions — they hold a lock on that bin.
+</Callout>
+
+## Executors instead of raw threads
+
+```java
+ExecutorService pool = Executors.newFixedThreadPool(8);
+Future<Receipt> f = pool.submit(() -> paymentService.charge(order));
+Receipt r = f.get(2, TimeUnit.SECONDS);       // bounded wait
+
+// Java 21: virtual threads — cheap threads for blocking I/O-heavy tasks
+try (var vexec = Executors.newVirtualThreadPerTaskExecutor()) {
+    requests.forEach(req -> vexec.submit(() -> handle(req)));
+}
+
+pool.shutdown();
+```
+
+Prefer executors over `new Thread()`: they manage thread lifecycles, bound concurrency and queue work. `CompletableFuture` composes asynchronous steps (`thenApply`, `thenCombine`, `exceptionally`).
+
+## Producer–consumer
+
+The most common concurrency structure in LLD (logging frameworks, order processing, notification dispatch, pub-sub):
+
+```java
+public final class AsyncLogWriter implements AutoCloseable {
+    private final BlockingQueue<LogEvent> queue = new ArrayBlockingQueue<>(10_000);   // bounded!
+    private final Thread worker;
+    private volatile boolean running = true;
+
+    public AsyncLogWriter(Appender appender) {
+        worker = new Thread(() -> {
+            try {
+                while (running || !queue.isEmpty()) {
+                    LogEvent e = queue.poll(100, TimeUnit.MILLISECONDS);
+                    if (e != null) appender.append(e);
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+        }, "async-log-writer");
+        worker.start();
+    }
+
+    public boolean log(LogEvent e) { return queue.offer(e); }   // non-blocking; false if full (drop policy)
+
+    @Override public void close() throws InterruptedException {
+        running = false;
+        worker.join();                                          // drain remaining events
+    }
+}
+```
+
+Design choices to state out loud: **bounded** queue (back-pressure instead of OOM), what to do when full (block, drop, drop oldest), and graceful **shutdown** that drains the queue.
+
+## Deadlock
+
+Four conditions must all hold (Coffman): mutual exclusion, hold-and-wait, no preemption, circular wait. Break one:
+
+```java
+// ❌ Thread 1 transfers A→B (locks A then B); thread 2 transfers B→A (locks B then A) → deadlock
+// ✅ Always lock in a global order, e.g., by account id
+void transfer(Account a, Account b, long amount) {
+    Account first = a.id().compareTo(b.id()) < 0 ? a : b;
+    Account second = first == a ? b : a;
+    synchronized (first) {
+        synchronized (second) {
+            a.debit(amount);
+            b.credit(amount);
+        }
+    }
+}
+```
+
+Other remedies: `tryLock` with timeout and back off; lock fewer things; avoid calling alien methods (callbacks, listeners) while holding a lock.
+
+Related liveness problems: **livelock** (threads keep reacting to each other without progress), **starvation** (a thread never gets the lock — fair locks help).
+
+## Strategies, from simplest to most scalable
+
+1. **Confinement** — don't share. Each request/thread owns its objects.
+2. **Immutability** — share freely; no locks needed. Prefer immutable value objects.
+3. **Thread-safe building blocks** — `ConcurrentHashMap`, atomics, blocking queues.
+4. **Coarse-grained locking** — one lock for a whole aggregate (e.g., a parking floor). Easy to get right.
+5. **Fine-grained locking** — a lock per spot/seat. More throughput, more deadlock risk.
+6. **Optimistic concurrency** — version numbers + CAS; retry on conflict. Great when contention is low.
+7. **Single-writer / actor** — route all updates for an entity to one thread or queue (partitioned by key), eliminating locks for that entity.
+
+<Callout type="interview">
+Name the shared state and the race, then the fix: "Two entry gates can call `assignSpot` simultaneously and both see the same spot free — a check-then-act race. I'll make allocation atomic per floor with a lock (or a CAS on the spot's status), and keep the critical section to the in-memory update only." That sentence is worth a lot.
+</Callout>
+
+## Testing concurrent code
+
+- Use an `ExecutorService` and a `CountDownLatch` to start many threads at the same moment and assert invariants afterwards (e.g., no spot assigned twice, counter equals the number of increments).
+- Run the test many times; races are probabilistic.
+- Tools: `jcstress` for low-level concurrency testing, thread dumps (`jstack`) for deadlocks.
+
+```java
+@Test void noSpotAssignedTwice() throws Exception {
+    var lot = new ParkingLot(/* 50 spots */);
+    var start = new CountDownLatch(1);
+    var pool = Executors.newFixedThreadPool(16);
+    List<Future<Optional<Ticket>>> results = new ArrayList<>();
+    for (int i = 0; i < 200; i++) {
+        int n = i;
+        results.add(pool.submit(() -> { start.await(); return lot.park(new Car("KA-" + n)); }));
+    }
+    start.countDown();
+    Set<SpotId> assigned = new HashSet<>();
+    for (var f : results) f.get().ifPresent(t -> assertTrue(assigned.add(t.spotId())));
+    assertEquals(50, assigned.size());
+}
+```
+
+## Interview questions
+
+<QA q="What's the difference between synchronized and volatile?">
+synchronized provides mutual exclusion and visibility: only one thread executes the block for a given lock, and changes made inside are visible to the next thread acquiring the lock. volatile provides only visibility and ordering for a single variable — reads see the latest write — but no atomicity, so compound actions like count++ or check-then-act remain racy. Use volatile for flags and safe publication, locks or atomics for compound updates.
+</QA>
+
+<QA q="How would you make seat booking safe when thousands of users click the same seat?">
+Make the claim an atomic conditional transition on the seat: a compare-and-set from AVAILABLE to HELD with a hold id and expiry (AtomicReference or a lock per show), or a conditional update in the database. Only one request succeeds; others get "seat unavailable". Keep the critical section to the state change, perform payment outside the lock, and release or expire holds if payment doesn't complete.
+</QA>
+
+<QA q="Why use ConcurrentHashMap.computeIfAbsent instead of get and put?">
+get-then-put is a check-then-act sequence: two threads can both see the key missing and both create and put values, with one overwriting the other (and possibly both being used). computeIfAbsent performs the check and insertion atomically for that key, so the creation function runs at most once and every caller receives the same value.
+</QA>
+
+<QA q="How do you prevent deadlocks?">
+Break one of the necessary conditions — most practically circular wait — by acquiring multiple locks in a consistent global order (for example by ID). Alternatively use tryLock with timeouts and back off, hold fewer locks for shorter times, avoid calling unknown code (callbacks, listeners) while holding locks, and prefer designs that don't need multiple locks at once (single-writer queues, immutability).
+</QA>
+
+<Practice task="Find the bugs: a Counter with a plain int count incremented by inc() using count++, a plain boolean done set by finish(), and await() that loops while (!done) with an empty body. Fix each one.">
+
+`count++` is a read-modify-write race — use an `AtomicInteger` (or `LongAdder` under heavy contention), or `synchronized`. `done` isn't `volatile`, so the waiting thread may never see the write (the JIT can even hoist the read out of the loop) — make it `volatile`. `await()` busy-spins and burns a CPU core — use a `CountDownLatch` with a count of 1 (`finish` counts down, `await` waits), which also provides the happens-before edge.
+
+</Practice>
+
+<Takeaways>
+
+- Identify shared mutable state and its races: check-then-act and read-modify-write.
+- synchronized/locks give atomicity and visibility; volatile gives visibility only; atomics give lock-free single-variable updates.
+- Use ConcurrentHashMap's atomic compound methods, blocking queues for producer–consumer, executors for threads.
+- Avoid deadlocks with consistent lock ordering and short critical sections.
+- Prefer confinement and immutability; lock only what must be shared.
+
+</Takeaways>
+
+## Further reading
+
+- Brian Goetz et al., *Java Concurrency in Practice* (2006) — still the definitive guide.
+- Java Language Specification, chapter 17 — the Java Memory Model.
+- JEP 444 — Virtual Threads (Java 21).
+- Next: [Writing Interview-Grade Code](/system-design/lld/interview-grade-code).

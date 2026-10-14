@@ -1,0 +1,180 @@
+After enough case studies, a pattern emerges: almost every design question is a combination of the same **ten problem shapes**, each with a standard set of answers. Recognising the shape in the first few minutes of an interview tells you where the difficulty lies and which deep dives to offer. This lesson is the bridge from concepts to fluent design.
+
+## The ten patterns at a glance
+
+| # | Pattern | Signal in the question | Standard answer | Seen in |
+| --- | --- | --- | --- | --- |
+| 1 | Scaling reads | Read:write ≫ 10:1, hot content | Cache layers, read replicas, CDN, precomputation | URL shortener, news feed, typeahead |
+| 2 | Scaling writes | Huge ingest, write-heavy | Sharding, LSM stores, batching, async queues | Ad clicks, chat, ride-hailing locations |
+| 3 | Contention on shared resources | "Last seat", "limited stock", "one driver" | Atomic conditional writes, locks/OCC, queue admission | Ticket booking, ride-hailing, payments |
+| 4 | Real-time updates | "Live", "instantly", "see others" | WebSocket/SSE + pub/sub routing | Chat, editor, ride tracking |
+| 5 | Long-running / async work | "Process", "transcode", "send" | Queue + workers + job status + retries | Video, notifications, crawler |
+| 6 | Large blobs | Files, images, video | Object storage, presigned & multipart uploads, CDN | File storage, video |
+| 7 | Fan-out | One event → many recipients | Push vs pull hybrid | News feed, notifications, chat groups |
+| 8 | Multi-step consistency | Steps across services/providers | Saga, outbox, idempotency keys | Payments, booking, orders |
+| 9 | Search & proximity | "Find", "nearby", "autocomplete" | Inverted index, geo index, precomputed top-k | Typeahead, ride-hailing |
+| 10 | Counting & aggregation | "How many", "top", "trending" | Stream aggregation, sketches, sharded counters | Ad clicks, typeahead trending, view counts |
+
+## 1. Scaling reads
+
+**Recognise it:** a large read:write ratio, a small hot set, tolerance for slight staleness.
+
+**Toolkit, in order of escalation:**
+
+1. **Indexes and query fixes** on the primary — cheapest win.
+2. **Cache-aside** (Redis) with TTL + invalidation on write; protect against stampedes.
+3. **Read replicas** — mind replication lag; route the author's own reads to the primary.
+4. **CDN / edge caching** for anything public.
+5. **Precompute** expensive results (feeds, top-k lists, materialised views, CQRS read models).
+
+**Pitfalls:** hot keys on one cache shard (replicate hot keys, local L1 cache); cache invalidation races; forgetting read-your-writes.
+
+## 2. Scaling writes
+
+**Recognise it:** ingest rates beyond one primary (tens of thousands of writes/s), or data beyond one machine.
+
+**Toolkit:**
+
+- **Shard** by a key that spreads load and aligns with queries.
+- **Write-optimised storage** (LSM: Cassandra, ScyllaDB, RocksDB).
+- **Batch and buffer** — aggregate increments in memory or a stream processor and write in batches.
+- **Queue in front** to absorb bursts (load levelling), then write at a sustainable rate.
+- **Keep transient high-frequency data in memory** (driver locations) and persist asynchronously.
+
+**Pitfalls:** hot partitions (salt keys, split), losing buffered data on crash (use a durable log), cross-shard queries.
+
+## 3. Contention on shared resources
+
+**Recognise it:** many actors competing for the same scarce thing; any double allocation is a serious bug.
+
+**Toolkit:**
+
+- **Atomic conditional writes**: `UPDATE … WHERE status = 'AVAILABLE'`, compare-and-set, unique constraints.
+- **Pessimistic locks** for very hot rows; **optimistic concurrency** (version checks) when conflicts are rare.
+- **Holds with expiry** (reserve → confirm or release).
+- **Single owner / serialisation**: route all requests for one resource to one partition or actor.
+- **Admission control** for extreme spikes (virtual waiting rooms, queues).
+
+**Pitfalls:** check-then-act races; distributed locks without fencing; holding locks across slow external calls.
+
+## 4. Real-time updates
+
+**Recognise it:** users must see changes made by others within a second.
+
+**Toolkit:**
+
+- Pick the transport: **SSE** (server → client), **WebSockets** (bidirectional), long polling (fallback).
+- Stateless business services + **stateful connection gateways**.
+- Route messages to the right gateway: **connection registry** or **pub/sub** channels per user/room/document.
+- **Persist first, push second**; clients resync from a cursor after reconnecting.
+
+**Pitfalls:** reconnection storms (backoff + jitter), presence fan-out costs, ordering (use per-entity sequence numbers).
+
+## 5. Long-running and asynchronous work
+
+**Recognise it:** work takes longer than a user should wait, or depends on slow external systems.
+
+**Toolkit:**
+
+- Accept the request, return **202 + job/status ID**, process asynchronously.
+- **Queue + autoscaled workers**; idempotent tasks; retries with backoff; dead-letter queue.
+- **Workflow/orchestration** for multi-step pipelines (DAGs, Temporal/Step Functions).
+- Notify completion via polling, webhooks, SSE or push.
+- Split big jobs into **chunks** processed in parallel.
+
+**Pitfalls:** duplicate processing (idempotency), poison messages, lost work on crash (ack after processing), unbounded queues.
+
+## 6. Large blobs
+
+**Recognise it:** files, images, video, backups, anything over a few hundred KB.
+
+**Toolkit:** object storage + metadata in a database; **presigned URLs** for direct upload/download; **multipart and resumable** uploads; content-addressed keys and chunking for dedup/delta sync; **CDN** for delivery; async post-processing triggered by storage events.
+
+**Pitfalls:** proxying bytes through app servers, storing blobs in the database, trusting the client's "upload done".
+
+## 7. Fan-out
+
+**Recognise it:** one action must reach many recipients (followers, group members, subscribers).
+
+**Toolkit:**
+
+- **Fan-out on write (push)** for normal cases → fast reads.
+- **Fan-out on read (pull)** for very large audiences (celebrities, huge channels) → cheap writes.
+- **Hybrid** with thresholds; skip inactive recipients; deliver IDs and hydrate later.
+- Do fan-out **asynchronously** via queues, prioritised by recipient activity.
+
+**Pitfalls:** write amplification for huge audiences; wasted work for inactive users; ordering across fan-out paths.
+
+## 8. Multi-step consistency across services
+
+**Recognise it:** a business operation spans services or external providers that can fail independently.
+
+**Toolkit:**
+
+- **Saga** (orchestrated for complex flows) with **compensations**; durable workflow engines.
+- **Transactional outbox** / CDC for reliable event publishing.
+- **Idempotency keys** at every boundary; explicit state machines with an "unknown" state for timeouts.
+- **Reconciliation** jobs against external sources of truth.
+- Prefer redrawing boundaries so data that must change atomically lives together.
+
+**Pitfalls:** dual writes; 2PC across microservices; retries that double-charge; irreversible steps scheduled before reversible ones.
+
+## 9. Search and proximity
+
+**Recognise it:** queries by text, prefix or location rather than by key.
+
+**Toolkit:** inverted index (Elasticsearch/OpenSearch) fed by CDC; geo indexes (geohash, quadtree, S2/H3, Redis GEO); precomputed top-k per prefix for autocomplete; rank in stages (cheap candidate retrieval → expensive re-ranking on a few).
+
+**Pitfalls:** treating the search index as the source of truth; LIKE '%term%' scans; geohash boundary misses (query neighbours).
+
+## 10. Counting and aggregation
+
+**Recognise it:** counts, uniques, top-K, trending, dashboards over high-volume events.
+
+**Toolkit:**
+
+- **Stream aggregation** in event-time windows (Flink/Kafka Streams) → OLAP store.
+- **Sketches**: HyperLogLog (uniques), Count-Min + heap (top-K), Bloom filters (seen?).
+- **Sharded counters** or buffered increments for hot counters (likes, views).
+- **Batch recomputation + reconciliation** when numbers must be exact (billing).
+
+**Pitfalls:** hot-row increments, processing-time windows, double counting without dedup IDs.
+
+## Cross-cutting checklist for any design
+
+Before you finish, run through:
+
+- [ ] **Single points of failure** — every component redundant?
+- [ ] **Idempotency** — every retried write safe?
+- [ ] **Hot keys / skew** — celebrity, viral item, big tenant?
+- [ ] **Consistency choice per data type** — where strong, where eventual, where read-your-writes?
+- [ ] **Back-pressure** — what happens at 10× traffic? Queues bounded? Rate limits?
+- [ ] **Failure walk-through** — cache down, DB failover, dependency slow, region down.
+- [ ] **Observability** — SLOs and the system-specific metrics (lag, hit ratio, queue depth).
+- [ ] **Security** — authN at the edge, object-level authZ, encryption, abuse controls.
+- [ ] **Cost** — the dominant cost driver (egress, storage, compute) and how you'd reduce it.
+
+## Interview questions
+
+<QA q="You're asked to design a 'live leaderboard for a mobile game with 50M players'. Which patterns apply?">
+Scaling writes (millions of score updates — buffer and batch, shard), counting and aggregation (top-K — Redis sorted sets per leaderboard, sharded with a merge step for global top-K, or approximate top-K with sketches for extreme scale), scaling reads (cache the top-100 page heavily since everyone views it), and real-time updates (push rank changes to players currently viewing via SSE/WebSockets). Contention is minimal since each player updates only their own score.
+</QA>
+
+<QA q="How do you use these patterns in the first five minutes of an interview?">
+While clarifying requirements and estimating, map the problem to its dominant patterns — e.g., "this is read-heavy with fan-out and a celebrity problem" or "this is a contention problem with spikes". Say so explicitly, design the end-to-end path, and then propose deep dives on exactly those patterns. It focuses your time on what's hard and shows the interviewer you recognise the problem's shape.
+</QA>
+
+<Takeaways>
+
+- Most design questions combine a handful of recurring problem shapes.
+- Identify the dominant patterns early; they tell you where to spend your deep-dive time.
+- Each pattern has a standard toolkit and known pitfalls — know both.
+- Finish every design with the cross-cutting checklist: SPOFs, idempotency, hot keys, consistency, back-pressure, failures, observability, security, cost.
+
+</Takeaways>
+
+## Further reading
+
+- Martin Kleppmann, *Designing Data-Intensive Applications* — the conceptual foundation for every pattern above.
+- Alex Xu, *System Design Interview*, Vols. 1 and 2 — many worked case studies to practise pattern recognition.
+- Related: [HLD Cheat Sheet](/system-design/hld/hld-cheat-sheet), [The HLD Interview Framework](/system-design/hld/hld-interview-framework).

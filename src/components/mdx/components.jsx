@@ -1,0 +1,62 @@
+import { Link } from 'react-router';
+import { Callout } from './Callout';
+import { Takeaways } from './Takeaways';
+import { QA } from './QA';
+import { Mermaid } from './Mermaid';
+import { HashRing } from './HashRing';
+import { Related } from './Related';
+import { Practice } from './Practice';
+
+/** ```mermaid fences become diagrams; every other <pre> renders normally. */
+function Pre({ children, ...rest }) {
+  const code = children?.props;
+  if (code?.className === 'language-mermaid') {
+    return <Mermaid chart={String(code.children)} />;
+  }
+  return <pre {...rest}>{children}</pre>;
+}
+
+function Table(props) {
+  return (
+    <div className="table-wrap">
+      <table {...props} />
+    </div>
+  );
+}
+
+/** Internal links use the router; external links open in a new tab. */
+function Anchor({ href = '', children, ...rest }) {
+  if (href.startsWith('/')) {
+    return (
+      <Link to={href} {...rest}>
+        {children}
+      </Link>
+    );
+  }
+  if (href.startsWith('#')) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
+      {children}
+    </a>
+  );
+}
+
+/** Everything a lesson can use without importing it. */
+export const mdxComponents = {
+  pre: Pre,
+  table: Table,
+  a: Anchor,
+  Callout,
+  Takeaways,
+  QA,
+  Mermaid,
+  HashRing,
+  Related,
+  Practice,
+};

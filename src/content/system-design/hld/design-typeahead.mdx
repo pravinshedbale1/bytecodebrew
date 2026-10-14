@@ -1,0 +1,188 @@
+<Related ids={['caching', 'cdn', 'batch-and-stream-processing', 'probabilistic-data-structures', 'search-systems', 'sharding']} />
+
+Design search autocomplete (typeahead): as a user types "how to", suggest the top completions — "how to tie a tie", "how to lose weight" — ranked by popularity, within the time between keystrokes. It's a classic because the latency budget is brutal, the read volume is enormous, and the elegant answer is **precomputation**.
+
+## 1. Clarify the problem
+
+| Question | Assumption |
+| --- | --- |
+| What do we suggest? | Popular complete queries matching the typed **prefix** |
+| How many suggestions? | Top 10 |
+| Ranking? | Popularity (search frequency), with recency weighting; personalisation optional |
+| Freshness? | Trending queries should appear within ~15 minutes; the long tail can update daily |
+| Scale? | 1B searches/day; average query ~4 words, ~20 characters |
+| Languages? | English first; design shouldn't preclude others |
+| Filtering? | Must remove offensive/unsafe suggestions |
+
+## 2. Requirements
+
+**Functional:** return top-k suggestions for a prefix; update rankings from search logs; support blocklisting.
+
+**Non-functional:**
+
+- **Latency** — suggestions should render within ~100 ms of a keystroke end to end, so the server budget is a few tens of milliseconds.
+- **High availability** — degrade gracefully (show nothing) rather than error.
+- **Scale** — very high read QPS.
+
+## 3. Capacity estimation
+
+```text
+Searches: 1B/day. Each search triggers a request per keystroke after debounce — say ~10 requests/search
+Autocomplete requests: 10B/day ÷ 10^5 ≈ 100K/s average, ~300K/s peak
+
+Unique queries in the corpus: ~1B; keep the top ~100M by popularity for suggestions
+Prefixes: each query of ~20 chars has ~20 prefixes, but they share heavily;
+store top-10 completions per prefix for prefixes up to ~20 chars
+
+Rough size: ~1B distinct prefixes × top-10 entries × ~30 B ≈ 300 GB (before compression/pruning)
+→ prune rare prefixes (min count) and shard; hot prefixes (1–3 chars) are a tiny set served from cache/edge
+```
+
+**So:** reads dominate completely. Precompute top-k per prefix offline so serving is a single lookup; shard the long tail; cache short prefixes everywhere.
+
+## 4. API
+
+```text
+GET /v1/suggest?q=how%20to&limit=10&locale=en-IN
+→ 200 { "prefix": "how to", "suggestions": ["how to tie a tie", "how to lose weight", …] }
+Cache-Control: public, max-age=300     (non-personalised)
+```
+
+## 5. Data model
+
+The core structure is a **trie** (prefix tree), where each node represents a prefix:
+
+```mermaid
+flowchart TB
+  R(("root")) --> H["h"]
+  H --> HO["ho"]
+  HO --> HOW["how<br/>top: how to tie a tie, how old is…, how to lose weight"]
+  HOW --> HOWT["how t…<br/>top: how to tie a tie, how to lose weight, how to draw"]
+  HO --> HOT["hot<br/>top: hotels near me, hotstar, hot wheels"]
+```
+
+Naively, getting the top 10 for a prefix means traversing every completion beneath the node — far too slow for short prefixes with millions of descendants. The key optimisation: **store the precomputed top-k completions at every node**. A lookup becomes "walk to the prefix node, return its list" — O(length of prefix).
+
+**Why precompute?** Without it, a lookup costs O(p) to find the prefix node, O(c) to walk its c descendants, and O(c log c) to sort them — and c can be millions for a one-letter prefix. Capping prefix length (users rarely type more than ~50 characters) and storing the top-k at each node reduce both steps to effectively O(1), at the cost of memory.
+
+For serving at scale, the trie is usually **flattened into a key-value map**: `prefix → [top 10 completions with scores]`, which shards and caches trivially.
+
+## 6. High-level design
+
+```mermaid
+flowchart LR
+  subgraph Serving["Serving path (online)"]
+    C[Client] --> CDN["CDN / edge cache"]
+    CDN --> LB[Load balancer]
+    LB --> SS["Suggest service<br/>(in-memory shard of prefix map)"]
+  end
+  subgraph Building["Data path (offline + near-real-time)"]
+    SL["Search service logs"] --> K[["Kafka: queries"]]
+    K --> B["Batch job (daily)<br/>counts with time decay"]
+    K --> ST["Stream job (minutes)<br/>trending counts"]
+    B --> BUILD["Index builder<br/>top-k per prefix, filters"]
+    ST --> BUILD
+    BUILD --> SNAP[("Versioned snapshots<br/>in object storage")]
+  end
+  SNAP -. load / hot swap .-> SS
+```
+
+**Serving:** client debounces keystrokes (e.g., 100–150 ms), requests the prefix; the CDN serves popular prefixes; misses go to a suggest server that holds its shard of the prefix map **in memory** and returns the list.
+
+**Building:** search events flow to Kafka. A daily batch job computes query frequencies over a window with **time decay** (recent searches count more), removes blocklisted and low-quality queries, and builds top-k per prefix. A streaming job counts recent queries per 5–15 minutes to detect **trending** queries and merges them in. The builder writes immutable, versioned snapshots; servers load the new version and atomically swap.
+
+## 7. Deep dives
+
+### Sharding the prefix map
+
+- **By prefix range** (first characters): simple, but skewed — far more queries start with "s" than "x". Split ranges by observed **load**, not alphabet, using a shard map.
+- **By hash of prefix**: even distribution; each request touches exactly one shard since lookup is by the full prefix string.
+- Short prefixes (1–2 chars) are extremely hot but few — replicate them to **every** server and cache them at the edge.
+
+Each shard is **replicated** for availability and read throughput.
+
+### Freshness without rebuilding everything
+
+Full rebuilds are batch (daily). For trending queries:
+
+- The stream job maintains counts over a sliding window per query (Count-Min Sketch + heap for heavy hitters).
+- Trending entries are pushed as **deltas** to suggest servers, which merge them into the top-k lists for affected prefixes (only the ~20 prefixes of each trending query).
+- Or run a small, separate "trending index" and merge results at query time.
+
+**Updating in place is expensive.** If one query's count changes, every ancestor node's top-k list may change too ("beer" rising affects "b", "be", "bee", "beer"). That's why most designs rebuild periodically and swap snapshots, applying in-place deltas only for a small trending set. The log pipeline can also **sample** queries (log 1 in N) to cut processing cost, since rankings only need relative frequencies.
+
+### Ranking
+
+Score = f(frequency with decay, freshness boost, click-through rate of the suggestion, language/locale match). **Personalisation** (the user's own recent searches) is merged client- or server-side from a small per-user store — and makes responses uncacheable at the CDN, so keep the global list cacheable and add personal entries separately.
+
+### Client-side optimisations
+
+- **Debounce** keystrokes and cancel in-flight requests when a new one starts.
+- **Cache** results per prefix on the client; as the user types "how t" after "how", filter the cached list locally first.
+- **Prefetch** for likely next prefixes.
+- Show results only if they still match the current input (responses can arrive out of order).
+- Use **HTTP caching** in the browser: Google, for example, has served suggestions with `Cache-Control: private, max-age=3600` — cached per user for an hour, never by shared caches. Non-personalised lists can additionally be edge-cached as `public`.
+
+### Locale and language
+
+Different countries search for different things — build **separate tries per locale/market** (and serve them from nearby regions or the edge). For non-English languages, store Unicode characters in the trie and apply locale-aware normalisation (case folding, diacritics, transliteration).
+
+### Safety and quality filters
+
+Apply blocklists (offensive, violent, adult terms), legal removals and spam detection at build time, plus a fast **real-time kill switch** that removes a suggestion from all servers within minutes. Require a minimum count/unique-user threshold so a single user can't inject a suggestion.
+
+## 8. Failure modes
+
+| Failure | Mitigation |
+| --- | --- |
+| Suggest shard down | Replicas behind the load balancer; client shows no suggestions rather than an error |
+| Bad snapshot (corrupt or offensive) | Validate before publish; canary load on a few servers; instant rollback to previous version |
+| Pipeline delayed | Serving continues with the last good snapshot; only freshness suffers |
+| Traffic spike on a trending prefix | Edge caching + replicated hot prefixes |
+
+## 9. Trade-offs summary
+
+| Decision | Choice | Alternative | Why |
+| --- | --- | --- | --- |
+| Compute top-k | Precompute per prefix offline | Traverse trie at query time | Latency budget |
+| Storage | In-memory prefix map, sharded | Database lookups | Sub-ms lookups |
+| Updates | Versioned snapshots + streaming deltas | Mutate in place | Consistency, safe rollback |
+| Caching | CDN for global lists | No edge cache | Removes most traffic |
+
+## 10. What interviewers look for
+
+- **Mid-level**: a trie, the idea of storing top-k at nodes, caching.
+- **Senior**: offline build vs online serving separation, sharding with skew, freshness via streaming, client debouncing, filtering.
+- **Staff**: ranking signals and personalisation vs cacheability, multi-language, safe deployment of index versions, cost of storage.
+
+## Interview questions
+
+<QA q="Why store the top-k at each trie node instead of computing it on the fly?">
+For short prefixes the subtree can contain millions of completions; traversing and sorting them on every keystroke would take far too long. Precomputing the top-k at each node during the offline build turns a query into a walk of a few characters plus returning a stored list. The cost is extra memory and more work at build time, and updates must recompute lists along each affected query's prefixes.
+</QA>
+
+<QA q="How would you make a breaking-news query appear in suggestions within minutes?">
+Run a streaming job over the query log that maintains short-window counts (e.g., 5–15 minutes) and detects queries whose rate spikes relative to their baseline. Push those as deltas to suggest servers, which update the top-k lists of the query's prefixes, or serve them from a small trending index merged at query time. Apply the same safety filters and minimum unique-user thresholds before promoting them.
+</QA>
+
+<QA q="Personalised suggestions break CDN caching. How do you handle that?">
+Split the response: the global top-k for a prefix is identical for everyone and stays cacheable at the CDN; personal suggestions (the user's recent searches) come from a small per-user store, fetched once per session or kept on the device, and are merged on the client. This preserves cache hit rates while adding personalisation.
+</QA>
+
+<Takeaways>
+
+- Autocomplete is extremely read-heavy with a tight latency budget: precompute, don't compute.
+- Store top-k completions at each trie node, or flatten to a prefix → top-k map.
+- Separate the offline build pipeline (batch + streaming) from the in-memory serving tier; swap versioned snapshots.
+- Shard by load-aware prefix ranges or hash; replicate and edge-cache hot short prefixes.
+- Debounce and cache on the client; filter unsafe suggestions at build time with a real-time kill switch.
+
+</Takeaways>
+
+## Further reading
+
+- Alex Xu, *System Design Interview*, Vol. 1 — ch. 13, "Design a Search Autocomplete System".
+- Bast and Weber, "Type Less, Find More: Fast Autocompletion Search with a Succinct Index" (SIGIR 2006).
+- Related: [Search & Inverted Indexes](/system-design/hld/search-systems), [Probabilistic Data Structures](/system-design/hld/probabilistic-data-structures).
+- Facebook Engineering, "The Life of a Typeahead Query" (2010).
+- Ramabhadran et al., "Prefix Hash Tree: An Indexing Data Structure over Distributed Hash Tables" (PODC 2004).

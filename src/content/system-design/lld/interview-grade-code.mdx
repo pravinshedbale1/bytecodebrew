@@ -1,0 +1,183 @@
+In a machine-coding round, two candidates can implement the same design and get opposite results. The difference is **code quality**: structure, naming, validation, error handling, testability — the things a reviewer notices in the first 60 seconds of reading your code. This lesson is a checklist of habits that make code read as senior.
+
+## Structure the project
+
+```text
+src/main/java/com/example/parking/
+├── model/          Vehicle, VehicleType, ParkingSpot, Ticket, Money        (entities, value objects, enums)
+├── strategy/       PricingStrategy, HourlyPricing, AllocationStrategy       (variation points)
+├── repository/     TicketRepository, InMemoryTicketRepository              (storage behind interfaces)
+├── service/        ParkingService                                           (use cases / orchestration)
+├── exception/      ParkingFullException, InvalidTicketException
+└── ParkingDemo.java                                                         (wiring + runnable scenario)
+```
+
+Even in a single-file IDE session, grouping classes this way signals layered thinking. **Wiring happens in one place** (the demo/main), where concrete implementations are chosen and injected.
+
+## Model the domain precisely
+
+**Value objects over primitives** ("primitive obsession" is a common smell):
+
+```java
+// ❌ What currency? Paise or rupees? Can it be negative?
+long fee;
+
+// ✅ Rules live with the type
+public record Money(long minorUnits, Currency currency) {
+    public Money {
+        if (minorUnits < 0) throw new IllegalArgumentException("Money cannot be negative");
+        Objects.requireNonNull(currency);
+    }
+    public Money plus(Money o) { requireSameCurrency(o); return new Money(minorUnits + o.minorUnits, currency); }
+}
+```
+
+Other good value objects: `TicketId`, `EmailAddress`, `DateRange`, `Coordinate`, `SeatNumber`. They make method signatures self-documenting (`book(ShowId, Set<SeatId>, UserId)` instead of `book(String, List<String>, String)`).
+
+**Enums for closed sets** (vehicle types, statuses, directions) — with fields and behaviour if useful:
+
+```java
+public enum VehicleType {
+    BIKE(SpotSize.SMALL), CAR(SpotSize.MEDIUM), TRUCK(SpotSize.LARGE);
+    private final SpotSize requiredSpot;
+    VehicleType(SpotSize s) { this.requiredSpot = s; }
+    public SpotSize requiredSpot() { return requiredSpot; }
+}
+```
+
+**Make illegal states unrepresentable**: a `Ticket` is created only with a vehicle, a spot and an entry time; there's no setter to remove them. A `Booking` can only move between statuses via validated transitions.
+
+## Validate at the boundary, fail fast
+
+```java
+public Ticket park(Vehicle vehicle, GateId gate) {
+    Objects.requireNonNull(vehicle, "vehicle");
+    if (ticketRepository.hasActiveTicket(vehicle.plate()))
+        throw new DuplicateEntryException(vehicle.plate());
+    ...
+}
+```
+
+- Check arguments at public entry points with clear messages.
+- Use **specific exception types** from a small domain hierarchy:
+
+```java
+public class ParkingException extends RuntimeException {
+    public ParkingException(String msg) { super(msg); }
+}
+public final class ParkingFullException extends ParkingException {
+    public ParkingFullException(VehicleType t) { super("No free spot for " + t); }
+}
+```
+
+- Use `Optional` for "may be absent" **return values** (`findTicket`), not for fields or parameters.
+- Don't swallow exceptions (`catch (Exception e) {}`) and don't use exceptions for normal control flow.
+- Decide: is "lot full" exceptional, or a normal outcome? Returning `Optional<Ticket>` or a result type is often clearer than throwing for expected business outcomes.
+
+## Keep classes and methods small and honest
+
+- **Single responsibility**: `ParkingService` orchestrates; `PricingStrategy` prices; `SpotAllocator` allocates; repositories store.
+- **Methods do one thing** at one level of abstraction. A 60-line method with nested loops and `if`s is a red flag — extract well-named helpers.
+- **Names reveal intent**: `findNearestFreeSpot(type)` not `get(type)`; `isOverdue(today)` not `check()`.
+- **No god class / no "Manager" dumping ground.**
+- **Avoid boolean parameters** that switch behaviour (`createUser(name, true)`) — use two methods or an enum.
+
+## Depend on abstractions; inject dependencies
+
+```java
+public final class ParkingService {
+    private final SpotAllocator allocator;
+    private final PricingStrategy pricing;
+    private final TicketRepository tickets;
+    private final Clock clock;                      // inject time → deterministic tests
+
+    public ParkingService(SpotAllocator allocator, PricingStrategy pricing,
+                          TicketRepository tickets, Clock clock) {
+        this.allocator = allocator; this.pricing = pricing; this.tickets = tickets; this.clock = clock;
+    }
+}
+```
+
+- **Inject a `Clock`** (or a time supplier) instead of calling `Instant.now()` — the single biggest testability win for pricing, expiry and scheduling logic.
+- Inject random number generators and ID generators for the same reason.
+- Repository interfaces with in-memory implementations make the "database" swappable.
+
+## Immutability and defensive copies
+
+- Make value objects and events immutable (`record`, `final` fields).
+- Return unmodifiable views/copies of internal collections (`List.copyOf`, `Collections.unmodifiableList`).
+- Don't expose setters for fields that shouldn't change after construction.
+
+## Thread safety where it matters
+
+If the problem has concurrent actors (gates, users, workers), identify shared state and protect it — see [Concurrency for LLD](/system-design/lld/concurrency-for-lld). If not, say explicitly: "this is single-threaded for now; here's what I'd change for concurrent gates."
+
+## Demonstrate it works
+
+- A `main`/demo that runs the **happy path** and a couple of **edge cases** (lot full, invalid ticket), printing readable output.
+- If time allows, a few unit tests for the core logic (pricing, state transitions, split calculations). Tests also prove that your dependencies were injectable.
+
+```java
+@Test void chargesMinimumOneHour() {
+    var clock = Clock.fixed(Instant.parse("2026-10-15T10:30:00Z"), ZoneOffset.UTC);
+    var pricing = new HourlyPricing(Map.of(VehicleType.CAR, Money.inr(40)));
+    var ticket = new Ticket(TicketId.of("T1"), car, spot, Instant.parse("2026-10-15T10:10:00Z"));
+    assertEquals(Money.inr(40), pricing.price(ticket, clock.instant()));
+}
+```
+
+## Common anti-patterns reviewers flag
+
+| Anti-pattern | Symptom | Fix |
+| --- | --- | --- |
+| God class | One class does everything | Split by responsibility |
+| Type switches everywhere | `if (type == CAR) ... else if (type == BIKE)` repeated | Polymorphism / strategy / enum behaviour |
+| Primitive obsession | `String` IDs, `long` money, `int` status codes | Value objects and enums |
+| Anemic + scattered logic | Entities are bags of getters/setters; rules live in services | Put behaviour with the data (tell, don't ask) |
+| Static everything | Utility classes with state, singletons accessed globally | Instances + dependency injection |
+| Hidden time/randomness | `Instant.now()`, `new Random()` buried in logic | Inject `Clock`, `Random`, ID generators |
+| Leaky collections | Getters return internal mutable lists | Unmodifiable views or copies |
+| Pattern stuffing | Patterns without a problem to solve | Add patterns only at real variation points |
+| Swallowed exceptions | `catch (Exception e) {}` | Specific exceptions, handled or propagated |
+
+## Time management in the round
+
+1. Requirements and entities — 10 min.
+2. Interfaces and class skeletons — 10 min.
+3. Core flow end to end — 40 min (get it running early, even if simple).
+4. Edge cases, validation, concurrency — 15 min.
+5. Extensions and a quick test — remaining time.
+
+Commit to **working code first**. An elegant design that doesn't run scores lower than a clean, working core with clear extension points.
+
+## Interview questions
+
+<QA q="Why inject a Clock instead of calling Instant.now()?">
+Code that reads the system clock directly is non-deterministic and hard to test — you can't easily test pricing at 10:59 vs 11:01, expiry after 15 minutes, or weekend rules. Injecting a java.time.Clock (or a time supplier) lets production use the system clock while tests use Clock.fixed or a mutable test clock, making time-dependent behaviour fully controllable.
+</QA>
+
+<QA q="Should 'parking lot full' be an exception or a return value?">
+It's an expected business outcome rather than a programming error, so a return type such as an `Optional` ticket or a result object often expresses it better and forces callers to handle it. Exceptions suit invalid input or violated invariants. Either is defensible if applied consistently — explain the choice. Avoid generic RuntimeException with string messages either way.
+</QA>
+
+<Practice task="Review this method from a machine-coding round and list what you'd change: public String book(String u, String s, int n) returns the string ERR when n is over 10 and OK otherwise.">
+
+Names (`u`, `s`, `n`) reveal nothing — use `UserId`, `ShowId` and seat ids. Primitive obsession: strings for ids, and an int count where a `Set<SeatId>` is really meant. Errors as magic strings: throw specific exceptions (`InvalidSelectionException`) or return a result type, and return a `Booking` rather than "OK". Validate every input (null, empty, too many). The limit of 10 is a magic number — make it a named constant or a policy. And since the method surely changes shared state, say how it is made thread-safe.
+
+</Practice>
+
+<Takeaways>
+
+- Organise code into model, strategy, repository, service and exception layers, wired in one place.
+- Use value objects and enums; make illegal states unrepresentable.
+- Validate at boundaries, use specific exceptions, and keep methods small and well named.
+- Inject dependencies — including Clock — to stay testable.
+- Get a clean core running first; extend afterwards.
+
+</Takeaways>
+
+## Further reading
+
+- Robert C. Martin, *Clean Code* (2008).
+- Joshua Bloch, *Effective Java* (3rd ed., 2018).
+- Martin Fowler, *Refactoring* (2nd ed., 2018) — the catalogue of code smells.

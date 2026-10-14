@@ -1,0 +1,164 @@
+Knowing 23 patterns is less valuable than knowing **which one a problem calls for** — and being able to explain why a similar-looking pattern is wrong. This lesson maps problems to patterns and collects the comparisons interviewers ask about most.
+
+## Start from the problem, not the pattern
+
+| If the requirement says… | Consider | Because |
+| --- | --- | --- |
+| "It can be calculated/done in several ways" | **Strategy** | Interchangeable algorithms behind one interface |
+| "Behaviour depends on the current status/mode" | **State** | Each state's behaviour in its own class |
+| "When X happens, notify A, B and C" | **Observer** | Publisher doesn't know subscribers |
+| "Requests go through checks/handlers in order" | **Chain of Responsibility** | Configurable, short-circuiting pipeline |
+| "Support undo / queue / schedule / log operations" | **Command** (+ **Memento**) | Operations as objects |
+| "Add logging/caching/retries without changing the class" | **Decorator** (or **Proxy**) | Wrap behind the same interface |
+| "Control access / lazy-load / remote object" | **Proxy** | Same interface, gatekeeping |
+| "Integrate a third-party/legacy API" | **Adapter** | Translate interfaces at the boundary |
+| "Simplify a complex subsystem for callers" | **Facade** | One front door |
+| "Part–whole tree, treat leaf and group alike" | **Composite** | Uniform recursive structure |
+| "Two dimensions vary independently (type × platform)" | **Bridge** | Two hierarchies joined by composition |
+| "Millions of similar small objects" | **Flyweight** | Share intrinsic state |
+| "Create objects without knowing concrete classes" | **Factory Method / simple factory** | Centralise creation |
+| "Create a consistent family of related objects" | **Abstract Factory** | One factory per family |
+| "Object with many optional parameters, must be valid" | **Builder** | Readable, validated construction |
+| "Copy a configured object cheaply" | **Prototype** | Clone instead of rebuild |
+| "Exactly one instance" | **Single injected instance** (Singleton only if truly necessary) | Testability |
+| "Same algorithm skeleton, steps differ" | **Template Method** (or Strategy for steps) | Fixed order, overridable steps |
+| "Many objects talk to many others" | **Mediator** | Hub instead of a web |
+| "Traverse a structure without exposing it" | **Iterator** | Separate traversal state |
+| "Add operations to a stable hierarchy" | **Visitor** (or sealed types + switch) | Double dispatch |
+
+## The comparisons interviewers ask about
+
+### Wrappers: Adapter vs Decorator vs Proxy vs Facade
+
+| | Adapter | Decorator | Proxy | Facade |
+| --- | --- | --- | --- | --- |
+| Interface offered | **Different** from wrapped | **Same** (maybe extended) | **Same** | **New, simpler** |
+| Wraps | One object | One object (stackable) | One object | A whole subsystem |
+| Intent | Compatibility | Add responsibilities | Control access | Simplify use |
+| Who composes | Wiring code | Client (stacks freely) | Usually the proxy itself | — |
+
+### Composition-based look-alikes: Strategy vs State vs Bridge vs Command
+
+| | Strategy | State | Bridge | Command |
+| --- | --- | --- | --- | --- |
+| Delegated object represents | An algorithm | The current mode | An implementation platform | A request/operation |
+| Who chooses it | Client/config | Transitions inside the context | Fixed at construction, by design | Whoever creates the command |
+| Changes over lifetime | Rarely | Constantly | Rarely | One per operation |
+| Implementations know each other? | No | Often (trigger next state) | No | No |
+
+### Inheritance vs composition: Template Method vs Strategy
+
+Template Method varies **steps** via subclassing (static, class level); Strategy varies behaviour via an injected object (dynamic, object level). Factory Method is a Template Method whose varying step is object creation.
+
+### Recursive structures: Composite vs Decorator vs Chain of Responsibility
+
+| | Composite | Decorator | Chain of Responsibility |
+| --- | --- | --- | --- |
+| Children | Many | One | One (next) |
+| Purpose | Aggregate results of a tree | Add behaviour to one object | Route a request until handled |
+| Can stop propagation? | — | No, always delegates | Yes |
+
+### Connecting senders and receivers: Observer vs Mediator vs Chain vs Command
+
+- **Observer** — receivers subscribe dynamically; one-to-many.
+- **Mediator** — peers talk only through a hub; many-to-many collapsed to many-to-one.
+- **Chain of Responsibility** — request passes along potential receivers until one handles it.
+- **Command** — a single sender-to-receiver link captured as an object.
+
+### Facade vs Mediator
+
+A facade is a one-way front door; the subsystem doesn't know it and parts may still talk directly. A mediator sits between peers that only talk through it.
+
+### Creational choices
+
+| Need | Pattern |
+| --- | --- |
+| Choose one implementation by input | Simple factory / registry |
+| Subclass decides the product inside an algorithm | Factory Method |
+| Consistent families | Abstract Factory |
+| Many optional params, validation, immutability | Builder |
+| Clone preconfigured objects | Prototype |
+
+Designs often **start** with Factory Method and **evolve** toward Abstract Factory, Builder or Prototype as needs grow. Factories, builders and prototypes are frequently single (injected) instances.
+
+## Patterns that combine naturally
+
+- **Strategy + Factory** — a factory/registry selects the strategy from config or input (split types, pricing).
+- **State + Singleton/Flyweight** — stateless state objects shared across contexts.
+- **Command + Memento** — undo via snapshots; **Command + Composite** — macros.
+- **Decorator + Strategy** — composed pricing rules (`EvDiscount(MinimumCharge(Hourly))`).
+- **Composite + Visitor/Iterator** — operations and traversals over trees.
+- **Observer + Mediator** — a mediator implemented as an event hub.
+- **Adapter + Abstract Factory** — a provider factory producing matching adapters.
+- **Chain of Responsibility + Composite** — event bubbling up a component tree.
+
+## Patterns in the case studies
+
+| Case study | Main patterns |
+| --- | --- |
+| [Parking lot](/system-design/lld/lld-parking-lot) | Strategy (pricing, allocation), Facade, Repository |
+| [Vending machine](/system-design/lld/lld-vending-machine) | State, Strategy (change-making) |
+| [Elevator](/system-design/lld/lld-elevator-system) | Strategy (dispatch), State, Observer |
+| [Tic-tac-toe](/system-design/lld/lld-tic-tac-toe) | Strategy (players, win detection) |
+| [LRU cache](/system-design/lld/lld-lru-cache) | Strategy (eviction), Decorator, Observer |
+| [Logging framework](/system-design/lld/lld-logging-framework) | Strategy (formatters/appenders), Chain, Decorator (async), Factory |
+| [Library](/system-design/lld/lld-library-management) | Strategy (fines, borrowing), Observer, State |
+| [Splitwise](/system-design/lld/lld-splitwise) | Strategy (split types), Factory |
+| [Movie booking](/system-design/lld/lld-movie-ticket-booking) | Strategy (locking, pricing), State, Observer, Adapter |
+| [Chess](/system-design/lld/lld-chess) | Polymorphism/Template Method, Command, Factory |
+| [Rate limiter](/system-design/lld/lld-rate-limiter) | Strategy, Factory, Decorator |
+| [ATM](/system-design/lld/lld-atm) | State, Chain of Responsibility, Adapter, Facade |
+| [Pub-sub](/system-design/lld/lld-pub-sub) | Observer, producer–consumer, Iterator |
+| [Snake & Ladder](/system-design/lld/lld-snake-and-ladder) | Strategy (dice, move rule) |
+| [File system](/system-design/lld/lld-file-system) | Composite, Visitor, Facade |
+| [Key-value store](/system-design/lld/lld-kv-store) | Command-like buffered writes, Facade |
+| [Job scheduler](/system-design/lld/lld-job-scheduler) | Command, Strategy (retry, schedule), producer–consumer |
+| [Notification service](/system-design/lld/lld-notification-service) | Adapter, Chain of Responsibility (failover), Strategy |
+| [Cab booking](/system-design/lld/lld-cab-booking) | Strategy (matching, fares), Decorator (surge), State |
+| [Food delivery](/system-design/lld/lld-food-delivery) | State, Strategy (coupons, fees), Observer |
+| [Hotel booking](/system-design/lld/lld-hotel-booking) | Strategy (pricing, cancellation), Decorator |
+| [Digital wallet](/system-design/lld/lld-digital-wallet) | Strategy (limits), Facade; ledger and idempotency as principles |
+
+Strategy appears almost everywhere; State appears in every lifecycle-driven machine. Master those two first.
+
+## Anti-patterns to avoid in interviews
+
+- **Pattern stuffing** — adding patterns without a variation point that needs them.
+- **Singleton for convenience** — global state instead of injection.
+- **Abstract everything** — interfaces with one implementation and no reason to vary (speculative generality).
+- **Inheritance for code reuse** across unrelated concepts — prefer composition.
+
+<Callout type="interview">
+When you introduce a pattern, use the formula: **requirement → variation point → pattern → benefit**. "Fees vary by vehicle and time, so pricing is a Strategy; a festival surcharge becomes a new class without touching the exit flow." The name matters less than the reasoning.
+</Callout>
+
+## Interview questions
+
+<QA q="Strategy and State have the same class diagram. How do you explain the difference?">
+The difference is who selects the delegated object and why. In Strategy, the client or configuration chooses an algorithm that rarely changes, and strategies are independent of each other. In State, the object's lifecycle drives the choice: the current state object handles events and replaces itself with the next state, so states know about each other and change constantly. Same structure, different problem.
+</QA>
+
+<QA q="When would you choose Decorator over Proxy for adding caching to a repository?">
+If caching is one of several optional behaviours the client composes (logging, metrics, retries, caching) and stacks in different combinations, it's naturally a decorator. If the wrapper is mainly about controlling access to the real object — creating it lazily, sitting in front of a remote resource, managing its lifecycle transparently — it's a proxy. Both share the interface; the distinction is intent and who controls composition.
+</QA>
+
+<Practice task="Name the pattern and the variation point for each: (a) export a report as PDF, CSV or Excel; (b) a coupon applies only if three eligibility checks pass, in order; (c) add audit logging to every repository; (d) a ticket moves Open, In progress, Resolved, Closed with different allowed actions in each.">
+
+(a) **Strategy** (or Bridge if report types vary too): the export format varies. (b) **Chain of Responsibility**, or a list of validators: the set and order of checks vary. (c) **Decorator**, or a dynamic proxy applied to all repositories at once: cross-cutting behaviour added without touching the classes. (d) **State**, or an enum with a transition table if the per-state behaviour is small: behaviour depends on the lifecycle stage.
+
+</Practice>
+
+<Takeaways>
+
+- Map requirements to variation points, then to patterns — never the reverse.
+- Know the look-alike comparisons: wrappers (Adapter/Decorator/Proxy/Facade) and delegators (Strategy/State/Bridge/Command).
+- Strategy and State cover most machine-coding problems.
+- Explain every pattern with requirement → variation point → pattern → benefit.
+
+</Takeaways>
+
+## Further reading
+
+- Gamma et al., *Design Patterns* (1994) — the "Related Patterns" section of each chapter.
+- Alexander Shvets, *Dive Into Design Patterns* — "Relations with Other Patterns" sections.
+- Joshua Kerievsky, *Refactoring to Patterns* (2004) — moving toward (and away from) patterns as code evolves.

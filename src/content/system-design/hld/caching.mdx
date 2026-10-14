@@ -1,0 +1,243 @@
+A **cache** stores a copy of data in a faster location so future requests can be served without going back to the slower source. Caching is the single most effective technique for improving read latency and reducing load on databases — and also one of the most common sources of subtle bugs.
+
+> There are only two hard things in Computer Science: cache invalidation and naming things. — Phil Karlton
+
+## Why caching works
+
+Two properties of real workloads make caching effective:
+
+1. **Skewed access.** A small fraction of data receives most requests (popular products, celebrity profiles, today's news). Caching that hot set gives a high **hit ratio** with modest memory.
+2. **Speed gap.** Reading from memory takes ~100 ns; a network round trip to an in-memory cache ~0.5 ms; a database query with disk access 5–50 ms. Each cache hit avoids the slow path entirely.
+
+The key metric is the **hit ratio**: `hits / (hits + misses)`. Going from a 90% to a 99% hit ratio cuts database load **by 10×** — misses are what reach the database, and they drop from 10% to 1%.
+
+## Where caches live
+
+A request may pass through many cache layers:
+
+```mermaid
+flowchart LR
+  B["Browser cache"] --> CDN["CDN edge cache"]
+  CDN --> GW["API gateway /<br/>reverse proxy cache"]
+  GW --> APP["App server<br/>in-process cache"]
+  APP --> DC["Distributed cache<br/>(Redis / Memcached)"]
+  DC --> DB["Database<br/>(buffer pool)"]
+```
+
+| Layer | What it caches | Pros | Cons |
+| --- | --- | --- | --- |
+| **Client / browser** | Static assets, API responses (via HTTP headers) | Zero network cost | Hard to invalidate; per-user |
+| **CDN** | Static files, media, cacheable API responses | Close to users, offloads origin | Coarse invalidation; mostly public content |
+| **Reverse proxy** | Full HTTP responses | Transparent to app | Limited to cacheable responses |
+| **In-process (local)** | Hot objects in app memory (e.g., Caffeine, Guava) | Fastest — no network | Each instance has its own copy; inconsistent across instances; limited by heap |
+| **Distributed cache** | Objects, query results, sessions | Shared across instances; scalable | Network hop; another system to operate |
+| **Database cache** | Pages in the buffer pool | Automatic | Limited control; still DB load |
+
+## Cache read/write strategies
+
+### Cache-aside (lazy loading)
+
+The application manages the cache explicitly. This is the most common pattern.
+
+```mermaid
+sequenceDiagram
+  participant App
+  participant Cache
+  participant DB
+  App->>Cache: GET user:42
+  Cache-->>App: miss
+  App->>DB: SELECT * FROM users WHERE id = 42
+  DB-->>App: row
+  App->>Cache: SET user:42 (TTL 10 min)
+```
+
+```js
+async function getUser(id) {
+  const cached = await cache.get(`user:${id}`);
+  if (cached) return cached;
+  const user = await db.findUser(id);
+  await cache.set(`user:${id}`, user, { ttl: 600 });
+  return user;
+}
+
+async function updateUser(id, changes) {
+  await db.updateUser(id, changes);
+  await cache.delete(`user:${id}`);   // invalidate, don't update
+}
+```
+
+- ✅ Only requested data is cached; cache failure degrades to slower DB reads rather than errors.
+- ❌ First request for each key is a miss; stale data is possible between DB write and invalidation.
+
+<Callout type="tip" title="Delete, don't update, on writes">
+On a write, **delete** the cache entry rather than setting it to the new value. If two concurrent writers both update the DB and then the cache, the cache updates can land in the opposite order, leaving the cache permanently stale. Deleting forces the next reader to load the fresh value.
+</Callout>
+
+### Read-through
+
+The cache itself loads from the database on a miss; the app only talks to the cache. Same behaviour as cache-aside, but the loading logic lives in the cache library or provider. Simplifies application code.
+
+<Callout type="note" title="Where sources differ">
+Many sources — including Alex Xu's *System Design Interview* — call the pattern "check the cache, on a miss read the database and fill the cache" a **read-through** cache. Strictly, that's **cache-aside**: the *application* does the loading. In a true read-through cache, the *cache layer itself* loads from the database on a miss. Behaviour is the same; the difference is where the loading code lives. If an interviewer says "read-through", clarify which they mean.
+</Callout>
+
+### Write-through
+
+Every write goes to the cache **and** synchronously to the database before returning.
+
+- ✅ Cache is always fresh for written keys; reads after writes hit.
+- ❌ Writes are slower (two writes); cache fills with data that may never be read (pair it with a TTL).
+
+### Write-behind (write-back)
+
+Writes go to the cache and are acknowledged immediately; the cache flushes them to the database asynchronously in batches.
+
+- ✅ Very fast writes; batching reduces DB load (great for counters, metrics, view counts).
+- ❌ **Data loss risk** if the cache node fails before flushing; harder consistency reasoning.
+
+### Write-around
+
+Writes go directly to the database, bypassing the cache; the cache is filled only on reads. Good for data that's written but rarely read soon after (e.g., logs, bulk imports).
+
+| Strategy | Read latency | Write latency | Consistency | Data loss risk | Best for |
+| --- | --- | --- | --- | --- | --- |
+| Cache-aside | Miss on first read | Normal | Possible brief staleness | None | General-purpose read-heavy data |
+| Read-through | Miss on first read | Normal | Possible brief staleness | None | Same, with simpler app code |
+| Write-through | Fast after writes | Slower | Strong for cached keys | None | Read-after-write heavy data |
+| Write-behind | Fast | Fastest | Eventual | Yes | Counters, high-volume writes |
+| Write-around | Miss after write | Normal | Good | None | Write-once, read-rarely data |
+
+## Eviction policies
+
+Caches have finite memory. When full, the **eviction policy** decides what to drop.
+
+- **LRU (least recently used)** — drop the item not accessed for the longest time. The default for most workloads. Implemented with a hash map + doubly linked list for O(1) operations.
+- **LFU (least frequently used)** — drop the item with the fewest accesses. Better when popularity is stable; slow to adapt when popularity shifts.
+- **FIFO** — drop the oldest inserted item. Simple; ignores access patterns.
+- **TTL-based** — items expire after a fixed time regardless of use. Bounds staleness.
+- **Modern hybrids** — W-TinyLFU (Caffeine), ARC, Redis's approximated LRU/LFU — combine recency and frequency and resist scan pollution (a one-off scan evicting all hot data).
+
+<Callout type="note">
+**Eviction** (removing items for space) and **expiration** (removing items after a TTL) are different mechanisms, and most systems use both: a TTL bounds staleness, and the eviction policy manages memory pressure.
+</Callout>
+
+## Cache invalidation
+
+Keeping cached data in sync with the source of truth is the hard part. Options, from simplest to most precise:
+
+1. **TTL only** — accept up to T seconds of staleness. Simple and robust; perfect for data where slight staleness is fine (product listings, profiles of other users).
+2. **Explicit invalidation on write** — the writer deletes affected cache keys. Precise, but every write path must know every cache key derived from the data — easy to miss one.
+3. **Event-driven invalidation** — the database emits change events (via CDC, e.g., Debezium → Kafka); a consumer invalidates or updates cache entries. Decouples writers from cache logic and catches writes from any source.
+4. **Versioned keys** — include a version in the key (`product:42:v17`). Writing bumps the version; old entries simply stop being read and expire. Great for immutable or CDN-cached content.
+
+Always combine precise invalidation with a TTL as a safety net — if an invalidation is ever missed, the entry still eventually refreshes.
+
+### The race condition in cache-aside
+
+Even with delete-on-write, this interleaving leaves stale data:
+
+```text
+1. Reader: cache miss for key K
+2. Reader: reads old value V1 from DB
+3. Writer: writes V2 to DB
+4. Writer: deletes K from cache
+5. Reader: sets K = V1 in cache        ← stale until TTL expires
+```
+
+Mitigations: short TTLs; **delayed double delete** (delete again a short time after the write); or use leases — Facebook's memcache paper describes a lease token issued on a miss, so a set is rejected if the key was invalidated in between.
+
+## Failure modes every design should address
+
+### Cache stampede (thundering herd)
+
+A popular key expires; thousands of concurrent requests miss simultaneously and all hit the database to recompute it.
+
+Mitigations:
+
+- **Request coalescing / single-flight** — only one request recomputes; others wait for its result.
+- **Locking** — the first misser takes a short lock (e.g., Redis `SET key NX PX`) to rebuild; others serve stale data or wait briefly.
+- **Probabilistic early refresh** — refresh slightly before expiry, with randomness so not all instances refresh at once.
+- **Stale-while-revalidate** — serve the stale value while one background request refreshes it.
+
+### Cache penetration
+
+Requests for keys that **don't exist** (often malicious or buggy) always miss and always hit the database.
+
+Mitigations: cache negative results ("not found") with a short TTL; use a **Bloom filter** of valid keys to reject impossible lookups before touching the cache or DB; validate inputs.
+
+### Cache avalanche
+
+Many keys expire at the same moment (e.g., all set with the same TTL during a warm-up), or the cache cluster restarts — causing a sudden flood to the database.
+
+Mitigations: add **jitter** to TTLs (e.g., 10 min ± 60 s); warm the cache before shifting traffic; replicate the cache; rate-limit or shed load at the database tier; use circuit breakers.
+
+### Hot keys
+
+One key receives so much traffic that a single cache node saturates.
+
+Mitigations: replicate hot keys across nodes with a suffix (`key#1..#N`) and read a random replica; add a small **local in-process cache** in front of the distributed cache for the hottest keys.
+
+### Cache node failure
+
+A single cache server is a single point of failure — and losing it suddenly shifts its entire load to the database. Replicate cache nodes across zones, size the database to survive a partial cache loss (or shed load), and **over-provision cache memory** by a margin so the working set still fits as data grows; a cache that silently starts evicting hot keys degrades just like a failure.
+
+## Distributed caching: Redis vs Memcached
+
+| | Redis | Memcached |
+| --- | --- | --- |
+| Data types | Strings, hashes, lists, sets, sorted sets, streams, bitmaps, HyperLogLog, geo | Strings (opaque blobs) only |
+| Persistence | Optional (RDB snapshots, AOF log) | None |
+| Replication & failover | Built in (replicas, Sentinel, Cluster) | None built in (client-side distribution) |
+| Threading | Mostly single-threaded command execution (I/O threads available) | Multi-threaded |
+| Extras | Pub/sub, Lua scripting, transactions, TTL per key | Simpler, very efficient memory use |
+| Typical choice | Default for most modern systems; also used for rate limiting, leaderboards, queues | Pure, simple, large-scale object caching |
+
+<Callout type="example">
+Facebook scaled Memcached to thousands of servers holding trillions of items, using leases to prevent stale sets and thundering herds, and regional pools to replicate hot data. Twitter's timelines are served from Redis clusters, with each user's home timeline precomputed as a Redis list.
+</Callout>
+
+## What to cache — and what not to
+
+**Good candidates:** data that's read far more than written; expensive to compute (aggregations, rendered pages, ML features); tolerant of brief staleness; or accessed with a skewed distribution.
+
+**Poor candidates:** data that changes on nearly every read; data requiring strict consistency (account balances at the moment of debit); highly unique, rarely repeated queries (low hit ratio wastes memory); and large blobs better served by a CDN.
+
+<Callout type="interview">
+When you add a cache in an interview, cover four things in one breath: **what** you cache (key and value), **strategy** (cache-aside with TTL), **invalidation** (delete on write + TTL safety net), and **failure handling** (stampede protection; the system still works, slower, if the cache is down).
+</Callout>
+
+## Interview questions
+
+<QA q="Your cache hit ratio is 95% but the database is still overloaded. What do you check?">
+Compute the absolute miss volume: at 200K reads/s, 5% is still 10K queries/s to the database, which may be too much — improving to 99% would cut that to 2K. Then check: whether misses are concentrated on keys that don't exist (penetration — cache negative results); whether expiry causes stampedes on popular keys (coalescing, jitter); whether write traffic, not reads, is the actual load; whether some queries bypass the cache; and whether cache memory is too small, causing hot keys to be evicted (check the eviction rate).
+</QA>
+
+<QA q="Why delete the cache entry on update instead of writing the new value?">
+Two concurrent writers can update the database in one order and the cache in the opposite order, leaving the cache permanently holding the older value. Deleting is idempotent and order-insensitive: whoever reads next loads the current value from the database. It also avoids computing cache values that may never be read. A small race (a reader repopulating a stale value) still exists, which TTLs, delayed double deletes, or leases address.
+</QA>
+
+<QA q="How do you prevent a cache stampede on a very popular key?">
+Ensure only one request recomputes the value: use single-flight/request coalescing in each app instance, plus a distributed lock (SET NX with a short expiry) so only one instance rebuilds across the fleet while others serve the stale value or wait briefly. Refresh popular keys before they expire (probabilistic early expiration or background refresh), and add TTL jitter so many keys don't expire together.
+</QA>
+
+<QA q="When would you choose an in-process cache over Redis?">
+For small, very hot, rarely changing data where even a network hop matters — configuration, feature flags, reference data, or the hottest few keys. In-process caches are fastest but each instance holds its own copy, so invalidation across instances is harder (use short TTLs or pub/sub invalidation messages) and memory is limited by the heap. Many systems use both: a small local L1 cache in front of a shared Redis L2.
+</QA>
+
+<Takeaways>
+
+- Caching exploits skewed access and the memory/disk speed gap; the hit ratio determines its value.
+- Cache-aside with delete-on-write and a TTL safety net is the default pattern.
+- Write-through keeps cached data fresh; write-behind is fastest but risks data loss.
+- LRU is a solid default eviction policy; TTLs bound staleness.
+- Plan for stampedes, penetration, avalanches and hot keys — and make sure the system degrades gracefully if the cache fails.
+
+</Takeaways>
+
+## Further reading
+
+- Nishtala et al., "Scaling Memcache at Facebook" (NSDI 2013) — leases, regional pools, thundering herds.
+- Vattani, Chierichetti and Lowenstein, "Optimal Probabilistic Cache Stampede Prevention" (VLDB 2015).
+- Einziger, Friedman and Manes, "TinyLFU: A Highly Efficient Cache Admission Policy" (ACM ToS, 2017).
+- AWS whitepaper, "Database Caching Strategies Using Redis".
+- Related: [Content Delivery Networks](/system-design/hld/cdn), [Probabilistic Data Structures](/system-design/hld/probabilistic-data-structures).

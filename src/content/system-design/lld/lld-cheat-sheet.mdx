@@ -1,0 +1,114 @@
+A one-page revision sheet for LLD rounds. Every entry links to its full lesson.
+
+## The round
+
+Requirements (use cases + variation points + concurrency) → entities & relationships (noun–verb) → class diagram with interfaces at variation points → core flows → **working code first** → extensions, concurrency, tests. ([Framework](/system-design/lld/lld-interview-framework))
+
+Ask first: *design discussion or running code?*
+
+## OOP essentials
+
+- **Encapsulation** guards invariants; **abstraction** hides implementation; **inheritance** = is-a (tight coupling); **polymorphism** replaces type switches.
+- Interface = role/contract; abstract class = shared code + state for a family.
+- Override `equals` and `hashCode` together; use **records** for value types.
+- Prefer **immutable value objects** (`Money`, `TicketId`); defensive copies.
+- Relationships: dependency < association < aggregation < composition (lifecycle ownership); realization, inheritance. ([OOP](/system-design/lld/oop-fundamentals), [UML](/system-design/lld/class-relationships-uml))
+
+## Principles
+
+| Principle | One line |
+| --- | --- |
+| SRP | One reason to change |
+| OCP | Add classes, don't edit tested ones — along real axes of change |
+| LSP | Subtypes honour the contract: no stronger preconditions, weaker guarantees or surprise exceptions |
+| ISP | Role interfaces sized to clients |
+| DIP | Business owns abstractions; infrastructure implements; inject via constructors |
+| Encapsulate what varies · Program to interfaces · Composition over inheritance | The roots of most patterns |
+| DRY · KISS · YAGNI | Avoid duplication *and* over-engineering |
+| Law of Demeter · Tell, don't ask | Talk to neighbours; put behaviour with data |
+
+([SOLID](/system-design/lld/solid-principles), [Core principles](/system-design/lld/core-design-principles))
+
+## Patterns in one line each
+
+**Creational**
+
+- [Singleton](/system-design/lld/singleton-pattern) — one instance; holder idiom or enum; prefer an injected single instance.
+- [Factory Method / Abstract Factory](/system-design/lld/factory-patterns) — subclasses pick the product / one factory per product family.
+- [Builder](/system-design/lld/builder-pattern) — many optional params, validation in `build()`, immutable result.
+- [Prototype](/system-design/lld/prototype-pattern) — copy configured objects; shallow vs deep.
+
+**Structural**
+
+- [Adapter](/system-design/lld/adapter-pattern) — different interface; integrate vendors.
+- [Decorator](/system-design/lld/decorator-pattern) — same interface, stackable added behaviour.
+- [Facade](/system-design/lld/facade-pattern) — simple front door to a subsystem.
+- [Proxy](/system-design/lld/proxy-pattern) — same interface, controls access (lazy, protection, remote, caching).
+- [Composite](/system-design/lld/composite-pattern) — trees; leaf and group alike.
+- [Bridge](/system-design/lld/bridge-pattern) — two independent dimensions via composition.
+- [Flyweight](/system-design/lld/flyweight-pattern) — share immutable intrinsic state.
+
+**Behavioral**
+
+- [Strategy](/system-design/lld/strategy-pattern) — interchangeable algorithms. *Most used.*
+- [Observer](/system-design/lld/observer-pattern) — subscribe/notify; mind threads, failures, leaks.
+- [State](/system-design/lld/state-pattern) — behaviour per lifecycle state; draw the diagram first.
+- [Command](/system-design/lld/command-pattern) — requests as objects: undo, queue, log.
+- [Chain of Responsibility](/system-design/lld/chain-of-responsibility-pattern) — handlers in sequence, can short-circuit.
+- [Template Method](/system-design/lld/template-method-pattern) — final skeleton, overridable steps.
+- [Iterator](/system-design/lld/iterator-pattern) — traversal without exposing internals.
+- [Mediator](/system-design/lld/mediator-pattern) — hub replaces a web of references.
+- [Memento](/system-design/lld/memento-pattern) — opaque snapshots for undo.
+- [Visitor](/system-design/lld/visitor-pattern) — add operations to a stable hierarchy (double dispatch).
+
+([Choosing & comparing](/system-design/lld/pattern-selection-guide))
+
+## Concurrency toolkit
+
+| Need | Tool |
+| --- | --- |
+| Atomic check-then-act on shared state | `synchronized` / `ReentrantLock` (short critical sections) |
+| Visibility of a flag | `volatile` |
+| Counter / single-variable CAS | `AtomicInteger`, `AtomicReference`, `LongAdder` |
+| Shared map with atomic get-or-create | `ConcurrentHashMap.computeIfAbsent / merge / compute` |
+| Read-mostly listeners | `CopyOnWriteArrayList` |
+| Producer–consumer | Bounded `BlockingQueue` + worker; explicit full-queue policy |
+| Running tasks | `ExecutorService`; virtual threads for blocking I/O (Java 21) |
+| Avoid deadlock | Global lock ordering, `tryLock` with timeout |
+
+Never hold a lock across slow external calls (payments, network). ([Concurrency](/system-design/lld/concurrency-for-lld))
+
+## Code-quality checklist
+
+Packages (model / strategy / repository / service / exception) · value objects & enums · validate at boundaries · specific exceptions · small methods, intention-revealing names · inject dependencies **and `Clock`** · unmodifiable collections · runnable demo · a few tests. ([Interview-grade code](/system-design/lld/interview-grade-code), [Code smells & refactoring](/system-design/lld/code-smells-refactoring))
+
+## Schema checklist
+
+Entities → tables · value objects → columns · enums → CHECKed text · composition → `ON DELETE CASCADE` · invariants → CHECK, UNIQUE, **partial unique** ("one active"), **exclusion** (no overlapping ranges) · claim with a conditional `UPDATE` and check the row count · lock rows in id order · indexes from queries (equality columns first). ([Schema design](/system-design/lld/lld-schema-design))
+
+## Case-study one-liners
+
+| Problem | Key insight |
+| --- | --- |
+| [Parking lot](/system-design/lld/lld-parking-lot) | Pricing & allocation strategies; lock per floor so two gates can't take one spot |
+| [Vending machine](/system-design/lld/lld-vending-machine) | State table first; plan change before dispensing; money as integers |
+| [Elevator](/system-design/lld/lld-elevator-system) | Hall vs car calls; LOOK with up/down TreeSets; dispatch strategy by cost |
+| [Tic-tac-toe](/system-design/lld/lld-tic-tac-toe) | O(1) win check with row/col/diagonal counters; players as strategies |
+| [LRU cache](/system-design/lld/lld-lru-cache) | HashMap + doubly linked list; eviction policy strategy; one lock or segments |
+| [Logging framework](/system-design/lld/lld-logging-framework) | Logger/appender/formatter split; level check first; async appender with bounded queue |
+| [Library](/system-design/lld/lld-library-management) | Book ≠ BookCopy; reservations FIFO per title turn returns into holds |
+| [Splitwise](/system-design/lld/lld-splitwise) | Integer paise with remainder distribution; split strategies; greedy simplification (≤ N−1 payments) |
+| [Movie booking](/system-design/lld/lld-movie-ticket-booking) | Availability per (show, seat); all-or-nothing locks with TTL; re-validate after payment |
+| [Chess](/system-design/lld/lld-chess) | Pieces → pseudo-legal moves; validator → make/test/unmake for king safety |
+| [Rate limiter](/system-design/lld/lld-rate-limiter) | Algorithm strategies per key in ConcurrentHashMap; monotonic clock; evict idle keys |
+| [ATM](/system-design/lld/lld-atm) | Session state machine; denomination chain; plan → idempotent debit → dispense → reverse on failure |
+| [Pub-sub](/system-design/lld/lld-pub-sub) | Append-only log per topic, offset per subscriber, worker per subscription; break the batch on seek |
+| [Snake & Ladder](/system-design/lld/lld-snake-and-ladder) | Jumps as a validated map (no loops); dice and move rule injected; deque for turn order |
+| [File system](/system-design/lld/lld-file-system) | Composite tree; normalise paths once; cycle check on move; visitors for whole-tree queries |
+| [Key-value store](/system-design/lld/lld-kv-store) | Per-session write layers for nested transactions; versions + validate-at-commit (OCC); tombstones |
+| [Job scheduler](/system-design/lld/lld-job-scheduler) | Triggers in a time-ordered heap; dispatcher waits on a condition; fixed rate vs fixed delay |
+| [Notification service](/system-design/lld/lld-notification-service) | Idempotency at intake; priority by category; preferences → quiet hours → caps; failover + DLQ |
+| [Cab booking](/system-design/lld/lld-cab-booking) | Grid spatial index; candidates + CAS claim on the driver; release the driver on every exit |
+| [Food delivery](/system-design/lld/lld-food-delivery) | One-restaurant cart; best coupon; atomic stock reservation; transition table = cancellation policy |
+| [Hotel booking](/system-design/lld/lld-hotel-booking) | Half-open date ranges; per-room TreeMap, check one neighbour; per-night pricing |
+| [Digital wallet](/system-design/lld/lld-digital-wallet) | Double-entry ledger; lock accounts in id order; idempotency keys; refunds are new transactions |
