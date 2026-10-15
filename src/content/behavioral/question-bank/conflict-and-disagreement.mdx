@@ -1,0 +1,111 @@
+Conflict questions are in almost every behavioral loop, because every team disagrees and the way you handle it decides whether people want to work with you. The interviewer isn't hoping you've never had a conflict. Someone who claims that is either inexperienced or not being honest. They want to see that you **disagree openly, with evidence and respect, listen for real, and commit once a decision is made**.
+
+## The question in its many forms
+
+- "Tell me about a time you disagreed with your manager."
+- "Describe a conflict with a teammate. How did you resolve it?"
+- "Tell me about a time you pushed back on a decision."
+- "Tell me about a time someone disagreed with your approach."
+- "Have you ever had to work with someone who was hard to work with?"
+- Amazon's version: "Tell me about a time you had to **disagree and commit**."
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Courage** | You raised the disagreement, early, rather than complaining afterwards |
+| **Respect and empathy** | You tried to understand their reasons; you never made it personal |
+| **Data over opinion** | You brought evidence: a prototype, numbers, a document |
+| **Judgment** | You knew which battles mattered |
+| **Commitment** | When the decision went against you, you committed fully, and say so |
+| **Outcome** | The project or relationship ended in a better place |
+
+## Choosing the story
+
+- Pick a **real technical or priority disagreement** with something at stake: a design, a deadline, a release, a scope cut.
+- It doesn't have to end with you winning. "I was wrong, and here's what I learned" or "I disagreed and committed" can score **higher** than "I convinced everyone".
+- Avoid stories that are really about personalities ("he was rude") with no work substance.
+- Avoid conflicts you resolved by escalating straight to a manager, unless escalation was genuinely the right last step.
+
+## The shape of a strong conflict answer
+
+1. **The disagreement**: what it was about, and why it mattered (stakes).
+2. **Understanding the other side**: what they believed and why. This is where you show empathy.
+3. **Your approach**: a private conversation, data, a proposal, a compromise.
+4. **The decision**: who decided, and how.
+5. **Commitment and outcome**: what happened, and what you did afterwards.
+6. **Lesson**: what you'd do the same or differently.
+
+## Weak vs strong
+
+> **Question:** Tell me about a time you disagreed with a senior colleague.
+
+**Weak:** "Our tech lead wanted to use MongoDB for the new service, which was obviously wrong because our data was relational. I told him in the meeting that it was a bad idea. Eventually the manager agreed with me and we used Postgres. It worked out fine."
+
+*Notes: "Dismissive of the other view, public confrontation, no data, outcome credited to the manager."*
+
+**Strong:**
+
+"Let me tell you about a disagreement over the database for our new order-history service.
+
+"Our tech lead proposed MongoDB because the order documents varied a lot between product types, and a flexible schema would let us move fast. I was worried: the main use case was reporting across orders, payments and refunds, which meant joins and transactions.
+
+"I did three things. First, I asked him for half an hour one-to-one rather than arguing in the design review, and asked what problem he most wanted to avoid. It was schema migrations slowing the team down, which was a fair concern. Second, I built a small comparison on a copy of production data: the five most common report queries in both databases. Postgres with a JSONB column for the variable product fields handled the flexible part, and the reports were simpler and about four times faster. Third, I wrote it up as a one-page doc covering both options. I included his migration concern, and a plan for it: additive-only schema changes and a migration review checklist.
+
+"He read it, agreed Postgres with JSONB covered his concern, and presented the decision to the team himself. The service shipped on schedule, and two years later we hadn't needed a painful migration. I learned to start disagreements by asking what the other person is trying to protect. Usually we want the same thing."
+
+## If you lost the argument
+
+That's a great story too. Show that you **committed fully**: "I still thought the cache added risk, but the decision was made, so I wrote the invalidation tests myself and owned the rollout." If you turned out to be right, say what you did then. Constructive answers propose a fix, not "I told you so". If you turned out to be wrong, say what you learned.
+
+## At senior and staff level
+
+At senior levels, conflicts are less about one design and more about **direction, priorities and organisational trade-offs**. The interviewer is looking for whether you can disagree with senior leaders constructively and change a decision at a larger scale.
+
+**Senior sample (shortened):** "Our director wanted every team to move to a new event platform within two quarters. I led the payments platform and thought a forced migration for payments was risky during our peak season. I didn't argue in the all-hands. I asked for a 30-minute review, and brought three things: the incident history of the new platform for high-value flows, a migration plan that moved our low-risk event streams first, and a proposed date for the payment streams after peak season. The director agreed to the phased plan. We moved 70% of our streams in the first quarter, and the payment streams in the third with no incidents. Two other teams with peak-season risk used the same plan."
+
+What makes it senior: the **scope** (an organisation-wide mandate), going **to the decision-maker with an alternative rather than a refusal**, and an outcome **other teams reused**.
+
+## Follow-ups to expect
+
+- "What did the other person say, exactly?"
+- "What would you have done if they hadn't agreed?"
+- "Did you ever escalate? When would you?"
+- "How is your relationship with that person now?"
+- "Looking back, was there anything they were right about?"
+
+<Callout type="warning" title="Red flags">
+
+- Making the other person the villain, or using words like "obviously" and "incompetent".
+- Winning through authority (the manager overruled them) rather than through evidence.
+- No sign of listening or of changing your own view.
+- "I've never really had a conflict."
+- Disagreeing, losing, then quietly doing it your way anyway.
+
+</Callout>
+
+<Practice task="Draft a conflict story where the decision did NOT go your way. What do you say about how you behaved after the decision, and what you learned?">
+
+The strong part of a lost-argument story is what came after:
+
+- **You committed visibly**: "I owned the part I'd argued against, so I could make it work."
+- **You stayed constructive** when issues appeared: you proposed fixes and didn't point fingers.
+- **You learned something real**: either that the other view had merits you hadn't seen, or how to argue more effectively next time (for example, with a prototype earlier).
+
+This maps directly to Amazon's "Have Backbone; Disagree and Commit".
+
+</Practice>
+
+<Takeaways>
+
+- They want open, respectful, evidence-based disagreement, followed by full commitment.
+- Show that you understood the other side's reasons before arguing your own.
+- Prefer a private conversation plus data over public confrontation or escalation.
+- A story you lost, then committed to, can be stronger than one you won.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Leadership & Influence](/behavioral/question-bank/leadership-and-influence).
+- [Amazon: Leadership Principles](/behavioral/companies/amazon), "Have Backbone; Disagree and Commit".

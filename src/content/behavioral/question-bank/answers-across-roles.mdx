@@ -1,0 +1,108 @@
+Most sample answers in this course come from a backend engineer. The shape of a strong answer doesn't change with your role, but the **evidence** does. A frontend engineer's numbers are load times and conversion; a data engineer's are freshness and correctness; an SRE's are error budgets and recovery time. Here are five strong answers from other roles, one per theme, with notes on what makes each work.
+
+## What counts as impact in each role
+
+| Role | Typical measurable results |
+| --- | --- |
+| **Backend** | Latency (p50/p99), error rate, throughput, cost, incidents |
+| **Frontend / web** | Load time (LCP, INP), bundle size, conversion, accessibility issues fixed, crash-free sessions |
+| **Mobile** | Crash-free users, app start time, app size, store rating, release frequency |
+| **Data engineering** | Pipeline freshness, job runtime, data-quality failures, cost per run, consumers served |
+| **ML** | Offline metrics and, more importantly, the online business metric; inference latency and cost |
+| **SRE / platform** | Availability vs SLO, mean time to detect and to recover, toil hours removed, deploy frequency |
+| **QA / SDET** | Escaped defects, test run time, flakiness, coverage of critical paths |
+
+## Frontend: impact
+
+> **Question:** Tell me about your most impactful work.
+
+"I cut our product page's load time roughly in half, which measurably lifted conversion.
+
+"I was one of three frontend engineers on a retail site. Product pages took about 4.5 seconds to show the main image on mid-range Android phones, which were most of our traffic. The product team had a growing pile of 'slow page' complaints.
+
+"First, I measured on real devices rather than my laptop: field data from our analytics, plus profiling on a low-end phone. Three things dominated. A 700 KB JavaScript bundle blocked rendering, the hero image was full-resolution, and a reviews widget loaded synchronously. Second, I split the bundle so the product page only loaded what it used. I served images in modern formats at the right size per device, and lazy-loaded the reviews below the fold. Third, I added a performance budget to CI that fails the build if the page bundle grows past a limit, so the gains would last.
+
+"Time to the main image went from about 4.5 to 2.2 seconds on those devices. In the A/B test the faster page converted about 6% better. The budget has blocked two regressions since. I learned to measure on the devices our users actually have."
+
+*Why it works: field data on real devices, three clear actions, a business metric (conversion) and a guard against regression.*
+
+## Mobile: failure
+
+> **Question:** Tell me about a mistake you made.
+
+"I shipped an app release that crashed on launch for about 8% of Android users. I caused it.
+
+"I'd upgraded an analytics library as part of a routine dependency update. It worked on the devices I tested, but crashed at startup on one older Android version when a particular permission wasn't granted. We release to the store in stages, but I'd skipped the staged rollout because the change 'was only a library bump'.
+
+"Within an hour our crash dashboard spiked. I halted the rollout, reverted the dependency and shipped a hotfix that evening. Crash-free users were back above 99.5% the next day. In the post-mortem I owned two things. I skipped the staged rollout, and we had no test coverage on older OS versions.
+
+"I changed both. Every release, including 'small' ones, now goes out in stages, starting at 5%, with an automatic halt if crash-free users drop below a threshold. And I added the three oldest OS versions we support to our device-farm test run. The automatic halt has since caught one bad release from another team at 5%, before most users saw it."
+
+*Why it works: clear ownership, a fast response, an honest root cause ("I skipped the staged rollout") and a systemic fix with evidence.*
+
+## Data engineering: ownership
+
+> **Question:** Tell me about a problem nobody owned that you fixed.
+
+"I took ownership of our daily revenue numbers being wrong a few times a month, which no single team owned.
+
+"Finance's dashboard occasionally showed revenue 5–10% off, and they'd notice days later. The data came through four pipelines owned by three teams, so each team checked its own part and found nothing wrong.
+
+"I offered to own it end to end for a month. First, I traced one bad day through every stage and found duplicate events. A retry in an upstream job re-emitted a batch, and our deduplication keyed on the wrong field. Second, I fixed the dedup key in our pipeline and agreed with the upstream team that they'd add a batch ID, so retries were safe on both sides. Third, I added data-quality checks after each stage: row counts against the source, no duplicate order IDs, and revenue within expected bounds. Each check alerts the owning team, so ownership is clear the next time.
+
+"In the following quarter the dashboard was wrong zero times, and two other data issues were caught by the checks within an hour, not days. Finance stopped reconciling by hand. I learned that problems spanning several teams need someone to trace one example end to end first."
+
+*Why it works: a cross-team problem nobody owned, a methodical root cause, a fix on both sides, and checks that made ownership permanent.*
+
+## SRE: conflict
+
+> **Question:** Tell me about a time you disagreed with another team.
+
+"I disagreed with a product team that wanted to launch despite having used up their error budget. We found a middle path.
+
+"Their checkout service had burned through its monthly error budget, and our team's policy was to freeze feature launches until reliability work was done. They had a marketing launch planned that week and pushed hard to proceed.
+
+"First, I met their lead to understand the stakes. The launch was tied to a partner campaign that couldn't move. Second, I looked at what had burned the budget: one dependency timeout, causing about 80% of the errors. Third, I proposed launching on schedule behind a feature flag at 10% of traffic, while two of their engineers and I fixed the timeout handling that week. Then we'd ramp up as the error rate came down. I wrote it up so both managers could agree.
+
+"They launched on time at 10%, the fix landed in four days, and they reached 100% within the week with the error rate back inside the target. Afterwards both teams agreed to add this 'flagged launch with a reliability plan' option to the policy. I learned that a rule works better with a safe way to make exceptions."
+
+*Why it works: respect for their constraint, data on the cause, a creative middle path, and a lasting change to the process.*
+
+## QA / SDET: leadership
+
+> **Question:** Tell me about a time you influenced engineers outside your team.
+
+"I got our backend teams to own their API tests, which cut the escaped defects we were finding.
+
+"Our QA team wrote and ran all integration tests after development, so bugs were found late, and the developers saw testing as QA's job.
+
+"First, I pulled six months of production bugs. Most were API contract issues that a test written alongside the code would have caught. Second, I built a small test template and paired with one backend team for two sprints, so their developers wrote tests in the same pull request as the code. Third, I shared that team's before-and-after defect numbers at the engineering all-hands, and offered the same pairing to any team.
+
+"Four teams adopted it within a quarter. Escaped API defects for those teams fell by about half, and our QA team moved to exploratory and performance testing. I learned that people adopt a practice faster when they see it working for a team like theirs."
+
+*Why it works: influence without authority, through data, a working example and a visible result.*
+
+<Practice task="Using the impact table, rewrite the result of one of your stories with the measure most relevant to your role. If you are a backend engineer, try writing it the way a frontend engineer would describe the user-facing effect.">
+
+The point is to connect your technical result to what someone else cares about:
+
+- the user ("pages appear twice as fast");
+- the business ("6% more conversions");
+- the team ("no more hand reconciliation").
+
+Most strong answers include **both** a technical number and a user or business consequence. If you only have the technical one, ask yourself: "so what, for whom?"
+
+</Practice>
+
+<Takeaways>
+
+- The STAR shape is the same in every role; the evidence changes.
+- Learn your role's measures: frontend load time and conversion, mobile crash-free users, data freshness and correctness, SRE availability and recovery time, QA escaped defects.
+- Pair a technical number with a user or business consequence.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Amazon: Leadership Principles](/behavioral/companies/amazon).
+- [Impact, Data & Customers](/behavioral/question-bank/impact-and-customers).

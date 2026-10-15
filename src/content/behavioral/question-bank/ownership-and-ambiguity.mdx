@@ -1,0 +1,104 @@
+Ownership is the signal companies name most often. Amazon has a principle called exactly that, and Google's guidance describes comfort with ambiguity and a bias for action. The question behind it is simple: **when something is broken, unclear, or nobody's job, do you wait or do you act?** Strong candidates have stories where they picked something up, figured out what "done" meant, and drove it to the end.
+
+## The question in its many forms
+
+- "Tell me about a time you went beyond your job description."
+- "Tell me about a time you took ownership of a problem that wasn't yours."
+- "Describe a project with unclear requirements. What did you do?"
+- "Tell me about a time you had to make a decision without all the information."
+- "Tell me about something you started on your own initiative."
+- "Tell me about a time you saw a problem nobody was fixing."
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Initiative** | You acted without being told to |
+| **End-to-end ownership** | You saw it through to the real outcome, not just your piece |
+| **Structuring ambiguity** | You turned a fuzzy goal into questions, assumptions and a plan |
+| **Judgment under uncertainty** | You decided with partial data, knowing what was reversible |
+| **Long-term thinking** | You fixed the root cause or prevented a recurrence, not just the symptom |
+
+## Handling ambiguity: show your method
+
+*Cracking the Coding Interview*, describing what PM interviewers look for, says interviewers want to see that ambiguity doesn't overwhelm you. You seek new information, prioritise the most important parts, and work in a structured way. The same applies to engineers. Make your method visible:
+
+1. **Clarify the goal**: who is this for, and what would success look like?
+2. **List what's unknown**, and find the cheapest way to learn each thing.
+3. **State your assumptions** and check them with the stakeholders.
+4. **Separate reversible from irreversible decisions.** Move fast on the reversible ones.
+5. **Ship a small first version** and learn from it.
+
+## Weak vs strong
+
+> **Question:** Tell me about a time you took ownership of something outside your role.
+
+**Weak:** "Our builds were flaky, so I fixed some tests. It helped the team."
+
+**Strong:**
+
+"I took over our flaky test problem, which nobody owned. It was costing every engineer time every day.
+
+"Our main build failed on about one run in five for reasons unrelated to the change being tested. People just re-ran it, so each merge took an extra 20–30 minutes, and real failures were getting ignored.
+
+"It wasn't assigned to anyone, so I raised it at our team retro and offered to own it for two sprints. First, I added a small script to our CI that recorded every test failure, then ranked the tests by how often they failed when re-runs passed. Twelve tests accounted for almost all the flakiness. Second, I fixed the top five myself. Most were time-dependent assertions and a shared test database. I quarantined the rest, with a ticket assigned to each owning team. Third, so it wouldn't come back, I added a check that flags any newly flaky test within a day, and I wrote up the three most common causes for the team wiki.
+
+"The flaky-failure rate went from about 20% of builds to under 2%. Merges sped up, and engineers started trusting red builds again. The dashboard is still used by the team. I learned that 'nobody owns it' problems usually need someone to measure them first; once the data was visible, other teams fixed their tests quickly."
+
+## Owning without overstepping
+
+Ownership isn't doing everything yourself or ignoring other teams. Show that you **told the right people**, got agreement where needed, and handed things back properly ("I quarantined their tests, but filed tickets to the owners rather than rewriting their code").
+
+## At senior and staff level
+
+Seniors are expected to own **outcomes, not tasks**. That means problems that span teams, quarters and systems, and turning a vague business goal into a technical plan that others execute.
+
+**Senior sample (shortened):** "Leadership said our cloud bill had to drop by 25% within two quarters, with no further detail. I volunteered to own the engineering side. First, I broke the bill down by service and team, which nobody had done. Three services were 60% of the spend. Second, for each one I wrote a short options list (right-sizing, storage tiering, a caching change), with estimated savings and risk. I agreed owners and dates with each team, and kept the riskiest change for last. Third, I set up a weekly cost dashboard per team, so progress was visible without me chasing anyone. We reached a 31% reduction in five months with no customer-facing incidents, and the per-team dashboard is now part of every team's monthly review."
+
+What makes it senior: an **ambiguous business goal** turned into a plan, **several teams** executing it, and a **mechanism** (the dashboard) that kept working without the candidate.
+
+## Follow-ups to expect
+
+- "Why did you pick this up rather than escalating it?"
+- "What did you deprioritise to make time?"
+- "What assumptions did you make, and were any wrong?"
+- "How did your manager react?"
+- "What happens to it now?"
+
+<Callout type="warning" title="Red flags">
+
+- Waiting for instructions in an ambiguous situation.
+- "It wasn't my responsibility" in any form.
+- Heroics that ignore the team (working nights alone, no communication).
+- Stopping at your piece when the outcome wasn't reached.
+
+</Callout>
+
+<Practice task="Think of a problem in your team that annoyed everybody but belonged to nobody. If you fixed it, write it as STAR. If you did not, what would owning it have looked like, and is there a smaller one you did fix?">
+
+Typical ownership stories:
+
+- flaky tests or a slow build;
+- missing alerts or monitoring;
+- an undocumented runbook;
+- a recurring manual task you automated;
+- a confusing onboarding process;
+- a bug in a shared library.
+
+A small, real story with a measured result, like "the deploy script I wrote saved 30 minutes per release", is better than a big story in which you were peripheral.
+
+</Practice>
+
+<Takeaways>
+
+- Ownership = act without being told, see it through to the outcome, and prevent recurrence.
+- Make your method for ambiguity visible: clarify the goal, list unknowns, state assumptions, move fast on reversible choices, ship small.
+- Own the problem without overstepping: communicate, agree and hand back.
+- Measure the result so the ownership has visible impact.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Failure, Mistakes & Weaknesses](/behavioral/question-bank/failure-and-mistakes).
+- [Amazon: Leadership Principles](/behavioral/companies/amazon): Ownership and Bias for Action.

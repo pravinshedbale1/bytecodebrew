@@ -1,0 +1,103 @@
+Sooner or later an interviewer says, "Tell me about a project you're proud of", and then keeps asking "why?" for twenty minutes. The project deep dive tests two things at once: whether you really did what your resume says, and how deep your technical judgment goes. It's common for experienced engineers, and it's often where the decision about your **level** is made. The defence is simple: know two or three projects inside out.
+
+## Choose the right projects
+
+*Cracking the Coding Interview* advises mastering **two or three projects**, chosen because:
+
+- the project had **genuinely challenging parts**, beyond "I learned a lot";
+- you played a **central role**, ideally on the challenging parts;
+- you can discuss it at **technical depth**.
+
+A smaller project where you made the key decisions beats a famous project where you fixed tickets. Pick projects that match the level you're applying for: a senior role wants a project where you shaped the design or led others, not one where you implemented someone else's plan.
+
+## Prepare these answers for each project
+
+For each project, prepare the answers to these questions in advance. The book lists challenges, mistakes, technical decisions, technology choices and trade-offs, and what you'd do differently; scaling questions are common follow-ups.
+
+| Area | Be ready to explain |
+| --- | --- |
+| **The problem** | Who it was for, why it mattered, what happened before |
+| **Your role** | What you owned, who else was involved, how you split the work |
+| **Architecture** | A whiteboard sketch: components, data flow, storage |
+| **Key decisions** | Two or three choices, the alternatives, and why you chose as you did |
+| **Hardest part** | The specific technical challenge and how you solved it |
+| **Mistakes** | What went wrong and what you changed |
+| **Results** | Metrics: latency, cost, incidents, revenue, adoption |
+| **Do differently** | With hindsight, what you'd change, and why |
+| **Scale** | What breaks at 10× load, and how you'd fix it |
+
+## The structure of a good deep dive
+
+1. **One-minute overview**: the problem, the users, your role and the outcome.
+2. **Architecture**: sketch it, naming only the components that matter.
+3. **Let them steer**: "I can go into the data model, the rollout, or the performance work. Which is most interesting?" Interviewers like choosing, and it gets you to your strongest material.
+4. **Go deep on decisions**: always give the alternatives and the trade-off.
+
+Here's how a decision sounds when explained well:
+
+> "We needed to fan out order events to four consumers. I chose Kafka over a simple queue because two consumers needed to replay history after a bug, and Kafka keeps the log. The trade-off was operational cost: we had to run and monitor a cluster, so I pushed for the managed service, even though it cost more per month."
+
+## Questions you'll get, and what they're testing
+
+| Question | Testing |
+| --- | --- |
+| "Why did you choose X over Y?" | Judgment and trade-off awareness |
+| "What was the hardest bug?" | Depth and persistence |
+| "How did you test it? How did you roll it out?" | Engineering maturity |
+| "What would break at 10× traffic?" | Systems thinking |
+| "What did your teammates do?" | Honesty about your own role |
+| "What would you do differently?" | Self-awareness and reflection |
+| "How did you measure success?" | Impact orientation |
+
+Experienced candidates are held to a higher bar here. The book notes that an experienced engineer's answer to "what was the hardest bug you've faced?" is expected to be more in-depth and impressive.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Overclaiming**: saying you designed something you only implemented. Follow-ups expose it quickly.
+- **"We decided"** with no view on what you thought or proposed.
+- **No trade-offs**: every decision presented as obviously right.
+- **Not knowing the numbers**: traffic, data size, latency, team size.
+- **Drowning in detail**: give the overview first, then go deep where they point.
+- **Confidential details**: describe the problem generically, with no internal names or secrets. Interviewers respect that.
+
+</Callout>
+
+## Interview questions
+
+<QA q="How do you talk about a project where most of the work was done by others?">
+Be precise about your part and generous about theirs: "The design was the tech lead's; I owned the migration tooling and the rollout." Then go deep on your part — the decisions you made, the problems you solved, and what you'd change. Interviewers are scoring your contribution, and being honest about the boundary is itself a strong signal. If your part is small, choose a different project for the deep dive.
+</QA>
+
+<Practice task="For your strongest project, write the one-minute overview and list three decisions with their alternatives. Then answer: what would break first at ten times the traffic?">
+
+A good overview names:
+
+- the **problem** and the users;
+- your **role**;
+- a **metric** for the outcome.
+
+Each decision should read: we needed X; options were A and B; I chose A because…; the cost was…. For the 10× question, think about the usual suspects:
+
+- a single database or hot partition;
+- synchronous calls in a chain;
+- caches with low hit rates;
+- batch jobs that won't fit their time window;
+- rate limits from third parties.
+
+Say what you'd monitor to see it coming, and what you'd change first. This connects to the [System Design](/system-design/hld) track.
+
+</Practice>
+
+<Takeaways>
+
+- Master two or three projects where you had a central role on the challenging parts.
+- Prepare the problem, your role, the architecture, key decisions with alternatives, the hardest part, mistakes, results, what you'd do differently, and scale.
+- Overview first, then let the interviewer steer; go deep on decisions and trade-offs.
+- Be exact about your own contribution; overclaiming is exposed by follow-ups.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Why This Company, Why Leave](/behavioral/foundations/motivation-questions).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter V: "Know Your Technical Projects", and Chapter III "Special Situations: Experienced Candidates".

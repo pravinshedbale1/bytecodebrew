@@ -1,0 +1,110 @@
+"Leadership" in an engineering interview rarely means managing people. It means **making things happen through others when you don't have authority**: aligning a team on a design, getting another team to change their API, raising the quality bar, stepping up when something is drifting. Google's own guidance calls this **emergent leadership** for individual contributors: taking initiative and collaborating across teams. Every level is asked about it, with bigger scope expected as you go up.
+
+## The question in its many forms
+
+- "Tell me about a time you led a project."
+- "Tell me about a time you influenced someone without authority."
+- "Describe a time you convinced your team to change direction."
+- "Tell me about a time you took the lead when no one else would."
+- "How did you get buy-in for an idea?"
+- "Tell me about a time you raised the bar on quality."
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Initiative** | You noticed the need and acted without being asked |
+| **Vision** | You explained clearly why it mattered |
+| **Influence** | You brought people along with data, prototypes and listening, not pressure |
+| **Execution** | You turned agreement into a plan, owners and follow-through |
+| **Enabling others** | You made others more effective; credit went where it was due |
+| **Scope** | The reach of the story fits the level (your team, several teams, the organisation) |
+
+## Influence techniques worth naming in your story
+
+- **Find the shared goal**: everyone wants fewer incidents or faster releases. Start there.
+- **Show, don't argue**: a prototype, a benchmark or a dashboard beats a debate.
+- **Write it down**: a short design document that includes the alternatives and the costs.
+- **Win one ally first**: often the person most affected, or a respected senior engineer.
+- **Lower the cost of saying yes**: offer to do the first part, or roll out behind a flag.
+- **Give credit away**: let others present, and name their contributions.
+
+## Weak vs strong
+
+> **Question:** Tell me about a time you influenced a team you didn't manage.
+
+**Weak:** "I noticed our deployments were slow, so I told everyone we should move to a new CI system. People were resistant at first, but eventually they agreed and we migrated. Deployment time went down."
+
+*Notes: "How did they agree? What did the candidate do? No numbers."*
+
+**Strong:**
+
+"I got four teams to adopt contract tests, which cut our integration incidents a lot.
+
+"Our services broke each other about twice a month: a team would change an API field, and a consumer would fail in production. Nobody owned the problem, because each team only saw its own side.
+
+"First, I collected the data: six months of incidents. Eleven of them were API-contract breaks, costing about 40 engineer-hours in total. Second, rather than proposing a company-wide tool, I picked the pair of services that broke most often. One was mine and one belonged to the search team. I set up consumer-driven contract tests between them in a day, so people could see a real example. Third, I presented the incident numbers and the working example at the engineering sync. I offered to pair with any team on their first contract, and I wrote a one-page how-to guide.
+
+"Three more teams adopted it within two months. I paired with two of them, and the search team's lead ended up running the next session himself. Contract-break incidents went from about two a month to one in the following quarter. What I learned: data plus a working example convinces people far faster than a proposal."
+
+## Scaling the story to your level
+
+| Level | Expected scope |
+| --- | --- |
+| Junior | Led a feature or a fix; influenced your own team's practice |
+| Mid | Led a project end to end; aligned your team and one neighbouring team |
+| Senior | Drove a multi-team change; set direction for a technical area |
+| Staff+ | Changed how an organisation works; influenced leadership decisions |
+
+See [Signals by Level](/behavioral/playbook/signals-by-level).
+
+## At senior and staff level
+
+At these levels, leadership stories are about **setting direction** for several teams, **changing how the organisation works**, and **growing other leaders**. Expect to explain how you chose *what* to lead, not only how you led it.
+
+**Staff sample (shortened):** "I noticed that each of our seven product teams had built its own retry and timeout logic for calls to payment providers, with different bugs in each. Rather than proposing a mandate, I wrote a two-page strategy covering the incidents this had caused, a shared client library, and a migration path. I reviewed it one-to-one with each tech lead before any meeting. I built the first version with one team, then made two senior engineers from other teams co-owners of the library, so it wasn't 'my' project. Over three quarters, all seven teams adopted it. Payment-provider incidents fell by about two-thirds, and the two co-owners now run the library. One of them was promoted partly on that work."
+
+What makes it staff-level: **finding the problem** across teams, **influencing tech leads before the meeting**, **building ownership in others**, and an **organisation-wide result**.
+
+## Follow-ups to expect
+
+- "Who resisted, and why? How did you handle them?"
+- "What would you have done if leadership had said no?"
+- "How did you decide what to do first?"
+- "What did you personally build, versus organise?"
+- "What would have happened if you hadn't stepped in?"
+
+<Callout type="warning" title="Red flags">
+
+- Leadership that sounds like pushing people around ("I told them they had to").
+- Taking all the credit, or none ("the team did it").
+- Only organising meetings, with no substance.
+- Scope far below the level you're applying for.
+
+</Callout>
+
+<Practice task="Find a time you changed something beyond your own task: a practice, a tool, a decision. List what you did to get others on board. Which influence techniques from the list did you use?">
+
+Even small stories count, as long as there's influence:
+
+- adding a linting rule the team adopted;
+- writing an onboarding doc that became standard;
+- convincing the team to add a rollback step.
+
+Name the techniques explicitly in your answer: "I started with the data", "I built a small example first", "I asked the lead to co-present". That makes the influence visible to the interviewer, rather than leaving them to infer it.
+
+</Practice>
+
+<Takeaways>
+
+- Engineering leadership usually means influence without authority, which Google calls emergent leadership.
+- Show initiative, a clear why, influence through data and examples, execution and credit given to others.
+- Name your techniques: a shared goal, a prototype, a written doc, an early ally, a lower cost of saying yes.
+- Match the scope to your level.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Collaboration & Mentoring](/behavioral/question-bank/collaboration-and-mentoring).
+- [Google: Leadership & Googleyness](/behavioral/companies/google).

@@ -1,13 +1,13 @@
 import { systemDesign } from './tracks/systemDesign';
 import { dsa } from './tracks/dsa';
-import { csFundamentals, behavioral } from './tracks/placeholders';
+import { behavioral } from './tracks/behavioral';
 import { hasContent } from '../content/registry';
 
 /**
  * Curriculum hierarchy:  Track → Course → Module → Lesson
  * Routes:                /:trackId/:courseId/:lessonId
  */
-export const tracks = [systemDesign, dsa, csFundamentals, behavioral];
+export const tracks = [systemDesign, dsa, behavioral];
 
 export const lessonKey = (trackId, courseId, lessonId) =>
   `${trackId}/${courseId}/${lessonId}`;

@@ -1,0 +1,125 @@
+"Tell me about a time you failed" is the question candidates fear most, so they dodge it. They give a fake failure ("I worked too hard"), blame someone else, or pick something trivial. That's exactly what the question is designed to catch. Interviewers are testing **self-awareness, honesty and learning**. A real failure, owned clearly, with a concrete change afterwards, is one of the strongest answers you can give. Meta's own prep advice says being open about what didn't go well "won't be counted against you", and that discussing what you learned is valued.
+
+## The question in its many forms
+
+- "Tell me about your biggest failure."
+- "Tell me about a mistake you made at work."
+- "Tell me about a project that didn't go as planned."
+- "Tell me about a time you missed a deadline."
+- "What would you do differently on your last project?"
+- "What is your greatest weakness?"
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Honesty** | A real failure, with real consequences |
+| **Ownership** | "I", not "the team" or "the requirements" |
+| **Response** | What you did immediately to limit the damage |
+| **Learning** | A specific change in how you work, and evidence it stuck |
+| **Proportion** | Not catastrophising, not minimising |
+
+## Choosing the failure
+
+- **Real and yours**: a bug you shipped, an estimate you blew, a decision that turned out wrong, a warning sign you missed.
+- **With consequences**, but not one that suggests you're unsafe to hire. A two-hour outage you caused and fixed is fine; repeated negligence is not.
+- **Resolved, with a lesson**: the story ends with what changed in you.
+- **Not too old**: a recent failure shows current self-awareness.
+
+## The shape: spend half on the aftermath
+
+1. **What happened**, briefly and honestly: "I made a mistake."
+2. **Your part**, owned clearly.
+3. **What you did immediately** to fix or limit it.
+4. **Root cause**: why you made the mistake.
+5. **What you changed**: process, habit, tooling.
+6. **Evidence** that the change worked.
+
+## Weak vs strong
+
+> **Question:** Tell me about a time you made a mistake.
+
+**Weak:** "We once had a release go wrong because the QA team missed a bug. We rolled back and it was fine. I learned the importance of testing."
+
+*Notes: "Blames QA, no personal mistake, generic lesson."*
+
+**Strong:**
+
+"I caused a two-hour outage of our search service by shipping an index change without checking it against production data.
+
+"I changed how product titles were tokenised for better matching, and tested it on our staging data. Staging had about 10,000 products; production had 40 million, including titles in several languages. When the re-index ran in production, memory blew up on the multilingual titles and search went down at 7 pm. That's our peak.
+
+"I saw the alerts, rolled the change back and restored the previous index, which took about two hours in total. I wrote the incident report that night. The root cause was mine: I assumed staging was representative, and I didn't ask anyone who'd run a production re-index before.
+
+"I changed three things. First, I added a dry-run step that builds the new index on a 5% sample of production data and compares memory and latency before any rollout. Second, I added a checklist item to our search change template: 'tested on production-shaped data?'. Third, I now ask myself, before any data migration, what is different between where I tested and where it will run.
+
+"The dry run has since caught two similar problems before release, one of them someone else's. I'm not glad it happened, but it changed how I approach every data change."
+
+## "What's your greatest weakness?"
+
+*Cracking the Coding Interview* is blunt about this one. Give a **real** weakness, because "I work too hard" signals arrogance or a refusal to admit faults. Then show how you **manage** it. Its example is weak attention to detail, which leads to careless mistakes, so the candidate always has someone double-check their work.
+
+Good weaknesses for engineers:
+
+- not delegating enough;
+- over-engineering early;
+- staying quiet in big meetings;
+- under-estimating;
+- going too deep before checking direction.
+
+Each should come with the concrete thing you do about it, and it shouldn't be a core requirement of the job.
+
+> "I tend to go deep into a problem before checking whether I'm solving the right thing. I once spent two days optimising a query the product team was about to remove. Now, before I start anything longer than a day, I write a three-line plan and share it with the person who asked. It's caught several misunderstandings early."
+
+## At senior and staff level
+
+Senior failures are usually **judgment** failures rather than coding mistakes: a bet that didn't pay off, a plan that was too ambitious, a team or stakeholder you failed to bring along. Interviewers want to hear that you **own the decision**, what you'd do differently as a leader, and how you protected the team while fixing it.
+
+**Senior sample (shortened):** "I championed rewriting our search service in a new language, estimating six months. After nine months we were only halfway, and the old service was falling behind on features. My mistake was planning a big-bang rewrite with no point where we could stop and still keep the value. I told my director directly that the plan wasn't working, before she asked. I then proposed changing course: keep the new query engine, which was done and 3× faster, behind the old API, and stop the rest of the rewrite. We shipped that in six weeks and got most of the latency win. Since then, every large change I lead has milestones that are each valuable on their own, and I put the 'what if we stop here?' question into our design template."
+
+What makes it senior: **a strategic mistake owned openly**, **raised upward early**, a **course correction that saved most of the value**, and a lesson that **changed how the team plans**.
+
+## Follow-ups to expect
+
+- "Whose fault was it, really?"
+- "How did your manager and team react?"
+- "Has anything similar happened since?"
+- "What did it cost the business?"
+- "Have you shared the lesson with others?"
+
+<Callout type="warning" title="Red flags">
+
+- A fake failure or humble-brag.
+- Blaming others, requirements or "the process".
+- No concrete change afterwards ("I learned to be more careful").
+- A failure that reveals an integrity issue.
+- A weakness that's a core job requirement ("I don't like writing code").
+
+</Callout>
+
+<Practice task="Write your failure story so that at least half of it is about what you did afterwards: the immediate fix, the root cause, the change and the evidence. Then write a real weakness with the habit you use to manage it.">
+
+Check the balance: if most of the story is about the failure itself, add more on the response. Strong lessons are **specific and observable**:
+
+- "I added a dry-run step";
+- "I now share a plan before starting any work longer than a day";
+- "I set up an alert on X".
+
+Weak lessons are attitudes: "I learned to be careful". For the weakness, the habit is the key part. It shows you're self-aware **and** doing something about it.
+
+</Practice>
+
+<Takeaways>
+
+- They're testing honesty, ownership, response and learning; a real failure owned well scores highly.
+- Choose something real, with consequences, that you resolved; avoid integrity issues.
+- Spend half the story on the aftermath: the immediate fix, the root cause, what changed, and evidence.
+- For weaknesses, give a real one plus the concrete habit you use to manage it.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Deadlines & Trade-offs](/behavioral/question-bank/deadlines-and-tradeoffs).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter V: "What are your weaknesses?".
+- Meta Careers, "Preparing for your software engineering interview at Meta" ([metacareers.com](https://www.metacareers.com/blog/preparing-for-your-software-engineering-interview-at-meta/)).

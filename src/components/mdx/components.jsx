@@ -9,6 +9,10 @@ import { Practice } from './Practice';
 import { ArrayViz } from './ArrayViz';
 import { TreeViz } from './TreeViz';
 import { GraphViz } from './GraphViz';
+import { StoryBank } from './StoryBank';
+import { BehavioralDrill } from './BehavioralDrill';
+import { QuestionList } from './QuestionList';
+import { StackedBar } from './StackedBar';
 import { SolvedToggle } from './SolvedToggle';
 import { ProblemTracker } from './ProblemTracker';
 import { problemSlug } from '../../hooks/useSolved';
@@ -77,5 +81,9 @@ export const mdxComponents = {
   ArrayViz,
   TreeViz,
   GraphViz,
+  StoryBank,
+  BehavioralDrill,
+  QuestionList,
+  StackedBar,
   ProblemTracker,
 };

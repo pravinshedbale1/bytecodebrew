@@ -1,0 +1,105 @@
+Every engineering job involves more work than time. Deadline and prioritisation questions test whether you can **deliver under pressure without cutting the wrong corners**. That means deciding what matters, communicating early when the plan doesn't fit, cutting scope instead of quality, and pushing back when a deadline is unrealistic. Amazon's "Deliver Results" and "Bias for Action", Stripe's "Move with urgency and focus" and Meta's "Move Fast" all point at this.
+
+## The question in its many forms
+
+- "Tell me about a time you had a very tight deadline."
+- "Tell me about a time you had to choose between competing priorities."
+- "Describe a time you had to cut scope."
+- "Tell me about a time you pushed back on a deadline or a request."
+- "Tell me about a time you had to balance speed and quality."
+- "How do you prioritise when everything is urgent?"
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Prioritisation** | You separated must-have from nice-to-have, with a reason |
+| **Communication** | You raised risks early, with options, not just "it's late" |
+| **Trade-off judgment** | You cut scope, not safety, and you knew which corners can't be cut |
+| **Delivery** | It shipped, and the important part worked |
+| **Pushback** | You said no or "not yet" with data, constructively |
+
+## Talk about trade-offs explicitly
+
+When time is short there are four levers. Show that you know them and chose deliberately:
+
+| Lever | Example | Usually acceptable? |
+| --- | --- | --- |
+| **Scope** | Ship 3 of 5 features; defer the admin UI | Yes, most often the right lever |
+| **Time** | Move the date by a week | Sometimes; raise it early |
+| **People** | Borrow a teammate for the migration | Rarely helps late (adding people late slows things down) |
+| **Quality** | Skip tests, monitoring or security review | **No**: say explicitly that you didn't |
+
+*Cracking the Coding Interview*, on what interviewers look for in leads and managers, says prioritisation means asking the right questions to understand what is critical, and cutting the less important parts.
+
+## Weak vs strong
+
+> **Question:** Tell me about a time you had a tight deadline.
+
+**Weak:** "We had to launch a feature in two weeks. Everyone worked really hard, including weekends, and we made it."
+
+*Notes: "Heroics, no prioritisation, no trade-offs."*
+
+**Strong:**
+
+"I had five weeks to ship UPI payments before a regulatory deadline, and the original plan needed eight.
+
+"I was the lead engineer on the integration, with one other engineer. The deadline was fixed by the regulator. Missing it meant we couldn't accept UPI at all during the festive season.
+
+"First, in the first week, I broke the plan into must-haves for the deadline and things that could follow, and checked the list with the product manager. Must-haves: collect payments, handle failures and timeouts, and reconcile with the bank. Deferred: refunds through UPI (they could go to the card or wallet temporarily), the admin dashboard, and the analytics events. Second, I told my manager and the product manager in writing on day four, not week four: we could meet the date with that scope, or deliver everything three weeks late. They chose the reduced scope. Third, I was explicit about what we wouldn't cut. Idempotency, reconciliation and alerting stayed in, because a bug there means wrong money. I moved the dashboard work out and used a SQL report in the meantime.
+
+"We launched two days before the deadline. In the first month we processed about 200,000 UPI payments with zero reconciliation mismatches, and shipped refunds and the dashboard three weeks later. What I'd repeat: raising the trade-off in week one, as a choice between two options, rather than hoping."
+
+## Pushing back
+
+A strong pushback story shows that you:
+
+- understood **why** the request mattered to the requester;
+- quantified the cost or risk;
+- offered **alternatives** (a smaller version, a later date, a different approach);
+- respected the final decision.
+
+"No" alone isn't a strong answer. "Not this, but here's what we can do by then" is.
+
+## Follow-ups to expect
+
+- "How did you decide what to cut?"
+- "Who disagreed with the cuts?"
+- "What corner did you consider cutting and decide not to?"
+- "What would you have done if the product manager had refused to cut scope?"
+- "Did anything break later because of the rush?"
+
+<Callout type="warning" title="Red flags">
+
+- Heroics as the strategy (weekends, all-nighters) with no prioritisation.
+- Silently missing the deadline, or raising the risk at the last minute.
+- Cutting testing, security or monitoring and presenting it as a win.
+- Prioritising by who shouts loudest.
+
+</Callout>
+
+<Practice task="Write a deadline story where you explicitly name one thing you cut, one thing you refused to cut, and when you told stakeholders. Would the story still work if the deadline had been missed?">
+
+The trade-off decision is what interviewers want to hear:
+
+- **what was cut**, and why that was safe;
+- **what was protected**, and why that couldn't move;
+- **when you communicated**: early, with options.
+
+A story where the deadline slipped can still be strong if you raised it early, offered choices, and protected what mattered. It's a good alternative to have ready.
+
+</Practice>
+
+<Takeaways>
+
+- These questions test prioritisation, early communication, trade-off judgment and delivery.
+- Name the levers (scope, time, people, quality) and show you cut scope, not safety.
+- Raise risks early, as a choice between options, in writing.
+- Push back with data and alternatives, then respect the decision.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Impact, Data & Customers](/behavioral/question-bank/impact-and-customers).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter III: "Dev Lead and Managers" (prioritisation, getting things done).

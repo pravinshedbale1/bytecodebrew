@@ -1,0 +1,89 @@
+.figure {
+  margin: var(--space-5) 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.bar {
+  display: flex;
+  gap: 3px;
+  min-height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg {
+  flex-basis: 0;
+  min-width: 72px;            /* keep short segments readable; the legend gives exact shares */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 8px;
+  color: var(--color-text);
+  border-top: 4px solid currentColor;
+  overflow: hidden;
+}
+
+.segLabel {
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+}
+
+.segValue {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.note { color: var(--color-note); background: var(--color-note-soft); }
+.warn { color: var(--color-warn); background: var(--color-warn-soft); }
+.accent { color: var(--color-accent); background: var(--color-accent-soft); }
+.success { color: var(--color-success); background: var(--color-success-soft); }
+.interview { color: var(--color-interview); background: var(--color-interview-soft); }
+.muted { color: var(--color-text-subtle); background: var(--color-surface-muted); }
+
+.legend {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+/* Phones: a slim, exactly proportional bar; the legend carries the labels. */
+@media (max-width: 600px) {
+  .bar { min-height: 14px; }
+  .seg { min-width: 0; padding: 0; border-top-width: 0; background: currentColor; }
+  .segLabel,
+  .segValue { display: none; }
+}

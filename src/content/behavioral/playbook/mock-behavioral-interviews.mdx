@@ -1,0 +1,150 @@
+Advice is easy to agree with. Hearing a whole round is what shows you what "good" sounds like. Below are two complete behavioral interviews with the interviewer's follow-ups and private notes. The first is a **mid-level** backend engineer; the second a **senior** engineer whose round decides between senior and staff. Neither candidate is perfect. Notice how they recover, and how the follow-ups test whether a story is real.
+
+## How a 45-minute round is spent
+
+<StackedBar title="A typical 45-minute behavioral round" unit=" min" segments={[
+  { label: 'Intro', value: 5, tone: 'muted', note: 'introductions and "tell me about yourself"' },
+  { label: 'Stories', value: 30, tone: 'accent', note: 'three or four questions, each with follow-ups' },
+  { label: 'Your questions', value: 7, tone: 'note', note: 'the questions you ask them' },
+  { label: 'Wrap-up', value: 3, tone: 'muted', note: 'next steps' },
+]} />
+
+Three or four questions in 30 minutes means each story gets **7–10 minutes including follow-ups**. Your two-minute answer is only the start.
+
+## Interview 1: mid-level backend engineer
+
+**Interviewer:** Thanks for joining. Could you start by telling me a bit about yourself?
+
+**Candidate:** Sure. I'm a backend engineer with four years' experience, the last three at an e-commerce company on the order platform, mostly Java and Spring. I started at a services company building APIs for banking clients, then moved for product ownership. At my current job I own the order-status service. My best piece of work there was making order updates event-driven, which cut customer "where is my order?" tickets by about a third. I'm looking for a team with bigger scale problems, and your logistics platform is exactly that.
+
+> **Interviewer's note:** Clear, 50 seconds, one quantified highlight, specific reason for us. Good start.
+
+**Interviewer:** Tell me about a technically challenging project.
+
+**Candidate:** The event-driven order updates. We had a polling system where the app asked every 30 seconds for status, and it was slow and expensive, so we moved to events with Kafka and push notifications…
+
+**Interviewer:** Sorry to interrupt: who's "we", and what was your part?
+
+**Candidate:** Fair question. There were three of us. I designed the event schema and the consumer that turns warehouse events into customer-facing statuses. I also ran the migration. The other two built the notification service and the app changes.
+
+> **Interviewer's note:** Started with "we"; corrected well when prompted. Clear about the boundary of their role, which is a good honesty signal.
+
+**Candidate:** The hard part was ordering. Warehouse events arrived out of order, so a customer might see "delivered" before "shipped". I did three things. First, I partitioned the topic by order ID, so all events for one order go through the same partition in order. Second, for events from older systems that arrived late anyway, I added a version number per order and dropped updates older than what we'd already shown. Third, I ran the new consumer in shadow mode for two weeks, comparing its output with the old poller's. That shadow run caught a mapping bug for returns before any customer saw it.
+
+**Interviewer:** Why shadow mode rather than a percentage rollout?
+
+**Candidate:** Statuses are customer-visible, and a wrong "delivered" creates support tickets immediately. Shadow mode let us compare every order with zero customer risk. The cost was two weeks. For a lower-risk change I'd have used a percentage rollout.
+
+**Interviewer:** And the result?
+
+**Candidate:** Status latency went from up to 30 seconds to under 2. Polling traffic to our database dropped by about 80%. "Where is my order?" tickets fell by about a third over the next two months. I'd do one thing differently: I'd add the per-order version from day one, instead of after the first bug.
+
+> **Interviewer's note:** Strong action section: specific techniques with reasons, a trade-off explained when probed (shadow vs percentage rollout), numbers and a reflection. Technical depth is solid for mid-level.
+
+**Interviewer:** Tell me about a disagreement with a colleague.
+
+**Candidate:** In that project, the notification-service engineer wanted to send a push for every status change. I thought customers would find eight notifications per order annoying, and that some statuses meant nothing to them. Instead of arguing, I pulled our app-review comments. Several complained about too many notifications from other apps. I suggested we each pick the statuses we thought mattered, then asked our product manager to check the list with the support team. We ended up with three notifications per order. Honestly, the support team chose one status I wouldn't have, "out for delivery", and it's the one customers like most.
+
+**Interviewer:** How was your relationship with that engineer afterwards?
+
+**Candidate:** Good. We paired on the next project. I think it helped that I'd brought data instead of just disagreeing, and that the final call wasn't "mine" or "theirs".
+
+> **Interviewer's note:** Real disagreement, handled with data and a neutral tie-breaker, and admitted being partly wrong. Collaboration signal: strong.
+
+**Interviewer:** Tell me about a mistake you made.
+
+**Candidate:** I once deployed a database index change during peak hours that locked a table for about four minutes, so order placement failed during that time. I hadn't checked whether the index could be built online on our database version; I assumed it could. I rolled back, apologised in the incident channel and wrote the post-mortem. Then I added a check to our migration tool that warns on locking operations, and our team agreed to run schema changes in a low-traffic window. The warning has fired twice since, once for me and once for a teammate.
+
+> **Interviewer's note:** Real mistake, owned in the first sentence, systemic fix with evidence. Brief and complete.
+
+**Interviewer:** We have a few minutes. What questions do you have?
+
+**Candidate:** You mentioned the team is moving warehouse integrations to events. What's been the hardest part so far? And how does on-call work for the team?
+
+### Scorecard: interview 1
+
+| Signal | Score (1–4) | Evidence |
+| --- | --- | --- |
+| Ownership | 3 | Owned the consumer and the migration; ran shadow testing on their own initiative |
+| Technical judgment | 4 | Partitioning, versioning, shadow vs percentage rollout explained |
+| Collaboration | 4 | Data-led disagreement; admitted the other side was partly right |
+| Self-awareness | 4 | Clear mistake, systemic fix, "what I'd do differently" given unprompted |
+| Communication | 3 | Started with "we" once; otherwise concise and structured |
+| Impact | 4 | Latency, database load and tickets all quantified |
+
+**Recommendation: hire, at mid-level.** The interviewer writes: "Solid mid-level, with ownership of a well-scoped project. Not yet senior: no cross-team leadership or ambiguous problem definition in the stories."
+
+## Interview 2: senior engineer (senior vs staff)
+
+**Interviewer:** Tell me about the most ambiguous problem you've worked on.
+
+**Candidate:** Last year our VP said checkout was "too slow and too fragile", and asked me to fix it. That was the whole brief. I'll explain how I turned it into a plan, because the defining part was the hardest.
+
+> **Interviewer's note:** Nugget first, and they named the ambiguity explicitly.
+
+**Candidate:** I did four things. First, I defined "slow" and "fragile" with data. Checkout p95 was 3.8 seconds, and we'd had nine checkout incidents in two quarters. Six of those came from synchronous calls to three downstream services. Second, I wrote a one-page problem statement with targets: p95 under 1.5 seconds, and no more than two incidents a quarter. I got the VP and the three downstream team leads to agree to it, so we were solving the same problem. Third, I proposed the plan: make the non-critical calls asynchronous (loyalty points, recommendations, analytics) and put timeouts and fallbacks on the critical ones. I split it into three milestones, each valuable on its own. Fourth, I led the work: two engineers on my team, plus one from the loyalty team, which I negotiated with their manager.
+
+**Interviewer:** The loyalty team had their own roadmap. How did you get an engineer from them?
+
+**Candidate:** I showed their lead that two of the six incidents had paged their on-call, and offered a trade: their engineer would build the async consumer for loyalty points, which they'd wanted to modernise anyway. And my team would own its on-call for the first month.
+
+> **Interviewer's note:** Influence across teams through a shared incentive, not escalation. Senior-level behaviour.
+
+**Interviewer:** What didn't go well?
+
+**Candidate:** Milestone two slipped by a month. I'd underestimated how many hidden consumers depended on the synchronous loyalty response: four internal reports read it directly. I should have mapped the dependencies before committing to dates. I told the VP as soon as we found the problem, reduced the scope of milestone two, and moved the reports to the new events in milestone three.
+
+**Interviewer:** Results?
+
+**Candidate:** p95 went to 1.2 seconds. We had one checkout incident in the following two quarters. The pattern of async calls for non-critical paths plus timeout budgets became our team's standard design guidance. Two other teams used the document for their own flows.
+
+**Interviewer:** If you did it again at a larger scale, say all of the company's customer-facing flows, what would change?
+
+**Candidate:** I'd stop being the person executing. I'd set the targets and the design guidance, make each flow's owning team responsible for its own migration with a shared dashboard, and spend my time reviewing designs and removing blockers. I'd also get the dependency map built first, given my mistake.
+
+> **Interviewer's note:** Strong senior story: defined an ambiguous problem, got cross-team agreement, influenced through incentives, owned a slip openly, organisation-level reuse. The answer on scale shows they understand what staff-level leadership would look like, but their evidence so far is one large cross-team project rather than sustained organisation-wide direction.
+
+### Scorecard: interview 2
+
+| Signal | Score (1–4) | Evidence |
+| --- | --- | --- |
+| Handling ambiguity | 4 | Turned a vague brief into measurable targets and milestones |
+| Influence | 4 | Cross-team agreement; won a loyalty-team engineer through a shared incentive |
+| Execution | 4 | Milestones, slip handled early, targets met |
+| Self-awareness | 4 | Owned the dependency-mapping miss and what they'd change |
+| Scope | 3 | One multi-team project with organisation-level reuse; not yet sustained org-wide direction |
+
+**Recommendation: strong hire at senior.** Staff was discussed but not chosen: "Next-level scope would need evidence of setting direction across many teams over a longer period."
+
+## What to take from these
+
+- **Follow-ups are where the scoring happens.** Both candidates' strongest moments came after "why?" or "what was your part?".
+- **Correcting "we" when asked is fine**; doing it unprompted is better.
+- **Admitting you were partly wrong** (the notification choice, the dependency miss) raised both candidates' scores.
+- **Scope decided the level**: the mid-level candidate owned a project, and the senior candidate defined one and aligned several teams.
+
+<Practice task="Record yourself answering the senior interview's first question, about the most ambiguous problem you have worked on, then have a friend ask three follow-ups: what was your part, what didn't go well, and what would change at a larger scale. Score yourself with the scorecard above.">
+
+Compare your scores with the transcripts. The most common gaps are:
+
+- **Defining the problem**: jumping to the solution without saying how you turned ambiguity into targets.
+- **Influence**: no example of getting another team to help.
+- **Scale**: no clear answer to "what would change at a larger scale?".
+
+If one signal scores 2 or below, pick a different story for that theme, or prepare the follow-up answers in advance.
+
+</Practice>
+
+<Takeaways>
+
+- In a 45-minute round each story gets 7–10 minutes with follow-ups; the two-minute answer is the opening.
+- Interviewers probe your exact part, your reasons, what went wrong, and what you'd do at a larger scale.
+- Admitting partial wrongness and correcting "we" honestly raise scores.
+- The level decision rests on scope: owning a project, versus defining one and aligning teams, versus setting direction across an organisation.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Engineering Manager Interviews](/behavioral/playbook/manager-interviews).
+- [Signals by Level](/behavioral/playbook/signals-by-level).

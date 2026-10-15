@@ -29,7 +29,7 @@ URL:  /system-design/hld/replication
 
 ### Adding a track or course
 
-Add it to `src/curriculum/tracks/` (see `placeholders.js`) and register the track in `src/curriculum/index.js`. Navigation, roadmap, progress and breadcrumbs update automatically.
+Add it to `src/curriculum/tracks/` (see `behavioral.js` for the shape) and register the track in `src/curriculum/index.js`. Navigation, roadmap, progress and breadcrumbs update automatically.
 
 ## Writing lessons (MDX)
 

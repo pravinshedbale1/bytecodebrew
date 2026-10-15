@@ -4,7 +4,6 @@ import { Home, ChevronDown, ArrowLeft, X } from 'lucide-react';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
 import { useProgress } from '../../hooks/useProgress';
-import { site } from '../../config/site';
 import { Icon } from '../common/Icon';
 import { ProgressBar } from '../common/ProgressBar';
 import { CourseOutline } from '../navigation/CourseOutline';
@@ -28,7 +27,9 @@ export function AppSidebar({ open, onClose }) {
           <span className={styles.logo} aria-hidden="true">
             {'</>'}
           </span>
-          {site.name}
+          <span>
+            ByteCode<span className={styles.brandAccent}>Brew</span>
+          </span>
         </Link>
         <button type="button" className={styles.close} onClick={onClose} aria-label="Close menu">
           <X size={18} />

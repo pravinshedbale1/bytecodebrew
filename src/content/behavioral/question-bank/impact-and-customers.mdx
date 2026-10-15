@@ -1,0 +1,101 @@
+"What are you proudest of?" and "Tell me about a time you made a decision based on data" give you the chance to show your best work, and many candidates under-sell it. They describe the technology, not the **impact**, or they can't say why it mattered. These questions test whether you connect engineering work to **outcomes for users and the business**, and whether you decide with evidence. Amazon starts its list with "Customer Obsession", Stripe with "Users first", and Microsoft names "Customer obsessed" among its culture attributes.
+
+## The question in its many forms
+
+- "What's the project you're proudest of?"
+- "Tell me about your most impactful work."
+- "Tell me about a time you used data to make a decision."
+- "Tell me about a time you put the customer first."
+- "Tell me about a time you simplified something complex."
+- "Tell me about a time you improved a process or a system significantly."
+
+## What they're scoring
+
+| Signal | Strong evidence |
+| --- | --- |
+| **Impact** | A meaningful outcome, quantified, that you can attribute to your work |
+| **Customer focus** | You started from the user's problem, not the technology |
+| **Data-driven judgment** | You measured before and after; you questioned misleading metrics |
+| **Simplicity** | You removed complexity rather than adding it |
+| **Scope** | The size of the outcome fits the level |
+
+## Translate work into impact
+
+Interviewers think in outcomes. Translate:
+
+| Engineering fact | Impact statement |
+| --- | --- |
+| "I added a cache in front of the pricing service." | "Product pages loaded in 300 ms instead of 1.1 s; the team measured a conversion lift in the A/B test." |
+| "I rewrote the batch job in Spark." | "The nightly report finished by 6 am instead of noon, so the finance team could close the day on time." |
+| "I built an internal CLI." | "Setting up a new service went from two days to an hour; 14 teams used it in the first quarter." |
+| "I fixed a memory leak." | "We cut the service from 24 instances to 10, more than halving its compute cost, and stopped the weekly restarts." |
+
+If you don't know the business number, use the closest measurable one: latency, errors, time saved, adoption, incidents.
+
+## Weak vs strong (data-driven decision)
+
+> **Question:** Tell me about a time you used data to make a decision.
+
+**Weak:** "I always use data. For example, we looked at our metrics and saw some issues, so we improved them."
+
+**Strong:**
+
+"I used data to change what our team built next, away from what everybody assumed.
+
+"Our checkout had a 9% drop-off at the payment step, and the team's plan was to add more payment methods, because customers had asked for them.
+
+"Before committing a quarter to it, I spent two days on the data. I joined the payment-attempt logs with the funnel events, and broke the drop-off down by reason. Missing payment methods explained under 2%. The biggest single cause, about 5%, was OTP pages timing out on slow mobile connections. The bank page took too long to load, and our session expired first. I took that to the product manager with the breakdown and a proposal: extend the session window and add a 'resend and retry' path, about two weeks of work, before the bigger project.
+
+"We shipped it and ran an A/B test. Payment-step drop-off fell from 9% to about 6.5%, worth far more than the payment-method project was estimated to bring. That one went ahead the following quarter. I learned to check what a metric is made of before deciding how to move it."
+
+## Customer-first stories
+
+Show that you:
+
+- **talked to or watched users**: support tickets, recordings, sales calls;
+- **changed something because of them**, sometimes against the plan or your own preference;
+- **measured** whether it helped them.
+
+## Follow-ups to expect
+
+- "How did you know the improvement came from your change?"
+- "What did the data not tell you?"
+- "Who did you have to convince?"
+- "What was the cost, and was it worth it?"
+- "What would you build next?"
+
+<Callout type="warning" title="Red flags">
+
+- Technology for its own sake ("I introduced Kubernetes because it's modern").
+- Impact claims you can't explain or attribute.
+- "The data said X" with no curiosity about whether the data was right.
+- Proudest work that's years old or tiny for the level.
+
+</Callout>
+
+<Practice task="Pick your proudest project and write its impact in one sentence with a number, from the user's or business's point of view, not the technology's. Then write how you know the impact came from your work.">
+
+A good impact sentence reads like: "*X* went from *A* to *B*, which meant *C* for *users or the business*." For attribution, mention:
+
+- an A/B test;
+- a before-and-after on a dashboard;
+- a timeline that lines up with your release;
+- a direct comparison, like the old job against the new job.
+
+If you can't attribute it, say what you **can** show, and be honest about the rest. Interviewers respect accurate claims far more than inflated ones.
+
+</Practice>
+
+<Takeaways>
+
+- These questions test impact, customer focus, data-driven judgment and simplicity.
+- Translate engineering work into outcomes: latency, time saved, cost, adoption, revenue.
+- Data stories should show that you questioned the data and broke it down, not just read a number.
+- Be ready to explain how you know the impact was yours.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [150+ Questions by Theme](/behavioral/question-bank/all-questions).
+- Stripe, "How Stripe works": Users first ([stripe.com/jobs/culture](https://stripe.com/jobs/culture)).
