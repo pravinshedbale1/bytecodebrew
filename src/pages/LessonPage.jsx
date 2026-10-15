@@ -12,6 +12,8 @@ import { LessonFooter } from '../components/lesson/LessonFooter';
 import { ProgressCard, UpNextCard } from '../components/rail/RailWidgets';
 import { LevelBadge } from '../components/common/Badge';
 import { ComingSoon } from '../components/common/ComingSoon';
+import { HighlightLayer } from '../components/highlights/HighlightLayer';
+import { LessonHighlightsCard } from '../components/highlights/LessonHighlightsCard';
 import { NotFoundPage } from './NotFoundPage';
 import styles from './LessonPage.module.css';
 import '../styles/prose.css';
@@ -63,6 +65,7 @@ export function LessonPage() {
           <TableOfContents headings={headings} />
         </RailCard>
       )}
+      {Content && <LessonHighlightsCard rootRef={articleRef} lessonKey={key} />}
       <UpNextCard lesson={next} label="Next lesson" />
       <ProgressCard title={`${course.shortTitle} progress`} completed={done} total={ready.length} />
     </>
@@ -96,6 +99,7 @@ export function LessonPage() {
                 </Suspense>
               </MDXProvider>
             </div>
+            <HighlightLayer rootRef={articleRef} lessonKey={key} />
             <LessonFooter
               complete={isComplete(key)}
               onToggleComplete={() => setComplete(key, !isComplete(key))}

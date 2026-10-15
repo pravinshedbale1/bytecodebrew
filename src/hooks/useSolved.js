@@ -1,32 +1,22 @@
 import { useSyncExternalStore, useCallback } from 'react';
-import { readJSON, writeJSON } from '../lib/storage';
+import { createSyncedStore, mergeObjects } from '../lib/syncedStore';
 
-const STORAGE_KEY = 'bcb:solved';
-
-// Shape: { [leetcodeSlug]: ISOString of when it was marked solved }
-let state = readJSON(STORAGE_KEY, {});
-const listeners = new Set();
-
-function subscribe(listener) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-const getSnapshot = () => state;
+// Shape: { [leetcodeSlug]: ISOString of when it was marked solved }; synced when signed in.
+const store = createSyncedStore({ name: 'solved', storageKey: 'bcb:solved', initial: {}, merge: mergeObjects() });
 
 /** Practice problems the reader has marked as solved, shared by every page that lists problems. */
 export function useSolved() {
-  const solved = useSyncExternalStore(subscribe, getSnapshot);
+  const solved = useSyncExternalStore(store.subscribe, store.get);
 
   const isSolved = useCallback((slug) => Boolean(solved[slug]), [solved]);
 
   const toggleSolved = useCallback((slug) => {
-    const next = { ...state };
-    if (next[slug]) delete next[slug];
-    else next[slug] = new Date().toISOString();
-    state = next;
-    writeJSON(STORAGE_KEY, state);
-    listeners.forEach((l) => l());
+    store.set((prev) => {
+      const next = { ...prev };
+      if (next[slug]) delete next[slug];
+      else next[slug] = new Date().toISOString();
+      return next;
+    });
   }, []);
 
   return { solved, isSolved, toggleSolved };

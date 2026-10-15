@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Shuffle, Play, Pause, RotateCcw, Save } from 'lucide-react';
 import { QUESTIONS, THEME_INFO } from '../../data/behavioralQuestions';
-import { readJSON, writeJSON } from '../../lib/storage';
+import { createSyncedStore, mergeArrays } from '../../lib/syncedStore';
 import styles from './BehavioralDrill.module.css';
 
 /**
@@ -18,12 +18,14 @@ const CHECKS = [
   'Finished in about two minutes',
 ];
 const TARGET = 120;            // seconds
-const KEY = 'bcb:drills';
-
-let history = readJSON(KEY, []);
-const listeners = new Set();
-const subscribe = (l) => { listeners.add(l); return () => listeners.delete(l); };
-const saveHistory = (next) => { history = next; writeJSON(KEY, history); listeners.forEach((l) => l()); };
+// Attempts, newest first, capped at 200; synced to the user's account when signed in.
+const store = createSyncedStore({
+  name: 'drills',
+  storageKey: 'bcb:drills',
+  initial: [],
+  merge: mergeArrays('at', { sort: (a, b) => b.at.localeCompare(a.at), limit: 200 }),
+});
+const saveHistory = (next) => store.set(next);
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -33,7 +35,7 @@ function pick(theme, current) {
 }
 
 export function BehavioralDrill() {
-  const attempts = useSyncExternalStore(subscribe, () => history);
+  const attempts = useSyncExternalStore(store.subscribe, store.get);
   const [theme, setTheme] = useState('all');
   const [question, setQuestion] = useState(null);
   const [seconds, setSeconds] = useState(0);

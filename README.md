@@ -69,6 +69,34 @@ Every Java snippet in the DSA track is an excerpt of a runnable file in [`dsa-ja
 
 Every LLD case study has a runnable reference solution in [`lld-java/`](lld-java/README.md), and the lesson's Java snippets are excerpts of it. After changing a lesson's code, update the matching file and run `./lld-java/run-all.sh` (JDK 21+; the schema lesson's SQL also runs if PostgreSQL is installed).
 
+## Accounts, sync and highlights (Firebase)
+
+Readers can **highlight text and add notes** in any lesson (select text → pick a colour), and **sign in with Google** to sync everything across devices: lesson progress, solved problems, story bank, drill history and highlights. Signed out, everything still works and is saved in the browser.
+
+How it works:
+
+- `src/lib/syncedStore.js`: every saved store lives in `localStorage` and, when signed in, in Firestore at `users/{uid}/state/{name}` as `{ json, updatedAt }`. The first sync after sign-in **merges** device and account data; later changes from other devices are applied live.
+- `src/components/highlights/`: highlights use the CSS Custom Highlight API (`CSS.highlights`), so lesson DOM is never modified. Each highlight is stored as its text plus surrounding context (`src/lib/highlights/anchor.js`) and re-located on load.
+- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names. Everything else is denied.
+- Firebase is loaded lazily after the first paint. With an empty `apiKey` in `src/config/firebase.js`, accounts are switched off and the sign-in button is hidden.
+
+Local development against the emulators (no Firebase project needed; requires Java):
+
+```bash
+npm run emulators        # Auth on :9099, Firestore on :8080 (project "demo-bytecodebrew")
+npm run dev:emulator     # the site, using the emulators
+```
+
+In emulator mode, `window.__bcbEmulatorSignIn('you@example.com')` signs in without the popup (for tests).
+
+One-time production setup:
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) (the free Spark plan is enough).
+2. **Authentication → Sign-in method → Google → Enable.** Under **Settings → Authorised domains**, add `bytecodebrew.com` (and `www.bytecodebrew.com`).
+3. **Firestore Database → Create database** (production mode, a region near your users).
+4. **Project settings → Your apps → Web app (`</>`)** → copy the config into `src/config/firebase.js`.
+5. Publish the rules: `npx firebase deploy --only firestore:rules --project <your-project-id>` (or paste `firestore.rules` into the console's Rules tab).
+
 ## Code map
 
 ```

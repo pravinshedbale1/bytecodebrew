@@ -1,11 +1,11 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Check, Pencil, Trash2, Plus, Copy } from 'lucide-react';
-import { readJSON, writeJSON } from '../../lib/storage';
+import { createSyncedStore, mergeArrays } from '../../lib/syncedStore';
 import styles from './StoryBank.module.css';
 
 /**
  * The reader's own story bank: STAR stories tagged with the themes they can answer,
- * plus a coverage grid that shows which themes still have no story. Saved in this browser only.
+ * plus a coverage grid that shows which themes still have no story. Saved in the browser and synced when signed in.
  */
 export const THEMES = [
   'Conflict',
@@ -20,16 +20,14 @@ export const THEMES = [
   'Integrity',
 ];
 
-const KEY = 'bcb:stories';
-let state = readJSON(KEY, []);
-const listeners = new Set();
-const subscribe = (l) => { listeners.add(l); return () => listeners.delete(l); };
-const save = (next) => { state = next; writeJSON(KEY, state); listeners.forEach((l) => l()); };
+// Saved in the browser, and synced to the user's account when signed in.
+const store = createSyncedStore({ name: 'stories', storageKey: 'bcb:stories', initial: [], merge: mergeArrays('id') });
+const save = (next) => store.set(next);
 
 const EMPTY = { title: '', situation: '', action: '', result: '', learned: '', themes: [] };
 
 export function StoryBank() {
-  const stories = useSyncExternalStore(subscribe, () => state);
+  const stories = useSyncExternalStore(store.subscribe, store.get);
   const [draft, setDraft] = useState(null);          // story being added or edited
   const [copied, setCopied] = useState(false);
 
@@ -149,7 +147,7 @@ export function StoryBank() {
       {stories.length === 0 && !draft && (
         <p className={styles.empty}>No stories yet. Add your first one: start with the project you are proudest of.</p>
       )}
-      <p className={styles.note}>Saved in this browser only. Use "Copy all" to keep a backup.</p>
+      <p className={styles.note}>Saved in this browser, and synced to your account when you sign in. "Copy all" makes a text backup.</p>
     </div>
   );
 }

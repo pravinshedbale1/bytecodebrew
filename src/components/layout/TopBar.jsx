@@ -4,11 +4,13 @@ import { getTrack, getCourse, getLessonContext } from '../../curriculum';
 import { parsePath } from '../../lib/route';
 import { useTheme } from '../../hooks/useTheme';
 import { Breadcrumbs } from './Breadcrumbs';
+import { AccountButton } from './AccountButton';
 import styles from './TopBar.module.css';
 
 function crumbsFor(pathname) {
   const { trackId, courseId, lessonId } = parsePath(pathname);
   const items = [{ label: 'Home', to: '/' }];
+  if (pathname === '/highlights') return [...items, { label: 'My highlights' }];
   const track = trackId && getTrack(trackId);
   if (!track) return items;
   items.push({ label: track.title, to: `/${track.id}` });
@@ -45,6 +47,7 @@ export function TopBar({ onOpenNav }) {
       >
         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
       </button>
+      <AccountButton />
     </header>
   );
 }

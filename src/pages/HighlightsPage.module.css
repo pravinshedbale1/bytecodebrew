@@ -1,0 +1,116 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 0.92rem;
+}
+
+.status { color: var(--color-text-muted); }
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.warn,
+.empty {
+  color: var(--color-text-muted);
+}
+
+.lesson { margin-bottom: var(--space-6); }
+
+.lessonTitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.where {
+  margin: 2px 0 var(--space-3);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.item {
+  position: relative;
+  padding: 10px 44px 10px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid currentColor;
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.yellow { color: #d4ac0d; }
+.green { color: #3fa865; }
+.blue { color: #4d8ad6; }
+.pink { color: #d9649a; }
+
+.quote {
+  color: var(--color-text);
+  text-decoration: none;
+  line-height: 1.55;
+}
+
+.quote:hover { text-decoration: underline; }
+
+.note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+
+.delete:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}

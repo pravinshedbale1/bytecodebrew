@@ -172,3 +172,18 @@
   font-variant-ligatures: none;
   font-feature-settings: 'liga' 0, 'calt' 0;
 }
+
+/* ---- Reader highlights (CSS Custom Highlight API; see components/highlights) */
+::highlight(bcb-hl-yellow) { background-color: rgb(247 214 74 / 0.45); }
+::highlight(bcb-hl-green) { background-color: rgb(127 212 154 / 0.45); }
+::highlight(bcb-hl-blue) { background-color: rgb(143 188 242 / 0.45); }
+::highlight(bcb-hl-pink) { background-color: rgb(242 160 196 / 0.45); }
+::highlight(bcb-hl-note) { text-decoration: underline dotted 2px; text-decoration-color: #8a6a00; text-underline-offset: 3px; }
+::highlight(bcb-hl-active) { background-color: rgb(247 214 74 / 0.8); }
+
+:root[data-theme='dark'] ::highlight(bcb-hl-yellow) { background-color: rgb(247 214 74 / 0.3); }
+:root[data-theme='dark'] ::highlight(bcb-hl-green) { background-color: rgb(127 212 154 / 0.28); }
+:root[data-theme='dark'] ::highlight(bcb-hl-blue) { background-color: rgb(143 188 242 / 0.3); }
+:root[data-theme='dark'] ::highlight(bcb-hl-pink) { background-color: rgb(242 160 196 / 0.3); }
+:root[data-theme='dark'] ::highlight(bcb-hl-note) { text-decoration-color: #e8c55a; }
+:root[data-theme='dark'] ::highlight(bcb-hl-active) { background-color: rgb(247 214 74 / 0.5); }

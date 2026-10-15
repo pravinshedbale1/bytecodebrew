@@ -1,41 +1,32 @@
 import { useSyncExternalStore, useCallback } from 'react';
-import { readJSON, writeJSON } from '../lib/storage';
-
-const STORAGE_KEY = 'bcb:progress';
+import { createSyncedStore, mergeObjects } from '../lib/syncedStore';
 
 // Shape: { [lessonKey]: { completedAt: ISOString } , __lastVisited: lessonKey }
-let state = readJSON(STORAGE_KEY, {});
-const listeners = new Set();
-
-function emit() {
-  writeJSON(STORAGE_KEY, state);
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-const getSnapshot = () => state;
+// Synced to the user's account when signed in; on a first merge, this device's values win conflicts.
+const store = createSyncedStore({
+  name: 'progress',
+  storageKey: 'bcb:progress',
+  initial: {},
+  merge: mergeObjects(),
+});
 
 export function useProgress() {
-  const progress = useSyncExternalStore(subscribe, getSnapshot);
+  const progress = useSyncExternalStore(store.subscribe, store.get);
 
   const isComplete = useCallback((key) => Boolean(progress[key]?.completedAt), [progress]);
 
   const setComplete = useCallback((key, done) => {
-    const next = { ...state };
-    if (done) next[key] = { completedAt: new Date().toISOString() };
-    else delete next[key];
-    state = next;
-    emit();
+    store.set((prev) => {
+      const next = { ...prev };
+      if (done) next[key] = { completedAt: new Date().toISOString() };
+      else delete next[key];
+      return next;
+    });
   }, []);
 
   const markVisited = useCallback((key) => {
-    if (state.__lastVisited === key) return;
-    state = { ...state, __lastVisited: key };
-    emit();
+    if (store.get().__lastVisited === key) return;
+    store.set((prev) => ({ ...prev, __lastVisited: key }));
   }, []);
 
   return { isComplete, setComplete, markVisited, lastVisited: progress.__lastVisited ?? null };
