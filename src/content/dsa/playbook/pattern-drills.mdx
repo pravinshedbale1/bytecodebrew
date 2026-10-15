@@ -1,0 +1,405 @@
+Recognising the pattern is the skill interviews test first, and it's the one people practise least: they solve problems one topic at a time, so they always know which pattern is coming. These **60 statements are mixed**, the way problems arrive in a real interview. Your only job is to **name the pattern and the signal that gave it away, in under a minute**, without writing any code. Then open the answer and compare.
+
+Many statements are paraphrased from *Cracking the Coding Interview* (6th ed.) and carry its problem number, so you can find the full problem and solution there. The rest are interview classics.
+
+## How to use these drills
+
+1. Read the statement once. Set a **60-second** timer.
+2. Say out loud: **the pattern**, **the signal** ("contiguous + sum + negatives") and **the target complexity**.
+3. Open the answer. Score yourself: **2** = pattern and key idea right, **1** = right family but wrong variant (e.g. sliding window instead of prefix sums), **0** = wrong or no idea.
+4. For every 0 or 1, re-read that pattern's "How to spot it" box and write the signal you missed in your log.
+5. Redo the whole set a week later, in a different order.
+
+| Score per round (out of 20) | What it means |
+| --- | --- |
+| 17–20 | Pattern recognition is solid; spend your time on speed and clean code |
+| 12–16 | Mostly there; drill the look-alikes in [The Pattern Picker](/dsa/playbook/pattern-picker) |
+| below 12 | Revisit the "How to spot it" boxes of the patterns you missed before solving more problems |
+
+The rounds get harder, and every round mixes topics on purpose.
+
+## Round 1: warm-up
+
+<Practice task="1. Given an unsorted array and a target, return the indexes of two numbers that add up to the target.">
+
+**Hashing.** For each value, look up `target − value` among the values seen so far (store value → index). O(n). If the array were sorted, two pointers would need O(1) space.
+
+</Practice>
+
+<Practice task="2. Return the k-th to last node of a singly linked list in one pass. (CtCI 2.2)">
+
+**Fast & slow pointers.** Move the fast pointer k steps ahead, then move both until fast reaches the end; slow is the answer. O(n), O(1).
+
+</Practice>
+
+<Practice task="3. Is there a route between two nodes of a directed graph? (CtCI 4.1)">
+
+**Graph BFS/DFS** from the source with a visited set; stop when the target is reached. O(V + E). Bidirectional BFS can be faster in practice.
+
+</Practice>
+
+<Practice task="4. A child climbs n steps taking 1, 2 or 3 at a time. How many ways? (CtCI 8.1)">
+
+**1D DP**: `ways[i] = ways[i−1] + ways[i−2] + ways[i−3]`, three rolling variables. It overflows quickly, so ask about a modulus or use `long`/BigInteger. O(n).
+
+</Practice>
+
+<Practice task="5. Merge all overlapping meeting time ranges.">
+
+**Intervals.** Sort by start; extend the last merged interval while the next one starts before it ends, otherwise start a new one. O(n log n).
+
+</Practice>
+
+<Practice task="6. Can the characters of a string be rearranged into a palindrome? (CtCI 1.4)">
+
+**Hashing / counting.** A palindrome allows at most one character with an odd count. Count characters (or flip one bit per character in an int and check `(mask & (mask − 1)) == 0`). O(n).
+
+</Practice>
+
+<Practice task="7. An array holds every number from 0 to n except one. Find the missing number in O(1) extra space.">
+
+**Math or bits.** `n(n + 1)/2 − sum`, or XOR all indexes and values so everything present cancels. O(n), O(1).
+
+</Practice>
+
+<Practice task="8. Return a list of the nodes at each depth of a binary tree. (CtCI 4.3)">
+
+**Tree BFS by levels** (queue size = level size), or DFS passing the depth down and appending to `lists[depth]`. O(n).
+
+</Practice>
+
+<Practice task="9. Implement a queue using two stacks. (CtCI 3.4)">
+
+**Design.** Push onto an in-stack; pop from an out-stack, refilling it from the in-stack only when it's empty. Each element moves at most twice: amortised O(1).
+
+</Practice>
+
+<Practice task="10. Return the k-th largest element of an unsorted array.">
+
+**Heap of size k** (O(n log k)) or **quickselect** (O(n) average). Sorting (O(n log n)) is a fine first answer to mention.
+
+</Practice>
+
+## Round 2: arrays and strings in disguise
+
+<Practice task="11. All numbers are positive. Find the length of the longest subarray whose sum is at most k.">
+
+**Sliding window.** Positive numbers make the sum grow when you extend and shrink when you move the left edge, so expand right and shrink left while the sum exceeds k. O(n).
+
+</Practice>
+
+<Practice task="12. Numbers may be negative. Find the length of the longest subarray whose sum is exactly k.">
+
+**Prefix sums + hash map.** Negatives break the window's monotonicity. Store the **first** index of each prefix sum; at index i, a subarray ending here sums to k if `prefix − k` was seen, and its length is i minus that first index. O(n).
+
+</Practice>
+
+<Practice task="13. Is one string a rotation of another, using a single substring check? (CtCI 1.9)">
+
+**String trick.** Same length and `b` is a substring of `a + a`. With KMP the check is O(n).
+
+</Practice>
+
+<Practice task="14. Given two arrays, find the pair (one value from each) with the smallest absolute difference. (CtCI 16.6)">
+
+**Sorting + two pointers.** Sort both, walk one pointer in each, record the difference and advance the pointer at the smaller value (advancing the larger only makes the gap bigger). O(n log n + m log m).
+
+</Practice>
+
+<Practice task="15. Return all subsets of a set. (CtCI 8.4)">
+
+**Backtracking** (record at every node) or **bitmasks** 0…2ⁿ − 1. Output size is n · 2ⁿ, so that's the best possible.
+
+</Practice>
+
+<Practice task="16. Given projects and dependency pairs, return a valid build order or report that none exists. (CtCI 4.7)">
+
+**Topological sort** (Kahn's algorithm). If fewer than all projects come out, there's a cycle. O(V + E).
+
+</Practice>
+
+<Practice task="17. Count the subarrays whose sum is divisible by k.">
+
+**Prefix sums + counting remainders.** Two prefixes with the same remainder mod k bound a divisible subarray. Count remainders (use `Math.floorMod` for negatives) and add the count seen so far at each step. O(n).
+
+</Practice>
+
+<Practice task="18. Find a target in a sorted array that was rotated at an unknown pivot.">
+
+**Binary search.** At each step one half is sorted; check whether the target lies in that half's range and discard the other half accordingly. O(log n).
+
+</Practice>
+
+<Practice task="19. Build a binary search tree of minimal height from a sorted array of distinct integers. (CtCI 4.2)">
+
+**Divide and conquer (tree recursion).** The middle element is the root; build the left subtree from the left half and the right from the right half. O(n).
+
+</Practice>
+
+<Practice task="20. Rotate an n × n image by 90 degrees in place. (CtCI 1.7)">
+
+**Matrix:** transpose, then reverse each row. O(n²), O(1).
+
+</Practice>
+
+## Round 3: linked lists, stacks and searching
+
+<Practice task="21. Is a singly linked list a palindrome? Use O(1) extra space.">
+
+**Fast & slow + reversal.** Find the middle with fast/slow pointers, reverse the second half, compare the halves (then optionally restore). O(n), O(1).
+
+</Practice>
+
+<Practice task="22. Evaluate an expression string with non-negative integers and +, −, *, / (no parentheses). (CtCI 16.26)">
+
+**Stack.** Push signed numbers for + and −; for * and / combine immediately with the top of the stack; sum the stack at the end. Precedence handled in one pass, O(n).
+
+</Practice>
+
+<Practice task="23. Find the smallest truck capacity that ships all packages, in order, within D days.">
+
+**Binary search on the answer.** Capacity between max(weight) and sum(weights); a greedy O(n) check counts days for a capacity, and feasibility is monotonic. O(n log sum).
+
+</Practice>
+
+<Practice task="24. Two singly linked lists may merge into one; return the first shared node or null. (CtCI 2.7)">
+
+**Two pointers.** Walk both; when one reaches the end, restart it at the other list's head. They meet at the junction (or both reach null) after at most m + n steps. O(1) space.
+
+</Practice>
+
+<Practice task="25. Find the first common ancestor of two nodes in a binary tree that is not a search tree. (CtCI 4.8)">
+
+**Tree DFS (LCA).** Return the node if it is p or q; recurse into both children; if both sides return non-null, the current node is the answer, otherwise pass up the non-null side. O(n).
+
+</Practice>
+
+<Practice task="26. Print all valid combinations of n pairs of parentheses. (CtCI 8.9)">
+
+**Backtracking** with counts: add `(` while open < n, add `)` while close < open. Every leaf is valid, so there's no filtering.
+
+</Practice>
+
+<Practice task="27. Count the ways to make n cents from quarters, dimes, nickels and pennies. (CtCI 8.11)">
+
+**Unbounded knapsack (counting).** Coins in the **outer** loop so each combination is counted once: `ways[a] += ways[a − coin]`. O(n · coins).
+
+</Practice>
+
+<Practice task="28. If any cell is 0, set its entire row and column to 0, using O(1) extra space. (CtCI 1.8)">
+
+**Matrix markers.** Use the first row and first column as flags, with two booleans for whether they themselves contained zeros. Apply the markers last.
+
+</Practice>
+
+<Practice task="29. Given birth and death years for many people, find the year with the most people alive. (CtCI 16.10)">
+
+**Difference array / sweep line.** +1 at the birth year and −1 at the year after death, then a running prefix sum; the maximum is the answer. O(n + years), or sort the events for O(n log n).
+
+</Practice>
+
+<Practice task="30. In a sorted array of distinct integers, find an index i where a[i] equals i. (CtCI 8.3)">
+
+**Binary search.** `a[i] − i` is non-decreasing for distinct sorted integers, so search for the point where it equals 0: if `a[mid] > mid` go left, else go right. O(log n). (With duplicates you must search both sides.)
+
+</Practice>
+
+## Round 4: graphs, trees and DP
+
+<Practice task="31. Change one dictionary word into another, one letter at a time, where every step is a dictionary word. Find the shortest sequence. (CtCI 17.22)">
+
+**BFS** over words (fewest steps, equal cost). Generate neighbours by changing each position to each letter and checking a hash set, or group words by wildcard patterns like `c_t`. Keep parents to rebuild the path.
+
+</Practice>
+
+<Practice task="32. Count downward paths in a binary tree, starting and ending anywhere, whose values sum to a target. (CtCI 4.12)">
+
+**Tree DFS + prefix sums.** Carry the running sum down; a hash map counts prefix sums on the current root-to-node path; add `count[sum − target]` at each node and undo the map entry on the way back. O(n).
+
+</Practice>
+
+<Practice task="33. A masseuse gets back-to-back requests and can't take adjacent ones. Maximise booked minutes. (CtCI 17.16)">
+
+**1D DP (house robber).** `best = max(skip, take + best two back)` with two rolling variables. O(n), O(1).
+
+</Practice>
+
+<Practice task="34. In a grid of land heights, 0 means water; ponds connect vertically, horizontally and diagonally. Return all pond sizes. (CtCI 16.19)">
+
+**Grid DFS/BFS** with eight directions; mark visited cells (or set them to −1) and count each component. O(R · C).
+
+</Practice>
+
+<Practice task="35. Find the area of the largest rectangle that fits under a histogram.">
+
+**Monotonic stack.** Keep bar indexes with increasing heights; when a lower bar arrives, pop and compute each popped bar's rectangle, whose width runs from the new top to the current index. O(n).
+
+</Practice>
+
+<Practice task="36. Accounts that share any email belong to the same person. Merge them.">
+
+**Union-find** over emails (or accounts): union every email in an account with its first email, then group by root. Near O(total emails). DFS on an email graph also works.
+
+</Practice>
+
+<Practice task="37. Place n queens on an n × n board so that none attack each other; list all arrangements. (CtCI 8.12)">
+
+**Backtracking** row by row, with sets (or boolean arrays) for columns and both diagonals (`r − c` and `r + c`) for O(1) checks.
+
+</Practice>
+
+<Practice task="38. Design a cache with O(1) get and put that evicts the least recently used entry. (CtCI 16.25)">
+
+**Design: hash map + doubly linked list.** The map points to list nodes; move a node to the front on every use; evict from the tail. Sentinels avoid edge cases.
+
+</Practice>
+
+<Practice task="39. Find the minimum number of insertions, deletions and replacements to turn one word into another.">
+
+**String DP** (edit distance) over prefixes: match → diagonal, else 1 + min(diagonal, up, left). O(n · m).
+
+</Practice>
+
+<Practice task="40. A sorted list-like structure has get(i), which returns −1 past the end, but no size method. Find a value. (CtCI 10.4)">
+
+**Binary search after exponential search.** Double the index (1, 2, 4, …) until `get(i)` is −1 or exceeds the target, then binary search in the last range. O(log n).
+
+</Practice>
+
+## Round 5: medium-hard mix
+
+<Practice task="41. Find the shortest subarray that, if sorted, makes the whole array sorted. (CtCI 16.16)">
+
+**Two scans (two pointers).** From the left, track the running max; the last index where a value is below it is the right end. From the right, track the running min; the last index where a value is above it is the left end. O(n), no sorting.
+
+</Practice>
+
+<Practice task="42. Find the cheapest flight from A to B using at most k stops.">
+
+**Bellman–Ford with k + 1 rounds**, relaxing from a copy of the previous round's costs (or BFS by stops). Plain Dijkstra ignores the stop limit. O(k · E).
+
+</Practice>
+
+<Practice task="43. Stack boxes so each is strictly smaller in width, height and depth than the one below; maximise the total height. (CtCI 8.13)">
+
+**Sort + LIS-style DP.** Sort by one dimension descending; `best[i]` = tallest stack with box i on top = its height + max `best[j]` over boxes j that can hold it. O(n²).
+
+</Practice>
+
+<Practice task="44. Find the in-order successor of a node in a BST where each node has a parent link. (CtCI 4.6)">
+
+**BST property.** If there's a right subtree, it's that subtree's leftmost node. Otherwise climb until you move up from a left child; that parent is the successor (or none). O(h).
+
+</Practice>
+
+<Practice task="45. Design a set with insert, remove and getRandom, all O(1).">
+
+**Design: ArrayList + value → index map.** Remove by moving the last element into the hole. getRandom picks a random index.
+
+</Practice>
+
+<Practice task="46. Count the trailing zeros of n factorial. (CtCI 16.5)">
+
+**Math.** Each zero needs a factor 5 (2s are plentiful): `n/5 + n/25 + n/125 + …`. O(log n).
+
+</Practice>
+
+<Practice task="47. A robot moves only right or down on a grid with blocked cells. Find any path from top-left to bottom-right. (CtCI 8.2)">
+
+**Grid DP / DFS with memo.** DFS backwards from the target, remembering cells already known to fail so each cell is explored once. O(R · C).
+
+</Practice>
+
+<Practice task="48. Numbers arrive one at a time; report the median after each. (CtCI 17.20)">
+
+**Two heaps.** A max-heap for the lower half and a min-heap for the upper half, sizes within one; the median comes from the tops. O(log n) per number.
+
+</Practice>
+
+<Practice task="49. Maximise stock profit with unlimited trades, where after selling you must skip a day before buying.">
+
+**State-machine DP** with hold, sold and rest states per day, all updated from yesterday's values. O(n), O(1).
+
+</Practice>
+
+<Practice task="50. Implement rand7 using only rand5. (CtCI 16.23)">
+
+**Rejection sampling.** `5·(rand5() − 1) + rand5()` is uniform on 1..25; keep 1..21 and return `(v − 1) % 7 + 1`, retrying otherwise.
+
+</Practice>
+
+## Round 6: hard and advanced
+
+<Practice task="51. In a grid of heights, find a path from top-left to bottom-right minimising the largest height difference between consecutive cells.">
+
+**Dijkstra** where a path's cost is its maximum step (`max` instead of `+`), or binary search on the answer + BFS. O(R·C log(R·C)).
+
+</Practice>
+
+<Practice task="52. People stand on each other's shoulders; each must be shorter and lighter than the one below. Find the tallest tower. (CtCI 17.8)">
+
+**Sort + longest increasing subsequence.** Sort by height (breaking ties so equal heights can't stack), then LIS on weight with binary search. O(n log n).
+
+</Practice>
+
+<Practice task="53. Numbers sit in a row. Removing one earns its value times its current left and right neighbours. Maximise the total.">
+
+**Interval DP**, choosing the number removed **last** in each range so its neighbours are the range's fixed ends (burst balloons). O(n³).
+
+</Practice>
+
+<Practice task="54. Find all occurrences of a pattern in a text of a million characters, in guaranteed linear time.">
+
+**KMP.** Build the failure table for the pattern; scan the text once, falling back via the table on mismatches. O(n + m).
+
+</Practice>
+
+<Practice task="55. An array receives 10⁵ point updates interleaved with 10⁵ range-sum queries.">
+
+**Fenwick tree** (or segment tree): O(log n) per update and query. Prefix sums would need O(n) per update.
+
+</Practice>
+
+<Practice task="56. Given a long string and many short strings, find where each short string occurs. (CtCI 17.17)">
+
+**Trie** of the short strings. From each position of the long string, walk the trie as far as it matches and record every word end reached. O(len · longest short string).
+
+</Practice>
+
+<Practice task="57. Add two integers without using + or any arithmetic operator. (CtCI 17.1)">
+
+**Bit manipulation.** XOR adds without carries; `(a & b) << 1` is the carry. Repeat until the carry is 0. Works for negatives in two's complement.
+
+</Practice>
+
+<Practice task="58. Find the longest substring that occurs at least twice in a string of length 10⁵.">
+
+**Binary search on the length + rolling hash.** If a repeat of length L exists, so does one of L − 1. Each check hashes all windows of length L in O(n), so O(n log n) expected.
+
+</Practice>
+
+<Practice task="59. For each element, count how many elements to its right are smaller.">
+
+**Fenwick tree over compressed values**, scanning right to left (count seen values below the current rank), or **merge sort** counting. O(n log n).
+
+</Practice>
+
+<Practice task="60. Count binary strings of length n (n up to 10¹⁵) with no two adjacent 1s, modulo 10⁹ + 7.">
+
+**State-machine DP + fast power.** Two states (ends in 0, ends in 1) give a 2 × 2 transition matrix; raise it to the n-th power by squaring. O(log n).
+
+</Practice>
+
+<Takeaways>
+
+- Practise spotting separately from solving: name the pattern, the signal and the target complexity in under a minute.
+- Score each drill 2, 1 or 0; every 1 is a look-alike you should study.
+- Write the missed signal in your log; redo the set a week later in a new order.
+- Mixed practice is what makes recognition work under interview pressure.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Mock Interviews, Annotated](/dsa/playbook/mock-interviews).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.): the full problems behind the numbered drills, with hints in section XIII.

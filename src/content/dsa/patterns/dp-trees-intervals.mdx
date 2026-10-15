@@ -1,0 +1,277 @@
+The DP lessons so far had states that move **along** something: an index, two indexes into two strings, a cell in a grid. Two families break that mould and catch people out:
+
+- **DP on trees**: the state is a node, and subproblems are subtrees.
+- **Interval DP**: the state is a range `[l, r]`, and you try every way to split it.
+
+Both look scary in a problem statement and both reduce to a short template. The hard part is choosing **what each subproblem returns**. This lesson shows you how.
+
+<Callout type="tip" title="How to spot it">
+
+- **Tree DP:** a tree problem where a node's best answer depends on a **choice at the node** (rob or skip it, put a camera or not). Plain "depth" or "sum" isn't enough to pass up.
+- Often the answer needs **two or three numbers per node** ("best if I take this node", "best if I don't").
+- **Interval DP:** you repeatedly merge, burst, cut or remove things from a **sequence**, and the cost depends on what's left **next to** them.
+- **Two players take from the ends** of an array.
+- n ≤ 500 or so, which allows the O(n³) that interval DP typically costs.
+
+</Callout>
+
+## Tree DP: return more than one number
+
+You already know the [tree DFS](/dsa/patterns/tree-dfs) shape: ask each child for an answer, then combine. Tree DP is the same, except that a single number per subtree loses information.
+
+> **House Robber III.** Houses form a binary tree; robbing two directly connected houses sets off the alarm. Maximise the loot.
+
+If a child just returns "the best for my subtree", the parent can't tell whether that best **robbed the child**, and that decides whether the parent may rob itself. So each node returns a **pair**:
+
+- `take` = best for this subtree **if this node is robbed**. Its children must then be skipped.
+- `skip` = best **if it isn't**. Each child is then free to do whichever is better.
+
+<TreeViz title="House Robber III: each node returns [rob, skip]" tree={{ id: "n0", v: 3, c: [{ id: "n1", v: 4, c: [{ id: "n3", v: 1 }, { id: "n4", v: 3 }] }, { id: "n2", v: 5, c: [null, { id: "n6", v: 1 }] }] }} frames={[
+  { note: "House Robber III: robbing two directly-linked houses sets off the alarm. Each node returns a PAIR — [best if I rob this node, best if I skip it] — computed from its children's pairs. Post-order: children first." },
+  { highlight: ["n3"], visited: [], notes: { n3: "[1, 0]" }, vars: { node: 1 }, note: "A leaf: rob = 1, skip = 0." },
+  { highlight: ["n4"], visited: ["n3"], notes: { n3: "[1, 0]", n4: "[3, 0]" }, vars: { node: 3 }, note: "A leaf: rob = 3, skip = 0." },
+  { highlight: ["n1"], visited: ["n3", "n4"], notes: { n3: "[1, 0]", n4: "[3, 0]", n1: "[4, 4]" }, vars: { node: 4 }, note: "rob = 4 + children's skip values = 4; skip = sum of each child's max(rob, skip) = 4." },
+  { highlight: ["n6"], visited: ["n3", "n4", "n1"], notes: { n3: "[1, 0]", n4: "[3, 0]", n1: "[4, 4]", n6: "[1, 0]" }, vars: { node: 1 }, note: "A leaf: rob = 1, skip = 0." },
+  { highlight: ["n2"], visited: ["n3", "n4", "n1", "n6"], notes: { n3: "[1, 0]", n4: "[3, 0]", n1: "[4, 4]", n6: "[1, 0]", n2: "[5, 1]" }, vars: { node: 5 }, note: "rob = 5 + children's skip values = 5; skip = sum of each child's max(rob, skip) = 1." },
+  { highlight: ["n0"], visited: ["n3", "n4", "n1", "n6", "n2"], notes: { n3: "[1, 0]", n4: "[3, 0]", n1: "[4, 4]", n6: "[1, 0]", n2: "[5, 1]", n0: "[8, 9]" }, vars: { node: 3 }, note: "rob = 3 + children's skip values = 8; skip = sum of each child's max(rob, skip) = 9." },
+  { visited: ["n3", "n4", "n1", "n6", "n2", "n0"], marked: ["n0"], notes: { n3: "[1, 0]", n4: "[3, 0]", n1: "[4, 4]", n6: "[1, 0]", n2: "[5, 1]", n0: "[8, 9]" }, vars: { answer: 9 }, note: "At the root: max(rob 8, skip 9) = 9 — rob 3, 3 and 1 (the root and the grandchildren). One pass, O(n): each node's pair is computed once, which is what turns the exponential choice into DP." }
+]} />
+
+```java
+static int rob(TreeNode root) {
+    int[] r = robPair(root);
+    return Math.max(r[0], r[1]);
+}
+
+static int[] robPair(TreeNode n) {
+    if (n == null) return new int[] { 0, 0 };
+    int[] l = robPair(n.left), r = robPair(n.right);
+    int take = n.val + l[1] + r[1];                                 // robbing n: children must be skipped
+    int skip = Math.max(l[0], l[1]) + Math.max(r[0], r[1]);         // skipping n: children are free
+    return new int[] { take, skip };
+}
+```
+
+Every node is visited once, so it's O(n) time and O(h) stack. Compare the brute force: trying every subset of houses is O(2ⁿ). Even memoising "best from this node" means passing extra flags around. Returning the pair is the cleanest form.
+
+### The recipe
+
+1. Ask: **what does the parent need to know** about a child's subtree to make its own choice? That set of facts is the child's return value.
+2. Write the **combine** step for each possible state of the current node.
+3. Handle `null` with values that never force a choice.
+4. The answer is the best state at the root.
+
+[Maximum path sum](/dsa/patterns/tree-dfs) and the diameter are already tree DP. They return "the best path going **down**" and update a global "best path **through** this node". House Robber III returns two states; cameras need three.
+
+### Binary tree cameras
+
+> Place the fewest cameras so every node is watched. A camera watches its node, its parent and its children.
+
+Each node reports one of three states to its parent, and the rules follow directly:
+
+| Children report | This node | Why |
+| --- | --- | --- |
+| Any child **NOT_COVERED** | **HAS_CAMERA** (count it) | Only we can cover that child now |
+| Else any child **HAS_CAMERA** | **COVERED** | A child's camera watches us |
+| Both COVERED (or null) | **NOT_COVERED** | Let our parent place the camera: it can cover more |
+
+```java
+static final int NOT_COVERED = 0, HAS_CAMERA = 1, COVERED = 2;
+static int cameras;
+
+static int minCameraCover(TreeNode root) {
+    cameras = 0;
+    if (cover(root) == NOT_COVERED) cameras++;                      // the root still needs one
+    return cameras;
+}
+
+static int cover(TreeNode n) {
+    if (n == null) return COVERED;                                 // nothing to watch: never forces a camera
+    int l = cover(n.left), r = cover(n.right);
+    if (l == NOT_COVERED || r == NOT_COVERED) { cameras++; return HAS_CAMERA; }   // a child needs us
+    if (l == HAS_CAMERA || r == HAS_CAMERA) return COVERED;        // a child watches us
+    return NOT_COVERED;                                            // let our parent place the camera
+}
+```
+
+This is a greedy argument on top of the tree-DP shape: a leaf never needs a camera of its own, because its parent's camera covers strictly more. The reference solution checks it against trying every subset of nodes.
+
+## Interval DP: choose the last action in a range
+
+> **Burst balloons.** Bursting balloon `i` earns `left · nums[i] · right`, where left and right are its **current** neighbours. Maximise the total.
+
+The natural first idea is "which balloon do I burst **first**?". It fails: after bursting one, its neighbours become adjacent, so the two sides of the remaining problem aren't independent.
+
+The trick is to choose the balloon that bursts **last** in a range. If `k` bursts last strictly between `l` and `r`, then at that moment its neighbours are exactly `l` and `r`. Everything to the left of `k` and everything to the right of it were independent subproblems that ended before `k` burst.
+
+`dp[l][r]` = best coins from bursting everything **strictly between** `l` and `r`, with a virtual 1 added at each end:
+
+> `dp[l][r] = max over l < k < r of dp[l][k] + a[l]·a[k]·a[r] + dp[k][r]`
+
+<ArrayViz title="Burst balloons [3, 1, 5, 8]: filling dp by interval length" frames={[
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, "·", "·", "·", "·"], ["1:3", "", "", 0, "·", "·", "·"], ["2:1", "", "", "", 0, "·", "·"], ["3:5", "", "", "", "", 0, "·"], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], note: "Balloons [3, 1, 5, 8] with a virtual 1 at each end (positions 0 and 5). dp[l][r] = best coins from bursting everything STRICTLY between l and r. Row = l, column = r. Neighbouring pairs (r = l + 1) have nothing between them: 0." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, "·", "·", "·"], ["1:3", "", "", 0, "·", "·", "·"], ["2:1", "", "", "", 0, "·", "·"], ["3:5", "", "", "", "", 0, "·"], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[1, 3]], window: [[1, 2], [2, 3]], vars: { l: 0, r: 2, "best last k": 1 }, note: "dp[0][2]: try each k in (0, 2) as the LAST balloon burst there — its neighbours are then 1 and 1. Best is k = 1: dp[0][1] + 1·3·1 + dp[1][2] = 3." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, "·", "·", "·"], ["1:3", "", "", 0, 15, "·", "·"], ["2:1", "", "", "", 0, "·", "·"], ["3:5", "", "", "", "", 0, "·"], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[2, 4]], window: [[2, 3], [3, 4]], vars: { l: 1, r: 3, "best last k": 2 }, note: "dp[1][3]: try each k in (1, 3) as the LAST balloon burst there — its neighbours are then 3 and 5. Best is k = 2: dp[1][2] + 3·1·5 + dp[2][3] = 15." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, "·", "·", "·"], ["1:3", "", "", 0, 15, "·", "·"], ["2:1", "", "", "", 0, 40, "·"], ["3:5", "", "", "", "", 0, "·"], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[3, 5]], window: [[3, 4], [4, 5]], vars: { l: 2, r: 4, "best last k": 3 }, note: "dp[2][4]: try each k in (2, 4) as the LAST balloon burst there — its neighbours are then 1 and 8. Best is k = 3: dp[2][3] + 1·5·8 + dp[3][4] = 40." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, "·", "·", "·"], ["1:3", "", "", 0, 15, "·", "·"], ["2:1", "", "", "", 0, 40, "·"], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[4, 6]], window: [[4, 5], [5, 6]], vars: { l: 3, r: 5, "best last k": 4 }, note: "dp[3][5]: try each k in (3, 5) as the LAST balloon burst there — its neighbours are then 5 and 1. Best is k = 4: dp[3][4] + 5·8·1 + dp[4][5] = 40." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, "·", "·"], ["1:3", "", "", 0, 15, "·", "·"], ["2:1", "", "", "", 0, 40, "·"], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[1, 4]], window: [[1, 2], [2, 4]], vars: { l: 0, r: 3, "best last k": 1 }, note: "dp[0][3]: try each k in (0, 3) as the LAST balloon burst there — its neighbours are then 1 and 5. Best is k = 1: dp[0][1] + 1·3·5 + dp[1][3] = 30." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, "·", "·"], ["1:3", "", "", 0, 15, 135, "·"], ["2:1", "", "", "", 0, 40, "·"], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[2, 5]], window: [[2, 4], [4, 5]], vars: { l: 1, r: 4, "best last k": 3 }, note: "dp[1][4]: try each k in (1, 4) as the LAST balloon burst there — its neighbours are then 3 and 8. Best is k = 3: dp[1][3] + 3·5·8 + dp[3][4] = 135." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, "·", "·"], ["1:3", "", "", 0, 15, 135, "·"], ["2:1", "", "", "", 0, 40, 48], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[3, 6]], window: [[3, 5], [5, 6]], vars: { l: 2, r: 5, "best last k": 4 }, note: "dp[2][5]: try each k in (2, 5) as the LAST balloon burst there — its neighbours are then 1 and 1. Best is k = 4: dp[2][4] + 1·8·1 + dp[4][5] = 48." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, 159, "·"], ["1:3", "", "", 0, 15, 135, "·"], ["2:1", "", "", "", 0, 40, 48], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[1, 5]], window: [[1, 2], [2, 5]], vars: { l: 0, r: 4, "best last k": 1 }, note: "dp[0][4]: try each k in (0, 4) as the LAST balloon burst there — its neighbours are then 1 and 8. Best is k = 1: dp[0][1] + 1·3·8 + dp[1][4] = 159." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, 159, "·"], ["1:3", "", "", 0, 15, 135, 159], ["2:1", "", "", "", 0, 40, 48], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[2, 6]], window: [[2, 5], [5, 6]], vars: { l: 1, r: 5, "best last k": 4 }, note: "dp[1][5]: try each k in (1, 5) as the LAST balloon burst there — its neighbours are then 3 and 1. Best is k = 4: dp[1][4] + 3·8·1 + dp[4][5] = 159." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, 159, 167], ["1:3", "", "", 0, 15, 135, 159], ["2:1", "", "", "", 0, 40, 48], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[1, 6]], window: [[1, 5], [5, 6]], vars: { l: 0, r: 5, "best last k": 4 }, note: "dp[0][5]: try each k in (0, 5) as the LAST balloon burst there — its neighbours are then 1 and 1. Best is k = 4: dp[0][4] + 1·8·1 + dp[4][5] = 167." },
+  { grid: [[" ", "0:1", "1:3", "2:1", "3:5", "4:8", "5:1"], ["0:1", "", 0, 3, 30, 159, 167], ["1:3", "", "", 0, 15, 135, 159], ["2:1", "", "", "", 0, 40, 48], ["3:5", "", "", "", "", 0, 40], ["4:8", "", "", "", "", "", 0], ["5:1", "", "", "", "", "", ""]], highlight: [[1, 6]], note: "Answer dp[0][5] = 167. Intervals are filled from short to long, so every dp[l][k] and dp[k][r] already exists when we need it. O(n³) time, O(n²) memory." }
+]} />
+
+```java
+static int maxCoins(int[] nums) {
+    int n = nums.length;
+    int[] a = new int[n + 2];
+    a[0] = a[n + 1] = 1;                                           // virtual 1s at both ends
+    for (int i = 0; i < n; i++) a[i + 1] = nums[i];
+    int[][] dp = new int[n + 2][n + 2];
+    for (int len = 2; len <= n + 1; len++)                        // shorter intervals first
+        for (int l = 0; l + len <= n + 1; l++) {
+            int r = l + len;
+            for (int k = l + 1; k < r; k++)
+                dp[l][r] = Math.max(dp[l][r], dp[l][k] + a[l] * a[k] * a[r] + dp[k][r]);
+        }
+    return dp[0][n + 1];
+}
+```
+
+**The fill order is by interval length**, from short to long, because `dp[l][r]` needs shorter intervals inside it. This is the defining feature of interval DP: you'll see either a `len` outer loop or `l` running **backwards** with `r` forwards. That's the same order [String DP](/dsa/patterns/dp-strings) uses for palindromic subsequences.
+
+### The template (pseudo-code)
+
+```java
+for (int len = MIN_LEN; len <= n; len++)
+    for (int l = 0; l + len - 1 < n; l++) {
+        int r = l + len - 1;
+        dp[l][r] = worst;
+        for (int k = l; k < r; k++)                    // every split point or "last action"
+            dp[l][r] = best(dp[l][r], dp[l][k] ⊕ dp[k + 1][r] ⊕ cost(l, k, r));
+    }
+```
+
+The exact split, `[l, k]` and `[k+1, r]` versus `(l, k)` and `(k, r)`, depends on whether the endpoints belong to the subproblem. Decide that in words first.
+
+### Minimum cost to cut a stick
+
+> Cut a stick of length n at given positions. Each cut costs the length of the piece being cut. Minimise the total.
+
+Choose which cut happens **first** inside a piece: it costs the piece's length, and then the two sides are independent. That works here (unlike balloons) because a piece's cost depends only on its own endpoints. Index the DP by **neighbouring cut positions** rather than by length units:
+
+```java
+static int minCost(int n, int[] cuts) {
+    Arrays.sort(cuts);
+    int m = cuts.length;
+    int[] p = new int[m + 2];
+    p[m + 1] = n;
+    for (int i = 0; i < m; i++) p[i + 1] = cuts[i];
+    int[][] dp = new int[m + 2][m + 2];
+    for (int len = 2; len <= m + 1; len++)
+        for (int i = 0; i + len <= m + 1; i++) {
+            int j = i + len;
+            dp[i][j] = Integer.MAX_VALUE;
+            for (int k = i + 1; k < j; k++)                        // first cut inside (p[i], p[j])
+                dp[i][j] = Math.min(dp[i][j], dp[i][k] + dp[k][j] + p[j] - p[i]);
+        }
+    return dp[0][m + 1];
+}
+```
+
+O(m³) in the number of cuts, independent of the stick's length.
+
+### Two-player games on a range
+
+> Players take turns removing a number from **either end**; each wants the larger total. Can player 1 win (or tie)?
+
+Store the **score difference** for whoever moves next on `[i, j]`. Taking `nums[i]` leaves the opponent with `[i+1, j]`, where their best difference is `dp[i+1][j]`:
+
+```java
+static boolean predictTheWinner(int[] nums) {
+    int n = nums.length;
+    int[][] dp = new int[n][n];
+    for (int i = 0; i < n; i++) dp[i][i] = nums[i];
+    for (int i = n - 2; i >= 0; i--)
+        for (int j = i + 1; j < n; j++)
+            dp[i][j] = Math.max(nums[i] - dp[i + 1][j], nums[j] - dp[i][j - 1]);   // the opponent then plays optimally
+    return dp[0][n - 1] >= 0;
+}
+```
+
+"My score minus yours" turns a two-player game into a one-variable recurrence. The same trick solves most minimax-on-a-range problems.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Tree DP returning one number** when the parent needs to know the child's choice. Return a pair or a state.
+- **Choosing the first action** in interval problems where neighbours change. Try "last action" instead.
+- **Wrong fill order**: filling `dp[l][r]` before the shorter intervals inside it. Loop by length, or `l` downward.
+- **Forgetting the virtual boundaries** (the 1s in burst balloons, `0` and `n` in cutting sticks).
+- **Off-by-one in splits**: decide whether `l` and `r` are inside the subproblem, write it as a comment, then stick to it.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 543 | [Diameter of Binary Tree](https://leetcode.com/problems/diameter-of-binary-tree/) | Easy | Return down, update through |
+| 337 | [House Robber III](https://leetcode.com/problems/house-robber-iii/) | Medium | Pair per node |
+| 1372 | [Longest ZigZag Path in a Binary Tree](https://leetcode.com/problems/longest-zigzag-path-in-a-binary-tree/) | Medium | State = direction of arrival |
+| 486 | [Predict the Winner](https://leetcode.com/problems/predict-the-winner/) | Medium | Score difference on a range |
+| 516 | [Longest Palindromic Subsequence](https://leetcode.com/problems/longest-palindromic-subsequence/) | Medium | Interval DP fill order |
+| 1039 | [Minimum Score Triangulation of Polygon](https://leetcode.com/problems/minimum-score-triangulation-of-polygon/) | Medium | Split on a third vertex |
+| 124 | [Binary Tree Maximum Path Sum](https://leetcode.com/problems/binary-tree-maximum-path-sum/) | Hard | Global best through a node |
+| 968 | [Binary Tree Cameras](https://leetcode.com/problems/binary-tree-cameras/) | Hard | Three states per node |
+| 312 | [Burst Balloons](https://leetcode.com/problems/burst-balloons/) | Hard | Last action in a range |
+| 1547 | [Minimum Cost to Cut a Stick](https://leetcode.com/problems/minimum-cost-to-cut-a-stick/) | Hard | DP over cut positions |
+
+## Interview questions
+
+<QA q="In burst balloons, why do you choose the last balloon to burst instead of the first?">
+If you choose the first balloon to burst in a range, its two neighbours become adjacent afterwards, so the remaining left and right parts interact and aren't independent subproblems. If you choose the last balloon k in the open range between l and r, then everything between l and k and everything between k and r is burst before k, with l and k or k and r as fixed boundaries, so those parts are independent. When k finally bursts its neighbours are exactly l and r, so its coins are a[l]·a[k]·a[r]. That gives a clean recurrence over intervals.
+</QA>
+
+<QA q="How do you decide what a recursive tree function should return in tree DP?">
+Ask what the parent needs to know about a child's subtree to make its own best decision. If one number suffices, return it. If the parent's choice depends on what the child did, such as whether the child was robbed or has a camera, return each relevant state, like a pair of best-if-taken and best-if-skipped, or a small enum. Then write the combine rule for each state of the current node, give null children values that never force a choice, and take the best state at the root. Each node is processed once, so it's O(n).
+</QA>
+
+<Practice task="Count the ways to parenthesise a boolean expression like 1^0|0|1 so that it evaluates to true (CtCI 8.14, Boolean Evaluation). What is the state, and what does each split combine?">
+
+This is interval DP over the operands. Let `T[l][r]` and `F[l][r]` count the ways the sub-expression from operand l to operand r evaluates to true and to false. For every operator k between them, split into left `[l, k]` and right `[k+1, r]` and combine the counts:
+
+- `&`: `T += Tl·Tr`; `F += total − Tl·Tr`.
+- `|`: `F += Fl·Fr`; `T += total − Fl·Fr`.
+- `^`: `T += Tl·Fr + Fl·Tr`; `F += Tl·Tr + Fl·Fr`.
+
+Here total = `(Tl + Fl)·(Tr + Fr)`. Fill by interval length. It's O(n³) for n operands.
+
+</Practice>
+
+<Practice task="House Robber III asks for the maximum. How would you also return which houses to rob?">
+
+Store the pair for every node, or recompute it, then walk **down** from the root carrying a flag "may I rob this node?".
+
+- At a node where robbing is allowed, rob it if `take ≥ skip`; its children then get "not allowed".
+- Otherwise skip it; its children get "allowed".
+
+Collect the robbed nodes along the way. This "reconstruct by replaying the decisions" works for any DP: compute values bottom-up, then follow the choices top-down. It's O(n).
+
+</Practice>
+
+<Takeaways>
+
+- Tree DP: return what the parent needs to choose: a pair (take, skip) or a few states.
+- Null children get values that never force a choice; the answer is the best state at the root.
+- Interval DP: dp over ranges, filled from short to long; try every split or "last action" k.
+- When neighbours change after an action, choose the last action in the range, not the first.
+- Two-player range games: store "my score minus yours" for the player to move.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [State-Machine & Bitmask DP](/dsa/patterns/dp-state-machine).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter 8 "Recursion and Dynamic Programming", problem 8.14 "Boolean Evaluation".

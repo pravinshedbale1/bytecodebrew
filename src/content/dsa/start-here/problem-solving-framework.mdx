@@ -40,12 +40,33 @@ Look at the brute force and ask **what it repeats**. Then ask the pattern questi
 | Are things connected (grid, network, dependencies)? | [BFS/DFS](/dsa/patterns/graph-traversal), [topological sort](/dsa/patterns/topological-sort), [union-find](/dsa/patterns/union-find) |
 | Must I list **all** combinations, subsets or arrangements? | [Backtracking](/dsa/patterns/backtracking) |
 | Am I asked for a max/min/count over choices, and the brute force recomputes the same subproblems? | [Dynamic programming](/dsa/patterns/dp-made-easy) |
+| Is it a class with methods that must all be fast? | [Designing data structures](/dsa/patterns/design-data-structures) |
+| Does the array change between many range questions? | [Fenwick or segment tree](/dsa/patterns/range-queries) |
 
 The [Pattern Picker](/dsa/playbook/pattern-picker) expands this into a full decision guide.
 
 ### 4. Optimise and check the complexity
 
 Apply the pattern, then state the new time and space complexity and compare it with what the constraints require. If it's still too slow, go back to step 3 — there may be another bottleneck.
+
+Two checks from *Cracking the Coding Interview* help here.
+
+**Look for BUD** in your current solution:
+
+| Look for | Example | Typical fix |
+| --- | --- | --- |
+| **B**ottleneck: the step that dominates the cost | Sorting is O(n log n), but everything after it is O(n) | Remove or replace that step (a hash set instead of sorting) |
+| **U**nnecessary work | Trying all d after you've already found a, b, c with a + b + c + d = target | Compute the one value that works and check for it |
+| **D**uplicated work | Re-summing the same subarray, re-solving the same subproblem | Store it: prefix sums, a hash map, memoisation |
+
+**Know your best conceivable runtime (BCR).** This is the fastest any solution could possibly be, judged from the input and output alone:
+
+- If you must look at every element, the BCR is O(n).
+- If you must print every pair, it's O(n²).
+
+The BCR isn't always reachable. It tells you when to **stop optimising**, and it hints at what remains. If you're at O(n log n) and the BCR is O(n), ask whether the sort is really necessary.
+
+Careful: "find all pairs with sum k" doesn't need to *look at* all pairs, so its BCR is O(n), not O(n²).
 
 ### 5. Code it cleanly
 
@@ -120,7 +141,8 @@ Being stuck is a normal part of solving. These moves get you unstuck, roughly in
 3. **Look at what the brute force repeats.** Repeated searching → hash map. Repeated sums → prefix sums. Repeated subproblems → DP.
 4. **Run through the data structures.** "Would a hash map help? A stack? A heap? Sorting first?"
 5. **Work backwards** from the answer: what would the last step look like?
-6. **Say it out loud.** In an interview, narrating where you're stuck invites a hint — interviewers want to give hints to candidates who are reasoning clearly.
+6. **Base case and build.** Solve n = 1, then n = 2 using the answer for n = 1, then n = 3. If each step reuses the last, you've found a recursion or a DP. Permutations of `"abc"` are permutations of `"ab"` with `c` inserted at every position.
+7. **Say it out loud.** In an interview, narrating where you're stuck invites a hint — interviewers want to give hints to candidates who are reasoning clearly.
 
 <Callout type="interview" title="Never stay silent">
 In an interview, a correct brute force explained clearly, plus a sensible attempt at optimising it, scores far better than ten minutes of silence followed by a half-finished clever idea. Say the brute force and its cost early — it's a safety net and a starting point.
@@ -156,3 +178,4 @@ Compare its complexity with the input size in the constraints. A rough rule: a t
 
 - Next: [Big-O the Easy Way](/dsa/start-here/complexity-made-easy).
 - George Pólya, *How to Solve It* (1945) — the original problem-solving framework, still worth reading.
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter VII "Technical Questions": the five "Optimize & Solve" techniques (BUD, DIY, Simplify and Generalize, Base Case and Build, Data Structure Brainstorm) and Best Conceivable Runtime.

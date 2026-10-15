@@ -1,4 +1,4 @@
-You've learned about thirty patterns. In an interview, the hard part is the first two minutes: reading an unfamiliar problem and deciding **which** pattern it is. This lesson turns that decision into a routine. Three quick reads — the **constraints**, the **input shape**, and the **wording** — narrow thirty patterns down to two or three candidates, and the brute force usually tells you which one wins.
+You've learned about thirty-five patterns. In an interview, the hard part is the first two minutes: reading an unfamiliar problem and deciding **which** pattern it is. This lesson turns that decision into a routine. Three quick reads — the **constraints**, the **input shape**, and the **wording** — narrow them down to two or three candidates, and the brute force usually tells you which one wins.
 
 ## Read 1: the constraints tell you the target complexity
 
@@ -7,8 +7,8 @@ Before thinking about the algorithm, look at the input size. With a budget of ro
 | Largest n | Target | Patterns that fit |
 | --- | --- | --- |
 | ≤ 10–12 | O(n!) | Permutations — [backtracking](/dsa/patterns/backtracking) |
-| ≤ 20–25 | O(2ⁿ) | Subsets — backtracking, [bitmasks](/dsa/patterns/bit-manipulation), bitmask DP |
-| ≤ 500 | O(n³) | Interval DP, Floyd–Warshall, triple loops |
+| ≤ 20–25 | O(2ⁿ) | Subsets — backtracking, [bitmasks](/dsa/patterns/bit-manipulation), [bitmask DP](/dsa/patterns/dp-state-machine) |
+| ≤ 500 | O(n³) | [Interval DP](/dsa/patterns/dp-trees-intervals), Floyd–Warshall, triple loops |
 | ≤ 5,000 | O(n²) | 2D DP ([strings](/dsa/patterns/dp-strings), [grids](/dsa/patterns/dp-grid)), every pair |
 | ≤ 10⁵ – 10⁶ | O(n log n) or O(n) | [Sorting](/dsa/patterns/sorting-and-selection), [heaps](/dsa/patterns/heap-patterns), [binary search](/dsa/patterns/binary-search), [hashing](/dsa/patterns/hashing), [two pointers](/dsa/patterns/two-pointers), [sliding window](/dsa/patterns/sliding-window), [prefix sums](/dsa/patterns/prefix-sums), [monotonic stack](/dsa/patterns/monotonic-stack), graph traversal |
 | ≥ 10⁹ (values, not lengths) | O(log n) | [Binary search on the answer](/dsa/patterns/binary-search-on-answer), maths |
@@ -29,7 +29,10 @@ If n is 10⁵, anything with nested loops over pairs is ruled out before you sta
 | Grid | [BFS/DFS](/dsa/patterns/graph-traversal), grid DP, backtracking (word search) |
 | Graph / relationships / dependencies | BFS/DFS, [topological sort](/dsa/patterns/topological-sort), [union-find](/dsa/patterns/union-find), [shortest paths](/dsa/patterns/shortest-paths) |
 | List of words + prefix questions | [Trie](/dsa/patterns/tries) |
-| Stream of numbers | Heap (top-k, running median) |
+| Stream of numbers | Heap (top-k, running median), [reservoir sampling](/dsa/patterns/math-for-interviews) |
+| Matrix to traverse or transform | [Matrix & simulation](/dsa/patterns/matrix-simulation) (spiral, rotate, in-place markers) |
+| "Implement a class" with fast methods | [Designing data structures](/dsa/patterns/design-data-structures) (combine two structures) |
+| Array with updates **and** range questions | [Fenwick / segment tree](/dsa/patterns/range-queries) |
 
 ## Read 3: the wording — signal words
 
@@ -58,6 +61,15 @@ If n is 10⁵, anything with nested loops over pairs is ruled out before you sta
 | "two strings", "edit / common / interleave" | String DP |
 | "starts with", "prefix", "autocomplete", "many words in a grid" | Trie |
 | "appears twice except one", "without extra space" on 0…n | Bit manipulation (XOR) |
+| "design / implement", "O(1) get and put", "evict" | Two structures combined (LRU = hash map + linked list) |
+| "spiral", "rotate the image", "in place" on a matrix | Matrix boundaries, transpose + reverse, markers |
+| "modulo 10⁹ + 7", "gcd", "prime", huge exponent | Math: modular arithmetic, sieve, fast power |
+| "find the pattern in the text", "repeated substring", "shortest palindrome" | KMP failure table, rolling hash |
+| "update index i" + "sum / min of range", "count smaller after self" | Fenwick tree, segment tree |
+| "cooldown", "at most k transactions", "fee" | State-machine DP |
+| "visit every node / city once" with n ≤ 20 | Bitmask DP |
+| a choice at each tree node ("rob", "camera") | Tree DP (return a pair or states) |
+| "burst", "merge stones", "cut", "take from either end" | Interval DP |
 | "earliest finishing", "furthest reach", "smallest that fits" | Greedy (justify it!) |
 
 ## The decision flow
@@ -91,6 +103,8 @@ The flow gives you **candidates**, not certainty. Confirm by writing the brute f
 | Binary search vs binary search on the answer | Searching positions in sorted data vs searching a range of possible answers with a yes/no check |
 | Heap vs sorting | Need everything ordered once → sort; need the best repeatedly or on a stream → heap |
 | Union-find vs DFS | Edges arriving over time → union-find; static graph → either |
+| Prefix sums vs Fenwick tree | No updates → prefix sums; updates mixed with queries → Fenwick or segment tree |
+| Interval DP vs plain 2D DP | Splitting a range at every k (O(n³)) vs two indexes moving forward (O(n²)) |
 
 ## Spot-the-pattern drills
 

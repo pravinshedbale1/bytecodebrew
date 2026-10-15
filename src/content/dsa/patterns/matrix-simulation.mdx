@@ -1,0 +1,253 @@
+Matrix problems rarely need a clever algorithm. What makes them hard is **bookkeeping**: four boundaries, two indexes, and a dozen chances for an off-by-one. The fix is not to be more careful but to use a few **fixed shapes** that make the index arithmetic impossible to get wrong: shrinking boundaries, direction arrays, "transpose then reverse", and in-place markers. Learn these and spiral order, rotation, zero-marking and the Game of Life all become routine.
+
+<Callout type="tip" title="How to spot it">
+
+- A 2D grid where the task is to **traverse in a shape** (spiral, diagonal, layer by layer).
+- **Transform in place**: rotate, transpose, mark rows and columns, update every cell from its neighbours.
+- **Simulate** rules on a board: games, robots, ants, falling objects.
+- Rows and columns are **sorted**, which calls for a staircase search.
+- (Exploring connected regions is a graph problem; use [Graphs & Grids](/dsa/patterns/graph-traversal).)
+
+</Callout>
+
+## Tool 1: direction arrays
+
+Never write four copies of "move up, down, left, right". Put the moves in an array and loop over it. Turning right is `d = (d + 1) % 4`:
+
+```java
+static final int[][] DIRS = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };   // right, down, left, up
+```
+
+For eight neighbours (games, mines), loop `dr` and `dc` over −1…1 and skip `(0, 0)`.
+
+## Spiral order: shrinking boundaries
+
+Keep the unvisited region as four boundaries. Walk one side, then move that boundary inward:
+
+<ArrayViz title="Spiral order with four boundaries" frames={[
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0], [1, 1], [1, 2], [1, 3], [2, 0], [2, 1], [2, 2], [2, 3], [3, 0], [3, 1], [3, 2], [3, 3]], vars: { top: 0, bottom: 3, left: 0, right: 3 }, aux: { label: "out", items: [] }, note: "Spiral order with four boundaries. The shaded region is what is still unvisited: rows top..bottom, columns left..right. Each side of the ring is one simple loop; after each side, move that boundary inward." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[1, 0], [1, 1], [1, 2], [1, 3], [2, 0], [2, 1], [2, 2], [2, 3], [3, 0], [3, 1], [3, 2], [3, 3]], highlight: [[0, 0], [0, 1], [0, 2], [0, 3]], done: [[0, 0], [0, 1], [0, 2], [0, 3]], vars: { top: 1, bottom: 3, left: 0, right: 3 }, aux: { label: "out", items: [1, 2, 3, 4] }, note: "Walk the top row left → right, then top++ (now 1)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2], [3, 0], [3, 1], [3, 2]], highlight: [[1, 3], [2, 3], [3, 3]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3]], vars: { top: 1, bottom: 3, left: 0, right: 2 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16] }, note: "Walk the right column down, then right-- (now 2)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]], highlight: [[3, 2], [3, 1], [3, 0]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0]], vars: { top: 1, bottom: 2, left: 0, right: 2 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13] }, note: "Rows remain (top ≤ bottom): walk the bottom row right → left, then bottom-- (now 2)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[1, 1], [1, 2], [2, 1], [2, 2]], highlight: [[2, 0], [1, 0]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0]], vars: { top: 1, bottom: 2, left: 1, right: 2 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5] }, note: "Columns remain (left ≤ right): walk the left column up, then left++ (now 1)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[2, 1], [2, 2]], highlight: [[1, 1], [1, 2]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0], [1, 1], [1, 2]], vars: { top: 2, bottom: 2, left: 1, right: 2 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5, 6, 7] }, note: "Walk the top row left → right, then top++ (now 2)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [[2, 1]], highlight: [[2, 2]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0], [1, 1], [1, 2], [2, 2]], vars: { top: 2, bottom: 2, left: 1, right: 1 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5, 6, 7, 11] }, note: "Walk the right column down, then right-- (now 1)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], window: [], highlight: [[2, 1]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0], [1, 1], [1, 2], [2, 2], [2, 1]], vars: { top: 2, bottom: 1, left: 1, right: 1 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5, 6, 7, 11, 10] }, note: "Rows remain (top ≤ bottom): walk the bottom row right → left, then bottom-- (now 1)." },
+  { grid: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], done: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0], [1, 1], [1, 2], [2, 2], [2, 1]], vars: { top: 2, bottom: 1, left: 2, right: 1 }, aux: { label: "out", items: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5, 6, 7, 11, 10] }, note: "top > bottom: every cell is visited once. The two \"if\" checks matter for non-square matrices — without them a single remaining row or column would be walked twice." }
+]} />
+
+```java
+static List<Integer> spiralOrder(int[][] m) {
+    List<Integer> out = new ArrayList<>();
+    int top = 0, bottom = m.length - 1, left = 0, right = m[0].length - 1;
+    while (top <= bottom && left <= right) {
+        for (int c = left; c <= right; c++) out.add(m[top][c]);
+        top++;
+        for (int r = top; r <= bottom; r++) out.add(m[r][right]);
+        right--;
+        if (top <= bottom) {                                   // a row is left to walk back along
+            for (int c = right; c >= left; c--) out.add(m[bottom][c]);
+            bottom--;
+        }
+        if (left <= right) {                                   // a column is left to walk up
+            for (int r = bottom; r >= top; r--) out.add(m[r][left]);
+            left++;
+        }
+    }
+    return out;
+}
+```
+
+The two `if` checks are the whole difficulty. With a 3 × 1 matrix, after walking down the only column there's no bottom row to walk back along. Without the check it would be added again.
+
+**The alternative shape** is "walk and turn": move in the current direction until the next cell is outside or already filled, then turn right. It's ideal when you're **filling** a matrix, as in Spiral Matrix II:
+
+```java
+static int[][] generateMatrix(int n) {
+    int[][] g = new int[n][n];
+    int r = 0, c = 0, d = 0;
+    for (int v = 1; v <= n * n; v++) {
+        g[r][c] = v;
+        int nr = r + DIRS[d][0], nc = c + DIRS[d][1];
+        if (nr < 0 || nc < 0 || nr >= n || nc >= n || g[nr][nc] != 0) {   // blocked: turn right
+            d = (d + 1) % 4;
+            nr = r + DIRS[d][0]; nc = c + DIRS[d][1];
+        }
+        r = nr; c = nc;
+    }
+    return g;
+}
+```
+
+## Rotate 90° in place: transpose, then reverse each row
+
+Tracing where each cell goes during a four-way swap is error-prone. Two simple passes do the same job:
+
+1. **Transpose** (swap `m[r][c]` with `m[c][r]` above the diagonal). Rows become columns.
+2. **Reverse each row.** This mirrors left to right.
+
+Together they move cell `(r, c)` to `(c, n − 1 − r)`, which is a clockwise rotation.
+
+```java
+static void rotate(int[][] m) {
+    int n = m.length;
+    for (int r = 0; r < n; r++)
+        for (int c = r + 1; c < n; c++) { int t = m[r][c]; m[r][c] = m[c][r]; m[c][r] = t; }
+    for (int[] row : m)
+        for (int l = 0, h = n - 1; l < h; l++, h--) { int t = row[l]; row[l] = row[h]; row[h] = t; }
+}
+```
+
+| Transformation | Recipe |
+| --- | --- |
+| Rotate clockwise | Transpose, then reverse each row |
+| Rotate anticlockwise | Transpose, then reverse each column (or reverse rows first, then transpose) |
+| Rotate 180° | Reverse each row, then reverse the row order |
+
+The `c = r + 1` start matters: starting from 0 would swap every pair twice and undo the transpose.
+
+## Set matrix zeroes: store markers inside the matrix
+
+> If a cell is 0, set its whole row and column to 0, using O(1) extra space.
+
+The obvious solution uses two boolean arrays to remember which rows and columns to clear. To get O(1) space, use **row 0 and column 0 as those arrays**. Then remember separately whether row 0 and column 0 themselves contained a zero:
+
+```java
+static void setZeroes(int[][] m) {
+    int R = m.length, C = m[0].length;
+    boolean firstRow = false, firstCol = false;
+    for (int c = 0; c < C; c++) if (m[0][c] == 0) firstRow = true;
+    for (int r = 0; r < R; r++) if (m[r][0] == 0) firstCol = true;
+    for (int r = 1; r < R; r++)
+        for (int c = 1; c < C; c++)
+            if (m[r][c] == 0) { m[r][0] = 0; m[0][c] = 0; }          // mark the row and the column
+    for (int r = 1; r < R; r++)
+        for (int c = 1; c < C; c++)
+            if (m[r][0] == 0 || m[0][c] == 0) m[r][c] = 0;
+    if (firstRow) Arrays.fill(m[0], 0);                           // markers are applied last
+    if (firstCol) for (int r = 0; r < R; r++) m[r][0] = 0;
+}
+```
+
+**Order matters.** Clear the inner cells first and the marker row and column last. Clearing the markers early would wipe out the information you still need.
+
+## Game of Life: encode two generations in one cell
+
+Every cell updates from its eight neighbours **at the same time**. Updating in place naively means later cells see already-updated neighbours. The fix is to encode both "now" and "next" in the cell, using extra states:
+
+| Value | Now | Next |
+| --- | --- | --- |
+| 0 | dead | dead |
+| 1 | alive | alive |
+| 2 | alive | dead |
+| 3 | dead | alive |
+
+Neighbours count as alive if the value is 1 or 2 ("alive now"). A second pass maps 1 and 3 to alive and everything else to dead:
+
+```java
+static void gameOfLife(int[][] b) {
+    int R = b.length, C = b[0].length;
+    for (int r = 0; r < R; r++)
+        for (int c = 0; c < C; c++) {
+            int live = 0;
+            for (int dr = -1; dr <= 1; dr++)
+                for (int dc = -1; dc <= 1; dc++) {
+                    if (dr == 0 && dc == 0) continue;
+                    int nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nc >= 0 && nr < R && nc < C && (b[nr][nc] == 1 || b[nr][nc] == 2)) live++;
+                }
+            if (b[r][c] == 1 && (live < 2 || live > 3)) b[r][c] = 2;   // dies
+            else if (b[r][c] == 0 && live == 3) b[r][c] = 3;           // is born
+        }
+    for (int[] row : b)
+        for (int c = 0; c < C; c++) row[c] = row[c] == 1 || row[c] == 3 ? 1 : 0;
+}
+```
+
+The same idea works with bits: keep "now" in bit 0, write "next" into bit 1, and shift right at the end. "Store the next state where the current state can still be read" is the general lesson for any simultaneous-update simulation.
+
+## Sorted rows and columns: the staircase search
+
+> Every row and every column is sorted. Is `target` in the matrix?
+
+Start at the **top-right** corner. If the current value is too big, everything below it in that column is bigger still, so drop the column. If it's too small, everything to its left in that row is smaller, so drop the row. Each step removes a whole row or column:
+
+```java
+static boolean searchMatrix(int[][] m, int target) {
+    int r = 0, c = m[0].length - 1;
+    while (r < m.length && c >= 0) {
+        if (m[r][c] == target) return true;
+        if (m[r][c] > target) c--;          // everything below in this column is even bigger
+        else r++;                           // everything left in this row is even smaller
+    }
+    return false;
+}
+```
+
+O(R + C). The bottom-left corner works too. The top-left doesn't, because both moves from there make the value bigger. If instead the matrix is sorted **row after row** (each row starts above the previous row's end), treat it as one sorted array of `R × C` and [binary search](/dsa/patterns/binary-search) with `r = i / C, c = i % C`.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Mixing up rows and columns**: `m.length` is the number of rows and `m[0].length` the number of columns. Name them `R` and `C` once.
+- **Non-square inputs**: test 1 × n, n × 1 and 1 × 1. Spiral and boundary loops break here first.
+- **Updating in place while still reading old values** (Game of Life, zero-marking). Encode the next state or apply markers last.
+- **Transposing the whole matrix** with `c` starting at 0, which swaps every pair twice.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 867 | [Transpose Matrix](https://leetcode.com/problems/transpose-matrix/) | Easy | Index mapping |
+| 54 | [Spiral Matrix](https://leetcode.com/problems/spiral-matrix/) | Medium | Shrinking boundaries |
+| 59 | [Spiral Matrix II](https://leetcode.com/problems/spiral-matrix-ii/) | Medium | Walk and turn |
+| 48 | [Rotate Image](https://leetcode.com/problems/rotate-image/) | Medium | Transpose + reverse |
+| 73 | [Set Matrix Zeroes](https://leetcode.com/problems/set-matrix-zeroes/) | Medium | Markers inside the matrix |
+| 289 | [Game of Life](https://leetcode.com/problems/game-of-life/) | Medium | Encode two generations |
+| 36 | [Valid Sudoku](https://leetcode.com/problems/valid-sudoku/) | Medium | Box index = (r / 3) · 3 + c / 3 |
+| 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | Flatten for binary search |
+| 240 | [Search a 2D Matrix II](https://leetcode.com/problems/search-a-2d-matrix-ii/) | Medium | Staircase from a corner |
+| 498 | [Diagonal Traverse](https://leetcode.com/problems/diagonal-traverse/) | Medium | Cells on a diagonal share r + c |
+
+## Interview questions
+
+<QA q="How do you rotate an n × n matrix by 90 degrees clockwise in place?">
+Transpose it by swapping m[r][c] with m[c][r] for c greater than r, then reverse each row. The transpose turns rows into columns and the row reversal mirrors left to right; together they send (r, c) to (c, n − 1 − r), which is a clockwise rotation. It's O(n²) time and O(1) extra space, and much easier to get right than swapping four cells at a time.
+</QA>
+
+<QA q="In the staircase search, why start from the top-right corner?">
+From the top-right, the two possible moves change the value in opposite directions: moving left gives smaller values and moving down gives bigger ones. So comparing with the target always tells you which move is safe, and each comparison discards a whole column (too big) or a whole row (too small). From the top-left both moves increase the value, so a comparison can't rule anything out. The search takes at most R + C steps.
+</QA>
+
+<Practice task="Tic-tac-toe on an n × n board: after each move (row, col, player), report whether that player has won. Can you do each move in O(1)?">
+
+Keep counters instead of scanning the board:
+
+- `rows[r]` and `cols[c]` for each row and column;
+- `diag` for the main diagonal and `anti` for the other diagonal.
+
+Player 1 adds +1 and player 2 adds −1. A move updates its row and column, plus `diag` if `r == c` and `anti` if `r + c == n − 1`. The player wins when any updated counter reaches `±n`. Each move is O(1) with O(n) memory. (CtCI 16.4, "Tic Tac Win", also discusses this.)
+
+</Practice>
+
+<Practice task="Print a matrix in diagonal order (zig-zag): up-right along one diagonal, then down-left along the next. What identifies a diagonal, and how do you handle direction changes?">
+
+All cells on the same anti-diagonal share `d = r + c`, for d from 0 to R + C − 2. For each d, the valid rows run from `max(0, d − C + 1)` to `min(d, R − 1)`. Collect the cells in that range with `c = d − r` and reverse them when d is even, so they go up-right. There are no direction-change edge cases, because each diagonal is generated independently. O(R · C).
+
+</Practice>
+
+<Takeaways>
+
+- Direction arrays replace four copies of movement code; turning is `(d + 1) % 4`.
+- Spiral: shrinking boundaries with two guard checks, or walk-and-turn when filling.
+- Rotate = transpose + reverse rows; set zeroes = markers in row 0 and column 0, applied last.
+- Simultaneous updates: encode the next state alongside the current one.
+- Sorted rows and columns: staircase search from the top-right corner, O(R + C).
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Math for Interviews](/dsa/patterns/math-for-interviews).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.): 1.7 "Rotate Matrix", 1.8 "Zero Matrix", 10.9 "Sorted Matrix Search", 16.22 "Langton's Ant".

@@ -117,6 +117,18 @@ The trickiest tree problems involve paths that **bend** at a node — they go up
 
 ### Diameter of a binary tree
 
+<TreeViz title="Diameter: return the height, record the bend" tree={{ id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 3, c: [{ id: "n5", v: 5, c: [{ id: "n9", v: 7 }, null] }, null] }, { id: "n4", v: 4, c: [null, { id: "n8", v: 6 }] }] }, null] }} frames={[
+  { vars: { diameter: 0 }, note: "Diameter = the longest path between any two nodes, in edges. Each call RETURNS its height (the longest straight-down path, the only kind the parent can extend) and RECORDS l + r, the longest path that bends at this node." },
+  { highlight: ["n9"], visited: [], notes: { n9: "h=1" }, vars: { "l + r": 0, diameter: 0 }, note: "Node 7: left height 0, right height 0. Record the bend here: 0 + 0 = 0. Return 1 + max = 1 to the parent." },
+  { highlight: ["n5"], visited: ["n9"], notes: { n9: "h=1", n5: "h=2" }, vars: { "l + r": 1, diameter: 1 }, note: "Node 5: left height 1, right height 0. Record the bend here: 1 + 0 = 1 — a new best. Return 1 + max = 2 to the parent." },
+  { highlight: ["n3"], visited: ["n9", "n5"], notes: { n9: "h=1", n5: "h=2", n3: "h=3" }, vars: { "l + r": 2, diameter: 2 }, note: "Node 3: left height 2, right height 0. Record the bend here: 2 + 0 = 2 — a new best. Return 1 + max = 3 to the parent." },
+  { highlight: ["n8"], visited: ["n9", "n5", "n3"], notes: { n9: "h=1", n5: "h=2", n3: "h=3", n8: "h=1" }, vars: { "l + r": 0, diameter: 2 }, note: "Node 6: left height 0, right height 0. Record the bend here: 0 + 0 = 0. Return 1 + max = 1 to the parent." },
+  { highlight: ["n4"], visited: ["n9", "n5", "n3", "n8"], notes: { n9: "h=1", n5: "h=2", n3: "h=3", n8: "h=1", n4: "h=2" }, vars: { "l + r": 1, diameter: 2 }, note: "Node 4: left height 0, right height 1. Record the bend here: 0 + 1 = 1. Return 1 + max = 2 to the parent." },
+  { highlight: ["n1"], visited: ["n9", "n5", "n3", "n8", "n4"], notes: { n9: "h=1", n5: "h=2", n3: "h=3", n8: "h=1", n4: "h=2", n1: "h=4" }, vars: { "l + r": 5, diameter: 5 }, note: "Node 2: left height 3, right height 2. Record the bend here: 3 + 2 = 5 — a new best. Return 1 + max = 4 to the parent." },
+  { highlight: ["n0"], visited: ["n9", "n5", "n3", "n8", "n4", "n1"], notes: { n9: "h=1", n5: "h=2", n3: "h=3", n8: "h=1", n4: "h=2", n1: "h=4", n0: "h=5" }, vars: { "l + r": 4, diameter: 5 }, note: "Node 1: left height 4, right height 0. Record the bend here: 4 + 0 = 4. Return 1 + max = 5 to the parent." },
+  { visited: ["n9", "n5", "n3", "n8", "n4", "n1", "n0"], path: ["n9", "n5", "n3", "n1", "n4", "n8"], marked: ["n1"], notes: { n9: "h=1", n5: "h=2", n3: "h=3", n8: "h=1", n4: "h=2", n1: "h=4", n0: "h=5" }, vars: { diameter: 5 }, note: "Diameter = 5: the path 7 → 5 → 3 → 2 → 4 → 6 bends at node 2, not at the root. The root only sees height 4 from its left child — that's why the best bend must be recorded at every node, not just returned." }
+]} />
+
 ```java
 static int diameter;
 

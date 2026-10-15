@@ -1,0 +1,263 @@
+[Prefix sums](/dsa/patterns/prefix-sums) answer "sum of a[l..r]" in O(1), but only while the array **never changes**. One update forces you to rebuild O(n) prefixes. When updates and queries are mixed, say 10⁵ of each, you need a structure that does **both** in O(log n). There are two: the **Fenwick tree**, which is ten lines of code, and the **segment tree**, which is more code but more flexible. They're less common in interviews than the core patterns, but at companies that ask hard problems they turn a Hard into a template, and they're the standard way to count inversions and "smaller elements after self".
+
+<Callout type="tip" title="How to spot it">
+
+- **Range queries mixed with point updates**: "update index i", then "sum / min / max of l..r", many times.
+- **Counting by value while scanning**: "how many earlier (or later) elements are smaller or bigger", inversions, "count of smaller numbers after self".
+- Constraints like n, q ≤ 10⁵ with both updates and queries. O(n) per operation would be 10¹⁰.
+- If there are **no updates**, use plain prefix sums. If updates come all at once before the queries, use a difference array.
+
+</Callout>
+
+## Which structure?
+
+| Need | Use |
+| --- | --- |
+| Range sums, no updates | Prefix sums: O(1) query |
+| Many range additions, then read once | Difference array: O(1) per update, O(n) to read |
+| Point update + prefix or range **sum** | **Fenwick tree**: tiny, O(log n) both |
+| Point update + range **min / max / gcd** | **Segment tree** |
+| **Range** update + range query | Segment tree with **lazy propagation** |
+
+## Fenwick tree (binary indexed tree)
+
+Position `i` (1-based) stores the sum of the range that **ends at i** and whose length is **i's lowest set bit** (`i & -i`). So box 6 (`110`) covers 5..6 and box 8 (`1000`) covers 1..8.
+
+- A **prefix query** walks down by stripping the lowest bit: 7 → 6 → 4 → 0.
+- An **update** climbs by adding the lowest bit: 3 → 4 → 8.
+
+Both walks visit at most log₂ n boxes.
+
+<ArrayViz title="Fenwick tree: query prefix(7), then add 10 at position 3" frames={[
+  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], vars: { a: "[5, 2, 9, -1, 6, 3, 4, 7]" }, note: "A Fenwick tree for a = [5, 2, 9, −1, 6, 3, 4, 7] (positions 1..8). Box i stores the sum of a range ENDING at i whose length is i's lowest set bit: [7] alone, [5..6], [1..4], [1..8]. Indexes below the boxes are 0-based; the labels use the 1-based positions." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6], vars: { "prefix(7)": 4, i: 7, "next i": 6 }, note: "Query prefix(7): add box 7 (covers 7..7), then strip the lowest set bit: i = 7 − 1 = 6." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5], vars: { "prefix(7)": 13, i: 6, "next i": 4 }, note: "Query prefix(7): add box 6 (covers 5..6), then strip the lowest set bit: i = 6 − 2 = 4." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5, 3], vars: { "prefix(7)": 28, i: 4, "next i": 0 }, note: "Query prefix(7): add box 4 (covers 1..4), then strip the lowest set bit: i = 4 − 4 = 0." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5, 3], vars: { "prefix(7)": 28 }, note: "i = 0: stop. prefix(7) = 28 from 3 boxes — the boxes 7, 5..6 and 1..4 tile 1..7 with no overlap. O(log n)." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [2], vars: { update: "a[3] += 10", i: 3, "next i": 4 }, note: "Update position 3 by +10: box 3 covers 3..3, which includes 3, so add 10. Then climb: i = 3 + 1 = 4." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [3], vars: { update: "a[3] += 10", i: 4, "next i": 8 }, note: "Update position 3 by +10: box 4 covers 1..4, which includes 3, so add 10. Then climb: i = 4 + 4 = 8." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 45"], highlight: [7], vars: { update: "a[3] += 10", i: 8, "next i": 16 }, note: "Update position 3 by +10: box 8 covers 1..8, which includes 3, so add 10. Then climb: i = 8 + 8 = 16." },
+  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 45"], highlight: [2, 3, 7], note: "i > 8: stop. Exactly the boxes whose range contains position 3 (3, 1..4 and 1..8) were updated — again O(log n). A plain prefix-sum array would need O(n) to absorb this update." }
+]} />
+
+```java
+static class Fenwick {
+    final long[] tree;
+    Fenwick(int n) { tree = new long[n + 1]; }
+
+    void add(int i, long delta) {                    // i is 1-based
+        for (; i < tree.length; i += i & -i) tree[i] += delta;   // climb to every range that covers i
+    }
+
+    long prefix(int i) {                             // sum of positions 1..i
+        long s = 0;
+        for (; i > 0; i -= i & -i) s += tree[i];     // strip the lowest set bit each step
+        return s;
+    }
+}
+```
+
+`i & -i` isolates the lowest set bit ([Bit Manipulation](/dsa/patterns/bit-manipulation)). A range sum is `prefix(r) − prefix(l − 1)`. To **set** a value instead of adding, add the difference from the old value:
+
+```java
+static class NumArray {
+    private final int[] a;
+    private final Fenwick fw;
+
+    NumArray(int[] nums) {
+        a = nums;
+        fw = new Fenwick(nums.length);
+        for (int i = 0; i < nums.length; i++) fw.add(i + 1, nums[i]);
+    }
+
+    void update(int i, int val) {
+        fw.add(i + 1, val - a[i]);                   // Fenwick stores deltas: add the difference
+        a[i] = val;
+    }
+
+    long sumRange(int l, int r) { return fw.prefix(r + 1) - fw.prefix(l); }
+}
+```
+
+## Fenwick over values: counting smaller elements
+
+> For each element, count how many elements **to its right** are smaller.
+
+Scan from right to left and keep a Fenwick tree indexed by **value**, where `tree` counts how many of each value you've seen so far. For each element, the answer is "how many seen values are smaller", which is a prefix sum over values. Values can be huge or negative, so first **compress** them to ranks 1..k:
+
+```java
+static List<Integer> countSmaller(int[] nums) {
+    int[] sorted = Arrays.stream(nums).distinct().sorted().toArray();   // coordinate compression
+    Fenwick fw = new Fenwick(sorted.length);
+    Integer[] out = new Integer[nums.length];
+    for (int i = nums.length - 1; i >= 0; i--) {
+        int rank = Arrays.binarySearch(sorted, nums[i]) + 1;   // 1-based rank
+        out[i] = (int) fw.prefix(rank - 1);                    // seen values strictly smaller
+        fw.add(rank, 1);
+    }
+    return Arrays.asList(out);
+}
+```
+
+That's O(n log n). The total of these counts is the number of **inversions** (pairs `i < j` with `a[i] > a[j]`).
+
+### The other classic: count inversions during merge sort
+
+When merging two sorted halves, if a right-half element `a[j]` goes out before a left-half element `a[i]`, then `a[j]` is smaller than **every** remaining left element. That adds `mid − i + 1` inversions in one step:
+
+```java
+static long countInversions(int[] a) { return sortCount(a, new int[a.length], 0, a.length - 1); }
+
+private static long sortCount(int[] a, int[] tmp, int lo, int hi) {
+    if (lo >= hi) return 0;
+    int mid = (lo + hi) / 2;
+    long count = sortCount(a, tmp, lo, mid) + sortCount(a, tmp, mid + 1, hi);
+    int i = lo, j = mid + 1, k = lo;
+    while (i <= mid && j <= hi) {
+        if (a[i] <= a[j]) tmp[k++] = a[i++];
+        else { count += mid - i + 1; tmp[k++] = a[j++]; }       // a[j] is smaller than everything left in the left half
+    }
+    while (i <= mid) tmp[k++] = a[i++];
+    while (j <= hi) tmp[k++] = a[j++];
+    System.arraycopy(tmp, lo, a, lo, hi - lo + 1);
+    return count;
+}
+```
+
+Both approaches are O(n log n). The reference solution checks them against each other and against an O(n²) count. The merge-sort version needs no extra structure; the Fenwick version extends more easily, for example to "count pairs where a[i] > 2·a[j]".
+
+## Segment tree
+
+A segment tree is a binary tree over the array:
+
+- Node 1 covers everything. Node `k` covering `[lo, hi]` has children `2k` and `2k + 1`, which cover the two halves.
+- Each node stores the answer for its range: a sum, a min, a max, or any **associative** combination.
+- An array of size `4n` is always big enough.
+
+A query splits into three cases, and an update fixes one leaf and recomputes its ancestors:
+
+```java
+static class SegmentTree {
+    private final int n;
+    private final long[] sum, max;
+
+    SegmentTree(int[] a) {
+        n = a.length;
+        sum = new long[4 * n];
+        max = new long[4 * n];
+        build(1, 0, n - 1, a);
+    }
+
+    private void build(int node, int lo, int hi, int[] a) {
+        if (lo == hi) { sum[node] = max[node] = a[lo]; return; }
+        int mid = (lo + hi) / 2;
+        build(2 * node, lo, mid, a);
+        build(2 * node + 1, mid + 1, hi, a);
+        pull(node);
+    }
+
+    private void pull(int node) {
+        sum[node] = sum[2 * node] + sum[2 * node + 1];
+        max[node] = Math.max(max[2 * node], max[2 * node + 1]);
+    }
+
+    void update(int i, int val) { update(1, 0, n - 1, i, val); }
+
+    private void update(int node, int lo, int hi, int i, int val) {
+        if (lo == hi) { sum[node] = max[node] = val; return; }
+        int mid = (lo + hi) / 2;
+        if (i <= mid) update(2 * node, lo, mid, i, val);
+        else update(2 * node + 1, mid + 1, hi, i, val);
+        pull(node);                                  // recompute on the way back up
+    }
+
+    long sum(int l, int r) { return sum(1, 0, n - 1, l, r); }
+
+    private long sum(int node, int lo, int hi, int l, int r) {
+        if (r < lo || hi < l) return 0;              // no overlap
+        if (l <= lo && hi <= r) return sum[node];    // fully inside: use the stored answer
+        int mid = (lo + hi) / 2;
+        return sum(2 * node, lo, mid, l, r) + sum(2 * node + 1, mid + 1, hi, l, r);
+    }
+    // max(l, r) is identical, with Long.MIN_VALUE for "no overlap" and Math.max to combine.
+}
+```
+
+The three query cases are what to explain in an interview:
+
+1. **No overlap**: return the neutral value (0 for sum, −∞ for max).
+2. **Full overlap**: return the stored answer.
+3. **Partial overlap**: recurse into both children and combine.
+
+At most four nodes per level are visited, so a query is O(log n).
+
+### Range updates: lazy propagation (awareness level)
+
+To "add v to every element of l..r", updating each leaf would be O(n). Instead, when a node is fully inside the range, update its stored sum (`sum += v × length`) and leave a **pending** note. Push the note down to the children only when a later operation needs to look inside that node. The reference solution includes a verified `LazySegmentTree`. In interviews it's rare; knowing the idea is usually enough.
+
+<Callout type="warning" title="Common mistakes">
+
+- **0-based vs 1-based** in Fenwick trees: `add(0, …)` loops forever, because `0 & -0 == 0` so `i` never grows. Always shift to 1-based.
+- **Setting instead of adding**: Fenwick stores sums of deltas, so to set a value, add `new − old`.
+- **Segment tree array too small**: use `4 * n`.
+- **Wrong neutral value** for "no overlap": 0 is wrong for min and max.
+- **Forgetting coordinate compression** when indexing a Fenwick tree by large or negative values.
+- **Reaching for these structures when prefix sums suffice** (no updates): that's more code and more bugs for nothing.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 303 | [Range Sum Query - Immutable](https://leetcode.com/problems/range-sum-query-immutable/) | Easy | Baseline: prefix sums |
+| 1094 | [Car Pooling](https://leetcode.com/problems/car-pooling/) | Medium | Difference array |
+| 307 | [Range Sum Query - Mutable](https://leetcode.com/problems/range-sum-query-mutable/) | Medium | Fenwick or segment tree |
+| 315 | [Count of Smaller Numbers After Self](https://leetcode.com/problems/count-of-smaller-numbers-after-self/) | Hard | Fenwick over compressed values |
+| 493 | [Reverse Pairs](https://leetcode.com/problems/reverse-pairs/) | Hard | Merge sort counting |
+| 327 | [Count of Range Sum](https://leetcode.com/problems/count-of-range-sum/) | Hard | Prefix sums + merge sort or Fenwick |
+| 1649 | [Create Sorted Array through Instructions](https://leetcode.com/problems/create-sorted-array-through-instructions/) | Hard | Fenwick counts on both sides |
+| 699 | [Falling Squares](https://leetcode.com/problems/falling-squares/) | Hard | Range max with updates |
+
+## Interview questions
+
+<QA q="When would you use a Fenwick tree instead of prefix sums or a segment tree?">
+Prefix sums are best when the array never changes: O(1) queries but O(n) per update. A Fenwick tree handles point updates and prefix or range sums in O(log n) each with about ten lines of code and n + 1 memory, so it's ideal for sums and counts that change over time. A segment tree is needed when the combined value isn't invertible, like min, max or gcd, where you can't subtract prefixes, or when you need range updates with lazy propagation.
+</QA>
+
+<QA q="How do you count inversions in O(n log n)?">
+Use merge sort. While merging two sorted halves, whenever an element from the right half is placed before remaining elements of the left half, it forms an inversion with each of them, so add the number of remaining left elements, mid − i + 1, in one step. Alternatively, scan right to left with a Fenwick tree over compressed values and, for each element, count the smaller values already seen. Both are O(n log n), compared with O(n²) for checking every pair.
+</QA>
+
+<Practice task="You receive a stream of operations: add a number, or ask how many numbers seen so far lie in [lo, hi]. Values are up to 10⁹ and all operations are known in advance. What do you build?">
+
+Collect every value that appears in any operation, including the query bounds, and **compress** them to ranks 1..k. Keep a Fenwick tree over ranks:
+
+- **add x**: `add(rank(x), 1)`.
+- **query [lo, hi]**: `prefix(rank(hi)) − prefix(rank(lo) − 1)`. Both bounds were compressed too, so their ranks exist; find them by binary search.
+
+That's O(log k) per operation. If operations aren't known in advance, use a `TreeMap`-based order-statistics structure, or a dynamic segment tree that creates nodes only when touched.
+
+</Practice>
+
+<Practice task="Why can a Fenwick tree answer range sums but not range minimums directly?">
+
+A Fenwick tree answers prefixes and gets a range by **subtracting** two prefixes: `sum(l..r) = prefix(r) − prefix(l − 1)`. Sums have an inverse operation; min and max don't. You can't recover min(l..r) from min(1..r) and min(1..l − 1). Prefix minimums can be done with a Fenwick tree if values only decrease, but for general range min or max, use a segment tree, whose query combines disjoint pieces of exactly l..r and never subtracts.
+
+</Practice>
+
+<Takeaways>
+
+- Use prefix sums for static arrays; once updates mix with queries, use an O(log n) structure.
+- Fenwick: box i covers a range of length `i & -i` ending at i; query strips low bits, update adds them.
+- Fenwick over compressed values counts smaller or larger elements seen so far, including inversions.
+- Merge sort counts inversions too: add mid − i + 1 when a right element goes first.
+- Segment tree: no overlap, full overlap, partial overlap; it handles min, max and lazy range updates.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [The Pattern Picker](/dsa/playbook/pattern-picker), to choose among everything in this course.
+- Peter M. Fenwick, "A New Data Structure for Cumulative Frequency Tables", *Software: Practice and Experience* (1994).
+- Competitive Programmer's Handbook (Antti Laaksonen), chapter "Range queries".

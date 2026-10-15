@@ -60,6 +60,16 @@ If you see two approaches, mention both with their trade-off ("sorting gives O(1
 - **Write the template you know.** Every pattern in this course has one. A familiar skeleton is faster and safer than improvising.
 - If you notice a bug mid-way, say so: "I'll come back to the empty-input case." Then do come back to it.
 
+What "good code" means to an interviewer, in the order they notice it:
+
+- **Correct**, including on unexpected inputs.
+- **Efficient**.
+- **Simple**: ten lines beats a hundred.
+- **Readable**: no clever bit tricks without a comment.
+- **Easy to change**: a helper or a small class beats copy-pasted blocks.
+
+Use data structures generously. A tiny `record Interval(int start, int end)` reads better than `int[]` pairs, and it costs ten seconds to write.
+
 Silence while you think is fine. Say "Let me think about the loop condition for a moment" and then think. A long unexplained silence is the thing to avoid.
 
 ## Phase 4: test (35–42 min)
@@ -91,6 +101,10 @@ Being stuck happens to everyone in interviews. What matters is what you do next.
 5. **Ask for a hint**, specifically: "I'm deciding between a heap and sorting here; am I on the right track?" A targeted question shows reasoning; "I don't know" doesn't.
 
 If time is short, **code the brute force cleanly** and explain the optimisation in words. A working O(n²) solution with a clear explanation of the O(n) one beats a broken O(n) attempt.
+
+## If you've seen the problem before
+
+Say so: "I've seen this one, I think it's solved with a monotonic stack." Interviewers ask questions to watch you reason. If you recite a memorised answer and they find out, it reads as dishonest. If you're upfront, it earns trust, and they'll either give you another problem or ask you to explain it properly anyway. *Cracking the Coding Interview* gives the same advice.
 
 ## Phrases that help
 
@@ -153,5 +167,6 @@ Finally, check that you traced an example and at least two edge cases without be
 
 ## Further reading
 
-- Next: [The DSA Cheat Sheet](/dsa/playbook/dsa-cheat-sheet).
-- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), chapter "The Interview" and its problem-solving flowchart.
+- Next: [Spot-the-Pattern Drills](/dsa/playbook/pattern-drills).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter VII "Technical Questions": "Walking Through a Problem", "What Good Coding Looks Like" and "When You've Heard a Question Before".
+- [Mock Interviews, Annotated](/dsa/playbook/mock-interviews): these phases in full transcripts.

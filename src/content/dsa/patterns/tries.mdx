@@ -14,19 +14,17 @@ A hash set can tell you whether a whole word exists. It can't efficiently tell y
 
 Words `car`, `cat`, `cart`, `dog`:
 
-```mermaid
-flowchart TD
-  R(("root")) --> C((c))
-  R --> D((d))
-  C --> A((a))
-  A --> T1(("t ✓"))
-  A --> R1(("r ✓"))
-  R1 --> T2(("t ✓"))
-  D --> O((o))
-  O --> G(("g ✓"))
-```
+<TreeViz title="Building a trie, then searching it" tree={{ id: "^", v: "root", c: [{ id: "^c", v: "c", c: [{ id: "^ca", v: "a", c: [{ id: "^car", v: "r", c: [{ id: "^cart", v: "t" }] }, { id: "^cat", v: "t" }] }] }, { id: "^d", v: "d", c: [{ id: "^do", v: "o", c: [{ id: "^dog", v: "g" }] }] }] }} frames={[
+  { note: "A trie stores words character by character: each edge is a letter, and words that share a prefix share the path. Insert car, cat, cart, dog.", hidden: ["^c", "^ca", "^car", "^cart", "^cat", "^d", "^do", "^dog"] },
+  { path: ["^", "^c", "^ca", "^car"], highlight: ["^car"], marked: ["^car"], note: "insert(\"car\"): create 3 new nodes (c, a, r), and mark the last node as the end of a word (green ring).", hidden: ["^cart", "^cat", "^d", "^do", "^dog"] },
+  { path: ["^", "^c", "^ca", "^cat"], highlight: ["^cat"], marked: ["^car", "^cat"], note: "insert(\"cat\"): walk the existing path for \"ca\", create 1 new node (t), and mark the last node as the end of a word (green ring).", hidden: ["^cart", "^d", "^do", "^dog"] },
+  { path: ["^", "^c", "^ca", "^car", "^cart"], highlight: ["^cart"], marked: ["^car", "^cat", "^cart"], note: "insert(\"cart\"): walk the existing path for \"car\", create 1 new node (t), and mark the last node as the end of a word (green ring).", hidden: ["^d", "^do", "^dog"] },
+  { path: ["^", "^d", "^do", "^dog"], highlight: ["^dog"], marked: ["^car", "^cat", "^cart", "^dog"], note: "insert(\"dog\"): create 3 new nodes (d, o, g), and mark the last node as the end of a word (green ring)." },
+  { path: ["^", "^c", "^ca"], highlight: ["^ca"], marked: ["^car", "^cat", "^cart", "^dog"], note: "search(\"ca\"): the path exists, but node \"ca\" is not marked as a word end → false. startsWith(\"ca\") → true. The end marker is what separates words from prefixes." },
+  { path: ["^", "^c", "^ca", "^car"], highlight: ["^car"], marked: ["^car", "^cat", "^cart", "^dog"], note: "search(\"cars\"): walk c → a → r, then there is no \"s\" child → false. Each lookup costs O(length of the word), no matter how many words are stored." }
+]} />
 
-`✓` marks nodes where a word **ends** — essential, because `car` is a word but `ca` isn't, even though both are paths.
+The green ring marks nodes where a word **ends** — essential, because `car` is a word but `ca` isn't, even though both are paths.
 
 ## The template
 

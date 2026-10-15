@@ -45,7 +45,12 @@ for (int x = n; x > 1; x /= 2) steps++;   // n, n/2, n/4, … 1 → about log₂
 
 **4. Different inputs get different letters.** Looping over an array of size `n` inside a loop over a string of length `m` is **O(n·m)**, not O(n²).
 
-**5. Recursion: count the calls, multiply by the work per call.** A function that calls itself twice with `n − 1` makes about 2ⁿ calls (that's why naïve Fibonacci is slow). One that calls itself once with `n / 2` makes log n calls.
+**5. Recursion: count the calls, multiply by the work per call.** A function that calls itself twice with `n − 1` makes about 2ⁿ calls (that's why naïve Fibonacci is slow). One that calls itself once with `n / 2` makes log n calls. In general, a recursion with `b` branches per call and depth `d` makes about **b^d** calls.
+
+Two classic traps, both from *Cracking the Coding Interview*'s Big-O chapter:
+
+- **Summing a balanced BST recursively** makes two calls per node and the depth is log n. That gives 2^(log n) = **n** calls, so it's O(n), not exponential. Write b^d, then simplify.
+- **Sorting n strings of length s** is O(n log n) comparisons, but each comparison costs up to O(s). The total is **O(s · n log n)**, not O(n log n).
 
 **6. Watch for loops that move a pointer only forward.** This looks like nested loops but is O(n):
 
@@ -141,3 +146,4 @@ O(n log n) or better. O(n²) would be about 10¹⁰ operations, far beyond the r
 
 - Next: [Recursion Without Fear](/dsa/start-here/recursion-made-easy).
 - Steven Skiena, *The Algorithm Design Manual* (3rd ed., 2020) — chapter 2, "Algorithm Analysis".
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter VI "Big O", including its worked examples and exercises.

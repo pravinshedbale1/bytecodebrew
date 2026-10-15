@@ -1,0 +1,246 @@
+Finding a pattern inside a text sounds solved: Java has `indexOf`. But `indexOf` is O(n · m) in the worst case: on text `"aaaa…ab"` and pattern `"aa…ab"` it re-checks almost the whole pattern at every position. Interviewers ask about linear-time matching to see if you know **why** the brute force wastes work and how to avoid it. There are two classic answers:
+
+- **KMP** never re-reads text characters, thanks to a precomputed failure table.
+- **Rolling hash** (Rabin–Karp) compares whole substrings in O(1) by comparing fingerprints.
+
+Both turn into general tools far beyond `indexOf`.
+
+<Callout type="tip" title="How to spot it">
+
+- "Find a pattern in a text" with large inputs, or "in **O(n + m)**".
+- Questions about **prefixes that are also suffixes**: "longest happy prefix", periods, repeated patterns, shortest palindrome by adding characters in front.
+- **Compare many substrings** quickly: duplicates, repeated DNA sequences, longest repeated substring.
+- **Rotation**: is `b` a rotation of `a`? That's "is `b` a substring of `a + a`".
+
+</Callout>
+
+## Why the brute force wastes work
+
+When the brute force has matched `j` characters and then hits a mismatch, it shifts the pattern by one and starts comparing from scratch. But it already **knows** the last `j` characters of the text, because they equal the pattern's first `j` characters. KMP's insight: precompute, for each prefix of the pattern, how much of it can be reused after a mismatch. That reusable amount is the longest **border**: a proper prefix that's also a suffix.
+
+## The failure table (prefix function)
+
+`lps[i]` = length of the longest proper prefix of `p[0..i]` that is also a suffix of it. For `"aabaaab"` it's `[0, 1, 0, 1, 2, 2, 3]`: the whole string ends with `"aab"`, which is also how it starts.
+
+<ArrayViz title="Building the failure table for aabaaab" frames={[
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], note: "Build lps for \"aabaaab\". lps[i] = length of the longest proper prefix of p[0..i] that is also a suffix of it. len = the length of the border we are currently extending; it is also the index of the next prefix character to compare.", aux: { label: "lps", items: ["0", "·", "·", "·", "·", "·", "·"] } },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 1, len: 1 }, aux: { label: "lps", items: [0, 1, "·", "·", "·", "·", "·"] }, note: "p[1] = 'a' = p[0]: the border grows. lps[1] = 1.", highlight: [1, 0], window: [0, 0] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 2, len: 0 }, aux: { label: "lps", items: [0, 1, "·", "·", "·", "·", "·"] }, note: "p[2] = 'b' ≠ p[1] = 'a': the border of length 1 can't grow. Fall back to the next shorter border: len = lps[0] = 0. No characters of p are re-read from the start.", highlight: [2, 1] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 2, len: 0 }, aux: { label: "lps", items: [0, 1, 0, "·", "·", "·", "·"] }, note: "p[2] = 'b' ≠ p[0]: no border. lps[2] = 0.", highlight: [2] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 3, len: 1 }, aux: { label: "lps", items: [0, 1, 0, 1, "·", "·", "·"] }, note: "p[3] = 'a' = p[0]: the border grows. lps[3] = 1.", highlight: [3, 0], window: [0, 0] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 4, len: 2 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, "·", "·"] }, note: "p[4] = 'a' = p[1]: the border grows. lps[4] = 2.", highlight: [4, 1], window: [0, 1] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 5, len: 1 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, "·", "·"] }, note: "p[5] = 'a' ≠ p[2] = 'b': the border of length 2 can't grow. Fall back to the next shorter border: len = lps[1] = 1. No characters of p are re-read from the start.", highlight: [5, 2] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 5, len: 2 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, "·"] }, note: "p[5] = 'a' = p[1]: the border grows. lps[5] = 2.", highlight: [5, 1], window: [0, 1] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 6, len: 3 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, 3] }, note: "p[6] = 'b' = p[2]: the border grows. lps[6] = 3.", highlight: [6, 2], window: [0, 2] },
+  { arr: ["a", "a", "b", "a", "a", "a", "b"], aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, 3] }, note: "Done in O(m): i only moves forward, and each fallback shrinks len, which only grew by one per step. The search uses the same loop over the text: on a mismatch, j = lps[j − 1] instead of restarting." }
+]} />
+
+```java
+static int[] prefixFunction(String p) {
+    int[] lps = new int[p.length()];
+    for (int i = 1, len = 0; i < p.length(); i++) {
+        while (len > 0 && p.charAt(i) != p.charAt(len)) len = lps[len - 1];   // fall back to a shorter border
+        if (p.charAt(i) == p.charAt(len)) len++;
+        lps[i] = len;
+    }
+    return lps;
+}
+```
+
+The fallback `len = lps[len - 1]` is the whole trick. If the current border can't be extended, the next candidate is the longest border **of that border**, which we've already computed.
+
+## KMP search
+
+The search runs the same loop with the text. `j` counts how many pattern characters are matched. On a mismatch, `j` falls back through the table; the text index `i` never moves backwards:
+
+```java
+static List<Integer> kmpSearch(String text, String pat) {
+    List<Integer> out = new ArrayList<>();
+    int[] lps = prefixFunction(pat);
+    for (int i = 0, j = 0; i < text.length(); i++) {          // j = characters of pat matched so far
+        while (j > 0 && text.charAt(i) != pat.charAt(j)) j = lps[j - 1];
+        if (text.charAt(i) == pat.charAt(j)) j++;
+        if (j == pat.length()) {
+            out.add(i - j + 1);
+            j = lps[j - 1];                                    // keep going: matches may overlap
+        }
+    }
+    return out;
+}
+```
+
+**Why it's O(n + m):** `j` goes up by at most one per text character, and every fallback makes it smaller. So the total number of fallbacks can't exceed the total number of increases, which is n.
+
+### The failure table on its own solves more problems
+
+- **Repeated substring pattern.** `s` is a block repeated k ≥ 2 times exactly when its longest border leaves a period `n − lps[n − 1]` that divides n.
+
+  ```java
+  static boolean repeatedSubstringPattern(String s) {
+      int n = s.length();
+      if (n == 0) return false;
+      int border = prefixFunction(s)[n - 1];
+      int period = n - border;
+      return border > 0 && n % period == 0;
+  }
+  ```
+
+- **Shortest palindrome by adding characters in front.** The part you can keep is the longest palindromic **prefix** of `s`. That's the longest border of `s + "#" + reverse(s)`, where `#` stops a border from crossing the middle:
+
+  ```java
+  static String shortestPalindrome(String s) {
+      String rev = new StringBuilder(s).reverse().toString();
+      int[] lps = prefixFunction(s + "#" + rev);                 // # stops borders crossing the middle
+      int keep = lps[lps.length - 1];                            // longest prefix of s that is a palindrome
+      return rev.substring(0, s.length() - keep) + s;
+  }
+  ```
+
+- **Longest happy prefix** is just `lps[n − 1]`.
+
+## Rolling hash (Rabin–Karp)
+
+Treat a string as a number in base B, modulo a large prime: `hash("abc") = (a·B² + b·B + c) mod M`. The key property is that sliding the window one step is O(1):
+
+- **remove** the leftmost character: subtract `a · B^(m−1)`;
+- **shift**: multiply by B;
+- **add** the new character.
+
+```java
+static List<Integer> rabinKarp(String text, String pat) {
+    List<Integer> out = new ArrayList<>();
+    int n = text.length(), m = pat.length();
+    if (m > n) return out;
+    long target = 0, h = 0, power = 1;                         // power = BASE^(m−1)
+    for (int i = 0; i < m; i++) {
+        target = (target * BASE + pat.charAt(i)) % MOD;
+        h = (h * BASE + text.charAt(i)) % MOD;
+        if (i > 0) power = power * BASE % MOD;
+    }
+    for (int i = 0; ; i++) {
+        if (h == target && text.regionMatches(i, pat, 0, m)) out.add(i);   // verify: hashes can collide
+        if (i + m == n) break;
+        h = (h - text.charAt(i) * power % MOD + MOD) % MOD;     // drop the leftmost character
+        h = (h * BASE + text.charAt(i + m)) % MOD;              // shift and add the new one
+    }
+    return out;
+}
+```
+
+The reference solution uses `BASE = 131` and `MOD = 1_000_000_007`. Equal strings always have equal hashes, but **different strings can collide**. So either verify each candidate match character by character (as above), or use two independent hashes and accept a tiny error probability. The expected time is O(n + m).
+
+### Where rolling hash beats KMP: comparing many substrings
+
+> Longest substring that appears at least twice.
+
+If a repeated substring of length L exists, then one of length L − 1 exists too. That makes "is there a repeat of length L?" monotonic, so you can [binary search on the answer](/dsa/patterns/binary-search-on-answer) for L. Each check hashes all windows of length L in O(n):
+
+```java
+static String longestDupSubstring(String s) {
+    int lo = 1, hi = s.length() - 1, bestStart = -1, bestLen = 0;
+    while (lo <= hi) {
+        int len = lo + (hi - lo) / 2;
+        int start = repeatedStart(s, len);
+        if (start >= 0) { bestStart = start; bestLen = len; lo = len + 1; }   // works: try longer
+        else hi = len - 1;
+    }
+    return bestStart < 0 ? "" : s.substring(bestStart, bestStart + bestLen);
+}
+
+static int repeatedStart(String s, int len) {
+    long h = 0, power = 1;
+    for (int i = 0; i < len; i++) {
+        h = (h * BASE + s.charAt(i)) % MOD;
+        if (i > 0) power = power * BASE % MOD;
+    }
+    Map<Long, List<Integer>> seen = new HashMap<>();
+    seen.computeIfAbsent(h, k -> new ArrayList<>()).add(0);
+    for (int i = 1; i + len <= s.length(); i++) {
+        h = (h - s.charAt(i - 1) * power % MOD + MOD) % MOD;
+        h = (h * BASE + s.charAt(i + len - 1)) % MOD;
+        List<Integer> same = seen.computeIfAbsent(h, k -> new ArrayList<>());
+        for (int j : same) if (s.regionMatches(i, s, j, len)) return i;
+        same.add(i);
+    }
+    return -1;
+}
+```
+
+That's O(n log n) expected. Verifying candidates makes it correct even when hashes collide.
+
+## Which tool when
+
+| Problem | Tool | Cost |
+| --- | --- | --- |
+| Find a pattern (worst-case guarantee) | KMP | O(n + m) |
+| Borders, periods, longest happy prefix | Failure table alone | O(m) |
+| Shortest palindrome by prepending | Failure table of `s#rev(s)` | O(n) |
+| Compare many substrings, find duplicates | Rolling hash | O(n) per length |
+| Longest repeated substring | Binary search on length + rolling hash | O(n log n) |
+| Is `b` a rotation of `a`? | Lengths equal and `b` in `a + a` | O(n) with KMP |
+| Many patterns at once | Trie (or Aho–Corasick) | See [Tries](/dsa/patterns/tries) |
+
+In an interview, `indexOf` or `contains` is usually acceptable for small inputs. Say so, and mention that KMP makes it linear if the interviewer asks.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Resetting `j` to 0 on a mismatch** instead of `lps[j − 1]`: that's the brute force again.
+- **`lps[i]` including the whole string**: borders must be *proper* (shorter than the string).
+- **Forgetting `+ MOD`** when subtracting in the rolling hash. Java's `%` can return a negative value.
+- **Trusting a hash match without verifying**, unless you consciously accept a tiny error rate with double hashing.
+- **Overflow in `h * BASE`**: keep `h` under MOD and use `long`.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 28 | [Find the Index of the First Occurrence in a String](https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/) | Easy | KMP search |
+| 796 | [Rotate String](https://leetcode.com/problems/rotate-string/) | Easy | Rotation ⇔ substring of a + a |
+| 459 | [Repeated Substring Pattern](https://leetcode.com/problems/repeated-substring-pattern/) | Easy | Period from the failure table |
+| 686 | [Repeated String Match](https://leetcode.com/problems/repeated-string-match/) | Medium | Bound the repeats, then search |
+| 187 | [Repeated DNA Sequences](https://leetcode.com/problems/repeated-dna-sequences/) | Medium | Fixed-length rolling hash |
+| 1392 | [Longest Happy Prefix](https://leetcode.com/problems/longest-happy-prefix/) | Hard | lps of the last position |
+| 214 | [Shortest Palindrome](https://leetcode.com/problems/shortest-palindrome/) | Hard | Failure table of s#rev(s) |
+| 1044 | [Longest Duplicate Substring](https://leetcode.com/problems/longest-duplicate-substring/) | Hard | Binary search + rolling hash |
+
+## Interview questions
+
+<QA q="Why is KMP linear even though it has a while loop inside the for loop?">
+The pattern index j increases by at most one for each text character, so it increases at most n times in total. Every iteration of the inner while loop decreases j, and j never goes below zero, so the total number of inner iterations over the whole run is at most the total number of increases, which is n. The text index never moves backwards. So the search is O(n) after the O(m) table, which is O(n + m) overall.
+</QA>
+
+<QA q="How do you deal with hash collisions in Rabin–Karp?">
+Equal strings always have equal hashes, but unequal strings can collide. The safe approach is to treat a hash match as a candidate and confirm it by comparing the characters, which keeps the algorithm exact; with a large prime modulus, false candidates are rare, so the expected time stays linear. Alternatively, use two independent hashes (different bases or moduli) and accept a negligible error probability, which avoids verification in problems like finding duplicates among many substrings.
+</QA>
+
+<Practice task="Check whether s2 is a rotation of s1 using only one call to a substring check. (CtCI 1.9.) Why does it work?">
+
+Return `s1.length() == s2.length() && (s1 + s1).contains(s2)`.
+
+Any rotation splits `s1` into `x + y` and produces `y + x`. And `s1 + s1 = x + y + x + y` contains `y + x` in the middle. Conversely, any length-n substring of `s1 + s1` starting at position k is the rotation by k. The length check rules out shorter substrings. With KMP the substring check is O(n).
+
+</Practice>
+
+<Practice task="Find all 10-letter sequences that occur more than once in a DNA string (letters A, C, G, T). How do you make each window O(1) without a general hash?">
+
+Encode each letter in 2 bits (A=0, C=1, G=2, T=3). A 10-letter window is then a 20-bit integer: `code = ((code << 2) | letter) & ((1 << 20) - 1)` adds the new letter and drops the oldest. Count codes in a hash set, or in a bit array of size 2²⁰, and report windows whose code was already seen exactly once. That's O(n) with no collisions, because the encoding is exact. It's a rolling hash where the "hash" is perfect.
+
+</Practice>
+
+<Takeaways>
+
+- KMP: the failure table stores the longest border of every prefix; on a mismatch, fall back to `lps[j − 1]`.
+- The search is O(n + m) because the text index never moves backwards.
+- The failure table alone answers period, happy-prefix and shortest-palindrome questions.
+- Rolling hash compares substrings in O(1): remove, shift, add; verify matches or double-hash.
+- Repeated-substring length problems combine rolling hash with binary search on the answer.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Range Queries: Fenwick & Segment Trees](/dsa/patterns/range-queries).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), "Rabin-Karp Substring Search" in XI "Advanced Topics", and 1.9 "String Rotation".
+- Cormen et al., *Introduction to Algorithms* (CLRS), chapter "String Matching" (Rabin–Karp and Knuth–Morris–Pratt).

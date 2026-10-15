@@ -49,7 +49,7 @@ const patterns = {
   title: 'Problem-Solving Patterns',
   shortTitle: 'Patterns',
   description:
-    'About 30 patterns cover the large majority of interview problems. Each lesson shows how to spot the pattern, why it works, one reusable template and a practice ladder.',
+    'About 35 patterns cover the large majority of interview problems. Each lesson shows how to spot the pattern, why it works, one reusable template and a practice ladder.',
   outcomes: [
     'Recognise the pattern from the wording and the constraints of a problem',
     'Reuse one template per pattern instead of memorising hundreds of solutions',
@@ -145,6 +145,8 @@ const patterns = {
         L('dp-knapsack', 'Knapsack Family', 'Take it or leave it: subset sum, coin change and their variants.', 22, 'Intermediate'),
         L('dp-grid', 'Grid DP', 'Paths and costs on a grid, and how to save memory with one row.', 16, 'Intermediate'),
         L('dp-strings', 'String DP', 'Two strings, two indexes: LCS, edit distance and palindromes.', 24, 'Advanced'),
+        L('dp-trees-intervals', 'Tree & Interval DP', 'DP on subtrees (house robber III, cameras) and on ranges (burst balloons, cutting sticks).', 24, 'Advanced'),
+        L('dp-state-machine', 'State-Machine & Bitmask DP', 'Stock problems as a few states per day, and subsets of a small set as the state.', 22, 'Advanced'),
       ],
     },
     {
@@ -155,6 +157,18 @@ const patterns = {
         L('greedy', 'Greedy', 'Make the best local choice — and how to convince yourself it is safe.', 18, 'Intermediate'),
         L('tries', 'Tries', 'Prefix trees for autocomplete, word search and prefix counting.', 16, 'Intermediate'),
         L('bit-manipulation', 'Bit Manipulation', 'XOR tricks, masks and counting bits — the handful that interviews use.', 14, 'Intermediate'),
+      ],
+    },
+    {
+      id: 'advanced',
+      title: 'Design, Matrices & Advanced Topics',
+      description: 'The remaining interview favourites: design-a-data-structure, matrix simulation, maths, string matching and range queries.',
+      lessons: [
+        L('design-data-structures', 'Designing Data Structures', 'LRU and LFU caches, O(1) random sets, time-based maps and iterators — combine two structures.', 26, 'Intermediate'),
+        L('matrix-simulation', 'Matrix & Simulation', 'Spiral order, rotation, in-place markers and the Game of Life — index bookkeeping without bugs.', 18, 'Intermediate'),
+        L('math-for-interviews', 'Math for Interviews', 'GCD, primes and the sieve, fast power, modular arithmetic, overflow, and random sampling.', 22, 'Intermediate'),
+        L('string-matching', 'String Matching: KMP & Rolling Hash', 'Find a pattern in O(n + m) with the failure table, and compare substrings in O(1) with hashing.', 22, 'Advanced'),
+        L('range-queries', 'Range Queries: Fenwick & Segment Trees', 'Prefix sums that survive updates: O(log n) update and query, and counting inversions.', 22, 'Advanced'),
       ],
     },
   ],
@@ -169,6 +183,7 @@ const playbook = {
     'Choose a pattern from a problem statement in under two minutes',
     'Follow a realistic week-by-week plan with a curated problem list',
     'Talk through a solution the way interviewers score it',
+    'Track every practice problem you have solved, per pattern',
   ],
   modules: [
     {
@@ -179,7 +194,10 @@ const playbook = {
         L('pattern-picker', 'The Pattern Picker', 'Signals in the wording and constraints that point to each pattern — a decision guide.', 16, 'Intermediate'),
         L('study-plan', 'A 10-Week Study Plan', 'What to study each week, which problems to solve and how to revise.', 14, 'Beginner'),
         L('interview-communication', 'Solving Out Loud', 'How DSA interviews are scored and what to say at each step.', 14, 'Beginner'),
+        L('pattern-drills', 'Spot-the-Pattern Drills', 'Sixty unseen problem statements: name the pattern in under a minute, then check.', 30, 'Intermediate'),
+        L('mock-interviews', 'Mock Interviews, Annotated', 'Two full transcripts of the same problem — a weak and a strong candidate — and a recovery from being stuck, scored.', 20, 'Intermediate'),
         L('dsa-cheat-sheet', 'DSA Cheat Sheet', 'Every pattern, template and complexity on one page for revision.', 12, 'Intermediate'),
+        L('problem-tracker', 'Problem Tracker', 'Every practice problem in one place: tick what you have solved and see your progress per pattern.', 5, 'Beginner'),
       ],
     },
   ],
@@ -190,6 +208,6 @@ export const dsa = {
   title: 'Data Structures & Algorithms',
   icon: 'binary',
   description:
-    'Pattern-first problem solving in Java: learn about 30 patterns instead of 500 solutions, with the reasoning interviewers want to hear.',
+    'Pattern-first problem solving in Java: learn about 35 patterns instead of 500 solutions, with the reasoning interviewers want to hear.',
   courses: [startHere, patterns, playbook],
 };

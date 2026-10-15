@@ -51,6 +51,15 @@ This page is for revision, not for learning: use it the night before an intervie
 | [Greedy](/dsa/patterns/greedy) | Safe local choice (exchange argument) | O(n) / O(n log n) | O(1) |
 | [Trie](/dsa/patterns/tries) | Prefixes, autocomplete, many words | O(L) per word | O(total chars) |
 | [Bits](/dsa/patterns/bit-manipulation) | Appears twice except one, subsets of n ≤ 20 | O(n) | O(1) |
+| [Tree DP](/dsa/patterns/dp-trees-intervals) | A choice at every node (rob, camera) | O(n) | O(h) |
+| [Interval DP](/dsa/patterns/dp-trees-intervals) | Burst, cut, merge, take from either end | O(n³) | O(n²) |
+| [State-machine DP](/dsa/patterns/dp-state-machine) | Cooldown, fee, at most k transactions | O(n · states) | O(states) |
+| [Bitmask DP](/dsa/patterns/dp-state-machine) | Visit or assign all of n ≤ 20 items | O(2ⁿ · n²) | O(2ⁿ · n) |
+| [Design](/dsa/patterns/design-data-structures) | "Implement a class", O(1) get/put, evict | O(1) per op | O(n) |
+| [Matrix](/dsa/patterns/matrix-simulation) | Spiral, rotate, in-place markers, simulation | O(R · C) | O(1) |
+| [Math](/dsa/patterns/math-for-interviews) | mod 10⁹ + 7, gcd, primes, huge exponents | O(log n) / O(n log log n) | varies |
+| [KMP / rolling hash](/dsa/patterns/string-matching) | Pattern in text, borders, repeated substrings | O(n + m) | O(m) |
+| [Fenwick / segment tree](/dsa/patterns/range-queries) | Updates mixed with range queries | O(log n) per op | O(n) |
 
 ## Arrays and strings
 
@@ -328,6 +337,50 @@ static int coinChange(int[] coins, int amount) {
   - Use `>>>` for unsigned shifts.
   - Always parenthesise: `(n & 1) == 0`.
 
+## Design, matrices and advanced topics
+
+**LRU cache** = `HashMap<key, Node>` plus a doubly linked list with sentinel `head` and `tail`. On `get` or `put`, unlink the node and add it at the front; when full, evict `tail.prev`. The node stores its key so eviction can delete it from the map.
+
+**O(1) delete from an array-backed set:** move the last element into the hole, update its index in the map, and remove the end.
+
+**Rotate clockwise** = transpose (`c` from `r + 1`), then reverse each row. **Staircase search** in a matrix with sorted rows and columns: start top-right; if the value is too big, `c--`, otherwise `r++`.
+
+**Fast power** (everything mod m):
+
+```java
+long result = 1;
+base %= m;
+while (exp > 0) {
+    if ((exp & 1) == 1) result = result * base % m;
+    base = base * base % m;
+    exp >>= 1;
+}
+```
+
+Modular inverse (m prime): `modPow(b, m - 2, m)`. GCD: `while (b != 0) { int t = a % b; a = b; b = t; }`.
+
+**KMP failure table:**
+
+```java
+int[] lps = new int[p.length()];
+for (int i = 1, len = 0; i < p.length(); i++) {
+    while (len > 0 && p.charAt(i) != p.charAt(len)) len = lps[len - 1];
+    if (p.charAt(i) == p.charAt(len)) len++;
+    lps[i] = len;
+}
+```
+
+**Fenwick tree** (1-based):
+
+```java
+void add(int i, long delta) { for (; i < tree.length; i += i & -i) tree[i] += delta; }
+long prefix(int i) { long s = 0; for (; i > 0; i -= i & -i) s += tree[i]; return s; }
+```
+
+**State-machine DP** (stock with cooldown): `sold = hold + p; hold = max(hold, rest − p); rest = max(rest, prevSold)`, all computed from yesterday's values.
+
+**Bitmask DP** (TSP): `dp[mask | 1 << u][u] = min(…, dp[mask][v] + d[v][u])` for every u not in `mask`.
+
 ## Edge cases to test every time
 
 | Input | Check |
@@ -351,6 +404,7 @@ static int coinChange(int[] coins, int amount) {
 
 ## Further reading
 
+- Next: [Problem Tracker](/dsa/playbook/problem-tracker), to see which patterns still need practice.
 - [The Pattern Picker](/dsa/playbook/pattern-picker), for deciding which template to use.
 - [Solving Out Loud](/dsa/playbook/interview-communication), for presenting the solution.
 - [Back to the start](/dsa/start-here/dsa-is-not-hard), the full DSA track.

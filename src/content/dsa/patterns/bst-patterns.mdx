@@ -76,6 +76,14 @@ flowchart TD
 
 `4 < 8` locally, but 4 is in 5's **right** subtree, so it must be greater than 5. The fix: every node inherits a range `(lo, hi)` from its ancestors.
 
+<TreeViz title="Validating a BST by passing bounds down" tree={{ id: "n0", v: 5, c: [{ id: "n1", v: 3 }, { id: "n2", v: 8, c: [{ id: "n5", v: 4 }, { id: "n6", v: 9 }] }] }} frames={[
+  { note: "Validate a BST by passing the allowed range (lo, hi) DOWN. The root may be anything. Going left lowers hi to the node's value; going right raises lo to it." },
+  { highlight: ["n0"], visited: [], notes: { n0: "(−∞, ∞)" }, vars: { node: 5, range: "(−∞, ∞)" }, note: "5 is inside (−∞, ∞): fine. Its left child gets (−∞, 5); its right child gets (5, ∞)." },
+  { highlight: ["n1"], visited: ["n0"], notes: { n0: "(−∞, ∞)", n1: "(−∞, 5)" }, vars: { node: 3, range: "(−∞, 5)" }, note: "3 is inside (−∞, 5): fine. Its left child gets (−∞, 3); its right child gets (3, 5)." },
+  { highlight: ["n2"], visited: ["n0", "n1"], notes: { n0: "(−∞, ∞)", n1: "(−∞, 5)", n2: "(5, ∞)" }, vars: { node: 8, range: "(5, ∞)" }, note: "8 is inside (5, ∞): fine. Its left child gets (5, 8); its right child gets (8, ∞)." },
+  { highlight: ["n5"], visited: ["n0", "n1", "n2"], notes: { n0: "(−∞, ∞)", n1: "(−∞, 5)", n2: "(5, ∞)", n5: "(5, 8)" }, vars: { node: 4, range: "(5, 8)" }, note: "4 is NOT inside (5, 8): it is less than 8 (fine for a left child of 8), but it sits in 5's RIGHT subtree, so it must be greater than 5. Invalid — a local parent/child check would have missed this." }
+]} />
+
 ```java
 static boolean isValidBST(TreeNode root) { return valid(root, Long.MIN_VALUE, Long.MAX_VALUE); }
 

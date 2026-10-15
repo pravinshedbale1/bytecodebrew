@@ -91,19 +91,29 @@ static void mergeSort(int[] a, int lo, int hi, int[] tmp) {   // sorts a[lo..hi)
 
 Each call makes two or more calls: generating subsets, permutations, naïve Fibonacci. The number of calls grows exponentially, which is fine when the problem genuinely asks for every possibility (that's [backtracking](/dsa/patterns/backtracking)) and wasteful when the calls repeat (that's when you need [dynamic programming](/dsa/patterns/dp-made-easy)).
 
-```mermaid
-flowchart TD
-  F5["fib(5)"] --> F4["fib(4)"]
-  F5 --> F3a["fib(3)"]
-  F4 --> F3b["fib(3)"]
-  F4 --> F2a["fib(2)"]
-  F3a --> F2b["fib(2)"]
-  F3a --> F1a["fib(1)"]
-  F3b --> F2c["fib(2)"]
-  F3b --> F1b["fib(1)"]
-```
+<TreeViz title="fib(4): the call tree and the call stack" tree={{ id: "f", v: "fib(4)", c: [{ id: "fL", v: "fib(3)", c: [{ id: "fLL", v: "fib(2)", c: [{ id: "fLLL", v: "fib(1)" }, { id: "fLLR", v: "fib(0)" }] }, { id: "fLR", v: "fib(1)" }] }, { id: "fR", v: "fib(2)", c: [{ id: "fRL", v: "fib(1)" }, { id: "fRR", v: "fib(0)" }] }] }} frames={[
+  { highlight: ["f"], visited: [], done: [], notes: {  }, aux: { label: "call stack", items: ["fib(4)"] }, note: "Call fib(4): it needs fib(3) and fib(2). It waits on the stack while fib(3) runs first.", hidden: ["fL", "fLL", "fLLL", "fLLR", "fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fL"], visited: ["f"], done: [], notes: {  }, aux: { label: "call stack", items: ["fib(4)", "fib(3)"] }, note: "Call fib(3): it needs fib(2) and fib(1). It waits on the stack while fib(2) runs first.", hidden: ["fLL", "fLLL", "fLLR", "fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLL"], visited: ["f", "fL"], done: [], notes: {  }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(2)"] }, note: "Call fib(2): it needs fib(1) and fib(0). It waits on the stack while fib(1) runs first.", hidden: ["fLLL", "fLLR", "fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLLL"], visited: ["f", "fL", "fLL"], done: [], notes: {  }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(2)", "fib(1)"] }, note: "Call fib(1): a base case.", hidden: ["fLLR", "fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLLL"], visited: ["f", "fL", "fLL"], done: [], notes: { fLLL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(2)"] }, note: "fib(1) returns 1 immediately and is popped off the stack.", hidden: ["fLLR", "fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLLR"], visited: ["f", "fL", "fLL"], done: ["fLLL"], notes: { fLLL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(2)", "fib(0)"] }, note: "Call fib(0): a base case.", hidden: ["fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLLR"], visited: ["f", "fL", "fLL"], done: ["fLLL"], notes: { fLLL: "= 1", fLLR: "= 0" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(2)"] }, note: "fib(0) returns 0 immediately and is popped off the stack.", hidden: ["fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLL"], visited: ["f", "fL"], done: ["fLLL", "fLLR"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)"] }, note: "fib(2) has both answers: returns 1. Popped — control goes back to its caller.", hidden: ["fLR", "fR", "fRL", "fRR"] },
+  { highlight: ["fLR"], visited: ["f", "fL"], done: ["fLLL", "fLLR", "fLL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)", "fib(1)"] }, note: "Call fib(1): a base case.", hidden: ["fR", "fRL", "fRR"] },
+  { highlight: ["fLR"], visited: ["f", "fL"], done: ["fLLL", "fLLR", "fLL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(3)"] }, note: "fib(1) returns 1 immediately and is popped off the stack.", hidden: ["fR", "fRL", "fRR"] },
+  { highlight: ["fL"], visited: ["f"], done: ["fLLL", "fLLR", "fLL", "fLR"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2" }, aux: { label: "call stack", items: ["fib(4)"] }, note: "fib(3) has both answers: returns 2. Popped — control goes back to its caller.", hidden: ["fR", "fRL", "fRR"] },
+  { highlight: ["fR"], visited: ["f"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2" }, aux: { label: "call stack", items: ["fib(4)", "fib(2)"] }, note: "Call fib(2): it needs fib(1) and fib(0). It waits on the stack while fib(1) runs first.", hidden: ["fRL", "fRR"] },
+  { highlight: ["fRL"], visited: ["f", "fR"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2" }, aux: { label: "call stack", items: ["fib(4)", "fib(2)", "fib(1)"] }, note: "Call fib(1): a base case.", hidden: ["fRR"] },
+  { highlight: ["fRL"], visited: ["f", "fR"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(2)"] }, note: "fib(1) returns 1 immediately and is popped off the stack.", hidden: ["fRR"] },
+  { highlight: ["fRR"], visited: ["f", "fR"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL", "fRL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1" }, aux: { label: "call stack", items: ["fib(4)", "fib(2)", "fib(0)"] }, note: "Call fib(0): a base case." },
+  { highlight: ["fRR"], visited: ["f", "fR"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL", "fRL"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1", fRR: "= 0" }, aux: { label: "call stack", items: ["fib(4)", "fib(2)"] }, note: "fib(0) returns 0 immediately and is popped off the stack." },
+  { highlight: ["fR"], visited: ["f"], done: ["fLLL", "fLLR", "fLL", "fLR", "fL", "fRL", "fRR"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1", fRR: "= 0", fR: "= 1" }, aux: { label: "call stack", items: ["fib(4)"] }, note: "fib(2) has both answers: returns 1. Popped — control goes back to its caller." },
+  { highlight: ["f"], visited: [], done: ["fLLL", "fLLR", "fLL", "fLR", "fL", "fRL", "fRR", "fR"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1", fRR: "= 0", fR: "= 1", f: "= 3" }, aux: { label: "call stack", items: [] }, note: "fib(4) has both answers: returns 3. Popped — control goes back to its caller." },
+  { highlight: ["fLL", "fR"], notes: { fLLL: "= 1", fLLR: "= 0", fLL: "= 1", fLR: "= 1", fL: "= 2", fRL: "= 1", fRR: "= 0", fR: "= 1", f: "= 3" }, aux: { label: "call stack", items: [] }, note: "fib(4) = 3 after 9 calls. fib(2) was computed 2 times (highlighted) and fib(1) 3 times. The stack never held more than 4 calls — depth, not total calls, sets the memory. Memoising each answer removes the repeats: that is DP." }
+]} />
 
-`fib(3)` is computed twice and `fib(2)` three times — in `fib(50)`, the same values are recomputed billions of times. Remembering each answer the first time ("memoisation") turns this exponential tree into a straight line. Keep that picture in mind; it's the whole idea behind DP.
+Even for `fib(4)`, `fib(2)` is computed twice. In `fib(50)`, the same values are recomputed billions of times. Remembering each answer the first time ("memoisation") turns this exponential tree into a straight line. Keep that picture in mind; it's the whole idea behind DP.
 
 ## Return up vs pass down
 

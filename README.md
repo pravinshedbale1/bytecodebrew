@@ -44,7 +44,11 @@ Standard Markdown (including GFM tables) plus these components, available withou
 | ```` ```mermaid ```` fences | Diagrams (flowchart, sequence, state…), themed for light/dark |
 | `<HashRing servers={…} keys={…} />` | Consistent-hashing ring diagram |
 | `<Related ids={['caching', 'sharding']} />` | "Concepts used" links to other lessons in the same course |
+| `<ArrayViz title="…" frames={[…]} />` | Step-through visual for arrays and grids (pointers, window, highlight, done, vars, aux list, note) |
+| `<TreeViz title="…" tree={…} frames={[…]} />` | Step-through visual for trees, tries and recursion trees; nodes are `{ id, v, c }`, frames list ids to highlight, mark, dim or hide |
+| `<ProblemTracker />` | Checklist of every practice-ladder problem in the DSA pattern lessons (parsed at build time) |
 | `[text](/system-design/hld/caching)` | Internal links navigate in-app; external links open in a new tab |
+| `[Two Sum](https://leetcode.com/problems/two-sum/)` | A LeetCode problem link gets a "solved" checkbox, stored in the browser and shared with the Problem Tracker |
 
 Concept lesson shape: why it matters → core mechanics with diagrams → trade-off tables → real-world examples → common mistakes → "In the interview" callout → interview questions → key takeaways → further reading (primary sources).
 
@@ -53,6 +57,12 @@ Case study shape: `<Related>` → clarify → requirements → capacity estimati
 LLD case study shape: `<Related>` → requirements table → class diagram → implementation (Java excerpts) → concurrency → patterns used → extensions → interview questions → `<Practice>` exercises → takeaways → further reading.
 
 MDX gotchas: in prose, `<` and `{` start JSX — write "under 50 ms" instead of "< 50 ms", or put it in backticks. `QA q` and `Practice task` attributes can't contain double quotes.
+
+DSA pattern lesson shape: pain point → "How to spot it" tip → idea with a step-through visual → template → worked problems → comparison table → common mistakes → practice ladder (`| # | [Title](leetcode link) | Level | What it trains |`, which the Problem Tracker reads) → interview questions → `<Practice>` → takeaways → further reading.
+
+### DSA code is compiled and tested
+
+Every Java snippet in the DSA track is an excerpt of a runnable file in [`dsa-java/`](dsa-java/README.md), tested against brute force on random inputs. After changing a lesson's code, update the matching file and run `./dsa-java/run-all.sh` (JDK 21+).
 
 ### LLD code is compiled and tested
 

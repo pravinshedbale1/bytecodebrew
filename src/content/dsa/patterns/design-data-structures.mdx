@@ -1,0 +1,378 @@
+"Design an LRU cache" is one of the most-asked interview questions there is, and it frightens people because it doesn't look like an algorithm problem. There's no array to scan and no pattern name in the statement, just a class with methods that must all run in O(1). The trick is the same every time: **no single structure does everything, so combine two**, each covering the other's weakness. Once you see that, this whole family of problems becomes a short checklist.
+
+<Callout type="tip" title="How to spot it">
+
+- The problem says **"Design…"** or **"Implement the class…"** and lists methods.
+- Each method has a **complexity requirement**, usually "O(1) average" or "O(log n)".
+- The operations pull in different directions: **find by key** *and* **keep an order**, or **delete anything** *and* **pick a random element**.
+- It mentions **eviction**, **capacity**, **timestamps**, **iterators** or **streams**.
+
+</Callout>
+
+## The method: list the operations, then pair structures
+
+Write each required operation next to the structure that does it fast:
+
+| Structure | Fast at | Slow at |
+| --- | --- | --- |
+| `HashMap` | Find / insert / delete by key, O(1) | Any notion of order |
+| Doubly linked list | Move or remove a **known** node, O(1); keep a recency order | Finding a node, O(n) |
+| `ArrayList` | Access by index, add/remove **at the end**, O(1) | Removing from the middle, O(n) |
+| Heap | Min/max, O(log n) | Removing an arbitrary element, O(n) |
+| `TreeMap` | Floor/ceiling, ordered keys, O(log n) | Nothing major, but not O(1) |
+
+If no single row covers every operation, pick two rows whose strengths cover each other's weaknesses, and keep them **in sync** in every method. That's the whole pattern.
+
+## LRU cache: hash map + doubly linked list
+
+> `get(key)` and `put(key, value)` in O(1). When the cache is full, evict the **least recently used** key.
+
+- Find a key in O(1) → **hash map**.
+- Know which key is least recent, and move a key to "most recent" in O(1) → **doubly linked list** in order of use.
+
+The map stores **key → list node**, so after a lookup you can unlink the node directly, without searching.
+
+<ArrayViz title="LRU cache with capacity 3" frames={[
+  { arr: ["(empty)"], highlight: [], aux: { label: "map keys", items: [] }, note: "Capacity 3. The list keeps keys in order of use: most recent at the front (left), least recent at the back. The hash map points at each list node, so we can find and move any key in O(1)." },
+  { arr: ["1:A"], highlight: [0], pointers: { MRU: 0, LRU: 0 }, aux: { label: "map keys", items: [1] }, note: "put(1, A): new key — add a node at the front and to the map." },
+  { arr: ["2:B", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 1 }, aux: { label: "map keys", items: [1, 2] }, note: "put(2, B): new key — add a node at the front and to the map." },
+  { arr: ["3:C", "2:B", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 2, 3] }, note: "put(3, C): new key — add a node at the front and to the map." },
+  { arr: ["1:A", "3:C", "2:B"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 2, 3] }, note: "get(1) → A: found through the map; unlink the node and move it to the front — it's now the most recent." },
+  { arr: ["4:D", "1:A", "3:C"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "put(4, D): full, so evict the node at the back (key 2), remove 2 from the map, then add 4 at the front." },
+  { arr: ["4:D", "1:A", "3:C"], highlight: [], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "get(2) → −1: not in the map." },
+  { arr: ["3:Z", "4:D", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "put(3, Z): 3 exists — update the value and move it to the front." },
+  { arr: ["3:Z", "4:D", "1:A"], highlight: [], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "Every operation is a map lookup plus a constant number of pointer changes: O(1). The list answers \"who is least recent?\"; the map answers \"where is key k?\". Neither can do both alone." }
+]} />
+
+```java
+static class LRUCache {
+    private static class Node {
+        int key, val;
+        Node prev, next;
+        Node(int k, int v) { key = k; val = v; }
+    }
+    private final int capacity;
+    private final Map<Integer, Node> map = new HashMap<>();
+    private final Node head = new Node(0, 0), tail = new Node(0, 0);   // sentinels: no null checks
+
+    LRUCache(int capacity) {
+        this.capacity = capacity;
+        head.next = tail;
+        tail.prev = head;
+    }
+
+    int get(int key) {
+        Node n = map.get(key);
+        if (n == null) return -1;
+        remove(n);
+        addFront(n);                                // used: now the most recent
+        return n.val;
+    }
+
+    void put(int key, int value) {
+        Node n = map.get(key);
+        if (n != null) {
+            n.val = value;
+            remove(n);
+            addFront(n);
+            return;
+        }
+        if (map.size() == capacity) {
+            Node lru = tail.prev;                   // least recently used sits before the tail
+            remove(lru);
+            map.remove(lru.key);                    // why the node stores its key
+        }
+        n = new Node(key, value);
+        map.put(key, n);
+        addFront(n);
+    }
+
+    private void remove(Node n) { n.prev.next = n.next; n.next.prev = n.prev; }
+    private void addFront(Node n) { n.next = head.next; n.prev = head; head.next.prev = n; head.next = n; }
+}
+```
+
+Three details interviewers look for:
+
+- **Sentinel head and tail** nodes remove every "is this the first or last node?" special case.
+- The node stores its **key**, because eviction starts from the list and must also delete from the map.
+- **Doubly** linked, because unlinking a node needs its predecessor.
+
+In real Java code, `LinkedHashMap` with `accessOrder = true` and an overridden `removeEldestEntry` is an LRU cache in five lines. Mention it, but expect to be asked to build the real thing.
+
+## LFU cache: three maps and a minimum counter
+
+> Evict the **least frequently used** key; among ties, the least recently used.
+
+Now we need, in O(1):
+
+- the value and use-count of a key, which takes two hash maps;
+- the keys with a given count in recency order, which takes a map from **count → `LinkedHashSet`**, iterated oldest first;
+- the smallest count in use, which is a single `minFreq` variable.
+
+```java
+static class LFUCache {
+    private final int capacity;
+    private final Map<Integer, Integer> vals = new HashMap<>(), freq = new HashMap<>();
+    private final Map<Integer, LinkedHashSet<Integer>> byFreq = new HashMap<>();   // freq → keys, oldest first
+    private int minFreq;
+
+    LFUCache(int capacity) { this.capacity = capacity; }
+
+    int get(int key) {
+        if (!vals.containsKey(key)) return -1;
+        touch(key);
+        return vals.get(key);
+    }
+
+    void put(int key, int value) {
+        if (capacity == 0) return;
+        if (vals.containsKey(key)) {
+            vals.put(key, value);
+            touch(key);
+            return;
+        }
+        if (vals.size() == capacity) {
+            Iterator<Integer> it = byFreq.get(minFreq).iterator();
+            int evict = it.next();                  // least frequent; among those, least recent
+            it.remove();
+            vals.remove(evict);
+            freq.remove(evict);
+        }
+        vals.put(key, value);
+        freq.put(key, 1);
+        byFreq.computeIfAbsent(1, f -> new LinkedHashSet<>()).add(key);
+        minFreq = 1;                                // a new key always has the lowest count
+    }
+
+    private void touch(int key) {                   // move key from bucket f to bucket f + 1
+        int f = freq.get(key);
+        freq.put(key, f + 1);
+        LinkedHashSet<Integer> bucket = byFreq.get(f);
+        bucket.remove(key);
+        if (bucket.isEmpty() && f == minFreq) minFreq++;
+        byFreq.computeIfAbsent(f + 1, x -> new LinkedHashSet<>()).add(key);
+    }
+}
+```
+
+Why `minFreq` never needs a search:
+
+- It only changes in two ways. A new key resets it to 1.
+- Touching a key moves it from count f to f + 1. If that empties the bucket for the minimum, the new minimum is exactly f + 1.
+
+## Insert, delete, get random, all in O(1)
+
+- A hash set can't pick a random element in O(1).
+- An array can, but deleting from its middle is O(n).
+- **Combine them**: an `ArrayList` of values plus a map **value → index**.
+- To delete, **move the last element into the hole**, then remove the end.
+
+```java
+static class RandomizedSet {
+    private final List<Integer> items = new ArrayList<>();
+    private final Map<Integer, Integer> index = new HashMap<>();   // value → its position in items
+    private final Random random = new Random();
+
+    boolean insert(int val) {
+        if (index.containsKey(val)) return false;
+        index.put(val, items.size());
+        items.add(val);
+        return true;
+    }
+
+    boolean remove(int val) {
+        Integer i = index.get(val);
+        if (i == null) return false;
+        int last = items.get(items.size() - 1);
+        items.set(i, last);                         // move the last element into the hole
+        index.put(last, i);
+        items.remove(items.size() - 1);             // removing the end is O(1)
+        index.remove(val);
+        return true;
+    }
+
+    int getRandom() { return items.get(random.nextInt(items.size())); }
+}
+```
+
+The order of the two `index` updates matters when `val` *is* the last element. Writing `index.put(last, i)` first and `index.remove(val)` second handles that case correctly. The tests in the reference solution cover it.
+
+## Time-based key-value store: map + sorted list
+
+> `set(key, value, timestamp)`; `get(key, timestamp)` returns the value with the largest timestamp **≤ the given one**.
+
+Timestamps arrive in increasing order, so each key's list of timestamps is already sorted. A `get` is a [binary search](/dsa/patterns/binary-search) for the last timestamp that isn't too big:
+
+```java
+static class TimeMap {
+    private final Map<String, List<Integer>> times = new HashMap<>();
+    private final Map<String, List<String>> values = new HashMap<>();
+
+    /** Timestamps for a key arrive in increasing order, so each list stays sorted. */
+    void set(String key, String value, int timestamp) {
+        times.computeIfAbsent(key, k -> new ArrayList<>()).add(timestamp);
+        values.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
+    }
+
+    /** The value with the largest timestamp ≤ the given one, or "". */
+    String get(String key, int timestamp) {
+        List<Integer> ts = times.get(key);
+        if (ts == null) return "";
+        int lo = 0, hi = ts.size();                 // first index with ts > timestamp
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (ts.get(mid) > timestamp) hi = mid; else lo = mid + 1;
+        }
+        return lo == 0 ? "" : values.get(key).get(lo - 1);
+    }
+}
+```
+
+If timestamps could arrive out of order, use `Map<String, TreeMap<Integer, String>>` and `floorEntry(timestamp)`. That costs O(log n) per `set` too, and it's a good follow-up to mention.
+
+## Iterators: hold the next element
+
+Iterator problems all ask you to compute **lazily**: produce the next element only when asked. The trick is to keep **one element of look-ahead** (or a stack of positions) inside the object.
+
+**Peeking iterator.** Pre-fetch one element so `peek()` can return it without consuming it:
+
+```java
+static class PeekingIterator<T> implements Iterator<T> {
+    private final Iterator<T> it;
+    private T next;
+    private boolean hasNext;
+
+    PeekingIterator(Iterator<T> it) { this.it = it; advance(); }
+
+    T peek() { return next; }
+    @Override public boolean hasNext() { return hasNext; }
+    @Override public T next() {
+        if (!hasNext) throw new NoSuchElementException();
+        T r = next;
+        advance();
+        return r;
+    }
+    private void advance() { hasNext = it.hasNext(); next = hasNext ? it.next() : null; }
+}
+```
+
+**Flatten a nested list** like `[1, [2, [3]], 4]` without flattening it up front. Keep a **stack of iterators**, one per open list. That is iterative DFS, done one element at a time:
+
+```java
+static class NestedIterator implements Iterator<Integer> {
+    private final Deque<Iterator<Object>> stack = new ArrayDeque<>();
+    private Integer next;
+
+    NestedIterator(List<Object> list) { stack.push(list.iterator()); }
+
+    @Override public boolean hasNext() {
+        while (next == null && !stack.isEmpty()) {
+            Iterator<Object> top = stack.peek();
+            if (!top.hasNext()) { stack.pop(); continue; }          // this list is finished
+            Object o = top.next();
+            if (o instanceof Integer i) next = i;
+            else {
+                @SuppressWarnings("unchecked") List<Object> inner = (List<Object>) o;
+                stack.push(inner.iterator());                     // descend into the inner list
+            }
+        }
+        return next != null;
+    }
+
+    @Override public Integer next() {
+        if (!hasNext()) throw new NoSuchElementException();
+        Integer r = next;
+        next = null;
+        return r;
+    }
+}
+```
+
+`hasNext()` does the work and must be **safe to call twice**: it only searches when nothing is buffered. Empty inner lists such as `[[], [[]]]` are the classic test, and the loop skips them naturally.
+
+## Design problems at a glance
+
+| Problem | Structures | Key trick |
+| --- | --- | --- |
+| LRU cache | HashMap + doubly linked list | Map to the node; sentinels; node stores its key |
+| LFU cache | 2 maps + count → LinkedHashSet | `minFreq` only resets to 1 or moves up by one |
+| Insert/delete/getRandom O(1) | ArrayList + value → index map | Swap with the last, then remove the end |
+| Time-based store | Map + sorted list per key | Binary search for the last timestamp ≤ t |
+| Min stack | Stack of (value, min so far) | Each entry remembers the min below it ([Stack Patterns](/dsa/patterns/stack-patterns)) |
+| Queue with two stacks | In-stack + out-stack | Refill out only when empty: amortised O(1) |
+| Running median | Max-heap + min-heap | Balance sizes ([Heaps](/dsa/patterns/heap-patterns)) |
+| Iterators | One-element buffer or stack of iterators | Compute lazily; `hasNext` is idempotent |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Updating one structure but not the other**: every method must keep both in sync. Check each method against each structure.
+- **Forgetting to move on `get`**: in an LRU cache, a read counts as a use.
+- **Singly linked list for LRU**: unlinking needs the previous node.
+- **Removing from the middle of an ArrayList** (O(n)) instead of swapping with the last.
+- **`hasNext()` with side effects** that break when it's called twice.
+- **Capacity 0** in caches: `put` must do nothing.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 232 | [Implement Queue using Stacks](https://leetcode.com/problems/implement-queue-using-stacks/) | Easy | Amortised O(1) with two stacks |
+| 706 | [Design HashMap](https://leetcode.com/problems/design-hashmap/) | Easy | Buckets and chaining |
+| 155 | [Min Stack](https://leetcode.com/problems/min-stack/) | Medium | Store extra state per entry |
+| 146 | [LRU Cache](https://leetcode.com/problems/lru-cache/) | Medium | HashMap + doubly linked list |
+| 380 | [Insert Delete GetRandom O(1)](https://leetcode.com/problems/insert-delete-getrandom-o1/) | Medium | Swap with the last |
+| 981 | [Time Based Key-Value Store](https://leetcode.com/problems/time-based-key-value-store/) | Medium | Map + binary search |
+| 284 | [Peeking Iterator](https://leetcode.com/problems/peeking-iterator/) | Medium | One-element buffer |
+| 341 | [Flatten Nested List Iterator](https://leetcode.com/problems/flatten-nested-list-iterator/) | Medium | Stack of iterators |
+| 1146 | [Snapshot Array](https://leetcode.com/problems/snapshot-array/) | Medium | Per-index history + binary search |
+| 355 | [Design Twitter](https://leetcode.com/problems/design-twitter/) | Medium | Maps + k-way merge with a heap |
+| 460 | [LFU Cache](https://leetcode.com/problems/lfu-cache/) | Hard | Frequency buckets + minFreq |
+| 381 | [Insert Delete GetRandom O(1) – Duplicates allowed](https://leetcode.com/problems/insert-delete-getrandom-o1-duplicates-allowed/) | Hard | Value → set of indexes |
+
+## Interview questions
+
+<QA q="Why does an LRU cache need both a hash map and a doubly linked list?">
+The cache needs two things in O(1): finding the entry for a key, and knowing and updating the order of use so it can evict the least recently used entry. A hash map finds keys in O(1) but has no order. A doubly linked list keeps the order and can move or remove a known node in O(1), but finding a node in it is O(n). Storing key to list node in the map gives both: look the node up in the map, then unlink and move it in the list. The list must be doubly linked because unlinking needs the previous node.
+</QA>
+
+<QA q="How do you remove an arbitrary element from an array-backed set in O(1)?">
+Keep a map from value to index. To remove a value, look up its index, copy the last element into that slot, update the moved element's index in the map, then remove the last slot, which is O(1). Order isn't preserved, which is fine for a set. This is what makes insert, delete and getRandom all O(1): getRandom picks a random index into the array.
+</QA>
+
+<Practice task="Design a hit counter: hit(timestamp) records a hit, and getHits(timestamp) returns the number of hits in the past 300 seconds. Timestamps are non-decreasing. What structure, and what if there are millions of hits per second?">
+
+**Basic:** a queue of timestamps. `hit` appends; `getHits` pops from the front while the front is 300 or more seconds older than `timestamp`, then returns the size. That's amortised O(1), since each hit is popped once.
+
+**Many hits per second:** store `(timestamp, count)` pairs, merging repeated timestamps. Or use a fixed circular array of 300 buckets indexed by `timestamp % 300`, where each bucket holds its timestamp and count; reset a bucket when its stored timestamp is stale. `getHits` sums the 300 buckets whose timestamps are recent. That's O(300) and fixed memory, however many hits arrive.
+
+</Practice>
+
+<Practice task="Design a data structure with inc(key), dec(key), getMaxKey() and getMinKey(), all in O(1). Which structures, and how do they connect?">
+
+This is the "All O(1)" problem, LFU's cousin. Keep a **doubly linked list of count buckets** in increasing order of count, each bucket holding a set of keys. Also keep a map **key → its bucket**.
+
+- `inc` moves a key to the next bucket, creating a bucket with count + 1 right after the current one if it doesn't exist. `dec` does the same in the other direction.
+- Delete a bucket when it becomes empty.
+- The min key is any key in the first bucket and the max key is any key in the last.
+
+Every step is a map lookup or a neighbour-pointer change, so everything is O(1).
+
+</Practice>
+
+<Takeaways>
+
+- Design problems = list the operations, then combine two structures whose strengths cover each other.
+- LRU: hash map to doubly linked list nodes, sentinels, node stores its key.
+- LFU: count to LinkedHashSet buckets plus a `minFreq` that only resets or steps up.
+- O(1) delete from an array: swap with the last element and update the index map.
+- Iterators compute lazily: buffer one element or keep a stack of iterators; `hasNext` must be safe to repeat.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Matrix & Simulation](/dsa/patterns/matrix-simulation).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter 3 "Stacks and Queues" (stack min, queue via stacks) and problem 16.25 "LRU Cache".

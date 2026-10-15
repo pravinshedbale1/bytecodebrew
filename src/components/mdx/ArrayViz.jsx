@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react';
 import styles from './ArrayViz.module.css';
+import { useStepper, VizState, VizControls } from './VizStepper';
 
 /**
  * Step-through visualiser for array algorithms.
@@ -36,17 +35,8 @@ function Grid({ f }) {
 }
 
 export function ArrayViz({ frames, title }) {
-  const [i, setI] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const last = frames.length - 1;
-  const f = frames[Math.min(i, last)];
-
-  useEffect(() => {
-    if (!playing) return undefined;
-    if (i >= last) { setPlaying(false); return undefined; }
-    const t = setTimeout(() => setI((x) => x + 1), 1400);
-    return () => clearTimeout(t);
-  }, [playing, i, last]);
+  const s = useStepper(frames.length);
+  const f = frames[s.i];
 
   const pointersAt = (idx) =>
     Object.entries(f.pointers ?? {}).filter(([, v]) => v === idx).map(([k]) => k);
@@ -82,37 +72,8 @@ export function ArrayViz({ frames, title }) {
       </div>
       )}
 
-      {(f.vars || f.aux) && (
-        <div className={styles.state}>
-          {f.vars && Object.entries(f.vars).map(([k, v]) => (
-            <span key={k} className={styles.var}><span className={styles.varName}>{k}</span> {String(v)}</span>
-          ))}
-          {f.aux && (
-            <span className={styles.var}>
-              <span className={styles.varName}>{f.aux.label}</span>
-              <span className={styles.aux}>[{f.aux.items.join(', ')}]</span>
-            </span>
-          )}
-        </div>
-      )}
-
-      {f.note && <p className={styles.note}>{f.note}</p>}
-
-      <div className={styles.controls}>
-        <button type="button" onClick={() => { setPlaying(false); setI(0); }} aria-label="Restart" disabled={i === 0}>
-          <RotateCcw size={15} />
-        </button>
-        <button type="button" onClick={() => { setPlaying(false); setI((x) => Math.max(0, x - 1)); }} aria-label="Previous step" disabled={i === 0}>
-          <ChevronLeft size={16} />
-        </button>
-        <button type="button" className={styles.play} onClick={() => { if (i >= last) setI(0); setPlaying((p) => !p); }} aria-label={playing ? 'Pause' : 'Play'}>
-          {playing ? <Pause size={15} /> : <Play size={15} />}
-        </button>
-        <button type="button" onClick={() => { setPlaying(false); setI((x) => Math.min(last, x + 1)); }} aria-label="Next step" disabled={i === last}>
-          <ChevronRight size={16} />
-        </button>
-        <span className={styles.step}>Step {i + 1} / {frames.length}</span>
-      </div>
+      <VizState f={f} />
+      <VizControls s={s} count={frames.length} />
     </figure>
   );
 }
