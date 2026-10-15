@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
-    "emulators": "firebase emulators:start --project demo-bytecodebrew",
+    "emulators": "npx --yes firebase-tools@15.34.0 emulators:start --project demo-bytecodebrew",
     "dev:emulator": "VITE_FIREBASE_EMULATOR=1 vite"
   },
   "dependencies": {
@@ -24,13 +24,12 @@
     "@mdx-js/react": "^3.1.1",
     "@mdx-js/rollup": "^3.1.1",
     "@vitejs/plugin-react": "^6.1.2",
-    "firebase-tools": "^15.34.0",
     "rehype-highlight": "^7.0.2",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "vite": "^8.3.4"
   },
   "engines": {
-    "node": ">=20.19"
+    "node": ">=24.12.0"
   }
 }
