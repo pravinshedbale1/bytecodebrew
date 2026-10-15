@@ -1,0 +1,166 @@
+Many problems need the **smallest (or largest) item, again and again**, while new items keep arriving: the next task by priority, the closest point so far, the k largest values in a stream.
+
+- Sorting once doesn't help when items keep arriving.
+- Scanning for the minimum each time costs O(n).
+
+A **heap** gives you the minimum in O(1) and handles each insert or removal in O(log n). Java calls it a `PriorityQueue`.
+
+## Picture it
+
+<TreeViz title="A min-heap: offer sifts up, poll sifts down" tree={{ id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }} frames={[
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }, hidden: ["i6"], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]" }, aux: { label: "array", items: [3, 5, 4, 9, 6, 8] }, note: "A min-heap: a COMPLETE binary tree where every parent is ≤ its children, so the minimum is always at the root. It lives in a plain array: the children of index i are 2i + 1 and 2i + 2, its parent is (i − 1) / 2 — no node objects or pointers at all." },
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }, hidden: ["i6"], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]" }, aux: { label: "array", items: [3, 5, 4, 9, 6, 8] }, note: "peek() = a[0] = 3: the minimum in O(1). The heap is NOT sorted (the array reads 3, 5, 4, 9, 6, 8) and siblings are in no particular order. It only promises parent ≤ child.", highlight: ["i0"] },
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: 2 }] }] }, hidden: [], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]", i6: "[6]" }, aux: { label: "array", items: [3, 5, 4, 9, 6, 8, 2] }, note: "offer(2): put it in the next free slot (index 6) to keep the tree complete. Now its parent 4 (index 2) is bigger — the order is broken.", highlight: ["i6"] },
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 2, c: [{ id: "i5", v: 8 }, { id: "i6", v: 4 }] }] }, hidden: [], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]", i6: "[6]" }, aux: { label: "array", items: [3, 5, 2, 9, 6, 8, 4] }, note: "Sift UP: swap 2 with its parent 4.", highlight: ["i2"], path: ["i2", "i6"] },
+  { tree: { id: "i0", v: 2, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 3, c: [{ id: "i5", v: 8 }, { id: "i6", v: 4 }] }] }, hidden: [], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]", i6: "[6]" }, aux: { label: "array", items: [2, 5, 3, 9, 6, 8, 4] }, note: "Still smaller than its parent 3: swap again. Now 2 is at the root and the order holds. At most one swap per level: O(log n).", highlight: ["i0"], path: ["i0", "i2"] },
+  { tree: { id: "i0", v: 4, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 3, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }, hidden: ["i6"], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]" }, aux: { label: "array", items: [4, 5, 3, 9, 6, 8] }, note: "poll() → 2. Remove the root by moving the LAST element (4) into it — the tree stays complete, but 4 is bigger than its child 3.", highlight: ["i0"] },
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }, hidden: ["i6"], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]" }, aux: { label: "array", items: [3, 5, 4, 9, 6, 8] }, note: "Sift DOWN: swap with the SMALLER child (3, not 5) — swapping with 5 would put 5 above 3 and break the rule.", highlight: ["i2"], path: ["i0", "i2"] },
+  { tree: { id: "i0", v: 3, c: [{ id: "i1", v: 5, c: [{ id: "i3", v: 9 }, { id: "i4", v: 6 }] }, { id: "i2", v: 4, c: [{ id: "i5", v: 8 }, { id: "i6", v: "" }] }] }, hidden: ["i6"], notes: { i0: "[0]", i1: "[1]", i2: "[2]", i3: "[3]", i4: "[4]", i5: "[5]" }, aux: { label: "array", items: [3, 5, 4, 9, 6, 8] }, note: "4 is now ≤ its only child 8: done. Again at most one swap per level, O(log n). That is the whole heap: O(1) peek, O(log n) offer and poll — exactly what a priority queue needs.", marked: ["i0"] }
+]} />
+
+## How it works
+
+A (binary) min-heap is a **complete binary tree** with one rule: **every parent is ≤ its children**. So the root is the minimum. Nothing else is ordered: siblings can be in any order, and the heap is not sorted.
+
+Because the tree is complete (filled level by level, left to right), it fits in a **plain array** with no references:
+
+| For the node at index i | Index |
+| --- | --- |
+| Left child | `2i + 1` |
+| Right child | `2i + 2` |
+| Parent | `(i − 1) / 2` |
+
+There are two operations, each one walk along a single root-to-leaf path:
+
+- **offer (insert)**: put the new value in the next free slot, then **sift up**, swapping with the parent while it's smaller.
+- **poll (remove the min)**: take the root, move the **last** element into the root, then **sift down**, swapping with the **smaller** child while that child is smaller.
+
+```java
+private void siftUp(int i) {
+    while (i > 0 && a[(i - 1) / 2] > a[i]) {   // parent of i is (i − 1) / 2
+        swap(i, (i - 1) / 2);
+        i = (i - 1) / 2;
+    }
+}
+
+private void siftDown(int i) {
+    while (true) {
+        int l = 2 * i + 1, r = 2 * i + 2, smallest = i;   // children of i
+        if (l < size && a[l] < a[smallest]) smallest = l;
+        if (r < size && a[r] < a[smallest]) smallest = r;
+        if (smallest == i) return;
+        swap(i, smallest);
+        i = smallest;
+    }
+}
+
+int poll() {
+    if (size == 0) throw new NoSuchElementException();
+    int min = a[0];
+    a[0] = a[--size];                          // move the last leaf to the root…
+    siftDown(0);                               // …and let it sink to its place
+    return min;
+}
+```
+
+A complete tree with n nodes has height about log₂ n, so both sifts are **O(log n)**.
+
+### Building a heap from n values in O(n)
+
+Inserting n values one by one costs O(n log n). **Heapify** does better. Treat the array as a complete tree and sift down every non-leaf node, from the last one back to the root:
+
+```java
+static MinHeap heapify(int[] values) {
+    MinHeap h = new MinHeap();
+    h.a = Arrays.copyOf(values, Math.max(1, values.length));
+    h.size = values.length;
+    for (int i = values.length / 2 - 1; i >= 0; i--) h.siftDown(i);
+    return h;
+}
+```
+
+It's O(n), not O(n log n): half the nodes are leaves and do no work, a quarter sift at most one level, an eighth two levels, and so on. The sum is bounded by 2n. The reference tests build heaps this way and check that polling returns sorted output, which is **heap sort**.
+
+## Types
+
+| Type | Root holds | Java |
+| --- | --- | --- |
+| **Min-heap** | The smallest | `new PriorityQueue<>()` |
+| **Max-heap** | The largest | `new PriorityQueue<>(Comparator.reverseOrder())` |
+| **Custom priority** | Smallest by a comparator | `new PriorityQueue<>((x, y) -> Integer.compare(x[1], y[1]))` |
+| **d-ary heap, Fibonacci heap** | Variants with different trade-offs | Rare in interviews; mention only if asked |
+
+## Operations and their cost
+
+| Operation | Heap | Sorted array | Unsorted array |
+| --- | --- | --- | --- |
+| Peek at the min | **O(1)** | O(1) | O(n) |
+| Insert | **O(log n)** | O(n) (shift) | O(1) |
+| Remove the min | **O(log n)** | O(1) or O(n) | O(n) |
+| Build from n items | **O(n)** | O(n log n) | — |
+| Search / remove an arbitrary item | O(n) | O(log n) / O(n) | O(n) |
+
+A heap is the best **balance** when inserts and removals of the minimum are interleaved.
+
+## In Java
+
+```java
+PriorityQueue<Integer> minHeap = new PriorityQueue<>();
+minHeap.offer(5); minHeap.offer(1); minHeap.offer(3);
+minHeap.peek();   // 1
+minHeap.poll();   // 1, then 3, then 5
+
+PriorityQueue<int[]> byDistance = new PriorityQueue<>((x, y) -> Integer.compare(x[0], y[0]));
+```
+
+- **Iterating a PriorityQueue is not sorted**; only repeated `poll` gives sorted order.
+- `remove(Object)` and `contains` are **O(n)**.
+- Write comparators with `Integer.compare`, not `x - y`, which can overflow.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Expecting a heap to be sorted**, or printing it and expecting order.
+- **Wrong heap direction**: to keep the **k largest**, use a **min**-heap of size k, so the smallest of them is easy to evict.
+- **Comparator `(a, b) -> a - b`** overflows for large or negative values.
+- **Sifting down with the larger child**: always swap with the smaller child in a min-heap.
+- **Updating an element's priority in place**: the heap won't notice. Remove it and re-add it, or push a new entry and skip stale ones (as Dijkstra does).
+
+</Callout>
+
+## Patterns that use heaps
+
+- [Heaps: Top-K, K-Way Merge, Two Heaps](/dsa/patterns/heap-patterns): k largest, merging sorted lists, running median.
+- [Shortest Paths](/dsa/patterns/shortest-paths): Dijkstra's algorithm pops the closest node.
+- [Intervals](/dsa/patterns/intervals): meeting rooms with a heap of end times.
+- [Greedy](/dsa/patterns/greedy): repeatedly take the best available option.
+
+## Interview questions
+
+<QA q="Why is a heap stored in an array instead of with node objects?">
+A heap is always a complete binary tree, so its nodes fill an array without gaps in level order, and parent and child positions follow from arithmetic: children of i at 2i + 1 and 2i + 2, parent at (i − 1) / 2. That removes all the pointers, saves memory, and gives fast, cache-friendly access. It works only because the tree is complete; a general binary tree would leave holes.
+</QA>
+
+<QA q="Why does building a heap with heapify take O(n) rather than O(n log n)?">
+Heapify sifts down each non-leaf node, starting from the bottom. A node's sift-down cost is its height, not log n. Half the nodes are leaves with height 0, a quarter have height 1, an eighth height 2, and so on, so the total work is n times the sum of h over 2 to the power h + 1, which converges to a constant. Inserting elements one at a time instead costs O(log n) each, O(n log n) in total.
+</QA>
+
+<Practice task="You receive a stream of numbers and must always be able to report the 3 largest seen so far. Which heap, of what size, and what does each new number cost?">
+
+Keep a **min-heap of size 3**. For each number, `offer` it; if the size exceeds 3, `poll` to drop the smallest. The heap then always holds the 3 largest, with the 3rd largest on top. Each number costs O(log 3) = O(1), and memory is O(3). A max-heap of everything would cost O(n) memory and O(log n) per number. The general version, a min-heap of size k for the k largest, is the [top-k pattern](/dsa/patterns/heap-patterns).
+
+</Practice>
+
+<Takeaways>
+
+- A min-heap is a complete tree where every parent is ≤ its children, so the minimum sits at the root.
+- It's stored in an array: children of i at 2i + 1 and 2i + 2, parent at (i − 1) / 2.
+- offer sifts up and poll moves the last element to the root and sifts down: O(log n). Peek is O(1).
+- Heapify builds a heap in O(n). A heap is not sorted, and arbitrary search is O(n).
+- In Java use `PriorityQueue`, with `Comparator.reverseOrder()` for a max-heap and `Integer.compare` in comparators.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Graphs](/dsa/data-structures/graphs).
+- Patterns: [Heaps: Top-K, K-Way Merge, Two Heaps](/dsa/patterns/heap-patterns).

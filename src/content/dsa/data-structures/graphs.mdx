@@ -1,0 +1,184 @@
+A **graph** is the most general way to describe things and the connections between them: cities and roads, people and friendships, web pages and links, courses and prerequisites, cells in a maze. Trees and linked lists are special cases. Graphs feel intimidating because they come in so many flavours, but nearly every graph interview question uses the same two traversals, **BFS and DFS**, on one representation, the **adjacency list**.
+
+## Types of graph
+
+<GraphViz title="Graph vocabulary and types" nodes={[{ id: "A", label: "A", x: 0, y: 1 }, { id: "B", label: "B", x: 1.3, y: 0 }, { id: "C", label: "C", x: 1.3, y: 2 }, { id: "D", label: "D", x: 2.6, y: 0 }, { id: "E", label: "E", x: 2.6, y: 2 }, { id: "F", label: "F", x: 3.9, y: 1 }]} edges={[{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }]} frames={[
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], note: "A graph is a set of NODES (vertices) and EDGES connecting pairs of them — any pair, unlike a tree. UNDIRECTED: edges work both ways, like friendships or two-way roads. 6 nodes (V = 6), 7 edges (E = 7)." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["C"], visited: ["A", "D", "E"], activeEdges: ["C>A", "C>D", "C>E"], note: "NEIGHBOURS of C are A, D and E — the nodes one edge away. C's DEGREE is 3. A PATH is a sequence of edges (A → C → E → F); a CYCLE is a path that returns to its start (A → B → D → C → A)." },
+  { directed: true, edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "D", to: "F" }, { from: "F", to: "E" }, { from: "E", to: "C" }], note: "DIRECTED: each edge has a direction, like a one-way street, a follower relationship or a prerequisite. A → B does not imply B → A. Here C → D → F → E → C is a directed cycle." },
+  { directed: true, edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], note: "DAG (directed acyclic graph): directed with NO cycles. Task dependencies and build orders are DAGs, and only DAGs can be topologically sorted (A before B and C, …, F last)." },
+  { edges: [{ from: "A", to: "B", label: "4" }, { from: "A", to: "C", label: "1" }, { from: "B", to: "D", label: "2" }, { from: "C", to: "D", label: "5" }, { from: "C", to: "E", label: "8" }, { from: "D", to: "F", label: "3" }, { from: "E", to: "F", label: "1" }], note: "WEIGHTED: each edge carries a number — distance, cost, time. \"Shortest path\" now means smallest total weight, not fewest edges: A → C → D → F costs 9, A → B → D → F costs 9 too." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "C" }, { from: "D", to: "F" }, { from: "E", to: "F" }], note: "DISCONNECTED: two CONNECTED COMPONENTS, {A, B, C} and {D, E, F}. No path joins them. Counting components (\"number of islands\", \"number of provinces\") is a classic question." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "E" }, { from: "E", to: "F" }], note: "A TREE is a connected graph with no cycles: exactly V − 1 edges (5 here). Remove any edge and it splits; add any edge and it gains a cycle. Grids are graphs too: each cell is a node joined to its 4 neighbours." }
+]} />
+
+| Type | Meaning | Example |
+| --- | --- | --- |
+| **Undirected** | Edges go both ways | Friendships, two-way roads |
+| **Directed** | Edges have a direction (u → v) | Followers, web links, prerequisites |
+| **Weighted** | Edges carry a cost or length | Road distances, flight prices |
+| **Unweighted** | All edges count as 1 | Social hops, grid moves |
+| **Cyclic / acyclic** | Has a cycle / has none | — |
+| **DAG** | Directed and acyclic | Build dependencies, course schedules |
+| **Connected** | A path exists between every pair | One network |
+| **Disconnected** | Several **components** | Islands, separate friend groups |
+| **Tree** | Connected, acyclic, V − 1 edges | Hierarchies |
+| **Grid (implicit)** | Each cell is a node; neighbours are adjacent cells | Mazes, flood fill, islands |
+| **Dense / sparse** | E close to V² / E close to V | Most real graphs are sparse |
+
+The vocabulary to know:
+
+- **Vertex (node)**; **edge**.
+- **Neighbours** (adjacent nodes); **degree** (number of edges at a node; in- and out-degree for directed graphs).
+- **Path**; **cycle**; **connected component**.
+- V and E for the counts of nodes and edges.
+
+## How a graph is stored
+
+There are three representations. Interviews almost always want the first:
+
+| Representation | Memory | "Neighbours of u?" | "Edge u–v?" | Use |
+| --- | --- | --- | --- | --- |
+| **Adjacency list**: for each node, a list of its neighbours | O(V + E) | O(degree) | O(degree) | **Default**; sparse graphs |
+| **Adjacency matrix**: `boolean[V][V]` | O(V²) | O(V) | **O(1)** | Dense graphs, small V |
+| **Edge list**: `int[][] edges` | O(E) | O(E) | O(E) | Input format; Kruskal's algorithm |
+
+Problems usually give you an edge list. The first thing you do is build an adjacency list:
+
+```java
+static List<List<Integer>> buildGraph(int n, int[][] edges) {
+    List<List<Integer>> g = new ArrayList<>();
+    for (int i = 0; i < n; i++) g.add(new ArrayList<>());
+    for (int[] e : edges) {
+        g.get(e[0]).add(e[1]);
+        g.get(e[1]).add(e[0]);                     // undirected: store both directions
+    }
+    return g;
+}
+```
+
+For a directed graph, drop the second `add`. For weights, store pairs: `List<List<int[]>>` with `{neighbour, weight}`. When nodes are strings, use `Map<String, List<String>>`. A **grid** needs no building at all: the neighbours of `(r, c)` are the four adjacent cells inside the bounds.
+
+## The two traversals
+
+### Breadth-first search (BFS): ring by ring, with a queue
+
+<GraphViz title="BFS from A" nodes={[{ id: "A", label: "A", x: 0, y: 1 }, { id: "B", label: "B", x: 1.3, y: 0 }, { id: "C", label: "C", x: 1.3, y: 2 }, { id: "D", label: "D", x: 2.6, y: 0 }, { id: "E", label: "E", x: 2.6, y: 2 }, { id: "F", label: "F", x: 3.9, y: 1 }]} edges={[{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }]} frames={[
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["A"], notes: { A: "d=0" }, aux: { label: "queue", items: ["A"] }, note: "BFS (breadth-first search) from A uses a QUEUE. Mark A seen, distance 0, and put it in the queue. BFS explores in rings: all nodes 1 edge away, then 2, then 3." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["A"], visited: ["B", "C"], done: [], pathEdges: ["A>B", "A>C"], notes: { A: "d=0", B: "d=1", C: "d=1" }, aux: { label: "queue", items: ["B", "C"] }, note: "Take A from the front of the queue. Its unseen neighbours B and C get distance 1 and join the back of the queue. Mark them seen NOW, so nobody adds them twice." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["B"], visited: ["C", "D"], done: ["A"], pathEdges: ["A>B", "A>C", "B>D"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2" }, aux: { label: "queue", items: ["C", "D"] }, note: "Take B from the front of the queue. Its unseen neighbour D gets distance 2 and joins the back of the queue. Mark it seen NOW, so nobody adds it twice." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["C"], visited: ["D", "E"], done: ["A", "B"], pathEdges: ["A>B", "A>C", "B>D", "C>E"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2", E: "d=2" }, aux: { label: "queue", items: ["D", "E"] }, note: "Take C from the front of the queue. Its unseen neighbour E gets distance 2 and joins the back of the queue. Mark it seen NOW, so nobody adds it twice." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["D"], visited: ["E", "F"], done: ["A", "B", "C"], pathEdges: ["A>B", "A>C", "B>D", "C>E", "D>F"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2", E: "d=2", F: "d=3" }, aux: { label: "queue", items: ["E", "F"] }, note: "Take D from the front of the queue. Its unseen neighbour F gets distance 3 and joins the back of the queue. Mark it seen NOW, so nobody adds it twice." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["E"], visited: ["F"], done: ["A", "B", "C", "D"], pathEdges: ["A>B", "A>C", "B>D", "C>E", "D>F"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2", E: "d=2", F: "d=3" }, aux: { label: "queue", items: ["F"] }, note: "Take E. All its neighbours are already seen — nothing to add." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["F"], visited: [], done: ["A", "B", "C", "D", "E"], pathEdges: ["A>B", "A>C", "B>D", "C>E", "D>F"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2", E: "d=2", F: "d=3" }, aux: { label: "queue", items: [] }, note: "Take F. All its neighbours are already seen — nothing to add." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], done: ["A", "B", "C", "D", "E", "F"], pathEdges: ["A>B", "A>C", "B>D", "C>E", "D>F"], notes: { A: "d=0", B: "d=1", C: "d=1", D: "d=2", E: "d=2", F: "d=3" }, aux: { label: "visit order", items: ["A", "B", "C", "D", "E", "F"] }, note: "Queue empty: done. Each node and edge is handled once — O(V + E). The highlighted edges form a BFS tree, and d is the FEWEST edges from A to each node. That is why BFS answers \"shortest path\" in unweighted graphs." }
+]} />
+
+```java
+static int[] bfs(List<List<Integer>> g, int src) {
+    int[] dist = new int[g.size()];
+    Arrays.fill(dist, -1);
+    dist[src] = 0;
+    Deque<Integer> q = new ArrayDeque<>(List.of(src));
+    while (!q.isEmpty()) {
+        int u = q.poll();
+        for (int v : g.get(u))
+            if (dist[v] == -1) { dist[v] = dist[u] + 1; q.offer(v); }   // first time seen = shortest
+    }
+    return dist;
+}
+```
+
+BFS reaches nodes in order of distance, so the first time it sees a node, it has found the **fewest edges** to it. Use it for **shortest paths in unweighted graphs** and anything "level by level".
+
+### Depth-first search (DFS): one path as far as it goes, with recursion
+
+<GraphViz title="DFS from A" nodes={[{ id: "A", label: "A", x: 0, y: 1 }, { id: "B", label: "B", x: 1.3, y: 0 }, { id: "C", label: "C", x: 1.3, y: 2 }, { id: "D", label: "D", x: 2.6, y: 0 }, { id: "E", label: "E", x: 2.6, y: 2 }, { id: "F", label: "F", x: 3.9, y: 1 }]} edges={[{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }]} frames={[
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], note: "DFS (depth-first search) from A goes as DEEP as possible along one path, and backs up only when stuck. It is usually written recursively; the call stack (shown) remembers where to come back to." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["A"], visited: [], done: [], pathEdges: [], aux: { label: "call stack", items: ["A"] }, note: "Visit A and mark it seen." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["B"], visited: ["A"], done: [], pathEdges: ["A>B"], aux: { label: "call stack", items: ["A", "B"] }, note: "From A, go to its first unseen neighbour B and keep going deeper." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["D"], visited: ["A", "B"], done: [], pathEdges: ["A>B", "B>D"], aux: { label: "call stack", items: ["A", "B", "D"] }, note: "From B, go to its first unseen neighbour D and keep going deeper." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["C"], visited: ["A", "B", "D"], done: [], pathEdges: ["A>B", "B>D", "D>C"], aux: { label: "call stack", items: ["A", "B", "D", "C"] }, note: "From D, go to its first unseen neighbour C and keep going deeper." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["E"], visited: ["A", "B", "D", "C"], done: [], pathEdges: ["A>B", "B>D", "D>C", "C>E"], aux: { label: "call stack", items: ["A", "B", "D", "C", "E"] }, note: "From C, go to its first unseen neighbour E and keep going deeper." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["F"], visited: ["A", "B", "D", "C", "E"], done: [], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A", "B", "D", "C", "E", "F"] }, note: "From E, go to its first unseen neighbour F and keep going deeper." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["E"], visited: ["A", "B", "D", "C"], done: ["F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A", "B", "D", "C", "E"] }, note: "F has no unseen neighbours left: return (backtrack) to E and try its next neighbour." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["C"], visited: ["A", "B", "D"], done: ["E", "F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A", "B", "D", "C"] }, note: "E has no unseen neighbours left: return (backtrack) to C and try its next neighbour." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["D"], visited: ["A", "B"], done: ["C", "E", "F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A", "B", "D"] }, note: "C has no unseen neighbours left: return (backtrack) to D and try its next neighbour." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["B"], visited: ["A"], done: ["D", "C", "E", "F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A", "B"] }, note: "D has no unseen neighbours left: return (backtrack) to B and try its next neighbour." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], highlight: ["A"], visited: [], done: ["B", "D", "C", "E", "F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "call stack", items: ["A"] }, note: "B has no unseen neighbours left: return (backtrack) to A and try its next neighbour." },
+  { edges: [{ from: "A", to: "B" }, { from: "A", to: "C" }, { from: "B", to: "D" }, { from: "C", to: "D" }, { from: "C", to: "E" }, { from: "D", to: "F" }, { from: "E", to: "F" }], done: ["A", "B", "D", "C", "E", "F"], pathEdges: ["A>B", "B>D", "D>C", "C>E", "E>F"], aux: { label: "visit order", items: ["A", "B", "D", "C", "E", "F"] }, note: "Visit order A, B, D, C, E, F — different from BFS. Also O(V + E). DFS does NOT give shortest paths, but it is the natural tool for exploring everything reachable, counting components, detecting cycles and topological sorting." }
+]} />
+
+```java
+static void dfsVisit(List<List<Integer>> g, int u, boolean[] seen, List<Integer> order) {
+    seen[u] = true;
+    order.add(u);
+    for (int v : g.get(u)) if (!seen[v]) dfsVisit(g, v, seen, order);
+}
+```
+
+Use DFS to **explore everything reachable**, count components, find cycles, do topological sorts and backtrack. It doesn't find shortest paths.
+
+Both traversals are **O(V + E)**: every node is visited once and every edge is looked at once from each end. The `seen` (or `dist`) check is essential. Unlike a tree, a graph can lead you back to a node you've already visited, and without the check you'd loop forever. The reference solution checks BFS distances against Floyd–Warshall on thousands of random graphs.
+
+## Operations and their cost (adjacency list)
+
+| Operation | Cost |
+| --- | --- |
+| Build from an edge list | O(V + E) |
+| List the neighbours of u | O(degree(u)) |
+| Check whether edge u–v exists | O(degree(u)) (O(1) with a matrix or a set per node) |
+| BFS / DFS / connected components | O(V + E) |
+| Shortest path, unweighted | O(V + E) with BFS |
+| Shortest path, non-negative weights | O(E log V) with Dijkstra |
+
+## Which graph algorithm when?
+
+| Question | Algorithm | Lesson |
+| --- | --- | --- |
+| Reachable? Count components or islands? | BFS or DFS | [Graphs & Grids](/dsa/patterns/graph-traversal) |
+| Fewest steps (unweighted) | BFS | [Graphs & Grids](/dsa/patterns/graph-traversal) |
+| Order tasks with dependencies; detect a cycle in a DAG | Topological sort | [Topological Sort](/dsa/patterns/topological-sort) |
+| Groups that merge as edges arrive | Union-find | [Union-Find](/dsa/patterns/union-find) |
+| Cheapest path with weights | Dijkstra / Bellman–Ford | [Shortest Paths](/dsa/patterns/shortest-paths) |
+
+<Callout type="warning" title="Common mistakes">
+
+- **No visited set**: infinite loops on cycles. Trees don't need one; graphs always do.
+- **Marking visited when you poll instead of when you enqueue** (BFS): the same node gets queued many times.
+- **Adding an undirected edge in one direction only.**
+- **Starting a traversal from only one node** when the graph may be disconnected: loop over every node and start from each unvisited one.
+- **Using an adjacency matrix for 10⁵ nodes**: that's 10¹⁰ cells. Use lists.
+
+</Callout>
+
+## Interview questions
+
+<QA q="When would you use an adjacency matrix instead of an adjacency list?">
+Use a matrix when the graph is dense (E close to V²) or V is small, and you need constant-time checks of whether a specific edge exists. It costs O(V²) memory regardless of the number of edges, and listing a node's neighbours takes O(V). For the sparse graphs typical of interviews and real systems, an adjacency list uses O(V + E) memory and lists neighbours in O(degree), which makes BFS and DFS O(V + E).
+</QA>
+
+<QA q="Why does BFS find shortest paths in an unweighted graph but DFS doesn't?">
+BFS processes nodes in order of their distance from the source: everything at distance 1 leaves the queue before anything at distance 2, and so on. So the first time a node is discovered, it's along a path with the fewest edges. DFS follows one path as deep as it can and may first reach a node through a long detour, so the distance at discovery isn't minimal. For weighted graphs neither is enough, and you need Dijkstra's algorithm.
+</QA>
+
+<Practice task="A grid of 0s (water) and 1s (land): count the islands, where land cells connect up, down, left and right. Describe it as a graph problem.">
+
+Each land cell is a node; edges join land cells that are adjacent horizontally or vertically. You don't build an adjacency list; the neighbours are computed on the fly. The number of islands is the number of **connected components**. Scan every cell, and when you find unvisited land, increase the count and run BFS or DFS from it, marking every cell of that island visited (or setting it to 0). It's O(R · C) time. See [Graphs & Grids](/dsa/patterns/graph-traversal).
+
+</Practice>
+
+<Takeaways>
+
+- A graph is nodes plus edges between any pairs: directed or undirected, weighted or not, cyclic or acyclic.
+- Store it as an adjacency list (O(V + E)); build one from the edge list first. Grids are implicit graphs.
+- BFS uses a queue, explores ring by ring, and gives the fewest edges.
+- DFS uses recursion or a stack, goes deep, and finds components and cycles.
+- Both are O(V + E). Always keep a visited set, and start from every node if the graph may be disconnected.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Choosing a Data Structure](/dsa/data-structures/choosing-a-data-structure).
+- Patterns: [Graphs & Grids: BFS and DFS](/dsa/patterns/graph-traversal).

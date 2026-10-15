@@ -1,0 +1,159 @@
+The array is the simplest data structure and the one everything else is built on. Stacks, queues, heaps and hash tables are arrays underneath. It's a row of numbered boxes, side by side in memory. Understand three facts about it and most of DSA's cost analysis follows:
+
+- **Reading any position is instant.**
+- **Inserting in the middle is slow.**
+- **A full array has to be copied to grow.**
+
+## Picture it
+
+<ArrayViz title="Arrays: indexing, inserting in the middle, and growing" frames={[
+  { arr: [4, 8, 1, 6, 3, "·", "·"], window: [0, 4], vars: { size: 5, capacity: 7 }, note: "An array is one block of memory: element i lives at start + i × (size of an element), so a[i] is a single calculation — O(1) for any i. The shaded part holds data; the dots are spare capacity." },
+  { arr: [4, 8, 1, 6, 3, "·", "·"], highlight: [3], window: [0, 4], vars: { "a[3]": 6 }, note: "Reading a[3]: jump straight to start + 3 × 4 bytes. No walking — this is what makes arrays the fastest structure for indexing and scanning." },
+  { arr: [4, 8, 1, 6, 3, 3, "·"], highlight: [5], window: [0, 5], vars: { "insert 9 at": 2, moved: "a[4] → a[5]" }, note: "To insert at index 2, every element from index 2 onward must move one place right, starting from the END so nothing is overwritten. Move a[4] = 3 to index 5." },
+  { arr: [4, 8, 1, 6, 6, 3, "·"], highlight: [4], window: [0, 5], vars: { "insert 9 at": 2, moved: "a[3] → a[4]" }, note: "To insert at index 2, every element from index 2 onward must move one place right, starting from the END so nothing is overwritten. Move a[3] = 6 to index 4." },
+  { arr: [4, 8, 1, 1, 6, 3, "·"], highlight: [3], window: [0, 5], vars: { "insert 9 at": 2, moved: "a[2] → a[3]" }, note: "To insert at index 2, every element from index 2 onward must move one place right, starting from the END so nothing is overwritten. Move a[2] = 1 to index 3." },
+  { arr: [4, 8, 9, 1, 6, 3, "·"], highlight: [2], window: [0, 5], vars: { size: 6, capacity: 7 }, note: "Now write 9 into the gap. Three moves for one insert: inserting or deleting in the middle is O(n). At the END it is O(1) — nothing has to move." },
+  { arr: [4, 8, 9, 1, 6, 3, 5], window: [0, 6], vars: { size: 7, capacity: 7 }, note: "append(5) filled the last slot. The array is full, and a block of memory cannot be extended in place." },
+  { arr: [4, 8, 9, 1, 6, 3, 5, 2, "·", "·", "·", "·", "·", "·"], window: [0, 7], highlight: [7], vars: { size: 8, capacity: 14, copied: 7 }, note: "append(2): a dynamic array allocates a bigger block (twice as big here; Java's ArrayList grows by 1.5×), copies all 7 elements over, then appends. That copy is O(n) — but it happens rarely." },
+  { arr: [4, 8, 9, 1, 6, 3, 5, 2, "·", "·", "·", "·", "·", "·"], window: [0, 7], vars: { size: 8, capacity: 14 }, note: "Because the capacity grows by a constant factor, the copies add up to O(n) over n appends (fewer than 2n when doubling): each append is O(1) AMORTISED. The next six appends need no copying at all." }
+]} />
+
+## How it works
+
+When you write `new int[7]`, Java reserves **one contiguous block** big enough for 7 ints (4 bytes each) and fills it with zeros. The variable holds the block's starting address. Element `i` is at:
+
+> address of a[i] = start + i × 4 bytes
+
+That's one multiplication and one addition, whatever `i` is. That's why `a[i]` is **O(1)**, and why indexes start at 0: `a[0]` is at the start itself.
+
+The same layout explains the costs:
+
+- **Scanning** is O(n) and very fast in practice. Neighbouring elements arrive in the CPU cache together.
+- **Inserting or deleting in the middle** is O(n): everything after the position shifts by one.
+- **Appending at the end** is O(1) if there's spare capacity.
+- A plain array **can't grow**. Its size is fixed when it's created.
+
+## Types of array
+
+| Type | Java | Size | Notes |
+| --- | --- | --- | --- |
+| **Static array** | `int[] a = new int[n]` | Fixed at creation | Fastest; primitives stored directly |
+| **Dynamic array** | `ArrayList<Integer>` | Grows automatically | Wraps an array that it replaces with a bigger one when full |
+| **2D array (matrix)** | `int[][] g = new int[R][C]` | Fixed | An array of row arrays; `g[r][c]`; rows can even differ in length ("jagged") |
+| **String** | `String` | Fixed, **immutable** | A sequence of chars; every "change" creates a new string |
+| **Mutable text** | `StringBuilder`, `char[]` | Grows / fixed | Use these to build or edit text |
+
+### Dynamic arrays: how ArrayList grows
+
+`ArrayList` keeps a backing array with some spare capacity. When it's full, it allocates a bigger array and copies everything over:
+
+```java
+static class DynamicArray {
+    private int[] data = new int[1];
+    private int size;
+    long copies;                                   // elements copied during resizes (for the amortised check)
+
+    void add(int x) {
+        if (size == data.length) {                 // full: allocate double and copy everything over
+            data = Arrays.copyOf(data, data.length * 2);
+            copies += size;
+        }
+        data[size++] = x;
+    }
+
+    int get(int i) {
+        if (i < 0 || i >= size) throw new IndexOutOfBoundsException(i);
+        return data[i];                            // address = start + i × 4 bytes: O(1)
+    }
+
+    void insert(int i, int x) {                    // O(n): everything after i shifts right
+        add(0);
+        System.arraycopy(data, i, data, i + 1, size - 1 - i);
+        data[i] = x;
+    }
+}
+```
+
+A single resize is O(n), but because the capacity **multiplies**, resizes get rarer as the array grows. The copy sizes are 1 + 2 + 4 + … + n/2, which is less than n, so the total copying for n appends is O(n). That makes each append **O(1) amortised**. The reference solution appends a million elements and checks that fewer than two million copies happen. (Growing by a fixed amount, like +10 each time, would make appends O(n) each. The multiplication matters.)
+
+### 2D arrays
+
+`int[][] grid = new int[3][4]` is an array of 3 references, each pointing to its own `int[4]` row. Read `grid[r][c]` as "row r, column c". `grid.length` is the number of rows, and `grid[0].length` the number of columns. Walking row by row is faster than column by column, because each row is contiguous.
+
+### Strings
+
+A Java `String` is an array of characters that **can't be changed**. Methods like `toUpperCase`, `substring` and `+` return a **new** string. Two costs follow:
+
+```java
+String s = "";
+for (int i = 0; i < n; i++) s += i;                // O(n²): each += copies the whole string so far
+
+StringBuilder sb = new StringBuilder();
+for (int i = 0; i < n; i++) sb.append(i);          // O(n) total: a dynamic array of chars
+String result = sb.toString();
+```
+
+- **Build text with `StringBuilder`**, never with `+=` in a loop.
+- `s.charAt(i)` is O(1); `s.substring(i, j)` copies, so it's O(j − i).
+- For letter counts, an `int[26]` indexed by `c - 'a'` beats a `HashMap`.
+- Compare strings with `equals`, never `==`. `==` compares references.
+
+## Operations and their cost
+
+| Operation | Array / ArrayList | String |
+| --- | --- | --- |
+| Read or write position i | O(1) | O(1) read (`charAt`); no write (immutable) |
+| Append at the end | O(1) amortised (ArrayList) | O(n) new string; use StringBuilder |
+| Insert / delete in the middle | O(n) | O(n) new string |
+| Search for a value (unsorted) | O(n) | O(n) (`indexOf`) |
+| Search when sorted | O(log n) with [binary search](/dsa/patterns/binary-search) | — |
+| Sort | O(n log n) | — |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Off-by-one:** valid indexes are `0` to `length − 1`. A loop condition `i <= a.length` reads past the end.
+- **`s += …` in a loop**: that's O(n²). Use a StringBuilder.
+- **`==` on strings**, or on `Integer` objects above 127. Use `equals`.
+- **`ArrayList.remove(int)` inside a forward loop** skips elements and is O(n) per call. Build a new list, or loop backwards.
+- **Confusing `length`, `length()` and `size()`**: arrays have `.length`, strings `.length()`, collections `.size()`.
+
+</Callout>
+
+## Patterns that use arrays and strings
+
+- [Two Pointers](/dsa/patterns/two-pointers) and [Sliding Window](/dsa/patterns/sliding-window): walk an array with two indexes.
+- [Prefix Sums](/dsa/patterns/prefix-sums): precompute running totals for O(1) range sums.
+- [Binary Search](/dsa/patterns/binary-search): O(log n) on sorted arrays.
+- [Matrix & Simulation](/dsa/patterns/matrix-simulation): 2D arrays.
+- [Hash Tables](/dsa/data-structures/hash-tables) and [Heaps](/dsa/data-structures/heaps) are built on arrays.
+
+## Interview questions
+
+<QA q="Why is accessing an array element O(1)?">
+Because the elements are stored contiguously and all have the same size, the address of element i is the start address plus i times the element size. Computing that is one multiplication and one addition, regardless of i or of the array's length, so the hardware jumps straight to it. Linked structures can't do this because their elements are scattered and must be reached by following references.
+</QA>
+
+<QA q="ArrayList sometimes copies its whole array when you add an element. Why is add still considered O(1)?">
+It's O(1) amortised. When the backing array is full, ArrayList allocates a new one larger by a constant factor and copies everything, which is O(n). Because the capacity multiplies, these copies happen rarely: over n appends the copy sizes form a geometric series bounded by a constant times n. Spread over the n appends, that's a constant amount of copying per append, even though an individual append can occasionally be slow.
+</QA>
+
+<Practice task="You need to remove all even numbers from an int array in place and return the new length. Why is calling a remove-at-index method for each even number a bad idea, and what's the O(n) way?">
+
+Each removal shifts every later element left. That's O(n) per removal and O(n²) overall in the worst case (all even). Instead use a **read/write pointer**: walk `read` over the array and copy each odd element to `a[write++]`. At the end, `write` is the new length. Every element moves at most once, which is O(n) time and O(1) space. This is the read/write variant of [Two Pointers](/dsa/patterns/two-pointers).
+
+</Practice>
+
+<Takeaways>
+
+- An array is one contiguous block, so `a[i]` is an address calculation: O(1).
+- Inserting or deleting in the middle shifts elements: O(n). Appending at the end is O(1) (amortised for ArrayList).
+- Dynamic arrays grow by a constant factor, so total copying stays O(n).
+- Strings are immutable: build them with StringBuilder, and compare with `equals`.
+- Stacks, queues, heaps and hash tables are all arrays underneath.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Linked Lists](/dsa/data-structures/linked-lists).
+- The [Java Toolkit for DSA](/dsa/start-here/java-dsa-toolkit) covers `Arrays` and `Collections` helpers.

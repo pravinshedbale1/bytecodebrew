@@ -46,6 +46,7 @@ Standard Markdown (including GFM tables) plus these components, available withou
 | `<Related ids={['caching', 'sharding']} />` | "Concepts used" links to other lessons in the same course |
 | `<ArrayViz title="…" frames={[…]} />` | Step-through visual for arrays and grids (pointers, window, highlight, done, vars, aux list, note) |
 | `<TreeViz title="…" tree={…} frames={[…]} />` | Step-through visual for trees, tries and recursion trees; nodes are `{ id, v, c }`, frames list ids to highlight, mark, dim or hide |
+| `<GraphViz title="…" directed nodes={…} edges={…} frames={[…]} />` | Step-through visual for graphs, linked lists and hash-table chains; nodes have grid positions (x, y) and a shape (circle, box, text); frames can replace edges, bend them, and highlight nodes or edges |
 | `<ProblemTracker />` | Checklist of every practice-ladder problem in the DSA pattern lessons (parsed at build time) |
 | `[text](/system-design/hld/caching)` | Internal links navigate in-app; external links open in a new tab |
 | `[Two Sum](https://leetcode.com/problems/two-sum/)` | A LeetCode problem link gets a "solved" checkbox, stored in the browser and shared with the Problem Tracker |

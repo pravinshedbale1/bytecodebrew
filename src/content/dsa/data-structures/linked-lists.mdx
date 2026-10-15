@@ -1,0 +1,161 @@
+An array keeps its elements side by side in one block of memory. A **linked list** scatters them anywhere and **links** them instead: each element lives in a small object, a **node**, that holds the value and a reference to the next node. Think of a treasure hunt: each clue tells you where the next one is. You can't jump to clue number 7; you have to follow the chain. In exchange, adding or removing a clue never means moving all the others.
+
+## Picture it
+
+<GraphViz title="A singly linked list: walking, adding and removing" directed nodes={[{ id: "n9", label: 9, x: 0, y: 0, shape: "box" }, { id: "n3", label: 3, x: 1, y: 0, shape: "box" }, { id: "n7", label: 7, x: 2, y: 0, shape: "box" }, { id: "n5", label: 5, x: 3, y: 0, shape: "box" }, { id: "n4", label: 4, x: 4, y: 0, shape: "box" }, { id: "null", label: "null", x: 5, y: 0, shape: "text" }]} edges={[]} frames={[
+  { edges: [{ from: "n3", to: "n7" }, { from: "n7", to: "n5" }, { from: "n5", to: "null" }], hidden: ["n9", "n4"], pointers: { head: "n3", tail: "n5" }, note: "A singly linked list 3 → 7 → 5. Each node is an object holding a value and a reference (next) to the following node; the last one points to null. The list itself only remembers head (and often tail)." },
+  { edges: [{ from: "n3", to: "n7" }, { from: "n7", to: "n5" }, { from: "n5", to: "null" }], hidden: ["n9", "n4"], highlight: ["n5"], visited: ["n3", "n7"], pointers: { head: "n3", cur: "n5", tail: "n5" }, note: "get(2): there is no address arithmetic — start at head and follow next twice. Reaching index i costs O(i), so random access is O(n)." },
+  { edges: [{ from: "n9", to: "n3" }, { from: "n3", to: "n7" }, { from: "n7", to: "n5" }, { from: "n5", to: "null" }], hidden: ["n4"], highlight: ["n9"], activeEdges: ["n9>n3"], pointers: { head: "n9", tail: "n5" }, note: "addFirst(9): create a node whose next is the old head, then move head to it. Two pointer assignments, no shifting: O(1). (An array would shift every element.)" },
+  { edges: [{ from: "n9", to: "n3" }, { from: "n3", to: "n7" }, { from: "n7", to: "n5" }, { from: "n5", to: "n4" }, { from: "n4", to: "null" }], highlight: ["n4"], activeEdges: ["n5>n4"], pointers: { head: "n9", tail: "n4" }, note: "addLast(4): the tail pointer gives the last node directly — set tail.next to the new node, then move tail. O(1). Without a tail pointer we would have to walk the whole list first." },
+  { edges: [{ from: "n9", to: "n3" }, { from: "n3", to: "n7" }, { from: "n7", to: "n5" }, { from: "n5", to: "n4" }, { from: "n4", to: "null" }], highlight: ["n7"], visited: ["n3"], pointers: { head: "n9", prev: "n3", tail: "n4" }, note: "remove(7): walk until prev.next is the node to delete. We need the node BEFORE it, because that is the arrow we must change." },
+  { edges: [{ from: "n9", to: "n3" }, { from: "n5", to: "n4" }, { from: "n4", to: "null" }, { from: "n3", to: "n5", bend: -26 }], done: ["n7"], activeEdges: ["n3>n5"], pointers: { head: "n9", prev: "n3", tail: "n4" }, note: "prev.next = prev.next.next: 3 now points past 7. Nothing references node 7 any more, so the garbage collector frees it. The unlink is O(1); finding prev was the O(n) part." },
+  { edges: [{ from: "n9", to: "n3" }, { from: "n5", to: "n4" }, { from: "n4", to: "null" }, { from: "n3", to: "n5", bend: -26 }], hidden: ["n7"], pointers: { head: "n9", tail: "n4" }, note: "Result 9 → 3 → 5 → 4. Linked lists win at inserting and removing at a known spot (no shifting); arrays win at indexing and cache-friendly scanning." }
+]} />
+
+## How it works
+
+A node is just a tiny class:
+
+```java
+static class Node {
+    int val;
+    Node next;
+    Node(int val, Node next) { this.val = val; this.next = next; }
+}
+```
+
+The list itself keeps a reference to the first node (`head`), and often to the last (`tail`) and a `size`. Everything else is reached by following `next` references until you hit `null`.
+
+Three consequences follow directly from this layout:
+
+- **No indexing.** To reach position i you must walk i steps: O(n). An array computes the address in O(1).
+- **Cheap splicing.** Inserting or removing next to a node you already hold changes one or two references: O(1), with no shifting.
+- **Extra memory and poor locality.** Every value carries a reference and an object header, and nodes are spread across memory, so scanning is slower in practice than scanning an array.
+
+## Types of linked list
+
+<GraphViz title="Singly, doubly and circular" directed nodes={[{ id: "nl", label: "null", x: 0, y: 0, shape: "text" }, { id: "a", label: "A", x: 1, y: 0, shape: "box" }, { id: "b", label: "B", x: 2, y: 0, shape: "box" }, { id: "c", label: "C", x: 3, y: 0, shape: "box" }, { id: "nr", label: "null", x: 4, y: 0, shape: "text" }]} edges={[]} frames={[
+  { edges: [{ from: "a", to: "b" }, { from: "b", to: "c" }, { from: "c", to: "nr" }], hidden: ["nl"], pointers: { head: "a", tail: "c" }, note: "SINGLY linked: each node has one reference, next. You can only move forward. Cheapest in memory; removing a node needs the node before it." },
+  { edges: [{ from: "a", to: "b" }, { from: "b", to: "a" }, { from: "b", to: "c" }, { from: "c", to: "b" }, { from: "c", to: "nr" }, { from: "a", to: "nl" }], pointers: { head: "a", tail: "c" }, note: "DOUBLY linked: each node also has prev. You can walk both ways and unlink a node you already hold in O(1) — which is why LRU caches and Java's LinkedList use it. Costs one extra reference per node." },
+  { edges: [{ from: "a", to: "b" }, { from: "b", to: "c" }, { from: "c", to: "a", bend: -34 }], hidden: ["nl", "nr"], pointers: { head: "a", tail: "c" }, note: "CIRCULAR: the last node points back to the first instead of null. Useful for round-robin scheduling and ring buffers. Loops must stop when they come back to the start, not at null." }
+]} />
+
+| Type | Each node holds | Strength | Typical use |
+| --- | --- | --- | --- |
+| **Singly linked** | `val`, `next` | Least memory; simplest | Stacks, hash-table chains, most interview problems |
+| **Doubly linked** | `val`, `next`, `prev` | Walk both ways; remove a known node in O(1) | LRU caches, Java's `LinkedList`, browser history |
+| **Circular** | last `next` → first | No end; natural for rotation | Round-robin scheduling, ring buffers |
+
+Interview linked-list problems almost always use a **singly** linked list given to you as a `ListNode head`. There's no list object, no size and no tail; just the first node.
+
+## Operations and their cost
+
+| Operation | Singly (with head and tail) | Doubly | Array, for comparison |
+| --- | --- | --- | --- |
+| Access the i-th element | O(n) | O(n) | **O(1)** |
+| Search for a value | O(n) | O(n) | O(n) |
+| Insert / remove at the front | **O(1)** | **O(1)** | O(n) (shift everything) |
+| Insert at the end | **O(1)** with a tail pointer | **O(1)** | O(1) amortised |
+| Remove at the end | O(n) (need the second-to-last node) | **O(1)** | O(1) |
+| Insert / remove after a node you hold | **O(1)** | **O(1)** | O(n) |
+| Remove a node you hold | O(n) (need its predecessor) | **O(1)** | O(n) |
+
+The pattern: linked lists are fast **where you already are** and slow at **getting somewhere**.
+
+## Building one
+
+The core operations, from the course's tested reference implementation:
+
+```java
+void addFirst(int x) {                         // O(1): the new node points at the old head
+    head = new Node(x, head);
+    if (tail == null) tail = head;
+    size++;
+}
+
+void addLast(int x) {                          // O(1) thanks to the tail pointer
+    Node n = new Node(x, null);
+    if (tail == null) head = tail = n;
+    else { tail.next = n; tail = n; }
+    size++;
+}
+
+boolean remove(int x) {                        // O(n): find the node BEFORE the one to unlink
+    Node dummy = new Node(0, head), prev = dummy;
+    while (prev.next != null && prev.next.val != x) prev = prev.next;
+    if (prev.next == null) return false;
+    if (prev.next == tail) tail = prev == dummy ? null : prev;
+    prev.next = prev.next.next;
+    head = dummy.next;
+    size--;
+    return true;
+}
+```
+
+Look at the **dummy node** in `remove`. It sits in front of the head, so removing the first node is no different from removing any other. This trick appears in almost every linked-list solution; the [Reversal & Dummy Nodes](/dsa/patterns/linked-list-manipulation) lesson is built around it.
+
+The standard loop for visiting every node:
+
+```java
+for (Node cur = head; cur != null; cur = cur.next) {
+    // use cur.val
+}
+```
+
+## In Java
+
+| Need | Use | Avoid |
+| --- | --- | --- |
+| A list you index into | `ArrayList` | `LinkedList` (O(n) `get(i)`) |
+| A stack or queue | `ArrayDeque` | `LinkedList` works, but it's slower and uses more memory |
+| O(1) removal of a node you hold | Your own doubly linked list (see [Designing Data Structures](/dsa/patterns/design-data-structures)) | `LinkedList.remove(Object)`, which searches: O(n) |
+
+`java.util.LinkedList` is a doubly linked list, but it doesn't expose its nodes. That means you can't get O(1) removal of an arbitrary element. In practice `ArrayList` and `ArrayDeque` beat it for almost everything. Linked lists matter in interviews because **you** manipulate the references.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Losing the rest of the list.** Changing `cur.next` before saving it orphans every later node. Save `next` first, then rewire.
+- **Null pointer at the end.** Check `cur != null` (and `cur.next != null` before using `cur.next.next`).
+- **Forgetting the head case.** Removing or inserting at the front changes `head`; a dummy node removes the special case.
+- **Forgetting the tail** when the last node is removed or appended.
+- **Drawing nothing.** Draw three boxes and arrows and update them one assignment at a time. It catches most bugs.
+
+</Callout>
+
+## Patterns that use linked lists
+
+- [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers): cycles, middles, the k-th node from the end.
+- [In-Place Reversal & Dummy Nodes](/dsa/patterns/linked-list-manipulation): reverse, merge and reorder lists.
+- [Designing Data Structures](/dsa/patterns/design-data-structures): LRU caches use a doubly linked list.
+- [Hash Tables](/dsa/data-structures/hash-tables): each bucket's collisions are a small linked list.
+
+## Interview questions
+
+<QA q="When would you choose a linked list over an array?">
+When you insert or remove at the front, or next to elements you already hold, many times, and rarely need positional access. A linked list does those in O(1) without shifting, while an array shifts O(n) elements. If you mostly index or scan, an array (ArrayList) is better: O(1) access and much better cache locality. In Java, ArrayDeque usually beats LinkedList even for queues.
+</QA>
+
+<QA q="Why can't a singly linked list remove a given node in O(1)?">
+Removing a node means making its predecessor point past it, and a singly linked node doesn't know its predecessor, so you have to walk from the head to find it, which is O(n). A doubly linked list stores prev, so it can unlink the node directly in O(1). (One interview trick deletes a non-tail node by copying the next node's value into it and unlinking the next node instead.)
+</QA>
+
+<Practice task="Write a method that returns the number of nodes in a singly linked list, then one that returns the last node. What does each cost, and what changes if the list keeps a tail pointer?">
+
+Both walk from `head` following `next` until `null`: count the steps for the size, and keep the previous non-null node for the last one. Each is O(n) time and O(1) space. With a stored `tail` the last node is O(1), and with a stored `size` field the length is O(1). That's why list classes maintain both on every insert and remove.
+
+</Practice>
+
+<Takeaways>
+
+- A linked list is nodes holding a value and a reference to the next node; the list keeps `head` (and often `tail`).
+- No indexing (O(n) to reach position i), but O(1) insert or remove at a spot you already hold.
+- Singly, doubly (prev pointers, O(1) removal of a known node) and circular lists.
+- Dummy nodes remove the head special case; save `next` before rewiring.
+- In Java, prefer ArrayList and ArrayDeque; linked lists matter when you manage the nodes yourself.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Stacks & Queues](/dsa/data-structures/stacks-and-queues).
+- Patterns: [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers).

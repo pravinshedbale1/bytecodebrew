@@ -1,0 +1,146 @@
+A hash table answers "where is the value for this key?" in **O(1) on average**, without searching and without sorting. It's the most useful data structure in interviews: a large share of O(n²) brute forces become O(n) once you add one. The idea is simple. Turn the key into an **array index** with a calculation, and store the entry at that index.
+
+## Picture it
+
+<GraphViz title="A hash table with 5 buckets and separate chaining" directed nodes={[{ id: "b0", label: "[0]", x: 0, y: 0, shape: "box" }, { id: "b1", label: "[1]", x: 0, y: 0.62, shape: "box" }, { id: "b2", label: "[2]", x: 0, y: 1.24, shape: "box" }, { id: "b3", label: "[3]", x: 0, y: 1.8599999999999999, shape: "box" }, { id: "b4", label: "[4]", x: 0, y: 2.48, shape: "box" }, { id: "e_bee", label: "bee=9", x: 1.3, y: 0, shape: "box" }, { id: "e_cat", label: "cat=4", x: 1.3, y: 1.24, shape: "box" }, { id: "e_owl", label: "owl=2", x: 1.3, y: 1.8599999999999999, shape: "box" }, { id: "e_ant", label: "ant=5", x: 2.55, y: 1.8599999999999999, shape: "box" }, { id: "e_dog", label: "dog=7", x: 1.3, y: 2.48, shape: "box" }]} edges={[]} frames={[
+  { edges: [], hidden: ["e_cat", "e_dog", "e_owl", "e_bee", "e_ant"], note: "A hash table: an array of 5 buckets. To store a key, compute an index from its hash code — (hash & 0x7fffffff) % 5 — and put the entry in that bucket. Finding it again repeats the same calculation, so no searching is needed." },
+  { edges: [{ from: "b2", to: "e_cat" }], hidden: ["e_dog", "e_owl", "e_bee", "e_ant"], highlight: ["e_cat", "b2"], vars: { key: "\"cat\"", hashCode: 98262, bucket: "98262 % 5 = 2" }, note: "put(\"cat\", 4): hashCode 98262, bucket 2. The bucket is empty, so the entry goes straight in. O(1)." },
+  { edges: [{ from: "b2", to: "e_cat" }, { from: "b4", to: "e_dog" }], hidden: ["e_owl", "e_bee", "e_ant"], highlight: ["e_dog", "b4"], vars: { key: "\"dog\"", hashCode: 99644, bucket: "99644 % 5 = 4" }, note: "put(\"dog\", 7): hashCode 99644, bucket 4. The bucket is empty, so the entry goes straight in. O(1)." },
+  { edges: [{ from: "b2", to: "e_cat" }, { from: "b3", to: "e_owl" }, { from: "b4", to: "e_dog" }], hidden: ["e_bee", "e_ant"], highlight: ["e_owl", "b3"], vars: { key: "\"owl\"", hashCode: 110468, bucket: "110468 % 5 = 3" }, note: "put(\"owl\", 2): hashCode 110468, bucket 3. The bucket is empty, so the entry goes straight in. O(1)." },
+  { edges: [{ from: "b0", to: "e_bee" }, { from: "b2", to: "e_cat" }, { from: "b3", to: "e_owl" }, { from: "b4", to: "e_dog" }], hidden: ["e_ant"], highlight: ["e_bee", "b0"], vars: { key: "\"bee\"", hashCode: 97410, bucket: "97410 % 5 = 0" }, note: "put(\"bee\", 9): hashCode 97410, bucket 0. The bucket is empty, so the entry goes straight in. O(1)." },
+  { edges: [{ from: "b0", to: "e_bee" }, { from: "b2", to: "e_cat" }, { from: "b3", to: "e_owl" }, { from: "e_owl", to: "e_ant" }, { from: "b4", to: "e_dog" }], hidden: [], highlight: ["e_ant", "b3"], vars: { key: "\"ant\"", hashCode: 96743, bucket: "96743 % 5 = 3" }, note: "put(\"ant\", 5): bucket 3 is already taken by \"owl\" — a COLLISION. With separate chaining the bucket holds a small linked list, and the new entry goes on the end." },
+  { edges: [{ from: "b0", to: "e_bee" }, { from: "b2", to: "e_cat" }, { from: "b3", to: "e_owl" }, { from: "e_owl", to: "e_ant" }, { from: "b4", to: "e_dog" }], highlight: ["b3"], visited: ["e_owl"], marked: ["e_ant"], activeEdges: ["b3>e_owl", "e_owl>e_ant"], vars: { key: "\"ant\"", bucket: 3 }, note: "get(\"ant\"): compute bucket 3, then walk its chain comparing keys with equals(): owl ≠ ant, ant = ant → 5. Cost = the chain length. With a good hash and a low load factor, chains stay at one or two entries: O(1) on average." },
+  { edges: [{ from: "b0", to: "e_bee" }, { from: "b2", to: "e_cat" }, { from: "b3", to: "e_owl" }, { from: "e_owl", to: "e_ant" }, { from: "b4", to: "e_dog" }], vars: { size: 5, capacity: 5, "load factor": "5 / 5 = 1.0" }, note: "Load factor = entries / buckets = 1.0 here. This demo never resized so you could see a collision; a real table resizes earlier — Java doubles the buckets once the load factor passes 0.75 and re-hashes every entry (with 10 buckets owl moves to 8, ant stays in 3, splitting this chain). Resizing is O(n) but rare, so put stays O(1) amortised." }
+]} />
+
+## How it works
+
+1. **Hash.** Every Java object has `hashCode()`, an `int` computed from its contents. For `"cat"` it's 98262.
+2. **Compress to a bucket.** Index = `(hash & 0x7fffffff) % capacity`. The mask drops the sign bit so the index is never negative.
+3. **Store or find** the entry in that bucket. Looking up repeats the same two steps, so it goes straight to the right bucket.
+
+Two different keys can land in the same bucket. That's a **collision**, and it can't be avoided, because there are far more possible keys than buckets. There are two classic ways to handle it:
+
+| Strategy | How | Used by |
+| --- | --- | --- |
+| **Separate chaining** | Each bucket holds a small linked list of entries | Java `HashMap` (chains of 8+ become small balanced trees) |
+| **Open addressing** | On a collision, probe the next free slot (linear or quadratic probing) | Python dicts, many C++ tables |
+
+The cost of an operation is the length of the chain it visits. That's why tables **resize**: the **load factor** is entries ÷ buckets. Java doubles the bucket array when it passes **0.75** and re-hashes every entry. A resize is O(n), but it happens rarely, so operations stay O(1) amortised.
+
+Here is the reference implementation from this course:
+
+```java
+void put(String key, int value) {
+    int i = index(key, buckets.length);
+    Entry last = null;
+    for (Entry e = buckets[i]; e != null; last = e, e = e.next)
+        if (e.key.equals(key)) { e.value = value; return; }   // existing key: overwrite
+    Entry added = new Entry(key, value, null);               // new key: append to the chain
+    if (last == null) buckets[i] = added; else last.next = added;
+    if (++size > buckets.length * 3 / 4) resize();           // load factor 0.75
+}
+
+Integer get(String key) {
+    for (Entry e = buckets[index(key, buckets.length)]; e != null; e = e.next)
+        if (e.key.equals(key)) return e.value;
+    return null;
+}
+```
+
+Notice the two methods each key needs: `hashCode()` picks the bucket and `equals()` finds the entry inside it. The reference tests include `"Aa"` and `"BB"`, which have the **same** hash code in Java and must still both be stored.
+
+## The equals/hashCode contract
+
+If two keys are `equals`, they **must** have the same `hashCode`. Otherwise a lookup computes a different bucket and never finds the entry. `String`, `Integer`, `List` and records follow the rule. For your own key class:
+
+```java
+record Point(int x, int y) { }                     // a record generates equals and hashCode for you
+Map<Point, Integer> seen = new HashMap<>();
+```
+
+Also, **never mutate a key** after putting it in a map. Its hash changes, and the entry becomes unreachable.
+
+## Types
+
+| Type | Java | Order | Cost | Use when |
+| --- | --- | --- | --- | --- |
+| **Hash map** | `HashMap<K, V>` | None (don't rely on it) | O(1) avg | Key → value lookups, counting |
+| **Hash set** | `HashSet<T>` | None | O(1) avg | "Have I seen this?", removing duplicates |
+| **Linked hash map** | `LinkedHashMap` | Insertion (or access) order | O(1) avg | Predictable iteration, simple LRU caches |
+| **Tree map / set** | `TreeMap`, `TreeSet` | **Sorted** by key | O(log n) | Floor/ceiling, ranges, sorted output (a balanced tree, not a hash table) |
+| **Counting array** | `int[26]`, `int[128]` | By index | O(1) | Small known key ranges, like letters |
+
+## Operations and their cost
+
+| Operation | Average | Worst case |
+| --- | --- | --- |
+| `put`, `get`, `containsKey`, `remove` | O(1) | O(n) with terrible hashing (O(log n) in Java 8+ thanks to tree bins) |
+| Iterate all entries | O(n + capacity) | — |
+| Find the minimum key | O(n) | Use a `TreeMap` (O(log n)) or a heap |
+
+In an interview, say "O(1) average" for hash operations. It shows you know the worst case exists.
+
+## Idioms you'll use constantly
+
+```java
+Map<String, Integer> count = new HashMap<>();
+for (String w : words) count.merge(w, 1, Integer::sum);          // count occurrences
+
+int c = count.getOrDefault("cat", 0);                            // read with a default
+
+Map<String, List<String>> groups = new HashMap<>();
+groups.computeIfAbsent(key, k -> new ArrayList<>()).add(word);    // group into lists
+
+Set<Integer> seen = new HashSet<>();
+if (!seen.add(x)) { /* x was already present */ }                // add returns false for duplicates
+```
+
+<Callout type="warning" title="Common mistakes">
+
+- **Relying on HashMap iteration order**: it isn't sorted or stable. Use `LinkedHashMap` or `TreeMap` when order matters.
+- **Custom keys without `equals` and `hashCode`**: lookups silently fail. Use a record.
+- **Mutable keys** (a `List` you later modify) become unreachable.
+- **`map.get(k) + 1` when the key is missing** throws a `NullPointerException`. Use `merge` or `getOrDefault`.
+- **Comparing `Integer` values from a map with `==`**: use `equals` (or unbox first).
+
+</Callout>
+
+## Patterns that use hash tables
+
+- [Hash Maps & Sets](/dsa/patterns/hashing): "have I seen this?", complements, counting, grouping.
+- [Prefix Sums](/dsa/patterns/prefix-sums): a map of prefix sums counts subarrays.
+- [Sliding Window](/dsa/patterns/sliding-window): a count map of the current window.
+- Graphs: a `visited` set and adjacency maps in [Graphs](/dsa/data-structures/graphs).
+- [Designing Data Structures](/dsa/patterns/design-data-structures): an LRU cache = a hash map + a linked list.
+
+## Interview questions
+
+<QA q="How does a hash map achieve O(1) average lookups, and what is the worst case?">
+It computes an array index from the key's hash code, so a lookup goes straight to one bucket instead of searching. Inside the bucket it compares keys with equals; with a good hash function and a load factor kept below a threshold by resizing, buckets hold about one entry, so the expected cost is constant. In the worst case many keys share a bucket. With plain chaining that's O(n), though Java 8 turns large buckets into balanced trees, giving O(log n).
+</QA>
+
+<QA q="What happens if you override equals but not hashCode for a key class?">
+Two keys that are equal can produce different hash codes, so they'll usually be placed in different buckets. A get with an equal but different object computes a different bucket and returns null, and a set can end up holding "duplicates". The contract is that equal objects must have equal hash codes. Using a Java record, or generating both methods together, avoids the problem.
+</QA>
+
+<Practice task="Given a list of words, group the anagrams together (e.g. eat, tea, ate). What should the map's key be, and what does it cost?">
+
+Use a **canonical key** that's the same for all anagrams. Either sort each word's characters (`aet`), which costs O(k log k) for a word of length k, or use a count signature of 26 letter counts as a string, which is O(k). Map that key to a list with `computeIfAbsent(key, x -> new ArrayList<>()).add(word)`. The total is O(n · k log k) or O(n · k). Choosing the right key is the core skill for hash-table problems.
+
+</Practice>
+
+<Takeaways>
+
+- A hash table turns a key into an array index: `hashCode`, then `& 0x7fffffff`, then `% capacity`.
+- Collisions are normal: chaining keeps a small list per bucket; resizing keeps the load factor below 0.75.
+- O(1) average for put, get and remove; worst case O(n) (O(log n) for Java's tree bins).
+- Equal keys must have equal hash codes; don't mutate keys; don't rely on HashMap order.
+- HashMap and HashSet for lookups, LinkedHashMap for order, TreeMap for sorted keys.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Trees](/dsa/data-structures/trees).
+- Patterns: [Hash Maps & Sets](/dsa/patterns/hashing).

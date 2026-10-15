@@ -1,0 +1,97 @@
+.svg {
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.edge {
+  stroke: var(--color-border-strong);
+  stroke-width: 1.6;
+}
+
+.path {
+  stroke: var(--color-accent);
+  stroke-width: 2.5;
+}
+
+.on {
+  stroke: var(--color-warn);
+  stroke-width: 2.8;
+}
+
+.arrow_edge { fill: var(--color-border-strong); }
+.arrow_path { fill: var(--color-accent); }
+.arrow_on { fill: var(--color-warn); }
+
+.edgeLabel {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  fill: var(--color-text-muted);
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.node circle,
+.node rect {
+  fill: var(--color-surface);
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  transition: fill 0.25s, stroke 0.25s;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  fill: var(--color-text);
+}
+
+.plain .label {
+  fill: var(--color-text-subtle);
+  font-size: 12.5px;
+}
+
+.node.visited circle,
+.node.visited rect {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
+}
+
+.node.highlight circle,
+.node.highlight rect {
+  fill: var(--color-warn-soft);
+  stroke: var(--color-warn);
+  stroke-width: 2;
+}
+
+.node.highlight .label {
+  font-weight: 650;
+}
+
+.node.marked circle,
+.node.marked rect {
+  stroke: var(--color-success);
+  stroke-width: 3;
+}
+
+.node.done {
+  opacity: 0.4;
+}
+
+.ptr {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 650;
+  fill: var(--color-accent);
+}
+
+.noteText {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  fill: var(--color-interview);
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 6px;
+  stroke-linejoin: round;
+}

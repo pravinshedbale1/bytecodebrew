@@ -1,5 +1,11 @@
 "Shortest path" sounds like one problem, but the right algorithm depends entirely on **the edge weights**. All edges cost the same? Plain [BFS](/dsa/patterns/graph-traversal). Weights of 0 or 1? A deque. Non-negative weights? **Dijkstra**. A limit on the number of edges, or negative weights? **Bellman–Ford**. Picking correctly is most of the problem — the code for each is short.
 
+<Callout type="note" title="New to graphs?">
+
+This lesson assumes you know weighted graphs and BFS. If not, read [Graphs](/dsa/data-structures/graphs) in Data Structures Basics first. It has step-through visuals.
+
+</Callout>
+
 <Callout type="tip" title="How to spot it">
 
 - "**Minimum cost / time / distance** to get from A to B" in a graph or grid with **weights**.

@@ -1,0 +1,161 @@
+Stacks and queues are arrays or lists with a **rule about which element leaves next**. That restriction is the point: it makes the right element available in O(1) without searching.
+
+- A **stack** returns the **most recent** element: last in, first out (LIFO). It's a pile of plates.
+- A **queue** returns the **oldest** element: first in, first out (FIFO). It's a line at a till.
+
+## Picture it
+
+<ArrayViz title="A stack: push and pop at the top" frames={[
+  { arr: ["(empty)"], note: "A stack: last in, first out — like a pile of plates. Here the array's END is the top, so push and pop never shift anything." },
+  { arr: [3], pointers: { top: 0 }, highlight: [0], note: "push(3): write at index size, then size++. O(1)." },
+  { arr: [3, 8], pointers: { top: 1 }, highlight: [1], note: "push(8): write at index size, then size++. O(1)." },
+  { arr: [3, 8, 5], pointers: { top: 2 }, highlight: [2], note: "push(5): write at index size, then size++. O(1)." },
+  { arr: [3, 8, 5], pointers: { top: 2 }, highlight: [2], note: "peek(): read the top without removing it → 5." },
+  { arr: [3, 8], pointers: { top: 1 }, highlight: [], note: "pop() → 5: the most recent element leaves first. O(1)." },
+  { arr: [3], pointers: { top: 0 }, highlight: [], note: "pop() → 8. Only the top is ever accessible — that restriction is exactly what makes stacks good at \"most recent first\" problems: undo, matching brackets, the call stack." }
+]} />
+
+<ArrayViz title="A queue on a circular array" frames={[
+  { arr: ["·", "·", "·", "·", "·"], pointers: { head: 0, next: 0 }, highlight: [], done: [0, 1, 2, 3, 4], vars: { size: 0 }, note: "A queue: first in, first out — like a line at a till. Built on a circular array: head = the oldest element; \"next\" = where the next offer writes. Dimmed slots are free." },
+  { arr: ["A", "·", "·", "·", "·"], pointers: { head: 0, next: 1 }, highlight: [0], done: [1, 2, 3, 4], vars: { size: 1 }, note: "offer(A): write at (head + size) % capacity = 0. O(1)." },
+  { arr: ["A", "B", "·", "·", "·"], pointers: { head: 0, next: 2 }, highlight: [1], done: [2, 3, 4], vars: { size: 2 }, note: "offer(B): write at (head + size) % capacity = 1. O(1)." },
+  { arr: ["A", "B", "C", "·", "·"], pointers: { head: 0, next: 3 }, highlight: [2], done: [3, 4], vars: { size: 3 }, note: "offer(C): write at (head + size) % capacity = 2. O(1)." },
+  { arr: ["·", "B", "C", "·", "·"], pointers: { head: 1, next: 3 }, highlight: [], done: [0, 3, 4], vars: { size: 2 }, note: "poll() → A: take the element at head (0), move head forward. Nothing shifts — O(1)." },
+  { arr: ["·", "·", "C", "·", "·"], pointers: { head: 2, next: 3 }, highlight: [], done: [0, 1, 3, 4], vars: { size: 1 }, note: "poll() → B: take the element at head (1), move head forward. Nothing shifts — O(1)." },
+  { arr: ["·", "·", "C", "D", "·"], pointers: { head: 2, next: 4 }, highlight: [3], done: [0, 1, 4], vars: { size: 2 }, note: "offer(D): write at index 3." },
+  { arr: ["·", "·", "C", "D", "E"], pointers: { head: 2, next: 0 }, highlight: [4], done: [0, 1], vars: { size: 3 }, note: "offer(E): write at index 4." },
+  { arr: ["F", "·", "C", "D", "E"], pointers: { head: 2, next: 1 }, highlight: [0], done: [1], vars: { size: 4 }, note: "offer(F): (head + size) % 5 = 0 — the index WRAPS to the front and reuses the slot freed by the polls." },
+  { arr: ["F", "·", "C", "D", "E"], pointers: { head: 2, next: 1 }, highlight: [], done: [1], vars: { size: 4 }, note: "The queue holds C, D, E, F in order even though they are not left-to-right in memory. When size reaches capacity, a real implementation copies into a bigger array, unwrapping it oldest-first." }
+]} />
+
+## How they work
+
+**Stack on an array.** The top is the **end** of the array. `push` writes at `size` and increments it; `pop` decrements `size` and returns that element. Nothing shifts, so both are O(1):
+
+```java
+static class ArrayStack {
+    private int[] data = new int[4];
+    private int size;
+
+    void push(int x) {
+        if (size == data.length) data = Arrays.copyOf(data, size * 2);
+        data[size++] = x;                          // the top is the END of the array
+    }
+    int pop() { if (size == 0) throw new NoSuchElementException(); return data[--size]; }
+    int peek() { if (size == 0) throw new NoSuchElementException(); return data[size - 1]; }
+    boolean isEmpty() { return size == 0; }
+}
+```
+
+**Queue on a circular array.** Removing from the front of a plain array would shift everything (O(n)). Instead, keep a `head` index that moves forward, and **wrap** indexes around with `% capacity`, so freed slots at the front get reused:
+
+```java
+void offer(int x) {
+    if (size == data.length) grow();
+    data[(head + size) % data.length] = x;     // the slot after the last element, wrapping round
+    size++;
+}
+
+int poll() {
+    if (size == 0) throw new NoSuchElementException();
+    int x = data[head];
+    head = (head + 1) % data.length;
+    size--;
+    return x;
+}
+```
+
+A linked list also works for both: a stack pushes and pops at the head, and a queue adds at the tail and removes at the head. Arrays are faster in practice.
+
+## Types
+
+| Type | Removes | Java | Typical use |
+| --- | --- | --- | --- |
+| **Stack** | Newest first (LIFO) | `Deque<Integer> st = new ArrayDeque<>()` with `push` / `pop` / `peek` | Undo, matching brackets, expression parsing, DFS, the call stack |
+| **Queue** | Oldest first (FIFO) | `Deque<Integer> q = new ArrayDeque<>()` with `offer` / `poll` / `peek` | BFS, task scheduling, buffering |
+| **Deque** (double-ended queue) | Either end | `ArrayDeque`: `offerFirst/Last`, `pollFirst/Last` | [Monotonic queue](/dsa/patterns/monotonic-stack), sliding-window maximum |
+| **Circular queue** | Oldest first, fixed capacity | Your own ring buffer | Bounded buffers, streaming |
+| **Priority queue** | **Smallest** (or largest) first | `PriorityQueue` | Top-k, scheduling by priority; see [Heaps](/dsa/data-structures/heaps) |
+
+A priority queue is called a queue, but it isn't FIFO. It's a heap, with O(log n) operations.
+
+## Operations and their cost
+
+| Operation | Stack | Queue | Deque | Priority queue |
+| --- | --- | --- | --- | --- |
+| Add | O(1) push | O(1) offer | O(1) either end | O(log n) |
+| Remove next | O(1) pop | O(1) poll | O(1) either end | O(log n) |
+| Look at next | O(1) peek | O(1) peek | O(1) either end | O(1) |
+| Search / remove arbitrary | O(n) | O(n) | O(n) | O(n) |
+
+(O(1) for array-backed versions is amortised: they occasionally grow.)
+
+## In Java
+
+```java
+Deque<Integer> stack = new ArrayDeque<>();
+stack.push(1); stack.push(2);
+stack.peek();   // 2
+stack.pop();    // 2
+
+Deque<Integer> queue = new ArrayDeque<>();
+queue.offer(1); queue.offer(2);
+queue.peek();   // 1
+queue.poll();   // 1
+```
+
+- **Use `ArrayDeque` for both.** Avoid the legacy `Stack` class (synchronized, extends `Vector`). `LinkedList` works but is slower.
+- `pop()` and `remove()` **throw** on an empty deque; `poll()` and `peek()` **return null**. Pick one style and check `isEmpty()` first.
+- `ArrayDeque` doesn't allow `null` elements.
+- Iterating a stack built with `push` visits it **top first**.
+
+## Recognising stack and queue problems
+
+- **Stack**: "most recent", "matching" or "nesting" (brackets, tags), "undo", "evaluate an expression", "next greater element", or simulating recursion iteratively.
+- **Queue**: "in the order they arrived", "level by level", "fewest steps" ([BFS](/dsa/patterns/graph-traversal)), or producer and consumer.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Popping an empty stack**: check `isEmpty()` first. That's often a correct-answer case too, like an unmatched `)`.
+- **Using `Stack` or `LinkedList`** when `ArrayDeque` is the right default.
+- **Mixing ends** on a Deque: `push` adds at the **front** (like `offerFirst`), while `offer` adds at the **back**. Use one consistent pair.
+- **Queue on a plain ArrayList with `remove(0)`**: that's O(n) per poll.
+
+</Callout>
+
+## Patterns that use stacks and queues
+
+- [Stack Patterns](/dsa/patterns/stack-patterns): brackets, expression evaluation, undo.
+- [Monotonic Stack & Queue](/dsa/patterns/monotonic-stack): next greater element, histograms, window maximum.
+- [Tree BFS](/dsa/patterns/tree-bfs) and [Graph BFS](/dsa/patterns/graph-traversal) use a queue; iterative DFS uses a stack.
+- [Designing Data Structures](/dsa/patterns/design-data-structures): a queue built from two stacks, a min stack.
+
+## Interview questions
+
+<QA q="How does an array-based queue avoid shifting elements on every poll?">
+It keeps a head index and a size instead of always starting at index 0. Polling reads data[head] and advances head; offering writes at (head + size) modulo the capacity. Indexes wrap around, so slots freed at the front are reused, and when the array is full it's copied into a bigger one, unwrapping oldest-first. Every operation is O(1) (amortised for growth), whereas removing index 0 of a plain array is O(n).
+</QA>
+
+<QA q="Why does recursion relate to stacks?">
+Each method call pushes a frame (its parameters and local variables) on the call stack, and returning pops it, so the most recent call always finishes first: LIFO. Any recursive algorithm can therefore be rewritten with an explicit stack, which is how iterative DFS and iterative tree traversals work, and how you avoid a StackOverflowError on very deep recursion.
+</QA>
+
+<Practice task="Implement a queue using only two stacks, so each operation is O(1) amortised. Explain why the amortised cost is constant.">
+
+Push new elements onto an **in** stack. To poll or peek, take from an **out** stack; when it's empty, first pop everything from **in** and push it onto **out**, which reverses the order so the oldest is on top. Each element is pushed and popped at most twice in its lifetime, so n operations cost O(n) in total, which is O(1) amortised, even though a single refill can move many elements. This is CtCI 3.4 "Queue via Stacks".
+
+</Practice>
+
+<Takeaways>
+
+- Stack = LIFO (push, pop and peek at the top); queue = FIFO (offer at the back, poll at the front); all O(1).
+- On arrays: a stack uses the end of the array; a queue uses a circular buffer with a wrapping head.
+- Use `ArrayDeque` for both in Java; avoid `Stack`; a priority queue is a heap, O(log n).
+- Stack signals: most recent, matching, nesting, undo. Queue signals: arrival order, levels, fewest steps.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Hash Tables](/dsa/data-structures/hash-tables).
+- Patterns: [Stack Patterns](/dsa/patterns/stack-patterns).

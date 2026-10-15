@@ -1,0 +1,225 @@
+Arrays and lists are lines: every element has one before it and one after it. A **tree** branches: each element can have several "next" elements, its **children**. That shape fits anything hierarchical: folders, company org charts, HTML pages, the moves in a game. It also makes searching fast. In a well-shaped tree, each step down discards a large part of the data, which is how databases and Java's `TreeMap` find keys in O(log n).
+
+## The vocabulary
+
+Tree problems are full of these words. Step through them once:
+
+<TreeViz title="Tree vocabulary" tree={{ id: "n0", v: "A", c: [{ id: "n1", v: "B", c: [{ id: "n3", v: "D" }, { id: "n4", v: "E", c: [{ id: "n9", v: "G" }, null] }] }, { id: "n2", v: "C", c: [null, { id: "n6", v: "F" }] }] }} frames={[
+  { highlight: ["n0"], pointers: { root: "n0" }, note: "A tree is nodes connected by edges, with no cycles. The top node is the ROOT (A). Every other node has exactly one PARENT; computer-science trees grow downward." },
+  { highlight: ["n1"], visited: ["n3", "n4"], path: ["n1", "n3", "n4"], note: "B is the PARENT of D and E; D and E are B's CHILDREN, and SIBLINGS of each other. In a BINARY tree every node has at most two children: left and right." },
+  { marked: ["n3", "n9", "n6"], note: "LEAVES have no children: D, G and F. A, B, C and E are INTERNAL nodes." },
+  { visited: ["n1", "n3", "n4", "n9"], path: ["n1", "n3", "n4", "n9"], highlight: ["n1"], note: "The SUBTREE of B is B plus everything below it. This is the key to tree problems: every subtree is itself a tree, so a recursive function can solve the left subtree, the right subtree, and combine." },
+  { notes: { n0: "d=0", n1: "d=1", n2: "d=1", n3: "d=2", n4: "d=2", n6: "d=2", n9: "d=3" }, note: "DEPTH = number of edges from the root down to a node (root has depth 0). Nodes with the same depth form a LEVEL." },
+  { notes: { n0: "h=4", n1: "h=3", n2: "h=2", n3: "h=1", n4: "h=2", n6: "h=1", n9: "h=1" }, path: ["n0", "n1", "n4", "n9"], note: "HEIGHT of a node = number of nodes on the longest path down to a leaf (some books count edges instead, giving one less). The tree's height is the root's: 4. Most tree operations cost O(height)." }
+]} />
+
+| Term | Meaning |
+| --- | --- |
+| **Root** | The top node; the only one without a parent |
+| **Parent / child** | A node directly above / below another |
+| **Leaf** | A node with no children |
+| **Subtree** | A node and everything below it; it's a tree too |
+| **Depth** | Edges from the root to the node (root = 0) |
+| **Height** | Nodes on the longest downward path to a leaf (some books count edges) |
+| **Level** | All nodes with the same depth |
+
+A tree with n nodes always has exactly **n − 1 edges**: every node except the root has exactly one edge to its parent.
+
+## How a tree is stored
+
+In interviews a binary tree is a set of linked nodes, like a linked list with two `next` references:
+
+```java
+static class TreeNode {
+    int val;
+    TreeNode left, right;
+    TreeNode(int v) { val = v; }
+}
+```
+
+You're given the `root`, and an empty tree is `null`. An n-ary tree uses `List<Node> children` instead of `left` and `right`. A **complete** tree can also live in an array with no references at all; that's how [heaps](/dsa/data-structures/heaps) work.
+
+## Types of tree
+
+<TreeViz title="Types of tree" tree={{ id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4, c: [null, { id: "n8", v: 7 }] }, null] }, { id: "n2", v: 3, c: [{ id: "n5", v: 5 }, { id: "n6", v: 6 }] }] }} frames={[
+  { tree: { id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4, c: [null, { id: "n8", v: 7 }] }, null] }, { id: "n2", v: 3, c: [{ id: "n5", v: 5 }, { id: "n6", v: 6 }] }] }, note: "BINARY TREE: every node has at most two children (left and right). No other rule. This is what most interview problems hand you as a TreeNode root." },
+  { tree: { id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4, c: [{ id: "n7", v: 6 }, { id: "n8", v: 7 }] }, { id: "n4", v: 5 }] }, { id: "n2", v: 3 }] }, note: "FULL binary tree: every node has 0 or 2 children — never exactly one." },
+  { tree: { id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4 }, { id: "n4", v: 5 }] }, { id: "n2", v: 3, c: [{ id: "n5", v: 6 }, null] }] }, note: "COMPLETE binary tree: every level is full except possibly the last, which is filled from the left. Heaps are complete trees, which lets them live in a plain array." },
+  { tree: { id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4 }, { id: "n4", v: 5 }] }, { id: "n2", v: 3, c: [{ id: "n5", v: 6 }, { id: "n6", v: 7 }] }] }, note: "PERFECT binary tree: all internal nodes have two children and all leaves are on the same level. With height h it has 2^h − 1 nodes — so its height is about log₂ n." },
+  { tree: { id: "n0", v: 1, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 4, c: [{ id: "n7", v: 7 }, null] }, { id: "n4", v: 5 }] }, { id: "n2", v: 3, c: [null, { id: "n6", v: 6 }] }] }, note: "BALANCED: for every node, the heights of its two subtrees differ by at most one. Height stays O(log n), which keeps operations fast. Self-balancing trees (AVL, red-black — inside Java's TreeMap) maintain this automatically." },
+  { tree: { id: "n0", v: 1, c: [null, { id: "n2", v: 2, c: [null, { id: "n4", v: 3, c: [null, { id: "n6", v: 4 }] }] }] }, note: "DEGENERATE (skewed): every node has one child, so the tree is really a linked list. Height = n, and every O(height) operation becomes O(n). This is what a plain BST becomes if you insert sorted keys." },
+  { tree: { id: "n0", v: 8, c: [{ id: "n1", v: 3, c: [{ id: "n3", v: 1 }, { id: "n4", v: 6 }] }, { id: "n2", v: 10, c: [null, { id: "n6", v: 14 }] }] }, note: "BINARY SEARCH TREE: for every node, everything in its LEFT subtree is smaller and everything in its RIGHT subtree is larger. Search goes left or right, halving the work in a balanced tree." },
+  { tree: { id: "r", v: "root", c: [{ id: "a", v: "a", c: [{ id: "a1", v: "x" }, { id: "a2", v: "y" }, { id: "a3", v: "z" }] }, { id: "b", v: "b" }, { id: "c", v: "c", c: [{ id: "c1", v: "w" }] }] }, note: "N-ARY tree: a node may have any number of children (a list instead of left/right). File systems, org charts, the DOM and TRIES (one child per letter) are n-ary trees." }
+]} />
+
+| Type | Rule | Why it matters |
+| --- | --- | --- |
+| **Binary tree** | At most 2 children per node | The default interview tree |
+| **Full** | Every node has 0 or 2 children | Expression trees, Huffman codes |
+| **Complete** | All levels full except the last, which fills from the left | Fits in an array: heaps |
+| **Perfect** | All levels completely full | 2^h − 1 nodes; height = log₂(n + 1) |
+| **Balanced** | Subtree heights differ by at most 1 everywhere | Height stays O(log n) |
+| **Degenerate** | Every node has one child | Really a linked list; height n |
+| **Binary search tree (BST)** | Left subtree smaller, right subtree larger, at every node | Search, insert, delete in O(height) |
+| **Self-balancing BST** | A BST that rebalances itself (AVL, red-black) | Guaranteed O(log n): `TreeMap`, `TreeSet` |
+| **N-ary tree** | Any number of children | File systems, the DOM |
+| **Trie** | N-ary, one edge per character | Prefix search; see [Tries](/dsa/patterns/tries) |
+| **Heap** | Complete tree; parent ≤ children (min-heap) | Priority queues; see [Heaps](/dsa/data-structures/heaps) |
+
+## Traversals: four ways to visit every node
+
+<TreeViz title="Preorder, inorder, postorder and level order" tree={{ id: "n0", v: 4, c: [{ id: "n1", v: 2, c: [{ id: "n3", v: 1 }, { id: "n4", v: 3 }] }, { id: "n2", v: 6, c: [{ id: "n5", v: 5 }, { id: "n6", v: 7 }] }] }} frames={[
+  { note: "Traversing = visiting every node once. Depth-first traversals differ only in WHEN the node itself is visited relative to its two subtrees. The badges show the visiting order." },
+  { notes: { n0: "#1", n1: "#2", n3: "#3", n4: "#4", n2: "#5", n5: "#6", n6: "#7" }, aux: { label: "preorder", items: [4, 2, 1, 3, 6, 5, 7] }, note: "PREORDER: node, then left subtree, then right subtree. The root comes first — useful for copying or serialising a tree." },
+  { notes: { n3: "#1", n1: "#2", n4: "#3", n0: "#4", n5: "#5", n2: "#6", n6: "#7" }, aux: { label: "inorder", items: [1, 2, 3, 4, 5, 6, 7] }, note: "INORDER: left subtree, node, right subtree. For a binary SEARCH tree this visits values in sorted order — 1 to 7 here." },
+  { notes: { n3: "#1", n4: "#2", n1: "#3", n5: "#4", n6: "#5", n2: "#6", n0: "#7" }, aux: { label: "postorder", items: [1, 3, 2, 5, 7, 6, 4] }, note: "POSTORDER: left subtree, right subtree, node. Children before parents — used when a node needs its children's answers (heights, sizes, deleting a tree)." },
+  { notes: { n0: "#1", n1: "#2", n2: "#3", n3: "#4", n4: "#5", n5: "#6", n6: "#7" }, aux: { label: "level order", items: [4, 2, 6, 1, 3, 5, 7] }, note: "LEVEL ORDER (breadth-first): level by level, left to right, using a QUEUE. Used for anything \"per level\" and for shortest distances from the root." }
+]} />
+
+The three depth-first orders are the same recursion. Only the position of the "visit" line changes:
+
+```java
+static void preorder(TreeNode n, List<Integer> out) {   // node, left, right
+    if (n == null) return;
+    out.add(n.val); preorder(n.left, out); preorder(n.right, out);
+}
+
+static void inorder(TreeNode n, List<Integer> out) {    // left, node, right — sorted for a BST
+    if (n == null) return;
+    inorder(n.left, out); out.add(n.val); inorder(n.right, out);
+}
+
+static void postorder(TreeNode n, List<Integer> out) {  // left, right, node
+    if (n == null) return;
+    postorder(n.left, out); postorder(n.right, out); out.add(n.val);
+}
+```
+
+Level order uses a **queue** instead of recursion: take a node from the front, add its children to the back.
+
+```java
+static List<Integer> levelOrder(TreeNode root) {        // breadth-first with a queue
+    List<Integer> out = new ArrayList<>();
+    if (root == null) return out;
+    Deque<TreeNode> q = new ArrayDeque<>(List.of(root));
+    while (!q.isEmpty()) {
+        TreeNode n = q.poll();
+        out.add(n.val);
+        if (n.left != null) q.offer(n.left);
+        if (n.right != null) q.offer(n.right);
+    }
+    return out;
+}
+```
+
+Every traversal is O(n) time. The space is O(h) for the recursion stack (depth-first) or O(width) for the queue (level order).
+
+## Binary search trees
+
+A BST adds one rule: **left < node < right**, at every node. Search then becomes a walk down one path:
+
+<TreeViz title="Searching and inserting in a BST" tree={{ id: "n0", v: 8, c: [{ id: "n1", v: 3, c: [{ id: "n3", v: 1 }, { id: "n4", v: 6, c: [{ id: "n9", v: 4, c: [null, { id: "new5", v: 5 }] }, { id: "n10", v: 7 }] }] }, { id: "n2", v: 10, c: [null, { id: "n6", v: 14 }] }] }} frames={[
+  { hidden: ["new5"], note: "A binary search tree: smaller values to the left, larger to the right — at every node, not just the root." },
+  { hidden: ["new5"], highlight: ["n0"], visited: [], note: "search(7): start at the root. 7 < 8, so 7 can only be in the LEFT subtree — the whole right side is skipped." },
+  { hidden: ["new5"], highlight: ["n1"], visited: ["n0"], path: ["n0", "n1"], note: "7 > 3: go right." },
+  { hidden: ["new5"], highlight: ["n4"], visited: ["n0", "n1"], path: ["n0", "n1", "n4"], note: "7 > 6: go right." },
+  { hidden: ["new5"], marked: ["n10"], visited: ["n0", "n1", "n4"], path: ["n0", "n1", "n4", "n10"], note: "Found 7 after 4 comparisons. Each step goes one level down, so search costs O(height): O(log n) when balanced, O(n) when degenerate." },
+  { highlight: ["new5"], visited: ["n0", "n1", "n4", "n9"], path: ["n0", "n1", "n4", "n9", "new5"], note: "insert(5): walk exactly as if searching — 5 < 8 left, 5 > 3 right, 5 < 6 left, 5 > 4 right — and hang the new node where the search fell off the tree. Also O(height)." },
+  { visited: [], note: "Inorder traversal now gives 1, 3, 4, 5, 6, 7, 8, 10, 14 — still sorted. Deleting is the only tricky operation: a node with two children is replaced by its in-order successor (the smallest value in its right subtree)." }
+]} />
+
+```java
+static boolean contains(TreeNode root, int x) {
+    while (root != null) {
+        if (x == root.val) return true;
+        root = x < root.val ? root.left : root.right;   // discard the other half
+    }
+    return false;
+}
+
+static TreeNode insert(TreeNode root, int x) {
+    if (root == null) return new TreeNode(x);
+    if (x < root.val) root.left = insert(root.left, x);
+    else if (x > root.val) root.right = insert(root.right, x);   // equal: already present
+    return root;
+}
+```
+
+Deletion has three cases:
+
+- **No children**: just remove the node.
+- **One child**: replace the node with its child.
+- **Two children**: copy in the value of the **in-order successor** (the leftmost node of the right subtree), then delete that successor.
+
+The reference solution tests all three against `TreeSet`.
+
+## Operations and their cost
+
+| Operation | Balanced BST (`TreeMap`) | Unbalanced BST, worst case | Plain binary tree |
+| --- | --- | --- | --- |
+| Search | O(log n) | O(n) | O(n): must check everything |
+| Insert / delete | O(log n) | O(n) | — |
+| Min / max | O(log n) | O(n) | O(n) |
+| Sorted iteration | O(n) (inorder) | O(n) | — |
+| Traverse all | O(n) | O(n) | O(n) |
+
+The reference tests insert 0…99 in order into a plain BST and get a tree of **height 100**: sorted input turns a BST into a linked list. That's why real libraries use self-balancing trees.
+
+## In Java
+
+- `TreeMap<K, V>` and `TreeSet<T>` are red-black trees: guaranteed O(log n), plus `floorKey`, `ceilingKey`, `firstKey`, `headMap` and `tailMap`.
+- There's no general-purpose tree class to subclass for interview problems; you write `TreeNode` yourself (LeetCode provides it).
+
+<Callout type="warning" title="Common mistakes">
+
+- **Forgetting the `null` base case**: every recursive tree function starts with "if the node is null…".
+- **Checking the BST rule only against the parent**: a node must be within bounds set by **all** its ancestors (see [BSTs](/dsa/patterns/bst-patterns)).
+- **Assuming a binary tree is a BST**: only use left/right ordering when the problem says it's a BST.
+- **Assuming O(log n)**: that holds only for balanced trees. State "O(h)" and explain.
+- **Deep recursion** on a degenerate tree of 10⁵ nodes can overflow the stack; use an explicit stack.
+
+</Callout>
+
+## Patterns that use trees
+
+- [Tree DFS](/dsa/patterns/tree-dfs): depths, paths, diameter, LCA (trust the recursion).
+- [Tree BFS](/dsa/patterns/tree-bfs): anything per level.
+- [Binary Search Trees](/dsa/patterns/bst-patterns): validation, k-th smallest, bounds.
+- [Tries](/dsa/patterns/tries), [Heaps](/dsa/data-structures/heaps) and [Tree & Interval DP](/dsa/patterns/dp-trees-intervals).
+
+## Interview questions
+
+<QA q="What is the difference between a binary tree and a binary search tree?">
+A binary tree only restricts the number of children: at most two per node. A binary search tree also orders the values: everything in a node's left subtree is smaller and everything in its right subtree is larger, at every node. That ordering lets search, insert and delete follow one path from the root, which is O(height), and makes an inorder traversal produce sorted output. In a plain binary tree, finding a value can require visiting every node.
+</QA>
+
+<QA q="Why can BST operations become O(n), and how do libraries prevent it?">
+The cost of BST operations is the tree's height. If keys arrive in sorted order, each new key goes to the right of the previous one, and the tree degenerates into a linked list of height n. Self-balancing trees like AVL and red-black trees perform rotations after inserts and deletes to keep the height O(log n). Java's TreeMap and TreeSet are red-black trees, so they guarantee O(log n).
+</QA>
+
+<Practice task="Write the preorder, inorder and postorder of the BST built by inserting 5, 3, 8, 1, 4 in that order. Which order is sorted, and which order lets you rebuild the same BST by inserting again?">
+
+The tree is 5 at the root, with 3 (children 1 and 4) on the left and 8 on the right.
+
+- **Preorder**: 5, 3, 1, 4, 8.
+- **Inorder**: 1, 3, 4, 5, 8. This is sorted, as it always is for a BST.
+- **Postorder**: 1, 4, 3, 8, 5.
+
+Re-inserting the **preorder** sequence rebuilds the same BST, because each node is inserted before its descendants. That's why preorder is used to serialise BSTs.
+
+</Practice>
+
+<Takeaways>
+
+- A tree is nodes with children and no cycles; root, leaf, subtree, depth and height are the vocabulary.
+- Binary, full, complete, perfect, balanced, degenerate, BST, n-ary, trie and heap are the types to know.
+- Preorder, inorder and postorder differ only in when the node is visited; level order uses a queue.
+- A BST orders values left < node < right, so operations are O(height): O(log n) only when balanced.
+- In Java, TreeMap and TreeSet are balanced BSTs; interview trees are TreeNode objects you write yourself.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Heaps & Priority Queues](/dsa/data-structures/heaps).
+- Patterns: [Tree DFS: Think in Subtrees](/dsa/patterns/tree-dfs).

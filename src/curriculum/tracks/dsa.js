@@ -44,6 +44,52 @@ const startHere = {
   ],
 };
 
+const dataStructures = {
+  id: 'data-structures',
+  title: 'Data Structures Basics',
+  shortTitle: 'Data Structures',
+  description:
+    'What each data structure is, how it sits in memory, its types, what every operation costs and which Java class to use, with step-through visuals. Read the one you need before its patterns.',
+  outcomes: [
+    'Picture how arrays, linked lists, hash tables, trees, heaps and graphs are laid out',
+    'State the cost of every common operation and explain why',
+    'Name the types of each structure (singly vs doubly, BST vs heap, directed vs undirected…)',
+    'Pick the right Java class for a job and avoid the legacy ones',
+    'Choose a data structure from the operations a problem needs',
+  ],
+  modules: [
+    {
+      id: 'linear',
+      title: 'Linear Structures',
+      description: 'Elements in a sequence: by position, by link, by order of arrival, or by key.',
+      lessons: [
+        L('arrays-and-strings', 'Arrays & Strings', 'Contiguous memory, O(1) indexing, dynamic arrays that double, 2D arrays and immutable strings.', 14, 'Beginner'),
+        L('linked-lists', 'Linked Lists', 'Nodes and pointers: singly, doubly and circular lists, and when they beat arrays.', 14, 'Beginner'),
+        L('stacks-and-queues', 'Stacks & Queues', 'Last-in-first-out and first-in-first-out, deques, and how both are built on arrays.', 12, 'Beginner'),
+        L('hash-tables', 'Hash Tables', 'Hash functions, buckets, collisions and resizing: why lookups are O(1) on average.', 16, 'Beginner'),
+      ],
+    },
+    {
+      id: 'hierarchical',
+      title: 'Trees, Heaps & Graphs',
+      description: 'Structures with branches: hierarchies, priority orders and networks.',
+      lessons: [
+        L('trees', 'Trees', 'Vocabulary, the types of tree, binary search trees and the four traversals.', 18, 'Beginner'),
+        L('heaps', 'Heaps & Priority Queues', 'A complete tree stored in an array: always know the minimum, in O(log n) per change.', 14, 'Beginner'),
+        L('graphs', 'Graphs', 'Nodes and edges: directed, weighted, cyclic; adjacency lists vs matrices; BFS and DFS.', 18, 'Beginner'),
+      ],
+    },
+    {
+      id: 'choosing',
+      title: 'Putting It Together',
+      description: 'From "what operations do I need?" to the right structure.',
+      lessons: [
+        L('choosing-a-data-structure', 'Choosing a Data Structure', 'One table of every structure and operation, and a decision guide for picking one.', 12, 'Beginner'),
+      ],
+    },
+  ],
+};
+
 const patterns = {
   id: 'patterns',
   title: 'Problem-Solving Patterns',
@@ -209,5 +255,5 @@ export const dsa = {
   icon: 'binary',
   description:
     'Pattern-first problem solving in Java: learn about 35 patterns instead of 500 solutions, with the reasoning interviewers want to hear.',
-  courses: [startHere, patterns, playbook],
+  courses: [startHere, dataStructures, patterns, playbook],
 };

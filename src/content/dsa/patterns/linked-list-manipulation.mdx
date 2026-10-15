@@ -1,5 +1,11 @@
 Linked-list bugs have a particular flavour: you change one `next` pointer and suddenly half the list is gone, or you walk into a cycle you created. Two techniques prevent almost all of that. **In-place reversal** — always save the next node before you change an arrow. **Dummy nodes** — a fake node in front of the head, so the head is never a special case. With these two, reversing, merging, deleting and reordering become routine.
 
+<Callout type="note" title="New to linked lists?">
+
+This lesson assumes you know what a node and a next pointer are, and how insertion and removal rewire them. If not, read [Linked Lists](/dsa/data-structures/linked-lists) in Data Structures Basics first. It has step-through visuals.
+
+</Callout>
+
 <Callout type="tip" title="How to spot it">
 
 - "**Reverse** the list" — the whole thing, a section `[left, right]`, or every group of k.

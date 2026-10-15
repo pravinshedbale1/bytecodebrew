@@ -8,6 +8,7 @@ import { Related } from './Related';
 import { Practice } from './Practice';
 import { ArrayViz } from './ArrayViz';
 import { TreeViz } from './TreeViz';
+import { GraphViz } from './GraphViz';
 import { SolvedToggle } from './SolvedToggle';
 import { ProblemTracker } from './ProblemTracker';
 import { problemSlug } from '../../hooks/useSolved';
@@ -75,5 +76,6 @@ export const mdxComponents = {
   Practice,
   ArrayViz,
   TreeViz,
+  GraphViz,
   ProblemTracker,
 };

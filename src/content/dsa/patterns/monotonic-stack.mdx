@@ -1,5 +1,11 @@
 "For each day, how many days until a warmer temperature?" The brute force looks right from each day until it finds a warmer one — O(n²) on a long cold spell. A **monotonic stack** answers it in one pass. It's one of the most surprising patterns the first time you see it, and one of the most reusable once it clicks: next greater element, stock spans, the largest rectangle in a histogram, and sliding-window maximum all use it.
 
+<Callout type="note" title="New to stacks and deques?">
+
+This lesson assumes you know how a stack and a deque work. If not, read [Stacks & Queues](/dsa/data-structures/stacks-and-queues) in Data Structures Basics first. It has step-through visuals.
+
+</Callout>
+
 <Callout type="tip" title="How to spot it">
 
 - "For each element, find the **next (or previous) greater / smaller** element" — or its distance.
