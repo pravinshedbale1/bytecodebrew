@@ -1,0 +1,232 @@
+"Longest common subsequence", "edit distance", "is this string an interleaving of those two?" — string DP problems look intimidating because the tables are two-dimensional. But nearly all of them follow one recipe: **two strings, two indexes**. `dp[i][j]` describes the first `i` characters of one string and the first `j` of the other, and you only ever ask one question about the **last characters**: *do they match?*
+
+<Callout type="tip" title="How to spot it">
+
+- **Two strings** compared or combined: common subsequence, edit distance, interleaving, "how many times does t appear in s".
+- **One string** with questions about palindromes or splitting — the state is a substring `[i, j]`.
+- "**Minimum operations** to turn A into B" (insert, delete, replace).
+- Lengths up to about 1000–5000 — an O(n·m) table.
+
+</Callout>
+
+## The recipe
+
+1. **State:** `dp[i][j]` = the answer for prefixes `a[0..i)` and `b[0..j)`. Use a table of size `(n + 1) × (m + 1)` so row 0 and column 0 mean "empty prefix".
+2. **Base cases:** empty against empty, and empty against a prefix.
+3. **Transition:** look at the last characters `a[i − 1]` and `b[j − 1]`:
+   - **match** → usually build on the **diagonal** `dp[i − 1][j − 1]`;
+   - **no match** → drop a character from one string: **up** `dp[i − 1][j]` or **left** `dp[i][j − 1]`.
+4. **Answer:** `dp[n][m]`.
+
+## Longest common subsequence
+
+<ArrayViz title="LCS table: diagonal on a match, best of up/left otherwise" frames={[
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["c", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["d", 0, 0, 0, 0, 0]], note: "LCS of \"abcbd\" (rows) and \"bdcb\" (columns). dp[i][j] = LCS of the first i letters of a and the first j of b. Row/column ∅ = empty prefix → 0." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["c", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["d", 0, 0, 0, 0, 0]], highlight: [[2, 2]], window: [[1, 2], [2, 1]], note: "'a' ≠ 'b': drop one letter — best of above (0) and left (0) = 0." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 0, 0, 0], ["c", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["d", 0, 0, 0, 0, 0]], highlight: [[3, 2]], window: [[2, 1]], note: "'b' = 'b': a match — extend the diagonal: dp = 0 + 1 = 1." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 1, 1, 0], ["c", 0, 0, 0, 0, 0], ["b", 0, 0, 0, 0, 0], ["d", 0, 0, 0, 0, 0]], highlight: [[3, 4]], window: [[2, 4], [3, 3]], note: "'b' ≠ 'c': drop one letter — best of above (0) and left (1) = 1." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 1, 1, 1], ["c", 0, 1, 1, 2, 0], ["b", 0, 0, 0, 0, 0], ["d", 0, 0, 0, 0, 0]], highlight: [[4, 4]], window: [[3, 3]], note: "'c' = 'c': a match — extend the diagonal: dp = 1 + 1 = 2." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 1, 1, 1], ["c", 0, 1, 1, 2, 2], ["b", 0, 1, 1, 2, 3], ["d", 0, 0, 0, 0, 0]], highlight: [[5, 5]], window: [[4, 4]], note: "'b' = 'b': a match — extend the diagonal: dp = 2 + 1 = 3." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 1, 1, 1], ["c", 0, 1, 1, 2, 2], ["b", 0, 1, 1, 2, 3], ["d", 0, 1, 2, 0, 0]], highlight: [[6, 3]], window: [[5, 2]], note: "'d' = 'd': a match — extend the diagonal: dp = 1 + 1 = 2." },
+  { grid: [["", "∅", "b", "d", "c", "b"], ["∅", 0, 0, 0, 0, 0], ["a", 0, 0, 0, 0, 0], ["b", 0, 1, 1, 1, 1], ["c", 0, 1, 1, 2, 2], ["b", 0, 1, 1, 2, 3], ["d", 0, 1, 2, 2, 3]], highlight: [[6, 5]], note: "Answer: 3 — for example \"bcb\". Every cell needs only its left, top and top-left neighbours." }
+]} />
+
+```java
+static int longestCommonSubsequence(String a, String b) {
+    int n = a.length(), m = b.length();
+    int[][] dp = new int[n + 1][m + 1];                   // row 0 / column 0: empty prefix → 0
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= m; j++)
+            dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1)
+                    ? dp[i - 1][j - 1] + 1                // match: both letters join the LCS
+                    : Math.max(dp[i - 1][j], dp[i][j - 1]);   // drop a letter from one string
+    return dp[n][m];
+}
+```
+
+Why is it safe to take the match greedily? If the last letters are equal, some LCS ends with that letter; pairing them can never be worse than leaving either unused.
+
+## Edit distance — three operations, three neighbours
+
+> Minimum insertions, deletions and replacements to turn `a` into `b`.
+
+The three non-match moves map exactly onto the three neighbours:
+
+- **replace** `a[i − 1]` with `b[j − 1]` → diagonal `dp[i − 1][j − 1] + 1`
+- **delete** `a[i − 1]` → up `dp[i − 1][j] + 1`
+- **insert** `b[j − 1]` → left `dp[i][j − 1] + 1`
+
+```java
+static int minDistance(String a, String b) {
+    int n = a.length(), m = b.length();
+    int[][] dp = new int[n + 1][m + 1];
+    for (int i = 0; i <= n; i++) dp[i][0] = i;            // turn a prefix into "" by deleting everything
+    for (int j = 0; j <= m; j++) dp[0][j] = j;            // turn "" into b's prefix by inserting everything
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= m; j++)
+            dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1)
+                    ? dp[i - 1][j - 1]                    // match: free
+                    : 1 + Math.min(dp[i - 1][j - 1], Math.min(dp[i - 1][j], dp[i][j - 1]));
+    return dp[n][m];
+}
+```
+
+The base cases are the part people forget: they aren't zeros here, because turning `"abc"` into `""` costs 3.
+
+## Counting variants
+
+### Distinct subsequences
+
+> How many ways does `t` appear as a subsequence of `s`?
+
+At `s[i − 1]` you can always **skip** it; if it matches `t[j − 1]`, you can also **use** it:
+
+```java
+static int numDistinct(String s, String t) {
+    int n = s.length(), m = t.length();
+    long[][] dp = new long[n + 1][m + 1];
+    for (int i = 0; i <= n; i++) dp[i][0] = 1;            // empty t appears once in anything
+    for (int i = 1; i <= n; i++)
+        for (int j = 1; j <= m; j++)
+            dp[i][j] = dp[i - 1][j] + (s.charAt(i - 1) == t.charAt(j - 1) ? dp[i - 1][j - 1] : 0);
+    return (int) dp[n][m];
+}
+```
+
+Counting problems **add** the choices; optimisation problems take **min/max**.
+
+### Interleaving string
+
+> Is `c` formed by interleaving `a` and `b`, keeping each one's order?
+
+`dp[i][j]` = can the first `i` of `a` and `j` of `b` form the first `i + j` of `c`? The last character of that prefix of `c` came from either `a` or `b`:
+
+```java
+static boolean isInterleave(String a, String b, String c) {
+    if (a.length() + b.length() != c.length()) return false;
+    boolean[][] dp = new boolean[a.length() + 1][b.length() + 1];
+    dp[0][0] = true;
+    for (int i = 0; i <= a.length(); i++)
+        for (int j = 0; j <= b.length(); j++) {
+            if (i > 0 && a.charAt(i - 1) == c.charAt(i + j - 1)) dp[i][j] |= dp[i - 1][j];
+            if (j > 0 && b.charAt(j - 1) == c.charAt(i + j - 1)) dp[i][j] |= dp[i][j - 1];
+        }
+    return dp[a.length()][b.length()];
+}
+```
+
+## One string: palindromes
+
+### Longest palindromic subsequence
+
+Two neat views:
+
+1. It's the **LCS of the string and its reverse**.
+2. Or an **interval DP**: `dp[i][j]` for the substring `s[i..j]`. If the ends match, they wrap the best inside; otherwise drop one end.
+
+```java
+static int longestPalindromeSubseq(String s) {
+    int n = s.length();
+    if (n == 0) return 0;
+    int[][] dp = new int[n][n];
+    for (int i = n - 1; i >= 0; i--) {                    // i goes DOWN so dp[i+1][…] is ready
+        dp[i][i] = 1;
+        for (int j = i + 1; j < n; j++)
+            dp[i][j] = s.charAt(i) == s.charAt(j) ? dp[i + 1][j - 1] + 2 : Math.max(dp[i + 1][j], dp[i][j - 1]);
+    }
+    return dp[0][n - 1];
+}
+```
+
+The fill order is the subtle part of interval DP: `dp[i][j]` needs `dp[i + 1][…]`, so `i` must run **backwards**.
+
+### Longest palindromic substring — expand around centres
+
+A DP table works (O(n²) time and space), but expanding from each of the 2n − 1 centres is simpler and uses O(1) space:
+
+```java
+static String longestPalindrome(String s) {
+    int bestL = 0, bestR = 0;
+    for (int c = 0; c < s.length(); c++) {
+        for (int[] lr : new int[][] { { c, c }, { c, c + 1 } }) {     // odd and even lengths
+            int l = lr[0], r = lr[1];
+            while (l >= 0 && r < s.length() && s.charAt(l) == s.charAt(r)) { l--; r++; }
+            if (r - l - 1 > bestR - bestL) { bestL = l + 1; bestR = r; }
+        }
+    }
+    return s.substring(bestL, bestR);
+}
+```
+
+Substring (contiguous) and subsequence (not contiguous) are different problems — read carefully.
+
+## Transition cheat sheet
+
+| Problem | On match | On mismatch | Base cases |
+| --- | --- | --- | --- |
+| LCS | diag + 1 | max(up, left) | zeros |
+| Edit distance | diag | 1 + min(diag, up, left) | `dp[i][0] = i`, `dp[0][j] = j` |
+| Distinct subsequences | up + diag | up | `dp[i][0] = 1` |
+| Interleaving | from up if a's char fits, from left if b's fits | — | `dp[0][0] = true` |
+| Palindromic subsequence (interval) | inside + 2 | max(drop left, drop right) | `dp[i][i] = 1` |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Index offsets:** with `(n + 1) × (m + 1)` tables, the characters are `a.charAt(i − 1)` and `b.charAt(j − 1)`.
+- **Wrong base cases** — edit distance's first row/column aren't zeros.
+- **Interval DP fill order** — `i` backwards, `j` forwards.
+- **Substring vs subsequence** confusion.
+- **Overflow** in counting problems — use `long`.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1143 | [Longest Common Subsequence](https://leetcode.com/problems/longest-common-subsequence/) | Medium | The recipe |
+| 583 | [Delete Operation for Two Strings](https://leetcode.com/problems/delete-operation-for-two-strings/) | Medium | n + m − 2·LCS |
+| 5 | [Longest Palindromic Substring](https://leetcode.com/problems/longest-palindromic-substring/) | Medium | Expand around centres |
+| 516 | [Longest Palindromic Subsequence](https://leetcode.com/problems/longest-palindromic-subsequence/) | Medium | Interval DP order |
+| 647 | [Palindromic Substrings](https://leetcode.com/problems/palindromic-substrings/) | Medium | Count while expanding |
+| 97 | [Interleaving String](https://leetcode.com/problems/interleaving-string/) | Medium | Boolean two-string DP |
+| 72 | [Edit Distance](https://leetcode.com/problems/edit-distance/) | Medium | Three operations, three neighbours |
+| 115 | [Distinct Subsequences](https://leetcode.com/problems/distinct-subsequences/) | Hard | Counting: skip + use |
+| 10 | [Regular Expression Matching](https://leetcode.com/problems/regular-expression-matching/) | Hard | Patterns with `*` |
+
+## Interview questions
+
+<QA q="Explain the edit distance recurrence.">
+dp[i][j] is the minimum number of edits to turn the first i characters of a into the first j characters of b. If the last characters match, no edit is needed for them: dp[i − 1][j − 1]. Otherwise take 1 plus the best of three moves: replace a's last character (dp[i − 1][j − 1]), delete it (dp[i − 1][j]), or insert b's last character (dp[i][j − 1]). The base cases are dp[i][0] = i deletions and dp[0][j] = j insertions.
+</QA>
+
+<QA q="How do you reduce the space of LCS from O(n·m) to O(m)?">
+Each row only depends on the previous row and the current row's left neighbour, so keep two arrays (previous and current) of length m + 1, or one array plus a variable holding the old diagonal value before it's overwritten. This works for the length; reconstructing the actual subsequence needs the full table or a divide-and-conquer technique such as Hirschberg's algorithm.
+</QA>
+
+<Practice task="Minimum number of deletions (from either string) to make two strings equal. Which result from this lesson gives the answer immediately?">
+
+Whatever survives in both strings must be a common subsequence, and you want to keep as much as possible — the **LCS**. So the answer is `n + m − 2 × LCS(a, b)`. Many "make two strings equal" questions reduce to LCS this way.
+
+</Practice>
+
+<Practice task="Count the palindromic substrings in a string. Adapt one of the methods in this lesson.">
+
+Use **expand around centres**: for each of the 2n − 1 centres, expand while the ends match and add 1 for every successful expansion (each one is a distinct palindromic substring). O(n²) time, O(1) space. The DP alternative marks `isPal[i][j] = s[i] == s[j] && (j − i < 2 || isPal[i + 1][j − 1])` and counts the true cells.
+
+</Practice>
+
+<Takeaways>
+
+- Two strings → `dp[i][j]` over prefixes, with an extra empty row and column.
+- Look at the last characters: match → diagonal; mismatch → up, left (or diagonal for replace).
+- Optimisation takes min/max, counting adds the choices.
+- One string with palindromes → interval DP (`i` backwards) or expand around centres.
+- Watch base cases, index offsets and substring vs subsequence.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Greedy](/dsa/patterns/greedy).
+- Dan Gusfield, *Algorithms on Strings, Trees, and Sequences* (1997) — chapter 11, edit distance and alignment.

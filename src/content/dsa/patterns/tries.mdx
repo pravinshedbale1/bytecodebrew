@@ -1,0 +1,181 @@
+A hash set can tell you whether a whole word exists. It can't efficiently tell you **which words start with "ca"**, or whether a partial path through a grid could still become a word. A **trie** (prefix tree) can. Each node is a character, each root-to-node path spells a prefix, and words that share a prefix share the path. Lookups cost O(length of the word), regardless of how many words are stored.
+
+<Callout type="tip" title="How to spot it">
+
+- **Prefix** questions: autocomplete, "starts with", counting words with a prefix, longest common prefix.
+- Searching **many words at once** in a grid or text (Word Search II) — a trie lets one search follow all words together.
+- **Wildcard** matching against a dictionary (`.` matches any letter).
+- Replacing words with their shortest **root** from a dictionary.
+- Maximum XOR of two numbers — a trie over **bits** instead of letters.
+
+</Callout>
+
+## The structure
+
+Words `car`, `cat`, `cart`, `dog`:
+
+```mermaid
+flowchart TD
+  R(("root")) --> C((c))
+  R --> D((d))
+  C --> A((a))
+  A --> T1(("t ✓"))
+  A --> R1(("r ✓"))
+  R1 --> T2(("t ✓"))
+  D --> O((o))
+  O --> G(("g ✓"))
+```
+
+`✓` marks nodes where a word **ends** — essential, because `car` is a word but `ca` isn't, even though both are paths.
+
+## The template
+
+```java
+static class Trie {
+    private static class Node {
+        Node[] next = new Node[26];          // one slot per lowercase letter
+        boolean end;                         // a word ends here
+        int pass;                            // how many words pass through (for prefix counts)
+    }
+    private final Node root = new Node();
+
+    void insert(String w) {
+        if (search(w)) return;               // already stored: don't double-count prefixes
+        Node cur = root;
+        for (char c : w.toCharArray()) {
+            int i = c - 'a';
+            if (cur.next[i] == null) cur.next[i] = new Node();
+            cur = cur.next[i];
+            cur.pass++;
+        }
+        cur.end = true;
+    }
+
+    boolean search(String w)     { Node n = walk(w); return n != null && n.end; }   // a whole word
+    boolean startsWith(String p) { return walk(p) != null; }                         // any word with this prefix
+    int countWithPrefix(String p) { Node n = walk(p); return n == null ? 0 : n.pass; }
+
+    private Node walk(String s) {
+        Node cur = root;
+        for (char c : s.toCharArray()) {
+            cur = cur.next[c - 'a'];
+            if (cur == null) return null;    // the path breaks: no such prefix
+        }
+        return cur;
+    }
+}
+```
+
+`insert`, `search` and `startsWith` are all **O(L)** for a word of length L. Space is O(total characters) in the worst case, with 26 references per node — use a `HashMap<Character, Node>` for large alphabets.
+
+The `search(w)` guard in `insert` matters if you keep counts: without it, inserting a word twice inflates every prefix count along its path (the reference solution's tests caught exactly that).
+
+## Wildcard search: branch on `.`
+
+> `addWord` and `search` where `.` matches any letter.
+
+A normal letter follows one child; a `.` tries **every** child — recursion over the trie:
+
+```java
+private boolean match(Node n, String w, int i) {
+    if (n == null) return false;
+    if (i == w.length()) return n.end;
+    char c = w.charAt(i);
+    if (c != '.') return match(n.next[c - 'a'], w, i + 1);
+    for (Node child : n.next) if (match(child, w, i + 1)) return true;   // try every branch
+    return false;
+}
+```
+
+## Word Search II: a trie guides the grid search
+
+> Find all dictionary words that can be traced in a letter grid (adjacent cells, no reuse).
+
+Running [Word Search](/dsa/patterns/backtracking) once per word repeats the same grid exploration for every word. Instead, put all words in a trie and run **one** backtracking search from each cell that walks the grid and the trie **together**. The moment the current path isn't a prefix of any word, stop.
+
+```java
+static class TNode { TNode[] next = new TNode[26]; String word; }   // word != null where a word ends
+
+static void dfsBoard(char[][] b, int r, int c, TNode parent, List<String> out) {
+    if (r < 0 || c < 0 || r >= b.length || c >= b[0].length || b[r][c] == '#') return;
+    TNode node = parent.next[b[r][c] - 'a'];
+    if (node == null) return;                                // no word continues this way: prune
+    if (node.word != null) { out.add(node.word); node.word = null; }   // found — report once
+    char saved = b[r][c];
+    b[r][c] = '#';                                           // in use on this path
+    dfsBoard(b, r + 1, c, node, out); dfsBoard(b, r - 1, c, node, out);
+    dfsBoard(b, r, c + 1, node, out); dfsBoard(b, r, c - 1, node, out);
+    b[r][c] = saved;
+}
+```
+
+Storing the full word at its end node (instead of a boolean) means you don't need to rebuild the string from the path; setting it to `null` after reporting prevents duplicates. A further optimisation removes trie leaves once their words are found, so later searches prune even earlier.
+
+## Trie or hash set?
+
+| Need | Hash set | Trie |
+| --- | --- | --- |
+| Is this exact word present? | ✅ O(L) | ✅ O(L) |
+| Any word starting with this prefix? | ❌ scan everything | ✅ O(L) |
+| Count / list words with a prefix | ❌ | ✅ |
+| Prune a search as soon as no word can match | ❌ | ✅ |
+| Memory | Lower | Higher (nodes with child arrays) |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Forgetting the end marker** — `search("ca")` returns true because the path exists.
+- **Double-counting** prefix counts when the same word is inserted twice.
+- **Reporting the same word many times** in grid search — clear the word after finding it.
+- **Not restoring grid cells** after backtracking.
+- **26-slot arrays for big alphabets** (Unicode) — use a map per node.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 14 | [Longest Common Prefix](https://leetcode.com/problems/longest-common-prefix/) | Easy | Shared paths (a trie isn't required, but fits) |
+| 208 | [Implement Trie (Prefix Tree)](https://leetcode.com/problems/implement-trie-prefix-tree/) | Medium | The template |
+| 211 | [Design Add and Search Words Data Structure](https://leetcode.com/problems/design-add-and-search-words-data-structure/) | Medium | Wildcards |
+| 648 | [Replace Words](https://leetcode.com/problems/replace-words/) | Medium | Shortest root on the path |
+| 1268 | [Search Suggestions System](https://leetcode.com/problems/search-suggestions-system/) | Medium | Autocomplete |
+| 421 | [Maximum XOR of Two Numbers in an Array](https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/) | Medium | A trie over bits |
+| 212 | [Word Search II](https://leetcode.com/problems/word-search-ii/) | Hard | Trie-guided backtracking |
+
+## Interview questions
+
+<QA q="When would you choose a trie over a hash set of words?">
+When the questions involve prefixes: checking whether any word starts with a prefix, counting or listing words by prefix, autocomplete, or pruning a search as soon as the current partial string can't become any word. A hash set answers only exact-word membership; a trie answers prefix queries in O(prefix length) at the cost of more memory.
+</QA>
+
+<QA q="Why is Word Search II with a trie faster than searching for each word separately?">
+Searching each word separately repeats the same grid exploration once per word. With a trie, one backtracking search per starting cell follows the grid and the trie together, so all words sharing a prefix share that work, and any path that isn't a prefix of some word is abandoned immediately. Removing found words (and empty trie branches) prunes even more as the search goes on.
+</QA>
+
+<Practice task="Autocomplete: after each character typed, return up to 3 dictionary words with that prefix in lexicographic order. How can the trie make each query fast?">
+
+Insert all words. At each trie node, store the (up to) 3 smallest words passing through it — insert words in sorted order and append while the node's list has fewer than 3. Each keystroke then moves one node down and returns that node's list: O(1) per character after O(total characters) preprocessing. (Sorting the words and binary-searching each prefix is a good non-trie alternative.)
+
+</Practice>
+
+<Practice task="Maximum XOR of any two numbers in an array. How does a trie over bits help?">
+
+Insert each number's 32 bits from the most significant into a binary trie (two children per node). For each number, walk the trie trying to take the **opposite** bit at every level — that greedily maximises XOR from the top bit down — and track the best. O(32 · n). It's the same structure as a word trie, with an alphabet of {0, 1}.
+
+</Practice>
+
+<Takeaways>
+
+- A trie stores words as shared prefix paths; operations cost O(word length).
+- Mark word ends explicitly; keep pass counts for prefix counting (and don't double-insert).
+- `.` wildcards branch over all children.
+- A trie lets one backtracking search look for many words at once, pruning dead prefixes.
+- Choose a trie for prefix questions; a hash set for exact lookups only.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Bit Manipulation](/dsa/patterns/bit-manipulation).
+- Sedgewick and Wayne, *Algorithms* — section 5.2, "Tries".

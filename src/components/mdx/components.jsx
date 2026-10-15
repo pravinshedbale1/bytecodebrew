@@ -6,6 +6,7 @@ import { Mermaid } from './Mermaid';
 import { HashRing } from './HashRing';
 import { Related } from './Related';
 import { Practice } from './Practice';
+import { ArrayViz } from './ArrayViz';
 
 /** ```mermaid fences become diagrams; every other <pre> renders normally. */
 function Pre({ children, ...rest }) {
@@ -59,4 +60,5 @@ export const mdxComponents = {
   HashRing,
   Related,
   Practice,
+  ArrayViz,
 };

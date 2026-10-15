@@ -1,0 +1,230 @@
+"Can you split this array into two equal-sum halves?" "Fewest coins to make 37?" "How many ways to assign + and − to reach a target?" These look unrelated, but they're all the **knapsack** family: a set of items, a budget (capacity, amount, target), and for each item a choice — **take it or leave it** (or take it again). Once you recognise the family, the table and the two loops are almost always the same — and a single detail, **the direction of the inner loop**, decides whether each item can be used once or many times.
+
+<Callout type="tip" title="How to spot it">
+
+- A list of **items** (numbers, coins, weights) and a **target or capacity**.
+- "Can you **reach** exactly X?", "**fewest** items to make X", "**how many ways** to make X", "**maximum value** within capacity".
+- "**Partition** into two subsets with equal (or closest) sums."
+- "Assign **+ or −** to each number to hit a target."
+- The target is small enough for a table (up to about 10⁴–10⁵).
+
+</Callout>
+
+## The classic 0/1 knapsack
+
+> Items with weights and values, a bag of capacity `cap`. Maximum total value, using each item at most once.
+
+**State:** `dp[i][c]` = best value using the first `i` items with capacity `c`. **Choice for item i:** skip it, or take it if it fits.
+
+```java
+static int knapsack2D(int[] wt, int[] val, int cap) {
+    int n = wt.length;
+    int[][] dp = new int[n + 1][cap + 1];
+    for (int i = 1; i <= n; i++)
+        for (int c = 0; c <= cap; c++) {
+            dp[i][c] = dp[i - 1][c];                                                // skip item i
+            if (c >= wt[i - 1])
+                dp[i][c] = Math.max(dp[i][c], dp[i - 1][c - wt[i - 1]] + val[i - 1]);   // take it
+        }
+    return dp[n][cap];
+}
+```
+
+### Shrink to one row — and why the loop goes downward
+
+Row `i` only reads row `i − 1`, so one array is enough — **if** you iterate capacity **from high to low**:
+
+```java
+static int knapsack(int[] wt, int[] val, int cap) {
+    int[] dp = new int[cap + 1];
+    for (int i = 0; i < wt.length; i++)
+        for (int c = cap; c >= wt[i]; c--)                    // DOWNWARD: each item used at most once
+            dp[c] = Math.max(dp[c], dp[c - wt[i]] + val[i]);
+    return dp[cap];
+}
+```
+
+Going downward, `dp[c − wt[i]]` hasn't been updated for item `i` yet — it still holds the value *without* this item. Going upward, it would already include item `i`, letting you take the same item again. The reference solution checks the 1D version against the 2D one and against exhaustive recursion.
+
+## The one-line rule
+
+| Each item can be used… | Inner loop over capacity | Family |
+| --- | --- | --- |
+| **at most once** | **downward** (high → low) | 0/1 knapsack |
+| **any number of times** | **upward** (low → high) | unbounded knapsack |
+
+Memorise this table. It's the difference between correct and subtly wrong in every problem below.
+
+## 0/1 problems
+
+### Partition equal subset sum
+
+> Can the array be split into two subsets with equal sums?
+
+Equivalent to: is there a subset summing to `total / 2`? A boolean knapsack:
+
+```java
+static boolean canPartition(int[] nums) {
+    int total = Arrays.stream(nums).sum();
+    if (total % 2 == 1) return false;                  // odd total can't split evenly
+    int target = total / 2;
+    boolean[] can = new boolean[target + 1];
+    can[0] = true;                                     // the empty subset
+    for (int x : nums)
+        for (int s = target; s >= x; s--)              // downward: each number once
+            can[s] = can[s] || can[s - x];
+    return can[target];
+}
+```
+
+### Target sum — rewrite the problem first
+
+> Put + or − in front of each number to reach `target`. How many ways?
+
+Let P be the sum of the numbers given `+` and N the sum given `−`. Then `P − N = target` and `P + N = total`, so **P = (total + target) / 2**. The question becomes "how many subsets sum to P?" — a counting knapsack:
+
+```java
+static int findTargetSumWays(int[] nums, int target) {
+    int total = Arrays.stream(nums).sum();
+    if (Math.abs(target) > total || (total + target) % 2 != 0) return 0;
+    int p = (total + target) / 2;
+    int[] ways = new int[p + 1];
+    ways[0] = 1;
+    for (int x : nums)
+        for (int s = p; s >= x; s--) ways[s] += ways[s - x];
+    return ways[p];
+}
+```
+
+The algebra step is the real insight — it turns a "two choices per number" search (2ⁿ) into a pseudo-polynomial DP. The reference solution checks it against trying every sign assignment, including zeros (each zero doubles the count, which this DP handles automatically).
+
+### Last stone weight II — closest split
+
+Smashing stones repeatedly leaves the difference between two groups. Minimise it: find the largest reachable subset sum not exceeding `total / 2`.
+
+```java
+static int lastStoneWeightII(int[] stones) {
+    int total = Arrays.stream(stones).sum(), half = total / 2;
+    boolean[] can = new boolean[half + 1];
+    can[0] = true;
+    for (int s : stones) for (int x = half; x >= s; x--) can[x] = can[x] || can[x - s];
+    for (int x = half; x >= 0; x--) if (can[x]) return total - 2 * x;
+    return total;
+}
+```
+
+## Unbounded problems
+
+### Coin change — fewest coins
+
+Coins can be reused, so loop **upward**. For each amount, try each coin as the **last** coin:
+
+<ArrayViz title="Coin change: fewest coins for each amount" frames={[
+  { arr: ["0:0", "1:∞", "2:∞", "3:∞", "4:∞", "5:∞", "6:∞"], highlight: [0], vars: { coins: "[1, 3, 4]" }, note: "Fewest coins for each amount 0…6. dp[0] = 0; everything else starts at ∞. Greedy (biggest coin first) gives 4+1+1 = 3 coins for 6 — DP will find better." },
+  { arr: ["0:0", "1:1", "2:∞", "3:∞", "4:∞", "5:∞", "6:∞"], pointers: { amount: 1 }, window: [1, 1], highlight: [0], vars: { tries: "1→1" }, note: "Amount 1: try each coin as the LAST coin: dp[0]+1 = 1. Best: 1 (last coin 1)." },
+  { arr: ["0:0", "1:1", "2:2", "3:∞", "4:∞", "5:∞", "6:∞"], pointers: { amount: 2 }, window: [2, 2], highlight: [1], vars: { tries: "1→2" }, note: "Amount 2: try each coin as the LAST coin: dp[1]+1 = 2. Best: 2 (last coin 1)." },
+  { arr: ["0:0", "1:1", "2:2", "3:1", "4:∞", "5:∞", "6:∞"], pointers: { amount: 3 }, window: [3, 3], highlight: [2, 0], vars: { tries: "1→3  3→1" }, note: "Amount 3: try each coin as the LAST coin: dp[2]+1 = 3, dp[0]+1 = 1. Best: 1 (last coin 3)." },
+  { arr: ["0:0", "1:1", "2:2", "3:1", "4:1", "5:∞", "6:∞"], pointers: { amount: 4 }, window: [4, 4], highlight: [3, 1, 0], vars: { tries: "1→2  3→2  4→1" }, note: "Amount 4: try each coin as the LAST coin: dp[3]+1 = 2, dp[1]+1 = 2, dp[0]+1 = 1. Best: 1 (last coin 4)." },
+  { arr: ["0:0", "1:1", "2:2", "3:1", "4:1", "5:2", "6:∞"], pointers: { amount: 5 }, window: [5, 5], highlight: [4, 2, 1], vars: { tries: "1→2  3→3  4→2" }, note: "Amount 5: try each coin as the LAST coin: dp[4]+1 = 2, dp[2]+1 = 3, dp[1]+1 = 2. Best: 2 (last coin 1)." },
+  { arr: ["0:0", "1:1", "2:2", "3:1", "4:1", "5:2", "6:2"], pointers: { amount: 6 }, window: [6, 6], highlight: [5, 3, 2], vars: { tries: "1→3  3→2  4→3" }, note: "Amount 6: try each coin as the LAST coin: dp[5]+1 = 3, dp[3]+1 = 2, dp[2]+1 = 3. Best: 2 (last coin 3)." },
+  { arr: ["0:0", "1:1", "2:2", "3:1", "4:1", "5:2", "6:2"], highlight: [6], vars: { answer: 2 }, note: "dp[6] = 2: 3 + 3. Every coin can be reused because each amount looks at SMALLER amounts already finished (the unbounded knapsack order)." }
+]} />
+
+```java
+static int coinChange(int[] coins, int amount) {
+    int[] dp = new int[amount + 1];
+    Arrays.fill(dp, amount + 1);                       // "infinity" that can't overflow when we add 1
+    dp[0] = 0;
+    for (int a = 1; a <= amount; a++)
+        for (int c : coins) if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);
+    return dp[amount] > amount ? -1 : dp[amount];
+}
+```
+
+Greedy (largest coin first) fails here: for coins `[1, 3, 4]` and amount 6, greedy gives 4 + 1 + 1 (three coins); DP finds 3 + 3 (two). That counterexample is worth remembering.
+
+### Coin change II — number of combinations
+
+> How many **combinations** of coins make the amount?
+
+```java
+static int change(int amount, int[] coins) {
+    int[] ways = new int[amount + 1];
+    ways[0] = 1;
+    for (int c : coins)                                // coins OUTSIDE
+        for (int a = c; a <= amount; a++)              // amounts inside, upward
+            ways[a] += ways[a - c];
+    return ways[amount];
+}
+```
+
+**Loop order matters for counting.** Coins in the outer loop count each **multiset** once (`1 + 2` and `2 + 1` are the same combination). Swapping the loops (amounts outside, coins inside) counts **ordered sequences** instead — the answer to a different question ("number of ways to climb with steps of these sizes").
+
+## Choosing the template
+
+| Question | Table | Combine | Loop |
+| --- | --- | --- | --- |
+| Can I reach exactly X? | `boolean` | `or` | 0/1 → downward |
+| How many subsets/combinations reach X? | `int` / `long` | `+` | coins outside; direction by reuse |
+| Fewest items to reach X | `int` (init ∞) | `min(…, +1)` | reuse → upward |
+| Maximum value within capacity | `int` | `max(…, +value)` | direction by reuse |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Wrong loop direction** — upward lets 0/1 items be reused; downward stops unbounded items being reused.
+- **Swapped loops** when counting — permutations instead of combinations.
+- **`Integer.MAX_VALUE` as infinity** — `+ 1` overflows to a negative number; use `amount + 1`.
+- **Skipping the parity / bounds checks** in partition and target sum.
+- **Huge targets** (sums up to 10⁹) — a knapsack table won't fit; look for a different approach.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 416 | [Partition Equal Subset Sum](https://leetcode.com/problems/partition-equal-subset-sum/) | Medium | Boolean 0/1 |
+| 494 | [Target Sum](https://leetcode.com/problems/target-sum/) | Medium | Algebra → counting 0/1 |
+| 1049 | [Last Stone Weight II](https://leetcode.com/problems/last-stone-weight-ii/) | Medium | Closest split |
+| 322 | [Coin Change](https://leetcode.com/problems/coin-change/) | Medium | Unbounded, minimum |
+| 518 | [Coin Change II](https://leetcode.com/problems/coin-change-ii/) | Medium | Unbounded, combinations |
+| 377 | [Combination Sum IV](https://leetcode.com/problems/combination-sum-iv/) | Medium | Loops swapped: ordered ways |
+| 279 | [Perfect Squares](https://leetcode.com/problems/perfect-squares/) | Medium | Coin change in disguise |
+| 474 | [Ones and Zeroes](https://leetcode.com/problems/ones-and-zeroes/) | Medium | Two capacities at once |
+
+## Interview questions
+
+<QA q="In the one-dimensional 0/1 knapsack, why must the capacity loop run downward?">
+When processing item i, dp[c − w] must still hold the best value without item i. Iterating capacities from high to low updates dp[c] before dp[c − w] is touched for this item, so the item is used at most once. Iterating upward would let dp[c − w] already include item i, effectively taking it again — which is exactly the unbounded knapsack.
+</QA>
+
+<QA q="Why does greedy fail for the coin change problem?">
+Taking the largest coin first can force awkward remainders. With coins 1, 3 and 4 and amount 6, greedy takes 4 and then needs 1 + 1, three coins, while 3 + 3 uses two. Greedy is only optimal for special 'canonical' coin systems like 1, 5, 10, 25. DP considers every possible last coin for every amount, so it finds the true minimum in O(amount × coins).
+</QA>
+
+<Practice task="Perfect squares: the fewest perfect square numbers (1, 4, 9, …) that sum to n. Which family, and what are the 'coins'?">
+
+It's **unbounded coin change (minimum)** where the coins are all squares ≤ n: `dp[a] = min over squares s ≤ a of dp[a − s] + 1`, with `dp[0] = 0`. O(n √n). Spotting that "squares" are just coins you can reuse is the whole trick.
+
+</Practice>
+
+<Practice task="Ones and zeroes: choose the largest number of binary strings using at most m zeros and n ones in total. What changes compared with the classic 0/1 knapsack?">
+
+There are **two capacities** (zeros and ones), so the table is 2D: `dp[z][o]` = most strings using at most z zeros and o ones. Each string is used at most once, so iterate **both** capacities downward: `dp[z][o] = max(dp[z][o], dp[z − zeros][o − ones] + 1)`. Same family, one more dimension.
+
+</Practice>
+
+<Takeaways>
+
+- Knapsack = items + budget + take/skip. Table indexed by the budget.
+- 0/1 (each once) → loop capacity downward; unbounded (reuse) → upward.
+- Counting combinations: items in the outer loop; swapped loops count ordered sequences.
+- Rewrite problems into knapsack form (target sum: P = (total + target) / 2).
+- Use `amount + 1` as infinity; greedy coin change can be wrong.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Grid DP](/dsa/patterns/dp-grid).
+- Kleinberg and Tardos, *Algorithm Design* (2005) — section 6.4, "Subset Sums and Knapsacks".

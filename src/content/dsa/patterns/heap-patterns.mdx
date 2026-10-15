@@ -1,0 +1,228 @@
+A heap (`PriorityQueue` in Java) answers one question very fast, again and again: **"what's the smallest (or largest) right now?"** — O(1) to peek, O(log n) to add or remove. Sorting gives you the full order once; a heap gives you the extreme element *repeatedly*, while items keep arriving and leaving. Three patterns cover almost every heap interview question: **top-k**, **k-way merge**, and **two heaps**.
+
+<Callout type="tip" title="How to spot it">
+
+- "The **k largest / smallest / most frequent / closest**" — top-k.
+- Data arrives as a **stream**, and you need the current best at every step.
+- **Merge** several sorted lists or arrays; "the k-th smallest across sorted rows".
+- A **running median**, or splitting values into a lower and upper half.
+- **Repeatedly** take the best available option (schedule the next task, combine the two smallest) — also the core of [Dijkstra](/dsa/patterns/shortest-paths).
+
+</Callout>
+
+## Heap basics in Java
+
+```java
+PriorityQueue<Integer> minHeap = new PriorityQueue<>();                           // smallest on top
+PriorityQueue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());  // largest on top
+PriorityQueue<int[]> byFirst = new PriorityQueue<>((x, y) -> Integer.compare(x[0], y[0]));
+
+heap.offer(x);    // O(log n)
+heap.peek();      // O(1) — look at the top
+heap.poll();      // O(log n) — remove the top
+```
+
+A heap is **not sorted** — only the top is guaranteed. Iterating a `PriorityQueue` does not give sorted order; poll repeatedly if you need that.
+
+## Pattern 1: Top-k — keep a heap of size k
+
+To find the k **largest**, keep a **min**-heap of size k. That sounds backwards, but the top of the min-heap is the *weakest* of your current top k — exactly the one to evict when a better element arrives.
+
+<ArrayViz title="The 3 largest with a size-3 min-heap" frames={[
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [] }, note: "Find the 3 largest. Keep a MIN-heap of at most 3. Its top is the weakest member of the current top 3 — the one to kick out when something better arrives." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 0 }, highlight: [0], done: [], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [5] }, note: "Heap not full yet: add 5." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 1 }, highlight: [1], done: [0], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [5, 12] }, note: "Heap not full yet: add 12." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 2 }, highlight: [2], done: [0, 1], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [3, 5, 12] }, note: "Heap not full yet: add 3." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 3 }, highlight: [3], done: [0, 1, 2], vars: { k: 3, top: 5 }, aux: { label: "min-heap (smallest first)", items: [5, 8, 12] }, note: "8 joins, the heap has 4, so pop the smallest (3). It can never be in the top 3 now." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 4 }, highlight: [4], done: [0, 1, 2, 3], vars: { k: 3, top: 8 }, aux: { label: "min-heap (smallest first)", items: [8, 12, 20] }, note: "20 joins, the heap has 4, so pop the smallest (5). It can never be in the top 3 now." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], vars: { k: 3, top: 8 }, aux: { label: "min-heap (smallest first)", items: [8, 12, 20] }, note: "7 joins, the heap has 4, so pop the smallest — 7 itself. It was never in the top 3." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], vars: { k: 3, top: 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "15 joins, the heap has 4, so pop the smallest (8). It can never be in the top 3 now." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 7 }, highlight: [7], done: [0, 1, 2, 3, 4, 5, 6], vars: { k: 3, top: 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "1 joins, the heap has 4, so pop the smallest — 1 itself. It was never in the top 3." },
+  { arr: [5, 12, 3, 8, 20, 7, 15, 1], vars: { k: 3, "3rd largest": 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "Done: the heap holds the 3 largest, and its top (12) is the 3rd largest. O(n log k) time, O(k) memory — works on a stream too." }
+]} />
+
+```java
+static int findKthLargest(int[] nums, int k) {
+    PriorityQueue<Integer> heap = new PriorityQueue<>();   // min-heap
+    for (int x : nums) {
+        heap.offer(x);
+        if (heap.size() > k) heap.poll();                  // evict the smallest: it can't be in the top k
+    }
+    return heap.peek();                                    // smallest of the k largest = k-th largest
+}
+```
+
+**O(n log k)** time and **O(k)** memory — better than sorting (O(n log n)) when k is small, and it works on a stream you can't store. (For a one-off array, [quickselect](/dsa/patterns/sorting-and-selection) is O(n) on average.)
+
+**The rule:** k largest → min-heap; k smallest → max-heap. The heap's top is always the element you'd throw out next.
+
+### K closest points to the origin
+
+"Closest" = smallest distance, so keep a **max**-heap by distance. Compare squared distances — no `Math.sqrt` needed, and no floating-point error.
+
+```java
+static int[][] kClosest(int[][] points, int k) {
+    PriorityQueue<int[]> heap = new PriorityQueue<>((p, q) -> Long.compare(dist(q), dist(p)));   // farthest on top
+    for (int[] p : points) {
+        heap.offer(p);
+        if (heap.size() > k) heap.poll();
+    }
+    return heap.toArray(new int[0][]);
+}
+static long dist(int[] p) { return (long) p[0] * p[0] + (long) p[1] * p[1]; }
+```
+
+### Top k frequent
+
+Count with a map, then run top-k on the entries by count:
+
+```java
+PriorityQueue<Map.Entry<Integer, Integer>> heap =
+        new PriorityQueue<>((x, y) -> Integer.compare(x.getValue(), y.getValue()));   // least frequent on top
+for (var e : freq.entrySet()) { heap.offer(e); if (heap.size() > k) heap.poll(); }
+```
+
+## Pattern 2: K-way merge — one candidate per list
+
+To merge k sorted lists, the next output is the smallest of the k current **heads**. Keep exactly those k heads in a min-heap; after taking one, push its successor from the same list.
+
+```java
+static List<Integer> mergeKSorted(List<int[]> lists) {
+    PriorityQueue<int[]> heap = new PriorityQueue<>((x, y) -> Integer.compare(x[0], y[0]));   // {value, list, index}
+    for (int i = 0; i < lists.size(); i++)
+        if (lists.get(i).length > 0) heap.offer(new int[] { lists.get(i)[0], i, 0 });
+    List<Integer> out = new ArrayList<>();
+    while (!heap.isEmpty()) {
+        int[] top = heap.poll();
+        out.add(top[0]);
+        int list = top[1], next = top[2] + 1;
+        if (next < lists.get(list).length) heap.offer(new int[] { lists.get(list)[next], list, next });
+    }
+    return out;
+}
+```
+
+**O(N log k)** for N total elements: the heap never holds more than k items. For linked lists, the heap stores nodes and you push `node.next`.
+
+### K-th smallest in a sorted matrix
+
+Each row is a sorted list — so it's k-way merge, stopped after k pops:
+
+```java
+static int kthSmallest(int[][] m, int k) {
+    PriorityQueue<int[]> heap = new PriorityQueue<>((x, y) -> Integer.compare(x[0], y[0]));   // {value, row, col}
+    for (int r = 0; r < Math.min(m.length, k); r++) heap.offer(new int[] { m[r][0], r, 0 });
+    for (int i = 1; i < k; i++) {
+        int[] top = heap.poll();
+        if (top[2] + 1 < m[0].length) heap.offer(new int[] { m[top[1]][top[2] + 1], top[1], top[2] + 1 });
+    }
+    return heap.peek()[0];
+}
+```
+
+(A [binary search on the answer](/dsa/patterns/binary-search-on-answer) over the value range — "how many elements are ≤ x?" — also works, in O(n log(max − min)).)
+
+## Pattern 3: Two heaps — the running median
+
+Split the numbers into a **lower half** (max-heap, so its largest is on top) and an **upper half** (min-heap, its smallest on top). Keep the sizes balanced; the median is at the tops.
+
+```java
+static class MedianFinder {
+    private final PriorityQueue<Integer> low = new PriorityQueue<>(Comparator.reverseOrder());  // smaller half
+    private final PriorityQueue<Integer> high = new PriorityQueue<>();                          // larger half
+
+    void addNum(int x) {
+        low.offer(x);                                   // 1. add to the lower half
+        high.offer(low.poll());                         // 2. its largest moves up — keeps every low ≤ every high
+        if (high.size() > low.size()) low.offer(high.poll());   // 3. rebalance: low holds the extra one
+    }
+
+    double findMedian() {
+        return low.size() > high.size() ? low.peek() : (low.peek() + (long) high.peek()) / 2.0;
+    }
+}
+```
+
+The three-step `addNum` avoids every special case: step 2 guarantees ordering between the halves, step 3 guarantees the sizes differ by at most one. Adding the two tops as `long` avoids overflow before dividing.
+
+Two heaps also solve "maximise capital" (IPO) — one heap of projects you can't afford yet sorted by cost, one of affordable projects sorted by profit — and sliding-window medians (with lazy deletion).
+
+## Pattern 4: Repeatedly take the best
+
+Some problems are just "take the top, process it, maybe push something back", until done:
+
+```java
+static int lastStoneWeight(int[] stones) {
+    PriorityQueue<Integer> heap = new PriorityQueue<>(Comparator.reverseOrder());
+    for (int s : stones) heap.offer(s);
+    while (heap.size() > 1) {
+        int y = heap.poll(), x = heap.poll();              // the two heaviest
+        if (y != x) heap.offer(y - x);
+    }
+    return heap.isEmpty() ? 0 : heap.peek();
+}
+```
+
+Task scheduling, connecting ropes at minimum cost, and Dijkstra's algorithm all have this shape.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Wrong heap direction for top-k:** k largest needs a **min**-heap of size k.
+- **Comparators that subtract** (`(a, b) -> a - b`) — overflow on large values; use `Integer.compare` / `Long.compare`.
+- **Assuming a `PriorityQueue` iterates in sorted order** — it doesn't.
+- **Pushing all elements** when only k are needed — O(n log n) instead of O(n log k).
+- **Integer overflow** averaging two medians — add as `long`.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1046 | [Last Stone Weight](https://leetcode.com/problems/last-stone-weight/) | Easy | Repeatedly take the best |
+| 703 | [Kth Largest Element in a Stream](https://leetcode.com/problems/kth-largest-element-in-a-stream/) | Easy | Size-k min-heap on a stream |
+| 215 | [Kth Largest Element in an Array](https://leetcode.com/problems/kth-largest-element-in-an-array/) | Medium | Heap vs quickselect |
+| 347 | [Top K Frequent Elements](https://leetcode.com/problems/top-k-frequent-elements/) | Medium | Count, then top-k |
+| 973 | [K Closest Points to Origin](https://leetcode.com/problems/k-closest-points-to-origin/) | Medium | Max-heap for "closest" |
+| 621 | [Task Scheduler](https://leetcode.com/problems/task-scheduler/) | Medium | Greedy with a heap |
+| 378 | [Kth Smallest Element in a Sorted Matrix](https://leetcode.com/problems/kth-smallest-element-in-a-sorted-matrix/) | Medium | K-way merge, stopped early |
+| 23 | [Merge k Sorted Lists](https://leetcode.com/problems/merge-k-sorted-lists/) | Hard | K-way merge |
+| 295 | [Find Median from Data Stream](https://leetcode.com/problems/find-median-from-data-stream/) | Hard | Two heaps |
+| 502 | [IPO](https://leetcode.com/problems/ipo/) | Hard | Two heaps for unlock-then-pick |
+
+## Interview questions
+
+<QA q="Why use a min-heap to find the k largest elements?">
+The heap holds the best k candidates seen so far, and the element you must be ready to discard is the weakest of them — the smallest. A min-heap keeps exactly that element on top, so each new number is compared with it and either replaces it or is ignored, in O(log k). A max-heap would put the strongest candidate on top, which is the one you never want to discard.
+</QA>
+
+<QA q="What's the complexity of merging k sorted lists with a heap, and why is it better than merging them one by one?">
+O(N log k) for N total elements, since each element is pushed and popped once from a heap that never exceeds k items. Merging lists one at a time into an accumulating result re-copies earlier elements repeatedly, costing up to O(N·k). Merging in pairs (divide and conquer) also achieves O(N log k).
+</QA>
+
+<Practice task="Connect n ropes with lengths given, where joining two ropes costs the sum of their lengths. Minimise the total cost. Which heap pattern, and why is it correct?">
+
+Repeatedly take the best: put all lengths in a **min-heap**, pop the two shortest, add their sum to the cost, and push the sum back, until one rope remains. Short ropes should be combined first because every rope's length is paid again each time it takes part in a later join — the same argument as Huffman coding. O(n log n).
+
+</Practice>
+
+<Practice task="Return the k most frequent words, sorted by frequency (highest first) and alphabetically for ties. How do the heap's comparator and the final order relate?">
+
+Use a size-k heap whose top is the entry to evict: **lowest** frequency, and for equal frequency the **alphabetically larger** word (it should lose ties). After processing, poll everything (which comes out worst-first) and reverse to get best-first. Getting the tie-break direction right on both the heap and the output is the whole difficulty.
+
+</Practice>
+
+<Takeaways>
+
+- A heap gives the current min or max in O(1) and updates in O(log n) — ideal when you need the extreme repeatedly.
+- Top-k: a size-k heap whose top is the one to evict (k largest → min-heap). O(n log k).
+- K-way merge: one head per list in a min-heap; push the successor after each pop. O(N log k).
+- Two heaps (max-heap lower half, min-heap upper half) maintain a running median.
+- Use `Integer.compare`; remember a `PriorityQueue` is not sorted when iterated.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Tree DFS: Think in Subtrees](/dsa/patterns/tree-dfs).
+- Robert Sedgewick and Kevin Wayne, *Algorithms* (4th ed., 2011) — section 2.4, "Priority Queues".

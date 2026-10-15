@@ -1,0 +1,242 @@
+A greedy algorithm makes the choice that looks best **right now** and never reconsiders it. When that works, it's the simplest and fastest solution there is — often one pass, O(1) memory. The catch is that it doesn't always work, and the real skill isn't writing the code (that's easy) but knowing **when a local choice is safe**. This lesson gives you the common greedy shapes and a simple way to convince yourself — and the interviewer — that the greedy choice is correct.
+
+<Callout type="tip" title="How to spot it">
+
+- There's an obvious "**best next move**": the earliest-ending interval, the smallest cookie that fits, the furthest reachable index.
+- **Sorting** by one key makes the rest of the problem a simple scan.
+- The problem asks for a min/max count, and DP feels like overkill because the choice never needs to be undone.
+- Warning sign: if you can build a **small counterexample** where the greedy choice is worse, it's DP (coin change with coins 1, 3, 4 is the classic).
+
+</Callout>
+
+## Is the greedy choice safe? The exchange argument
+
+To justify a greedy choice, argue like this:
+
+1. Take **any** optimal solution.
+2. If it doesn't make the greedy choice, **swap** its choice for the greedy one.
+3. Show the result is **still valid and no worse**.
+
+So there's always an optimal solution that agrees with the greedy choice — and by repeating the argument, greedy is optimal. You don't need a formal proof in an interview, but one sentence of this ("if an optimal answer used a bigger cookie for this child, swapping in the smaller one never hurts") is exactly what interviewers want to hear.
+
+## Shape 1: track the best reach
+
+### Jump game
+
+> `a[i]` is the maximum jump length from index i. Can you reach the last index?
+
+Trying every jump sequence is exponential, and a DP over positions is O(n²). But you only need **one number**: the furthest index reachable so far.
+
+<ArrayViz title="Jump game: one variable instead of a search" frames={[
+  { arr: [2, 3, 1, 0, 4, 0, 1], note: "Jump game: a[i] = the longest jump from i. Can you reach the last index? Instead of exploring every jump, track just one number: the furthest index reachable so far." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 0 }, highlight: [0], window: [0, 2], vars: { furthest: 2 }, note: "From 0 we can reach 2: furthest grows to 2." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 1 }, highlight: [1], window: [0, 4], vars: { furthest: 4 }, note: "From 1 we can reach 4: furthest grows to 4." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 2 }, highlight: [2], window: [0, 4], vars: { furthest: 4 }, note: "From 2 we reach at most 3 — no improvement; furthest stays 4." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 3 }, highlight: [3], window: [0, 4], vars: { furthest: 4 }, note: "From 3 we reach at most 3 — no improvement; furthest stays 4." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 4 }, highlight: [4], window: [0, 6], vars: { furthest: 8 }, note: "From 4 we can reach 8: furthest grows to 8." },
+  { arr: [2, 3, 1, 0, 4, 0, 1], window: [0, 6], vars: { furthest: 8 }, note: "Furthest ≥ last index (6): reachable. One pass, O(1) memory — no need to try jump combinations." }
+]} />
+
+```java
+static boolean canJump(int[] a) {
+    int furthest = 0;
+    for (int i = 0; i < a.length; i++) {
+        if (i > furthest) return false;               // can't even get to i
+        furthest = Math.max(furthest, i + a[i]);
+    }
+    return true;
+}
+```
+
+### Jump game II — fewest jumps
+
+Think of it as BFS by levels without a queue: every index reachable with `k` jumps forms a range; the next range ends at the furthest point reachable from it.
+
+```java
+static int jump(int[] a) {
+    int jumps = 0, curEnd = 0, furthest = 0;
+    for (int i = 0; i < a.length - 1; i++) {
+        furthest = Math.max(furthest, i + a[i]);
+        if (i == curEnd) {                            // used up the range reachable with `jumps` jumps
+            jumps++;
+            curEnd = furthest;
+        }
+    }
+    return jumps;
+}
+```
+
+The reference solution checks this against an O(n²) DP of minimum jumps.
+
+## Shape 2: sort, then match
+
+### Assign cookies
+
+> Each child needs a cookie of at least their greed; each cookie goes to at most one child. Maximise happy children.
+
+Sort both. Give each child (least greedy first) the **smallest** cookie that satisfies them — a bigger cookie could be saved for a greedier child.
+
+```java
+static int findContentChildren(int[] greed, int[] cookies) {
+    Arrays.sort(greed); Arrays.sort(cookies);
+    int child = 0;
+    for (int c = 0; c < cookies.length && child < greed.length; c++)
+        if (cookies[c] >= greed[child]) child++;
+    return child;
+}
+```
+
+### Boats to save people
+
+> Each boat holds at most two people and a weight limit. Fewest boats?
+
+Sort; the **heaviest** person must go in some boat — pair them with the **lightest** if they fit, otherwise alone.
+
+```java
+static int numRescueBoats(int[] people, int limit) {
+    Arrays.sort(people);
+    int boats = 0, light = 0, heavy = people.length - 1;
+    while (light <= heavy) {
+        if (people[light] + people[heavy] <= limit) light++;
+        heavy--;
+        boats++;
+    }
+    return boats;
+}
+```
+
+Exchange argument: if the heaviest person is paired with someone else in an optimal plan, swapping that partner for the lightest person keeps both boats valid (the lightest fits wherever the other did).
+
+(Interval greedies — keep the earliest-ending, minimum arrows — follow the same "sort, then one pass" shape; see [Intervals](/dsa/patterns/intervals).)
+
+## Shape 3: a running total that resets
+
+### Gas station
+
+> Stations in a circle with `gas[i]` and `cost[i]` to reach the next one. From which station can you complete the loop?
+
+Two facts make one pass enough:
+
+- If total gas ≥ total cost, **some** start works.
+- If your tank goes negative between `start` and `i`, then **no** station in that stretch can be the start (each would arrive at `i` with even less gas). So jump the start to `i + 1`.
+
+```java
+static int canCompleteCircuit(int[] gas, int[] cost) {
+    int total = 0, tank = 0, start = 0;
+    for (int i = 0; i < gas.length; i++) {
+        total += gas[i] - cost[i];
+        tank += gas[i] - cost[i];
+        if (tank < 0) { start = i + 1; tank = 0; }   // nothing in [start, i] can be the start
+    }
+    return total >= 0 ? start : -1;
+}
+```
+
+### Partition labels
+
+> Split a string into as many parts as possible so each letter appears in at most one part.
+
+Record each letter's **last** occurrence. Extend the current part until it reaches the last occurrence of every letter inside it; cut there.
+
+```java
+static List<Integer> partitionLabels(String s) {
+    int[] last = new int[26];
+    for (int i = 0; i < s.length(); i++) last[s.charAt(i) - 'a'] = i;
+    List<Integer> out = new ArrayList<>();
+    int start = 0, end = 0;
+    for (int i = 0; i < s.length(); i++) {
+        end = Math.max(end, last[s.charAt(i) - 'a']);
+        if (i == end) { out.add(end - start + 1); start = i + 1; }   // everything inside ends here
+    }
+    return out;
+}
+```
+
+## Shape 4: two passes for two-sided rules
+
+### Candy
+
+> Children in a line with ratings; each gets at least one candy, and a child with a higher rating than a neighbour gets more than that neighbour. Minimum total?
+
+Each rule is easy alone. Satisfy the **left** neighbour rule in a left-to-right pass, then the **right** rule in a right-to-left pass, keeping the larger requirement:
+
+```java
+static int candy(int[] r) {
+    int n = r.length;
+    int[] c = new int[n];
+    Arrays.fill(c, 1);
+    for (int i = 1; i < n; i++) if (r[i] > r[i - 1]) c[i] = c[i - 1] + 1;
+    for (int i = n - 2; i >= 0; i--) if (r[i] > r[i + 1]) c[i] = Math.max(c[i], c[i + 1] + 1);
+    return Arrays.stream(c).sum();
+}
+```
+
+## When greedy fails
+
+| Problem | Tempting greedy | Why it fails | Use |
+| --- | --- | --- | --- |
+| Coin change, coins 1, 3, 4, amount 6 | Largest coin first → 4 + 1 + 1 | 3 + 3 uses fewer | [DP](/dsa/patterns/dp-knapsack) |
+| 0/1 knapsack | Best value per weight first | Leaves unusable gaps | DP |
+| Longest increasing subsequence | Always take the next bigger number | An early big number blocks better options | DP / binary search |
+| Shortest path with negative edges | Always expand the closest node | A later negative edge changes everything | Bellman–Ford |
+
+**Test your greedy** on two or three tiny hand-made cases before coding — if you find a counterexample, switch to DP.
+
+<Callout type="warning" title="Common mistakes">
+
+- **No justification** — always give the one-sentence exchange argument.
+- **Sorting by the wrong key** (start vs end, value vs ratio).
+- **Assuming greedy works for coin change** in general.
+- **Forgetting the global check** (gas station: total ≥ 0) or the second pass (candy).
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 455 | [Assign Cookies](https://leetcode.com/problems/assign-cookies/) | Easy | Sort and match |
+| 121 | [Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/) | Easy | Track the best so far |
+| 55 | [Jump Game](https://leetcode.com/problems/jump-game/) | Medium | Furthest reach |
+| 45 | [Jump Game II](https://leetcode.com/problems/jump-game-ii/) | Medium | BFS levels without a queue |
+| 134 | [Gas Station](https://leetcode.com/problems/gas-station/) | Medium | Reset the start |
+| 763 | [Partition Labels](https://leetcode.com/problems/partition-labels/) | Medium | Last occurrences |
+| 881 | [Boats to Save People](https://leetcode.com/problems/boats-to-save-people/) | Medium | Pair heaviest with lightest |
+| 1029 | [Two City Scheduling](https://leetcode.com/problems/two-city-scheduling/) | Medium | Sort by difference |
+| 135 | [Candy](https://leetcode.com/problems/candy/) | Hard | Two passes |
+
+## Interview questions
+
+<QA q="How do you convince an interviewer that a greedy algorithm is correct?">
+Use an exchange argument: take any optimal solution that doesn't make the greedy choice at the first point where they differ, swap in the greedy choice, and show the result is still valid and no worse. Then there is an optimal solution consistent with the greedy choice, and repeating the argument covers every step. Also test small counterexamples quickly — if one breaks the greedy rule, switch to DP.
+</QA>
+
+<QA q="Why can the gas station problem skip every station between the old start and the failure point?">
+If you start at s and first run out of gas before reaching i + 1, any station k between s and i would arrive at i with no more gas than the journey from s had at k, because starting at s brought a non-negative amount of gas into k. So starting at k fails no later than i as well. The next candidate is i + 1, which makes the scan a single pass.
+</QA>
+
+<Practice task="Two city scheduling: 2n people, each with a cost to fly to city A and to city B; exactly n go to each. Minimise the total cost. What do you sort by?">
+
+Sort by `costA − costB` (how much cheaper A is than B). Send the first n (biggest savings by going to A) to A and the rest to B. Exchange argument: if someone with a larger A-advantage went to B while someone with a smaller one went to A, swapping them can only reduce the total. O(n log n).
+
+</Practice>
+
+<Practice task="Find a counterexample showing that 'always take the most valuable item that still fits' is wrong for the 0/1 knapsack.">
+
+Capacity 10, items (weight 6, value 6), (5, 5), (5, 5). Greedy by value takes the 6 and then nothing else fits: value 6. Taking the two 5s gives value 10. Greedy by value-per-weight fails similarly on other inputs — which is why 0/1 knapsack needs DP.
+
+</Practice>
+
+<Takeaways>
+
+- Greedy = make the locally best choice and never undo it; often one pass and O(1) memory.
+- Justify with an exchange argument; test small counterexamples before coding.
+- Common shapes: track the best reach, sort then match, running totals that reset, two passes for two-sided rules.
+- When a counterexample exists (coin change, 0/1 knapsack), use DP.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Tries](/dsa/patterns/tries).
+- Kleinberg and Tardos, *Algorithm Design* — chapter 4, "Greedy Algorithms" (stays-ahead and exchange arguments).

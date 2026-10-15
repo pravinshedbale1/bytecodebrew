@@ -1,0 +1,260 @@
+Linked-list bugs have a particular flavour: you change one `next` pointer and suddenly half the list is gone, or you walk into a cycle you created. Two techniques prevent almost all of that. **In-place reversal** — always save the next node before you change an arrow. **Dummy nodes** — a fake node in front of the head, so the head is never a special case. With these two, reversing, merging, deleting and reordering become routine.
+
+<Callout type="tip" title="How to spot it">
+
+- "**Reverse** the list" — the whole thing, a section `[left, right]`, or every group of k.
+- **Merge** sorted lists, **partition** around a value, **remove** nodes matching a condition.
+- "**Reorder**" or "**rotate**" a list.
+- The problem says **in place** / O(1) extra space, ruling out copying into an array.
+- Any operation that might change **which node is the head**.
+
+</Callout>
+
+## Reversal: save, flip, advance
+
+<ArrayViz title="Reversing a linked list in place" frames={[
+  { arr: ["1→2", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0 }, note: "Each cell shows a node and where its next pointer goes. To reverse, flip every arrow. Three pointers: prev (already reversed part), cur (node being flipped), next (saved before we lose it)." },
+  { arr: ["1→2", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0, next: 1 }, highlight: [0], note: "Save next = 2, so the rest of the list isn't lost when we change cur.next." },
+  { arr: ["1→∅", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0, next: 1 }, highlight: [0], note: "Flip: 1.next = ∅. Then move prev = cur, cur = next." },
+  { arr: ["1→∅", "2→3", "3→4", "4→5", "5→∅"], pointers: { prev: 0, cur: 1, next: 2 }, highlight: [1], note: "Save next = 3, so the rest of the list isn't lost when we change cur.next." },
+  { arr: ["1→∅", "2→1", "3→4", "4→5", "5→∅"], pointers: { prev: 0, cur: 1, next: 2 }, highlight: [1], note: "Flip: 2.next = 1. Then move prev = cur, cur = next." },
+  { arr: ["1→∅", "2→1", "3→4", "4→5", "5→∅"], pointers: { prev: 1, cur: 2, next: 3 }, highlight: [2], note: "Save next = 4, so the rest of the list isn't lost when we change cur.next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→5", "5→∅"], pointers: { prev: 1, cur: 2, next: 3 }, highlight: [2], note: "Flip: 3.next = 2. Then move prev = cur, cur = next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→5", "5→∅"], pointers: { prev: 2, cur: 3, next: 4 }, highlight: [3], note: "Save next = 5, so the rest of the list isn't lost when we change cur.next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→∅"], pointers: { prev: 2, cur: 3, next: 4 }, highlight: [3], note: "Flip: 4.next = 3. Then move prev = cur, cur = next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→∅"], pointers: { prev: 3, cur: 4 }, highlight: [4], note: "Save next = ∅, so the rest of the list isn't lost when we change cur.next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→4"], pointers: { prev: 3, cur: 4 }, highlight: [4], note: "Flip: 5.next = 4. Then move prev = cur, cur = next." },
+  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→4"], pointers: { "new head": 4 }, highlight: [4], note: "cur ran off the end. prev (5) is the new head: 5→4→3→2→1→∅. O(n) time, O(1) space." }
+]} />
+
+```java
+static ListNode reverseList(ListNode head) {
+    ListNode prev = null, cur = head;
+    while (cur != null) {
+        ListNode next = cur.next;      // 1. save the rest of the list
+        cur.next = prev;               // 2. flip this node's arrow
+        prev = cur;                    // 3. advance both pointers
+        cur = next;
+    }
+    return prev;                       // the old tail is the new head
+}
+```
+
+Say the three steps out loud as you write them — **save, flip, advance** — and you'll never lose the list.
+
+The recursive version is a nice "trust the function" exercise (see [Recursion](/dsa/start-here/recursion-made-easy)), but it uses O(n) stack space:
+
+```java
+static ListNode reverseRecursive(ListNode head) {
+    if (head == null || head.next == null) return head;
+    ListNode newHead = reverseRecursive(head.next);   // trust: everything after head is reversed
+    head.next.next = head;                            // the node after head now points back to it
+    head.next = null;
+    return newHead;
+}
+```
+
+## Dummy nodes: no special case for the head
+
+Whenever the head might change — deleting it, inserting before it, or building a new list — start with a dummy:
+
+```java
+ListNode dummy = new ListNode(0, head);   // dummy.next is always the real head
+// ... work with nodes, treating dummy like any other "previous" node ...
+return dummy.next;
+```
+
+### Remove all nodes with a given value
+
+```java
+static ListNode removeElements(ListNode head, int val) {
+    ListNode dummy = new ListNode(0, head), cur = dummy;
+    while (cur.next != null) {
+        if (cur.next.val == val) cur.next = cur.next.next;   // unlink it; DON'T advance (the new next may match too)
+        else cur = cur.next;
+    }
+    return dummy.next;
+}
+```
+
+Without the dummy, you'd need a separate loop to strip matching nodes off the front.
+
+### Merge two sorted lists
+
+```java
+static ListNode mergeTwoLists(ListNode a, ListNode b) {
+    ListNode dummy = new ListNode(0), tail = dummy;
+    while (a != null && b != null) {
+        if (a.val <= b.val) { tail.next = a; a = a.next; }
+        else                { tail.next = b; b = b.next; }
+        tail = tail.next;
+    }
+    tail.next = a != null ? a : b;                   // attach whatever is left
+    return dummy.next;
+}
+```
+
+The dummy is the "start of the answer"; `tail` is where the next node goes. This is also the merge step of merge sort on lists and the building block of [merging k sorted lists](/dsa/patterns/heap-patterns).
+
+## Worked problems
+
+### Reverse a sub-list `[left, right]`
+
+Walk to the node **before** the segment, then repeatedly move the node after `cur` to the front of the segment:
+
+```java
+static ListNode reverseBetween(ListNode head, int left, int right) {
+    ListNode dummy = new ListNode(0, head), before = dummy;
+    for (int i = 1; i < left; i++) before = before.next;     // node just before the segment
+    ListNode cur = before.next;                               // will end up as the segment's tail
+    for (int i = 0; i < right - left; i++) {
+        ListNode move = cur.next;                             // take the node after cur…
+        cur.next = move.next;
+        move.next = before.next;                              // …and put it at the front of the segment
+        before.next = move;
+    }
+    return dummy.next;
+}
+```
+
+The dummy handles `left = 1` (reversing from the head) with no extra code.
+
+### Reverse nodes in k-groups (hard)
+
+Check that k nodes remain; reverse exactly those k; reconnect; move on. Leftovers stay as they are.
+
+```java
+static ListNode reverseKGroup(ListNode head, int k) {
+    ListNode dummy = new ListNode(0, head), groupPrev = dummy;
+    while (true) {
+        ListNode kth = groupPrev;
+        for (int i = 0; i < k && kth != null; i++) kth = kth.next;
+        if (kth == null) break;                               // fewer than k left
+        ListNode groupNext = kth.next, prev = groupNext, cur = groupPrev.next;
+        while (cur != groupNext) {                            // standard reversal, but the reversed
+            ListNode next = cur.next;                         // group's tail points to groupNext
+            cur.next = prev;
+            prev = cur;
+            cur = next;
+        }
+        ListNode oldFirst = groupPrev.next;                   // now the last node of the group
+        groupPrev.next = kth;                                 // link the previous part to the new first
+        groupPrev = oldFirst;
+    }
+    return dummy.next;
+}
+```
+
+Starting `prev` at `groupNext` (instead of `null`) is the trick: the reversed group automatically connects to what follows.
+
+### Reorder list: L0 → Ln → L1 → Ln−1 → …
+
+Three patterns combined — and a common interview question for exactly that reason:
+
+1. Find the middle ([fast & slow](/dsa/patterns/fast-slow-pointers)).
+2. Reverse the second half.
+3. Interleave the two halves.
+
+```java
+static void reorderList(ListNode head) {
+    if (head == null) return;
+    ListNode slow = head, fast = head;
+    while (fast.next != null && fast.next.next != null) { slow = slow.next; fast = fast.next.next; }  // first middle
+    ListNode second = reverseList(slow.next);
+    slow.next = null;                                         // cut into two lists
+    for (ListNode first = head; second != null; ) {
+        ListNode n1 = first.next, n2 = second.next;
+        first.next = second;
+        second.next = n1;
+        first = n1;
+        second = n2;
+    }
+}
+```
+
+### Add two numbers (digits stored in reverse)
+
+A dummy-headed result list plus a carry:
+
+```java
+static ListNode addTwoNumbers(ListNode a, ListNode b) {
+    ListNode dummy = new ListNode(0), tail = dummy;
+    int carry = 0;
+    while (a != null || b != null || carry != 0) {           // carry != 0: don't drop a final carry
+        int sum = carry + (a != null ? a.val : 0) + (b != null ? b.val : 0);
+        tail.next = new ListNode(sum % 10);
+        tail = tail.next;
+        carry = sum / 10;
+        if (a != null) a = a.next;
+        if (b != null) b = b.next;
+    }
+    return dummy.next;
+}
+```
+
+<Callout type="tip" title="Draw it">
+For any pointer surgery, draw three or four boxes with arrows and update the drawing one assignment at a time. It takes thirty seconds and catches nearly every bug — interviewers like seeing it, too.
+</Callout>
+
+<Callout type="warning" title="Common mistakes">
+
+- **Changing `cur.next` before saving it** — the rest of the list is lost.
+- **Returning `head` instead of `prev`** after reversing — `head` is now the tail.
+- **Advancing after deleting** — the node that slid into place is skipped.
+- **Forgetting to cut** (`slow.next = null`) when splitting — creates a cycle when interleaving.
+- **Dropping the final carry** in addition problems.
+- **Special-casing the head** — use a dummy instead.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 206 | [Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/) | Easy | Save, flip, advance |
+| 21 | [Merge Two Sorted Lists](https://leetcode.com/problems/merge-two-sorted-lists/) | Easy | Dummy + tail |
+| 203 | [Remove Linked List Elements](https://leetcode.com/problems/remove-linked-list-elements/) | Easy | Dummy for head deletion |
+| 2 | [Add Two Numbers](https://leetcode.com/problems/add-two-numbers/) | Medium | Building a list with a carry |
+| 92 | [Reverse Linked List II](https://leetcode.com/problems/reverse-linked-list-ii/) | Medium | Reversing a segment |
+| 24 | [Swap Nodes in Pairs](https://leetcode.com/problems/swap-nodes-in-pairs/) | Medium | k-group with k = 2 |
+| 86 | [Partition List](https://leetcode.com/problems/partition-list/) | Medium | Two dummy lists, then join |
+| 143 | [Reorder List](https://leetcode.com/problems/reorder-list/) | Medium | Middle + reverse + interleave |
+| 61 | [Rotate List](https://leetcode.com/problems/rotate-list/) | Medium | Length, close a ring, cut |
+| 25 | [Reverse Nodes in k-Group](https://leetcode.com/problems/reverse-nodes-in-k-group/) | Hard | Reversal with reconnection |
+
+## Interview questions
+
+<QA q="Why use a dummy node?">
+It gives every real node, including the head, a previous node. Operations that delete, insert or rebuild at the front then need no special case, and the answer is always dummy.next — even when the original head was removed. It costs one extra node and removes a common source of null-pointer bugs.
+</QA>
+
+<QA q="Iterative or recursive reversal?">
+Iterative: O(n) time and O(1) extra space, and no risk of stack overflow on long lists. Recursive: also O(n) time but O(n) stack space, which can overflow for lists of tens of thousands of nodes in Java. The recursive version is elegant and worth knowing, but the iterative one is the safer default in production and interviews.
+</QA>
+
+<Practice task="Partition a list so all nodes less than x come before nodes greater than or equal to x, keeping the original relative order in each part. How do dummy nodes make this simple?">
+
+Build **two** lists as you walk: one with a dummy head for nodes `< x`, one with a dummy head for the rest, appending each node to the tail of the right list. At the end, connect the first list's tail to the second list's real head (`lessTail.next = greaterDummy.next`) and terminate the second list (`greaterTail.next = null` — otherwise an old pointer can create a cycle). Return `lessDummy.next`. O(n), O(1) extra space, and the order is preserved because you only ever append.
+
+</Practice>
+
+<Practice task="Rotate a list to the right by k places (k may be larger than the length). Outline the steps.">
+
+Walk once to find the length n and the tail. Reduce `k = k % n` (if 0, return head). Connect the tail to the head to make a **ring**, then walk `n − k` steps from the head to find the new tail; the node after it is the new head; cut the ring there. O(n), no extra space. The `k % n` step is the edge case most people miss.
+
+</Practice>
+
+<Takeaways>
+
+- Reversal: save next, flip the arrow, advance — and return `prev`.
+- Use a dummy node whenever the head can change; return `dummy.next`.
+- Merging and partitioning: build the answer with a dummy head and a tail pointer.
+- Complex reorders combine patterns: middle (fast/slow) + reverse + interleave.
+- Draw the boxes and arrows; update one assignment at a time.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Stack Patterns](/dsa/patterns/stack-patterns).
+- Nick Parlante, "Linked List Problems" (Stanford CS Education Library) — a classic set of pointer exercises.

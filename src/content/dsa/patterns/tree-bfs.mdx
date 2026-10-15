@@ -1,0 +1,200 @@
+DFS dives deep along one branch before trying the next. **BFS** (breadth-first search) does the opposite: it visits the tree **level by level** — the root, then all its children, then all their children. Whenever a question mentions levels, rows, "the view from the side", or "the shallowest", BFS is the natural fit, and it uses one data structure you already know: a **queue**.
+
+<Callout type="tip" title="How to spot it">
+
+- The answer is organised **by level**: level order, average per level, largest value per row, zigzag order.
+- "What can you see from the **right / left side**?" — the first or last node of each level.
+- "**Minimum depth**", "nearest leaf", "shortest number of steps" — BFS finds the shallowest answer first and can stop early.
+- Connecting nodes on the **same level** (next pointers).
+- On graphs and grids, the same idea finds **shortest paths** in unweighted graphs — see [Graph Traversal](/dsa/patterns/graph-traversal).
+
+</Callout>
+
+## The template: freeze the level size
+
+A queue naturally gives level order: children are added to the back while the current level is processed from the front. The one trick is to **record the queue's size at the start of each round** — that's exactly how many nodes belong to the current level.
+
+<ArrayViz title="Level-order traversal with a queue" frames={[
+  { arr: [1, 2, 3, 4, 5, 6, 7], aux: { label: "queue", items: [1] }, note: "Tree: 1 has children 2 and 3; 2 has 4 and 5; 3 has 6; 5 has 7. (Cells list the nodes in level order.) Start with the root in the queue." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [0], done: [], aux: { label: "queue", items: [1] }, vars: { level: 0, size: 1 }, note: "The queue holds exactly level 0: 1 node. Freeze size = 1 and process that many — children added now belong to the NEXT level." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 0 }, highlight: [0], done: [], aux: { label: "queue", items: [2, 3] }, vars: { level: 0, "this level": "[1]" }, note: "Poll 1, add its children 2 and 3 to the back." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [1, 2], done: [0], aux: { label: "queue", items: [2, 3] }, vars: { level: 1, size: 2 }, note: "The queue holds exactly level 1: 2 nodes. Freeze size = 2 and process that many — children added now belong to the NEXT level." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 1 }, highlight: [1], done: [0], aux: { label: "queue", items: [3, 4, 5] }, vars: { level: 1, "this level": "[2]" }, note: "Poll 2, add its children 4 and 5 to the back." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 2 }, highlight: [2], done: [0, 1], aux: { label: "queue", items: [4, 5, 6] }, vars: { level: 1, "this level": "[2, 3]" }, note: "Poll 3, add its children 6 to the back." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [3, 4, 5], done: [0, 1, 2], aux: { label: "queue", items: [4, 5, 6] }, vars: { level: 2, size: 3 }, note: "The queue holds exactly level 2: 3 nodes. Freeze size = 3 and process that many — children added now belong to the NEXT level." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 3 }, highlight: [3], done: [0, 1, 2], aux: { label: "queue", items: [5, 6] }, vars: { level: 2, "this level": "[4]" }, note: "Poll 4 — a leaf, nothing to add." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 4 }, highlight: [4], done: [0, 1, 2, 3], aux: { label: "queue", items: [6, 7] }, vars: { level: 2, "this level": "[4, 5]" }, note: "Poll 5, add its children 7 to the back." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], aux: { label: "queue", items: [7] }, vars: { level: 2, "this level": "[4, 5, 6]" }, note: "Poll 6 — a leaf, nothing to add." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "queue", items: [7] }, vars: { level: 3, size: 1 }, note: "The queue holds exactly level 3: 1 node. Freeze size = 1 and process that many — children added now belong to the NEXT level." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "queue", items: [] }, vars: { level: 3, "this level": "[7]" }, note: "Poll 7 — a leaf, nothing to add." },
+  { arr: [1, 2, 3, 4, 5, 6, 7], done: [0, 1, 2, 3, 4, 5, 6], aux: { label: "queue", items: [] }, vars: { result: "[1] [2,3] [4,5,6] [7]" }, note: "Queue empty. Each level was collected separately because we processed exactly `size` nodes per round. O(n) time, O(width) memory." }
+]} />
+
+```java
+static List<List<Integer>> levelOrder(TreeNode root) {
+    List<List<Integer>> out = new ArrayList<>();
+    if (root == null) return out;
+    Deque<TreeNode> queue = new ArrayDeque<>();
+    queue.offer(root);
+    while (!queue.isEmpty()) {
+        int size = queue.size();                      // everything in the queue now = one level
+        List<Integer> level = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            TreeNode n = queue.poll();
+            level.add(n.val);
+            if (n.left != null) queue.offer(n.left);  // children belong to the next level
+            if (n.right != null) queue.offer(n.right);
+        }
+        out.add(level);
+    }
+    return out;
+}
+```
+
+Every "per level" question is this template with a different line inside the `for` loop.
+
+## Worked problems
+
+### Right side view
+
+The last node processed on each level is the one visible from the right:
+
+```java
+static List<Integer> rightSideView(TreeNode root) {
+    List<Integer> out = new ArrayList<>();
+    if (root == null) return out;
+    Deque<TreeNode> queue = new ArrayDeque<>(List.of(root));
+    while (!queue.isEmpty()) {
+        int size = queue.size();
+        for (int i = 0; i < size; i++) {
+            TreeNode n = queue.poll();
+            if (i == size - 1) out.add(n.val);       // last of the level
+            if (n.left != null) queue.offer(n.left);
+            if (n.right != null) queue.offer(n.right);
+        }
+    }
+    return out;
+}
+```
+
+(A DFS version also works: visit right before left and record the first node seen at each new depth.)
+
+### Minimum depth — stop at the first leaf
+
+BFS explores shallow levels first, so the **first leaf** it meets is the shallowest. It can return immediately, without exploring deep branches:
+
+```java
+static int minDepth(TreeNode root) {
+    if (root == null) return 0;
+    Deque<TreeNode> queue = new ArrayDeque<>(List.of(root));
+    for (int depth = 1; ; depth++) {
+        int size = queue.size();
+        for (int i = 0; i < size; i++) {
+            TreeNode n = queue.poll();
+            if (n.left == null && n.right == null) return depth;   // first leaf = minimum depth
+            if (n.left != null) queue.offer(n.left);
+            if (n.right != null) queue.offer(n.right);
+        }
+    }
+}
+```
+
+On a tree that is short on one side and very deep on the other, this is much faster than a DFS that explores everything. It's also a common trap for DFS solutions: `1 + min(left, right)` is wrong when one child is null (that side isn't a path to a leaf).
+
+### Zigzag level order
+
+Alternate the direction each level. Building each level with `addFirst`/`addLast` avoids reversing lists:
+
+```java
+static List<List<Integer>> zigzagLevelOrder(TreeNode root) {
+    List<List<Integer>> out = new ArrayList<>();
+    if (root == null) return out;
+    Deque<TreeNode> queue = new ArrayDeque<>(List.of(root));
+    boolean leftToRight = true;
+    while (!queue.isEmpty()) {
+        int size = queue.size();
+        LinkedList<Integer> level = new LinkedList<>();
+        for (int i = 0; i < size; i++) {
+            TreeNode n = queue.poll();
+            if (leftToRight) level.addLast(n.val); else level.addFirst(n.val);
+            if (n.left != null) queue.offer(n.left);
+            if (n.right != null) queue.offer(n.right);
+        }
+        out.add(level);
+        leftToRight = !leftToRight;
+    }
+    return out;
+}
+```
+
+The **traversal** order never changes — only the order values are written into each level's list.
+
+## BFS or DFS?
+
+| Question | Better choice | Why |
+| --- | --- | --- |
+| Anything "per level" | BFS | The queue already groups levels |
+| Shallowest / nearest / fewest steps | BFS | First hit is the answer; stop early |
+| Heights, path sums, subtree properties | DFS | Children's answers combine at the parent |
+| Very wide tree, memory tight | DFS | BFS holds a whole level (up to n/2 nodes) |
+| Very deep tree, recursion risky | BFS (or iterative DFS) | No call stack |
+
+Both visit every node once: **O(n) time**. Memory differs: BFS uses O(width), recursive DFS uses O(height).
+
+<Callout type="warning" title="Common mistakes">
+
+- **Not freezing the size** — reading `queue.size()` inside the loop condition while adding children mixes levels together.
+- **Offering null children** — check before `offer`; `ArrayDeque` throws on `null`.
+- **Using DFS for minimum depth** with `1 + min(left, right)` — wrong when one child is missing.
+- **Forgetting the empty tree** — return an empty list before starting.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 102 | [Binary Tree Level Order Traversal](https://leetcode.com/problems/binary-tree-level-order-traversal/) | Medium | The template |
+| 637 | [Average of Levels in Binary Tree](https://leetcode.com/problems/average-of-levels-in-binary-tree/) | Easy | One line changed |
+| 111 | [Minimum Depth of Binary Tree](https://leetcode.com/problems/minimum-depth-of-binary-tree/) | Easy | Stop at the first leaf |
+| 199 | [Binary Tree Right Side View](https://leetcode.com/problems/binary-tree-right-side-view/) | Medium | Last of each level |
+| 103 | [Binary Tree Zigzag Level Order Traversal](https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/) | Medium | Write order vs visit order |
+| 515 | [Find Largest Value in Each Tree Row](https://leetcode.com/problems/find-largest-value-in-each-tree-row/) | Medium | Per-level aggregate |
+| 116 | [Populating Next Right Pointers in Each Node](https://leetcode.com/problems/populating-next-right-pointers-in-each-node/) | Medium | Linking within a level |
+| 662 | [Maximum Width of Binary Tree](https://leetcode.com/problems/maximum-width-of-binary-tree/) | Medium | Carrying positions in the queue |
+
+## Interview questions
+
+<QA q="How do you separate levels in a BFS over a tree?">
+Record the queue's size at the start of each iteration of the outer loop and poll exactly that many nodes in the inner loop. Those nodes form the current level; any children offered meanwhile go to the back of the queue and form the next level. An alternative is to enqueue (node, depth) pairs, but the size snapshot is simpler.
+</QA>
+
+<QA q="Why is BFS better than DFS for minimum depth?">
+BFS visits nodes in order of depth, so the first leaf it reaches is guaranteed to be the shallowest, and it can return immediately without exploring deeper parts of the tree. DFS has to explore every path to be sure, and the naive recursive formula 1 + min(left, right) is wrong when a node has only one child, because the missing side is not a path to a leaf.
+</QA>
+
+<Practice task="Find the maximum width of a binary tree, where width counts the null positions between the leftmost and rightmost nodes on a level. What do you store in the queue?">
+
+Store each node **with its position** as if the tree were a complete binary tree: the root is 0, a node at position p has children at `2p` and `2p + 1`. Width of a level = last position − first position + 1. To avoid overflow on deep trees, subtract the level's first position from every position at the start of the level (re-basing), and use `long`.
+
+</Practice>
+
+<Practice task="Connect each node to the next node on its right in the same level (next pointers), using O(1) extra space for a perfect binary tree. How can the previous level replace the queue?">
+
+Once a level's `next` pointers are set, that level **is** a linked list you can walk. Walk level i using `next`, and for each node set `left.next = right` and `right.next = node.next == null ? null : node.next.left`. Then move down to the leftmost node of the next level. No queue needed — the level you just built serves as one.
+
+</Practice>
+
+<Takeaways>
+
+- BFS processes a tree level by level with a queue.
+- Freeze `size = queue.size()` at the start of each round to separate levels.
+- BFS finds the shallowest answer first — stop early for minimum depth and nearest-node questions.
+- Choose by question type: per-level and nearest → BFS; subtree combinations → DFS.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Binary Search Trees](/dsa/patterns/bst-patterns).
+- [Graphs & Grids: BFS and DFS](/dsa/patterns/graph-traversal) — the same BFS on graphs.

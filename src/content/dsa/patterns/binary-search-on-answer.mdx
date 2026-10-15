@@ -1,0 +1,204 @@
+Some problems look nothing like binary search. "What's the minimum ship capacity to deliver everything in 5 days?" "What's the slowest eating speed that still finishes in time?" There's no sorted array in sight. But there's a hidden one: **the range of possible answers**. And the question "does capacity *c* work?" has a beautiful property — once it's yes, it stays yes for every bigger *c*. That's a false…true flip, and the [binary search template](/dsa/patterns/binary-search) finds it.
+
+This is one of the highest-value patterns to learn: it turns many "hard-looking" optimisation problems into a simple check plus ten lines of search.
+
+<Callout type="tip" title="How to spot it">
+
+- The question asks for the **minimum** value that makes something possible, or the **maximum** value that keeps something possible: "minimum capacity", "smallest speed", "largest minimum distance", "minimise the maximum".
+- Given a candidate answer, **checking whether it works is easy** (usually one greedy pass), but finding the answer directly is hard.
+- **Monotonic feasibility**: if x works, every larger x works (or every smaller x).
+- The answer is a number in a known range, and the range can be huge (up to 10⁹) — log₂ of 10⁹ is only 30 checks.
+
+</Callout>
+
+## The recipe
+
+1. **Answer range:** the smallest and largest possible answers (`lo`, `hi`).
+2. **Feasibility check:** `ok(x)` — "can it be done with x?" — usually a greedy simulation in O(n).
+3. **Monotonicity:** confirm that once `ok` becomes true it stays true.
+4. **Binary search** for the first `x` where `ok(x)` is true.
+
+Total cost: O(n · log(range)).
+
+<ArrayViz title="Koko eating bananas: search the speeds, not the piles" frames={[
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], vars: { piles: "[3, 6, 7, 11]", h: 8 }, note: "Koko eats bananas at speed k per hour (one pile per hour at most). The cells are not data — they are the possible ANSWERS k = 1…11. Find the smallest k that finishes within 8 hours." },
+  { arr: ["✗1", "✗2", "✗3", "✓4", "✓5", "✓6", "✓7", "✓8", "✓9", "✓10", "✓11"], note: "If speed k works, any faster speed also works: the answers go ✗ ✗ ✗ … ✓ ✓ ✓. That monotonic flip is all binary search needs — but we never compute every cell." },
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 0, mid: 5, hi: 10 }, window: [0, 10], highlight: [5], vars: { k: 6, hours: 6, ok: true }, note: "Speed 6 takes 6 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 0, mid: 2, hi: 5 }, window: [0, 5], highlight: [2], vars: { k: 3, hours: 10, ok: false }, note: "Speed 3 takes 10 hours > 8 — too slow, and so is everything slower: lo = mid + 1." },
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 3, mid: 4, hi: 5 }, window: [3, 5], highlight: [4], vars: { k: 5, hours: 8, ok: true }, note: "Speed 5 takes 8 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 3, mid: 3, hi: 4 }, window: [3, 4], highlight: [3], vars: { k: 4, hours: 8, ok: true }, note: "Speed 4 takes 8 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
+  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { answer: 3 }, highlight: [3], vars: { k: 4, hours: 8 }, note: "Smallest workable speed: 4. Only 4 feasibility checks, each O(n) — O(n log max)." }
+]} />
+
+```java
+/** First x in [lo, hi] where ok(x) is true. Same template as before, over a long range. */
+static long firstTrue(long lo, long hi, LongPredicate ok) {
+    while (lo < hi) {
+        long mid = lo + (hi - lo) / 2;
+        if (ok.test(mid)) hi = mid; else lo = mid + 1;
+    }
+    return lo;
+}
+```
+
+## Worked problems
+
+### Koko eating bananas — minimum speed
+
+> Piles of bananas, `h` hours. At speed `k`, each hour Koko eats up to `k` bananas from one pile. Smallest `k` to finish in `h` hours?
+
+- **Range:** 1 to the largest pile (eating faster than the largest pile never helps).
+- **Check:** hours needed at speed `k` = Σ ⌈pile / k⌉.
+
+```java
+static int minEatingSpeed(int[] piles, int h) {
+    int max = Arrays.stream(piles).max().getAsInt();
+    return (int) firstTrue(1, max, k -> canFinish(piles, h, k));
+}
+
+static boolean canFinish(int[] piles, int h, long k) {
+    long hours = 0;
+    for (int p : piles) hours += (p + k - 1) / k;          // ceil(p / k) with integers only
+    return hours <= h;
+}
+```
+
+`(p + k − 1) / k` is the integer ceiling — avoid `Math.ceil` on doubles, which invites rounding bugs.
+
+### Capacity to ship packages within D days — minimise the maximum
+
+> Packages must ship in order. Minimum ship capacity to ship them all within `days` days?
+
+- **Range:** the heaviest package (anything less can't carry it) to the total weight (one day carries everything).
+- **Check:** greedily load each day until the next package doesn't fit, then start a new day; count days.
+
+```java
+static int shipWithinDays(int[] weights, int days) {
+    long lo = Arrays.stream(weights).max().getAsInt();
+    long hi = Arrays.stream(weights).asLongStream().sum();
+    return (int) firstTrue(lo, hi, cap -> canShip(weights, days, cap));
+}
+
+static boolean canShip(int[] weights, int days, long cap) {
+    int used = 1; long load = 0;
+    for (int w : weights) {
+        if (load + w > cap) { used++; load = 0; }          // doesn't fit: start a new day
+        load += w;
+    }
+    return used <= days;
+}
+```
+
+**Split Array Largest Sum** ("split into k contiguous parts, minimise the largest part's sum") is *the same problem* with different words — the parts are days and the largest sum is the capacity. Recognising that is exactly the pattern skill.
+
+### Minimum days to make m bouquets
+
+```java
+static int minDays(int[] bloomDay, int m, int k) {
+    if ((long) m * k > bloomDay.length) return -1;         // impossible no matter how long we wait
+    int max = Arrays.stream(bloomDay).max().getAsInt();
+    return (int) firstTrue(1, max, d -> canMake(bloomDay, m, k, d));
+}
+
+static boolean canMake(int[] bloom, int m, int k, long day) {
+    int bouquets = 0, run = 0;
+    for (int b : bloom) {
+        run = b <= day ? run + 1 : 0;                      // adjacent bloomed flowers
+        if (run == k) { bouquets++; run = 0; }
+    }
+    return bouquets >= m;
+}
+```
+
+Check impossibility **before** searching — the template assumes the top of the range is feasible.
+
+### Maximise the minimum — flip the condition
+
+> Place `m` balls in baskets at given positions so the **minimum** distance between any two is as **large** as possible. (Also known as "aggressive cows".)
+
+Now feasibility goes the other way: a small gap is easy, a large gap eventually fails — true…true, false…false. Search for the **first gap that fails**, then subtract one:
+
+```java
+static int maxDistance(int[] position, int m) {
+    Arrays.sort(position);
+    long range = position[position.length - 1] - position[0];
+    return (int) firstTrue(1, range + 1, d -> !canPlace(position, m, d)) - 1;
+}
+
+static boolean canPlace(int[] sorted, int m, long gap) {
+    int placed = 1; long last = sorted[0];
+    for (int i = 1; i < sorted.length && placed < m; i++)
+        if (sorted[i] - last >= gap) { placed++; last = sorted[i]; }    // place as early as possible
+    return placed >= m;
+}
+```
+
+The greedy check ("place each ball at the first position at least `gap` after the last") is safe: placing earlier never leaves less room for the balls that follow.
+
+## Minimise vs maximise
+
+| Wording | Feasibility as x grows | Search for |
+| --- | --- | --- |
+| "Minimum x such that it's possible" | false…false, true…true | first true |
+| "Minimise the maximum …" | false…false, true…true | first true |
+| "Maximum x such that it's possible" | true…true, false…false | (first false) − 1 |
+| "Maximise the minimum …" | true…true, false…false | (first false) − 1 |
+
+<Callout type="warning" title="Common mistakes">
+
+- **A wrong range.** Starting too high skips the answer; `hi` must be feasible. Starting too *low* can break the check itself: with a capacity below the heaviest package, `canShip` puts that package on a day of its own and wrongly reports success — which is why `lo` starts at the heaviest package.
+- **Not checking impossibility** before searching when no answer exists.
+- **Overflow in the check** — sums of weights or `m * k` need `long`.
+- **A non-greedy or wrong check** — the check must be exact; test it on small cases by hand.
+- **Searching for "first true" when you need "last true"** — read whether you minimise or maximise.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 875 | [Koko Eating Bananas](https://leetcode.com/problems/koko-eating-bananas/) | Medium | The recipe, step by step |
+| 1283 | [Find the Smallest Divisor Given a Threshold](https://leetcode.com/problems/find-the-smallest-divisor-given-a-threshold/) | Medium | Same shape, different check |
+| 1011 | [Capacity To Ship Packages Within D Days](https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/) | Medium | Minimise the maximum |
+| 1482 | [Minimum Number of Days to Make m Bouquets](https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/) | Medium | Impossibility check first |
+| 2187 | [Minimum Time to Complete Trips](https://leetcode.com/problems/minimum-time-to-complete-trips/) | Medium | Huge ranges; overflow |
+| 1552 | [Magnetic Force Between Two Balls](https://leetcode.com/problems/magnetic-force-between-two-balls/) | Medium | Maximise the minimum |
+| 410 | [Split Array Largest Sum](https://leetcode.com/problems/split-array-largest-sum/) | Hard | Same as ship capacity |
+
+## Interview questions
+
+<QA q="How do you know binary search on the answer applies?">
+Three signs: the question asks for an optimal numeric value (minimum capacity, maximum distance), checking whether a given value works is straightforward, and feasibility is monotonic — if a value works, every larger (or every smaller) value also works. Then binary search over the range of possible answers, calling the check at each step, for O(check × log(range)).
+</QA>
+
+<QA q="Why is the greedy check correct for ship capacity?">
+Given a capacity, loading each day with as many consecutive packages as fit can only use the fewest days: any valid plan can be transformed into the greedy plan without increasing the number of days, because moving a package earlier into a day with spare room never forces an extra day later. So the greedy count is the true minimum number of days for that capacity, which makes the yes/no answer exact.
+</QA>
+
+<Practice task="You have n workers and jobs that take given times; each worker takes a contiguous block of jobs. Minimise the time until all jobs finish. Name the pattern, the range and the check.">
+
+Binary search on the answer, "minimise the maximum". **Range:** from the longest single job to the total of all jobs. **Check(T):** greedily assign consecutive jobs to a worker until the next would exceed T, then move to the next worker; feasible if at most n workers are used. It's ship-capacity again — days became workers.
+
+</Practice>
+
+<Practice task="Find the smallest positive divisor d such that the sum of ⌈nums[i] / d⌉ is at most a threshold. What's the range of d, and why is the condition monotonic?">
+
+Range: 1 to max(nums) (at that point every term is 1, the smallest possible sum). Monotonic because increasing d never increases any ⌈nums[i] / d⌉, so the total only goes down — once it's under the threshold, it stays under. Search for the first d where the sum ≤ threshold, using the integer ceiling `(x + d − 1) / d`.
+
+</Practice>
+
+<Takeaways>
+
+- When the answer is a number and "does x work?" flips once, binary search over the answers.
+- Recipe: range → feasibility check (often greedy, O(n)) → confirm monotonic → first true.
+- Minimise / minimise-the-max → first true; maximise / maximise-the-min → first false − 1.
+- Many "different" problems share one check (ship capacity = split array = painters).
+- Use `long` in checks, integer ceilings, and test impossibility first.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Sorting as a Tool](/dsa/patterns/sorting-and-selection).
+- [Binary Search](/dsa/patterns/binary-search) — the template this lesson reuses.

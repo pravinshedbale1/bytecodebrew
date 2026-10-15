@@ -1,5 +1,6 @@
 import { systemDesign } from './tracks/systemDesign';
-import { dsa, csFundamentals, behavioral } from './tracks/placeholders';
+import { dsa } from './tracks/dsa';
+import { csFundamentals, behavioral } from './tracks/placeholders';
 import { hasContent } from '../content/registry';
 
 /**

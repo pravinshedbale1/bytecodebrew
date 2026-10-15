@@ -1,0 +1,232 @@
+Bit manipulation feels like a bag of magic tricks, but interviews use only a handful of them — and each one follows from how binary numbers work. You need about six operators, three identities, and the confidence to look at a number as a row of 32 switches. In return you get O(1)-space solutions to problems like "find the number that appears once", and a compact way to represent subsets.
+
+<Callout type="tip" title="How to spot it">
+
+- "Every element appears **twice** (or three times) **except one**" — XOR or bit counting.
+- "Do it **without extra space**" for missing/duplicate numbers in a known range.
+- Questions about **powers of two**, **counting 1-bits**, reversing bits.
+- **Subsets** of a small set (n ≤ 20): a bitmask represents each subset.
+- "Add two numbers **without +**".
+
+</Callout>
+
+## The operators
+
+| Operator | Meaning | Example (4-bit) |
+| --- | --- | --- |
+| `a & b` | AND: 1 where both are 1 | `1100 & 1010 = 1000` |
+| `a \| b` | OR: 1 where either is 1 | `1100 \| 1010 = 1110` |
+| `a ^ b` | XOR: 1 where they differ | `1100 ^ 1010 = 0110` |
+| `~a` | NOT: flip every bit | `~1100 = 0011` |
+| `a << k` | shift left: multiply by 2ᵏ | `0011 << 2 = 1100` |
+| `a >> k` | arithmetic shift right (keeps the sign) | divide by 2ᵏ, rounding down |
+| `a >>> k` | logical shift right (fills with 0) | use when treating bits as unsigned |
+
+Java `int`s are 32-bit two's complement: `-1` is all 1s, and `>>` copies the sign bit. When you loop over bits of a possibly negative number, use `>>>` or a fixed loop of 32 — otherwise `n >> 1` on a negative number never reaches 0.
+
+## Single bits
+
+```java
+boolean isSet = (n & (1 << i)) != 0;   // test bit i
+n |= (1 << i);                         // set bit i
+n &= ~(1 << i);                        // clear bit i
+n ^= (1 << i);                         // flip bit i
+int lowest = n & -n;                   // isolate the lowest set bit
+```
+
+## Identity 1: `n & (n − 1)` clears the lowest set bit
+
+Subtracting 1 turns the lowest 1-bit into 0 and every 0 below it into 1. AND-ing with `n` wipes all of them.
+
+<ArrayViz title="Counting set bits with n & (n − 1)" frames={[
+  { arr: ["1", "0", "1", "1", "0", "1", "0", "0"], vars: { n: 180, "set bits": 0 }, note: "Count the 1-bits of 180 (binary 10110100). Trick: n & (n − 1) clears the LOWEST set bit. Subtracting 1 flips that bit to 0 and every 0 below it to 1; AND-ing with n wipes them all." },
+  { arr: ["1", "0", "1", "1", "0", "1", "0", "0"], highlight: [5], vars: { n: 180, "n − 1": "10110011", "set bits": 0 }, note: "Lowest set bit is highlighted. n − 1 = 10110011." },
+  { arr: ["1", "0", "1", "1", "0", "0", "0", "0"], vars: { n: 176, "set bits": 1 }, note: "n & (n − 1) = 10110000 — one bit gone. count = 1." },
+  { arr: ["1", "0", "1", "1", "0", "0", "0", "0"], highlight: [3], vars: { n: 176, "n − 1": "10101111", "set bits": 1 }, note: "Lowest set bit is highlighted. n − 1 = 10101111." },
+  { arr: ["1", "0", "1", "0", "0", "0", "0", "0"], vars: { n: 160, "set bits": 2 }, note: "n & (n − 1) = 10100000 — one bit gone. count = 2." },
+  { arr: ["1", "0", "1", "0", "0", "0", "0", "0"], highlight: [2], vars: { n: 160, "n − 1": "10011111", "set bits": 2 }, note: "Lowest set bit is highlighted. n − 1 = 10011111." },
+  { arr: ["1", "0", "0", "0", "0", "0", "0", "0"], vars: { n: 128, "set bits": 3 }, note: "n & (n − 1) = 10000000 — one bit gone. count = 3." },
+  { arr: ["1", "0", "0", "0", "0", "0", "0", "0"], highlight: [0], vars: { n: 128, "n − 1": "01111111", "set bits": 3 }, note: "Lowest set bit is highlighted. n − 1 = 01111111." },
+  { arr: ["0", "0", "0", "0", "0", "0", "0", "0"], vars: { n: 0, "set bits": 4 }, note: "n & (n − 1) = 00000000 — one bit gone. count = 4." },
+  { arr: ["0", "0", "0", "0", "0", "0", "0", "0"], vars: { "set bits": 4 }, note: "n is 0 after 4 steps: 4 set bits. The loop runs once per 1-bit, not once per bit. (Also: n > 0 && (n & (n − 1)) == 0 means \"power of two\".)" }
+]} />
+
+```java
+static int hammingWeight(int n) {               // number of 1-bits
+    int count = 0;
+    while (n != 0) { n &= n - 1; count++; }      // one iteration per set bit
+    return count;
+}
+
+static boolean isPowerOfTwo(int n) {             // exactly one bit set
+    return n > 0 && (n & (n - 1)) == 0;
+}
+```
+
+(`Integer.bitCount(n)` exists — mention it, but interviewers usually want the loop.)
+
+### Counting bits for every number up to n
+
+`i >> 1` drops the last bit, so `bits(i) = bits(i >> 1) + (i & 1)` — a one-line DP:
+
+```java
+static int[] countBits(int n) {
+    int[] r = new int[n + 1];
+    for (int i = 1; i <= n; i++) r[i] = r[i >> 1] + (i & 1);
+    return r;
+}
+```
+
+## Identity 2: XOR cancels pairs
+
+`x ^ x = 0` and `x ^ 0 = x`, and XOR is commutative. XOR everything together and every pair cancels, leaving the odd one out:
+
+```java
+static int singleNumber(int[] a) {               // every value appears twice except one
+    int x = 0;
+    for (int v : a) x ^= v;
+    return x;
+}
+```
+
+### Missing number (0 … n, one missing)
+
+XOR all indexes 0…n with all values; everything present cancels, leaving the missing number:
+
+```java
+static int missingNumber(int[] a) {
+    int x = a.length;                            // include n itself
+    for (int i = 0; i < a.length; i++) x ^= i ^ a[i];
+    return x;
+}
+```
+
+(The sum formula `n(n + 1)/2 − sum` also works; XOR has no overflow concerns.)
+
+## Identity 3: count each bit position
+
+> Every value appears **three** times except one. Find it.
+
+XOR doesn't cancel triples. Instead, count how many numbers have each bit set: for the triples it's a multiple of 3, so any remainder belongs to the single number.
+
+```java
+static int singleNumberII(int[] a) {
+    int result = 0;
+    for (int bit = 0; bit < 32; bit++) {
+        int count = 0;
+        for (int v : a) count += (v >> bit) & 1;
+        if (count % 3 != 0) result |= 1 << bit;  // includes bit 31, so negative answers work too
+    }
+    return result;
+}
+```
+
+O(32 · n), O(1) space, and it generalises to "appears k times".
+
+## Other classics
+
+### Reverse bits
+
+```java
+static int reverseBits(int n) {
+    int r = 0;
+    for (int i = 0; i < 32; i++) {
+        r = (r << 1) | (n & 1);                  // append n's lowest bit to r
+        n >>>= 1;                                // logical shift: works for negatives
+    }
+    return r;
+}
+```
+
+### Add without `+`
+
+XOR adds without carrying; AND finds where carries happen, shifted one place left. Repeat until there's nothing left to carry:
+
+```java
+static int getSum(int a, int b) {
+    while (b != 0) {
+        int carry = (a & b) << 1;
+        a ^= b;
+        b = carry;
+    }
+    return a;                                    // works for negatives too (two's complement)
+}
+```
+
+## Bitmasks as subsets
+
+For a set of n ≤ 20 items, the integers `0 … 2ⁿ − 1` represent every subset: bit i set means "item i is in the subset".
+
+```java
+static List<List<Integer>> subsetsByMask(int[] nums) {
+    List<List<Integer>> out = new ArrayList<>();
+    for (int mask = 0; mask < (1 << nums.length); mask++) {
+        List<Integer> s = new ArrayList<>();
+        for (int i = 0; i < nums.length; i++) if ((mask & (1 << i)) != 0) s.add(nums[i]);
+        out.add(s);
+    }
+    return out;
+}
+```
+
+This is the iterative twin of [backtracking](/dsa/patterns/backtracking) subsets, and the foundation of **bitmask DP** (states like "which cities have been visited"), used for small-n problems such as the travelling salesman.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Operator precedence:** `n & 1 == 0` parses as `n & (1 == 0)` — always parenthesise: `(n & 1) == 0`.
+- **`>>` on negative numbers** in loops that wait for 0 — use `>>>` or loop exactly 32 times.
+- **`1 << 31`** is negative in Java; `1 << 32` is `1` (shifts are taken mod 32) — use `1L` for 64-bit masks.
+- **Overflow** in sum-based tricks — XOR avoids it.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 136 | [Single Number](https://leetcode.com/problems/single-number/) | Easy | XOR cancels pairs |
+| 191 | [Number of 1 Bits](https://leetcode.com/problems/number-of-1-bits/) | Easy | n & (n − 1) |
+| 231 | [Power of Two](https://leetcode.com/problems/power-of-two/) | Easy | One bit set |
+| 268 | [Missing Number](https://leetcode.com/problems/missing-number/) | Easy | XOR indexes and values |
+| 338 | [Counting Bits](https://leetcode.com/problems/counting-bits/) | Easy | bits(i >> 1) + (i & 1) |
+| 190 | [Reverse Bits](https://leetcode.com/problems/reverse-bits/) | Easy | >>> and building bit by bit |
+| 137 | [Single Number II](https://leetcode.com/problems/single-number-ii/) | Medium | Count each bit mod 3 |
+| 371 | [Sum of Two Integers](https://leetcode.com/problems/sum-of-two-integers/) | Medium | XOR + carry |
+| 260 | [Single Number III](https://leetcode.com/problems/single-number-iii/) | Medium | Split by a differing bit |
+
+## Interview questions
+
+<QA q="Why does n & (n − 1) clear the lowest set bit?">
+Subtracting 1 from n flips the lowest 1-bit to 0 and turns every 0-bit below it into 1, leaving the higher bits unchanged. ANDing with n keeps the higher bits (identical in both) and zeroes the lowest set bit and everything below it (they differ). Repeating it until n is 0 counts the set bits in as many iterations as there are 1s, and a single application tests whether n is a power of two.
+</QA>
+
+<QA q="How do you find the single number when every other number appears exactly twice, in O(1) space?">
+XOR all the numbers together. XOR is commutative and associative, x XOR x = 0 and x XOR 0 = x, so every pair cancels out and only the number appearing once remains. It's O(n) time and O(1) space, with no overflow concerns.
+</QA>
+
+<Practice task="Two numbers appear once and every other number appears twice. Find both in O(n) time and O(1) space.">
+
+XOR everything to get `x = a ^ b` (non-zero since a ≠ b). Pick any set bit of x, e.g. `diff = x & -x`; a and b differ at that bit. Split all numbers into two groups by whether they have that bit, and XOR each group separately — pairs still cancel within each group, leaving a in one and b in the other.
+
+</Practice>
+
+<Practice task="Given n ≤ 15 tasks and a list of task pairs that can't run together, how would you represent and iterate over all valid groups?">
+
+Use a bitmask per subset (2¹⁵ = 32,768 masks). Precompute for each task a `conflict[i]` mask of tasks it conflicts with; a subset `mask` is valid if for every task i in it, `(mask & conflict[i]) == 0`. Iterate `mask` from 0 to 2ⁿ − 1. Bitmasks make subset checks a couple of AND operations — and they're the state for bitmask DP if you then need, say, the minimum number of valid groups covering all tasks.
+
+</Practice>
+
+<Takeaways>
+
+- Know the operators, and `>>` vs `>>>` for negative numbers.
+- `n & (n − 1)` clears the lowest set bit: count bits, test powers of two.
+- XOR cancels pairs: single number, missing number.
+- Counting each bit position handles "appears k times".
+- Bitmasks represent subsets of small sets and power bitmask DP; parenthesise bit expressions.
+
+</Takeaways>
+
+## Further reading
+
+- Henry S. Warren, *Hacker's Delight* (2nd ed., 2012) — the reference for bit tricks.
+- [The Pattern Picker](/dsa/playbook/pattern-picker) — choosing among all the patterns in this course.

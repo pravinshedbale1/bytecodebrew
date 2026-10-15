@@ -1,0 +1,205 @@
+Linked lists take away the thing arrays give you for free: you can't jump to the middle or look at "the 3rd node from the end" — you can only walk forward. Two pointers moving at **different speeds** (or with a fixed **gap**) recover most of what you lost, in one pass and O(1) memory. They find middles, detect cycles, locate where a cycle begins, and find the k-th node from the end.
+
+<Callout type="tip" title="How to spot it">
+
+- A **linked list** problem asking for the **middle**, the **k-th from the end**, or whether there's a **cycle**.
+- "Where does the cycle start?" or "find the duplicate" with O(1) extra space.
+- A sequence defined by "next = f(current)" (like repeatedly summing squares of digits) that might **loop forever**.
+- You'd normally use a `HashSet<Node>` of visited nodes, but the problem asks for **O(1) space**.
+
+</Callout>
+
+## The middle: fast moves twice as fast
+
+When `fast` reaches the end, `slow` has gone half as far — it's in the middle.
+
+```java
+static ListNode middleNode(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null && fast.next != null) {     // fast can take two steps
+        slow = slow.next;
+        fast = fast.next.next;
+    }
+    return slow;                                    // the second middle for even lengths
+}
+```
+
+For lists `1 2 3 4`, this returns `3` (the second middle). If you need the **first** middle (useful for splitting a list into two halves for merge sort), use `while (fast.next != null && fast.next.next != null)` instead.
+
+## Cycles: Floyd's tortoise and hare
+
+<ArrayViz title="Detect the cycle, then find where it starts" frames={[
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 0, fast: 0 }, note: "A list whose last node (7) points back to 3 — a cycle. slow moves 1 step, fast moves 2. If there is no cycle, fast falls off the end. If there is one, fast must eventually land on slow." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 1, fast: 2 }, highlight: [], vars: { step: 1 }, note: "slow → 2, fast → 3." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 2, fast: 4 }, highlight: [], vars: { step: 2 }, note: "slow → 3, fast → 5." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 3, fast: 6 }, highlight: [], vars: { step: 3 }, note: "slow → 4, fast → 7." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 4, fast: 3 }, highlight: [], vars: { step: 4 }, note: "slow → 5, fast → 4." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { "slow=fast": 5 }, highlight: [5], vars: { step: 5 }, note: "They meet at node 6 after 5 steps: there is a cycle. (Inside the cycle, fast gains 1 node per step, so it can't jump over slow.)" },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { p: 0, slow: 5 }, vars: {  }, note: "Phase 2 — where does the cycle start? Put a new pointer p at the head; move p and slow ONE step at a time." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { p: 1, slow: 6 }, highlight: [], note: "p → 2, slow → 7." },
+  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { "p=slow": 2 }, highlight: [2], note: "They meet at node 3 — the cycle's entrance. (Why: head-to-entrance distance = meeting-point-to-entrance distance, plus whole laps of the cycle — proof below.)" }
+]} />
+
+```java
+static boolean hasCycle(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null && fast.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+        if (slow == fast) return true;              // fast lapped slow inside the cycle
+    }
+    return false;                                   // fast reached the end: no cycle
+}
+```
+
+**Why they must meet:** once both are inside the cycle, the gap between them shrinks by exactly one node per step (fast gains one). A gap that shrinks by one can't skip zero, so they collide within one lap.
+
+### Where does the cycle start?
+
+```java
+static ListNode detectCycle(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null && fast.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+        if (slow == fast) {
+            ListNode p = head;                      // phase 2: one pointer from the head,
+            while (p != slow) {                     // one from the meeting point,
+                p = p.next;                         // both at speed 1
+                slow = slow.next;
+            }
+            return p;                               // they meet at the entrance
+        }
+    }
+    return null;
+}
+```
+
+**Why phase 2 works.** Let `a` = distance from head to the entrance, `b` = distance from the entrance to the meeting point, `C` = cycle length. When they meet, slow has walked `a + b` and fast has walked twice that, `2(a + b)`. Fast's extra distance `a + b` is a whole number of laps: `a + b = kC`. So `a = kC − b`: walking `a` steps from the meeting point (which is `b` into the cycle) lands exactly on the entrance — after some whole laps. A pointer walking `a` steps from the head also lands on the entrance. Same speed, same distance → they meet there.
+
+You don't need to reproduce the algebra in an interview, but knowing that it exists (and roughly why) is a strong signal.
+
+## The k-th from the end: a fixed gap
+
+Move a `lead` pointer `n` steps ahead, then move both until `lead` hits the end. `lag` is now `n` from the end. A **dummy node** in front of the head handles removing the head itself without a special case.
+
+```java
+static ListNode removeNthFromEnd(ListNode head, int n) {
+    ListNode dummy = new ListNode(0, head), lead = dummy, lag = dummy;
+    for (int i = 0; i <= n; i++) lead = lead.next;  // gap of n + 1, so lag stops BEFORE the target
+    while (lead != null) { lead = lead.next; lag = lag.next; }
+    lag.next = lag.next.next;                       // unlink the n-th from the end
+    return dummy.next;
+}
+```
+
+## Worked problems beyond lists
+
+### Palindrome linked list (O(1) space)
+
+Find the middle, reverse the second half (see [In-Place Reversal](/dsa/patterns/linked-list-manipulation)), then compare the halves.
+
+```java
+static boolean isPalindrome(ListNode head) {
+    ListNode slow = head, fast = head;
+    while (fast != null && fast.next != null) { slow = slow.next; fast = fast.next.next; }
+    ListNode second = reverseList(slow);            // reverse from the middle on
+    for (ListNode a = head, b = second; b != null; a = a.next, b = b.next)
+        if (a.val != b.val) return false;
+    return true;                                    // restore with reverseList(second) if the caller needs the list intact
+}
+```
+
+### Happy number — a cycle in a number sequence
+
+> Replace a number by the sum of the squares of its digits. Does it reach 1, or loop forever?
+
+The sequence is a linked list where `next(x) = digitSquareSum(x)`. It always ends in a cycle (values quickly drop below a few hundred), so run Floyd: happy if the cycle is the fixed point 1.
+
+```java
+static boolean isHappy(int n) {
+    int slow = n, fast = n;
+    do {
+        slow = digitSquareSum(slow);
+        fast = digitSquareSum(digitSquareSum(fast));
+    } while (slow != fast);
+    return slow == 1;
+}
+```
+
+### Find the duplicate number — a cycle in an array
+
+> `n + 1` numbers, each in `[1, n]`, exactly one value repeated (possibly many times). O(1) extra space, don't modify the array.
+
+Treat index `i` as a node pointing to `nums[i]`. Because two indexes point to the duplicate value, that value is the **entrance of a cycle** — and phase 2 of Floyd finds it.
+
+```java
+static int findDuplicate(int[] nums) {
+    int slow = nums[0], fast = nums[0];
+    do { slow = nums[slow]; fast = nums[nums[fast]]; } while (slow != fast);
+    int p = nums[0];
+    while (p != slow) { p = nums[p]; slow = nums[slow]; }
+    return p;
+}
+```
+
+This one is famous because the pattern is so well hidden. The signal: "values are valid indexes" + "O(1) space" + "a repeat".
+
+<Callout type="warning" title="Common mistakes">
+
+- **Null checks in the wrong order:** check `fast != null` before `fast.next != null`.
+- **First vs second middle:** pick the loop condition that matches what you need.
+- **Forgetting the dummy node** when the head itself might be removed.
+- **Starting phase 2 from the wrong place:** one pointer from the head, one from the **meeting point**.
+- **Using `==` on node values instead of node references** for cycle detection — compare nodes.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 876 | [Middle of the Linked List](https://leetcode.com/problems/middle-of-the-linked-list/) | Easy | Speed 1 vs speed 2 |
+| 141 | [Linked List Cycle](https://leetcode.com/problems/linked-list-cycle/) | Easy | Floyd, phase 1 |
+| 202 | [Happy Number](https://leetcode.com/problems/happy-number/) | Easy | Cycles in a sequence |
+| 234 | [Palindrome Linked List](https://leetcode.com/problems/palindrome-linked-list/) | Easy | Middle + reverse |
+| 19 | [Remove Nth Node From End of List](https://leetcode.com/problems/remove-nth-node-from-end-of-list/) | Medium | Fixed gap + dummy |
+| 142 | [Linked List Cycle II](https://leetcode.com/problems/linked-list-cycle-ii/) | Medium | Floyd, phase 2 |
+| 143 | [Reorder List](https://leetcode.com/problems/reorder-list/) | Medium | Middle + reverse + interleave |
+| 287 | [Find the Duplicate Number](https://leetcode.com/problems/find-the-duplicate-number/) | Medium | A hidden linked list |
+
+## Interview questions
+
+<QA q="Why do the fast and slow pointers always meet if there is a cycle?">
+Once both are inside the cycle, each step moves slow by one and fast by two, so the distance from fast to slow along the cycle decreases by exactly one per step. A distance that decreases by one each step must reach zero, so they meet within one lap of the cycle — fast can never jump over slow.
+</QA>
+
+<QA q="How would you detect a cycle if O(n) extra space were allowed? Why prefer Floyd's algorithm?">
+Walk the list storing visited node references in a HashSet; the first node already in the set is the cycle's entrance. That's simple and O(n) time, but O(n) space. Floyd's algorithm also runs in O(n) time with O(1) space and finds the entrance too, which matters for memory-constrained settings and is usually what the interviewer is looking for.
+</QA>
+
+<Practice task="Return the node where two singly linked lists intersect (they share a tail), or null. O(n + m) time and O(1) space. Which two-pointer idea fits?">
+
+Walk two pointers, one per list; when one reaches the end, redirect it to the **other** list's head. Both then travel `lenA + lenB` steps in total, so they line up and meet at the intersection (or both become null together if there isn't one). It's the "fixed gap" idea in disguise: switching lists cancels the length difference.
+
+</Practice>
+
+<Practice task="In a circular array, each value tells you how many steps to jump (positive = forward, negative = backward). Is there a cycle of length more than 1 that moves in one direction only? What would you reuse from this lesson?">
+
+Treat `i → (i + nums[i]) mod n` (with `Math.floorMod`) as a linked list and run fast/slow pointers from each start, stopping if the direction changes or a step lands on itself (a length-1 cycle). Mark nodes on failed paths as visited (e.g. set them to 0) so the total work stays O(n). It's LeetCode 457, Circular Array Loop — Floyd on an implicit list.
+
+</Practice>
+
+<Takeaways>
+
+- Speed 1 vs speed 2: the middle, and cycle detection in O(1) space.
+- Floyd phase 2: restart one pointer at the head; both at speed 1 meet at the cycle entrance.
+- A fixed gap finds the k-th from the end; a dummy node removes special cases at the head.
+- "Next = f(current)" sequences and "values are indexes" arrays are hidden linked lists.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [In-Place Reversal & Dummy Nodes](/dsa/patterns/linked-list-manipulation).
+- Donald Knuth, *The Art of Computer Programming*, Vol. 2 — section 3.1, exercise 6 (Floyd's cycle-finding method).

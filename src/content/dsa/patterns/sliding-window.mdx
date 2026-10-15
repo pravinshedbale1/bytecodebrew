@@ -1,0 +1,291 @@
+"Find the longest substring without repeating characters." The brute force checks every substring — O(n²) of them, each checked in O(n). But neighbouring substrings overlap almost completely: `abcd` and `bcde` share three letters. A sliding window exploits that overlap. Instead of rebuilding each substring, you keep **one window** and update it as it slides: add one element on the right, remove one on the left. O(n).
+
+<Callout type="tip" title="How to spot it">
+
+- The problem asks about a **contiguous** subarray or substring ("consecutive", "substring", "window", "subarray").
+- It asks for the **longest**, **shortest**, or **number of** windows satisfying a condition.
+- The condition can be **updated incrementally** when one element enters or leaves (a sum, a count of characters, number of distinct values).
+- **Fixed size k** windows: "maximum sum of k consecutive…", "every window of size k".
+- Not the same as "subsequence" — subsequences can skip elements; windows can't.
+
+</Callout>
+
+## The idea: expand right, shrink left
+
+Keep two indexes, `L` and `R`, marking a window. Move `R` forward one step at a time to **expand**. Whenever the window breaks the rule, move `L` forward to **shrink** it until it's valid again. Record the answer whenever the window is valid.
+
+<ArrayViz title="Longest substring without repeating characters" frames={[
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], note: "Longest substring with no repeated letter. The window [L, R] is always valid; R grows it, L shrinks it only when a letter repeats.", vars: { best: 0 } },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 0, R: 0 }, window: [0, 0], vars: { best: 1, length: 1 }, aux: { label: "window", items: ["a"] }, note: "Expand: add 'a'. No repeats, window length 1 — a new best." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 0, R: 1 }, window: [0, 1], vars: { best: 2, length: 2 }, aux: { label: "window", items: ["a", "b"] }, note: "Expand: add 'b'. No repeats, window length 2 — a new best." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 0, R: 2 }, window: [0, 2], vars: { best: 3, length: 3 }, aux: { label: "window", items: ["a", "b", "c"] }, note: "Expand: add 'c'. No repeats, window length 3 — a new best." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 0, R: 3 }, window: [0, 3], highlight: [1, 3], vars: { best: 3 }, aux: { label: "window", items: ["a", "b", "c", "b"] }, note: "Expand: add 'b'. Now 'b' appears twice — the window is invalid." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 1, R: 3 }, window: [1, 3], vars: { best: 3 }, aux: { label: "window", items: ["b", "c", "b"] }, note: "Shrink: L++. Still a repeat." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 2, R: 3 }, window: [2, 3], vars: { best: 3 }, aux: { label: "window", items: ["c", "b"] }, note: "Shrink: L++. The repeated 'b' has left the window — valid again." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 2, R: 3 }, window: [2, 3], vars: { best: 3, length: 2 }, aux: { label: "window", items: ["c", "b"] }, note: "Record: window length 2. Best stays 3." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 2, R: 4 }, window: [2, 4], vars: { best: 3, length: 3 }, aux: { label: "window", items: ["c", "b", "d"] }, note: "Expand: add 'd'. No repeats, window length 3." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 2, R: 5 }, window: [2, 5], highlight: [2, 5], vars: { best: 3 }, aux: { label: "window", items: ["c", "b", "d", "c"] }, note: "Expand: add 'c'. Now 'c' appears twice — the window is invalid." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 3, R: 5 }, window: [3, 5], vars: { best: 3 }, aux: { label: "window", items: ["b", "d", "c"] }, note: "Shrink: L++. The repeated 'c' has left the window — valid again." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 3, R: 5 }, window: [3, 5], vars: { best: 3, length: 3 }, aux: { label: "window", items: ["b", "d", "c"] }, note: "Record: window length 3. Best stays 3." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 3, R: 6 }, window: [3, 6], vars: { best: 4, length: 4 }, aux: { label: "window", items: ["b", "d", "c", "a"] }, note: "Expand: add 'a'. No repeats, window length 4 — a new best." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 3, R: 7 }, window: [3, 7], highlight: [3, 7], vars: { best: 4 }, aux: { label: "window", items: ["b", "d", "c", "a", "b"] }, note: "Expand: add 'b'. Now 'b' appears twice — the window is invalid." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 4, R: 7 }, window: [4, 7], vars: { best: 4 }, aux: { label: "window", items: ["d", "c", "a", "b"] }, note: "Shrink: L++. The repeated 'b' has left the window — valid again." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], pointers: { L: 4, R: 7 }, window: [4, 7], vars: { best: 4, length: 4 }, aux: { label: "window", items: ["d", "c", "a", "b"] }, note: "Record: window length 4. Best stays 4." },
+  { arr: ["a", "b", "c", "b", "d", "c", "a", "b"], vars: { best: 4 }, note: "Done: longest = 4. Each index entered the window once and left at most once — O(n), even with the inner while loop." }
+]} />
+
+**Why it's O(n):** `R` moves forward n times; `L` also only moves forward, at most n times in total. The `while` loop inside the `for` doesn't make it O(n²) — across the whole run it does at most n steps.
+
+## Three templates
+
+### 1. Fixed size k
+
+```java
+long sum = 0, best;
+for (int i = 0; i < k; i++) sum += a[i];            // first window
+best = sum;
+for (int right = k; right < a.length; right++) {
+    sum += a[right] - a[right - k];                  // add the new element, drop the oldest
+    best = Math.max(best, sum);
+}
+```
+
+### 2. Variable size — longest valid window
+
+```java
+int left = 0, best = 0;
+for (int right = 0; right < n; right++) {
+    add(a[right]);                                   // 1. expand
+    while (/* window is invalid */) remove(a[left++]);   // 2. shrink until valid
+    best = Math.max(best, right - left + 1);         // 3. valid: record
+}
+```
+
+### 3. Variable size — shortest valid window
+
+```java
+int left = 0, best = Integer.MAX_VALUE;
+for (int right = 0; right < n; right++) {
+    add(a[right]);                                   // 1. expand
+    while (/* window is valid */) {                  // 2. shrink while STILL valid,
+        best = Math.min(best, right - left + 1);     //    recording each valid size
+        remove(a[left++]);
+    }
+}
+```
+
+The difference between templates 2 and 3 is the `while` condition: for the **longest** window, shrink while it's **invalid**; for the **shortest**, shrink while it's **valid**.
+
+## Worked problems
+
+### Maximum sum of k consecutive elements (fixed)
+
+```java
+static long maxSumOfSizeK(int[] a, int k) {
+    long sum = 0, best;
+    for (int i = 0; i < k; i++) sum += a[i];
+    best = sum;
+    for (int right = k; right < a.length; right++) {
+        sum += a[right] - a[right - k];
+        best = Math.max(best, sum);
+    }
+    return best;
+}
+```
+
+### Longest substring without repeating characters (longest)
+
+```java
+static int lengthOfLongestSubstring(String s) {
+    Map<Character, Integer> count = new HashMap<>();
+    int left = 0, best = 0;
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        count.merge(c, 1, Integer::sum);                       // expand
+        while (count.get(c) > 1) {                             // shrink while invalid
+            count.merge(s.charAt(left), -1, Integer::sum);
+            left++;
+        }
+        best = Math.max(best, right - left + 1);               // record
+    }
+    return best;
+}
+```
+
+### Minimum size subarray sum (shortest)
+
+> Positive integers. Find the shortest subarray with sum ≥ target.
+
+```java
+static int minSubArrayLen(int target, int[] nums) {
+    int left = 0, sum = 0, best = Integer.MAX_VALUE;
+    for (int right = 0; right < nums.length; right++) {
+        sum += nums[right];
+        while (sum >= target) {                                // shrink while still valid
+            best = Math.min(best, right - left + 1);
+            sum -= nums[left++];
+        }
+    }
+    return best == Integer.MAX_VALUE ? 0 : best;
+}
+```
+
+### Longest repeating character replacement
+
+> You may change up to k letters. Find the longest substring that can become all the same letter.
+
+A window is valid when `length − (count of its most frequent letter) ≤ k` — that's how many letters you'd need to change.
+
+```java
+static int characterReplacement(String s, int k) {
+    int[] count = new int[26];
+    int left = 0, maxFreq = 0, best = 0;
+    for (int right = 0; right < s.length(); right++) {
+        maxFreq = Math.max(maxFreq, ++count[s.charAt(right) - 'a']);
+        while (right - left + 1 - maxFreq > k) {           // more than k changes needed
+            count[s.charAt(left) - 'a']--;
+            left++;
+        }
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}
+```
+
+A subtle point: `maxFreq` is never decreased when shrinking. It can be stale (too high), but that only makes the window look *more* valid than it is when it couldn't beat the best anyway — so the answer stays correct. It's a known trick; if it feels too clever, recomputing the max over 26 counts is also O(26 n).
+
+### Find all anagrams of p in s (fixed size, compare counts)
+
+```java
+static List<Integer> findAnagrams(String s, String p) {
+    List<Integer> out = new ArrayList<>();
+    if (p.length() > s.length()) return out;
+    int[] need = new int[26], have = new int[26];
+    for (char c : p.toCharArray()) need[c - 'a']++;
+    for (int right = 0; right < s.length(); right++) {
+        have[s.charAt(right) - 'a']++;
+        if (right >= p.length()) have[s.charAt(right - p.length()) - 'a']--;   // the char that left
+        if (right >= p.length() - 1 && Arrays.equals(have, need)) out.add(right - p.length() + 1);
+    }
+    return out;
+}
+```
+
+Comparing two 26-element arrays is O(26), so the whole thing is O(26·n) = O(n).
+
+### Minimum window substring (hard, shortest)
+
+> Smallest window of s containing every character of t (with multiplicity).
+
+Track how many characters of t are still **missing**; the window is valid when `missing == 0`.
+
+```java
+static String minWindow(String s, String t) {
+    Map<Character, Integer> need = new HashMap<>();
+    for (char c : t.toCharArray()) need.merge(c, 1, Integer::sum);
+    int missing = t.length(), left = 0, bestStart = 0, bestLen = Integer.MAX_VALUE;
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        if (need.containsKey(c)) { if (need.get(c) > 0) missing--; need.merge(c, -1, Integer::sum); }
+        while (missing == 0) {                                 // covers t: shrink while still valid
+            if (right - left + 1 < bestLen) { bestLen = right - left + 1; bestStart = left; }
+            char d = s.charAt(left++);
+            if (need.containsKey(d)) { need.merge(d, 1, Integer::sum); if (need.get(d) > 0) missing++; }
+        }
+    }
+    return bestLen == Integer.MAX_VALUE ? "" : s.substring(bestStart, bestStart + bestLen);
+}
+```
+
+`need` can go negative — that just means the window holds extra copies of a character, which is fine.
+
+## The "exactly K" trick
+
+Some problems ask for the number of subarrays with **exactly** K of something (K distinct numbers, K odd numbers). Exactly is awkward for a window, but **at most** is easy — so use:
+
+**exactly(K) = atMost(K) − atMost(K − 1)**
+
+```java
+static int subarraysWithKDistinct(int[] nums, int k) { return atMostK(nums, k) - atMostK(nums, k - 1); }
+
+static int atMostK(int[] nums, int k) {
+    Map<Integer, Integer> count = new HashMap<>();
+    int left = 0, total = 0;
+    for (int right = 0; right < nums.length; right++) {
+        count.merge(nums[right], 1, Integer::sum);
+        while (count.size() > k) {
+            if (count.merge(nums[left], -1, Integer::sum) == 0) count.remove(nums[left]);
+            left++;
+        }
+        total += right - left + 1;            // all subarrays ending at right that start in [left, right]
+    }
+    return total;
+}
+```
+
+`total += right − left + 1` is the counting move: every valid window `[left, right]` contains `right − left + 1` valid subarrays that end at `right`.
+
+## When a sliding window does NOT work
+
+The shrinking step assumes that **removing an element from the left makes the window "smaller" in the measured sense** — the sum goes down, the count of a letter goes down. With **negative numbers**, removing an element can increase the sum, so "shrink while sum ≥ target" breaks. For sums with negatives, use [prefix sums with a hash map](/dsa/patterns/prefix-sums) (or a monotonic deque for some variants).
+
+<Callout type="warning" title="Common mistakes">
+
+- **Using a window when elements can be negative** and the condition is about sums.
+- **Recording the answer in the wrong place:** after shrinking for "longest", inside the shrink loop for "shortest".
+- **Off-by-one in the length:** the window `[left, right]` has `right − left + 1` elements.
+- **Forgetting to remove the element that leaves** a fixed window (`a[right − k]`).
+- **Confusing substring with subsequence** — a window must be contiguous.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 643 | [Maximum Average Subarray I](https://leetcode.com/problems/maximum-average-subarray-i/) | Easy | Fixed window |
+| 3 | [Longest Substring Without Repeating Characters](https://leetcode.com/problems/longest-substring-without-repeating-characters/) | Medium | Longest valid window |
+| 209 | [Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/) | Medium | Shortest valid window |
+| 1004 | [Max Consecutive Ones III](https://leetcode.com/problems/max-consecutive-ones-iii/) | Medium | Window with a budget of k |
+| 424 | [Longest Repeating Character Replacement](https://leetcode.com/problems/longest-repeating-character-replacement/) | Medium | Validity via the most frequent count |
+| 567 | [Permutation in String](https://leetcode.com/problems/permutation-in-string/) | Medium | Fixed window, compare counts |
+| 438 | [Find All Anagrams in a String](https://leetcode.com/problems/find-all-anagrams-in-a-string/) | Medium | Same, collect all positions |
+| 76 | [Minimum Window Substring](https://leetcode.com/problems/minimum-window-substring/) | Hard | "Missing" counter + shortest window |
+| 992 | [Subarrays with K Different Integers](https://leetcode.com/problems/subarrays-with-k-different-integers/) | Hard | exactly = atMost(K) − atMost(K−1) |
+
+## Interview questions
+
+<QA q="Your sliding-window solution has a while loop inside a for loop. Why is it O(n), not O(n²)?">
+Both pointers only move forward. The right pointer advances n times in the for loop, and the left pointer can advance at most n times in total across all iterations of the while loop, because it never moves back. So the total work is at most 2n pointer moves plus O(1) work per move — O(n).
+</QA>
+
+<QA q="Can you use a sliding window to find the longest subarray with sum equal to k when the array has negative numbers?">
+Not reliably. The window relies on monotonic behaviour: adding elements moves the measure one way and removing them moves it back. With negatives, shrinking the window can increase the sum, so you can't tell which way to move. Use prefix sums with a hash map from prefix value to its earliest index instead, which is O(n) and handles negatives.
+</QA>
+
+<Practice task="Spot the pattern and choose the template: 'Given a binary array, return the maximum number of consecutive 1s if you can flip at most k zeros.'">
+
+Contiguous + longest + a condition you can update incrementally (number of zeros in the window) → **sliding window, longest-valid template**. Expand right, counting zeros; while `zeros > k`, shrink from the left (decrement when a zero leaves); record `right − left + 1`. It's the same shape as character replacement with only two letters. O(n), O(1) space.
+
+</Practice>
+
+<Practice task="Count the number of subarrays whose product is strictly less than k (all numbers positive). Which template, and what do you add to the answer at each step?">
+
+Positive numbers make the product monotonic, so a window works. Expand by multiplying in `nums[right]`; while `product >= k`, divide out `nums[left++]`. Now every subarray ending at `right` and starting anywhere in `[left, right]` is valid, so add `right − left + 1` — the same counting move as `atMostK`. Handle `k <= 1` separately (no product of positive integers is below 1).
+
+</Practice>
+
+<Takeaways>
+
+- Sliding window = contiguous range + incrementally updatable condition → O(n).
+- Expand with `right`; shrink with `left`. For the longest window, shrink while invalid; for the shortest, shrink while valid.
+- Fixed size k: add the new element, drop `a[right − k]`.
+- exactly(K) = atMost(K) − atMost(K − 1); count with `right − left + 1`.
+- Negative numbers break sum-based windows — use prefix sums instead.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Prefix Sums & Difference Arrays](/dsa/patterns/prefix-sums).
+- [Big-O the Easy Way](/dsa/start-here/complexity-made-easy) — why the inner while loop is amortised O(n).

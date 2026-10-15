@@ -1,0 +1,248 @@
+The simplest DP family walks along a sequence once. At each position you make a small decision — take this element or not, extend the current run or restart, which earlier element to attach to — and the best answer up to here depends only on answers at **earlier** positions. A one-dimensional table, and very often just a couple of variables. These problems are the best place to practise the [four steps](/dsa/patterns/dp-made-easy) until they feel automatic.
+
+<Callout type="tip" title="How to spot it">
+
+- A single array or string, and the answer is a max/min/count over **choices along it**.
+- "**Can't pick adjacent** elements", "**maximum subarray** sum/product", "**longest increasing** subsequence".
+- "How many ways to **decode / split / segment**" a string.
+- The answer at position i depends on a **few earlier positions** (i − 1, i − 2) or on **all earlier** positions (LIS, word break).
+
+</Callout>
+
+## Shape 1: take or skip — house robber
+
+> Houses in a row hold money; you can't rob two adjacent houses. Maximum loot?
+
+**State:** `best[i]` = most money from houses `0..i`. **Choice at house i:** skip it (`best[i − 1]`) or take it (`a[i] + best[i − 2]`).
+
+<ArrayViz title="House robber: skip or take at each house" frames={[
+  { arr: [2, 7, 9, 3, 1, 4], aux: { label: "best[i]", items: [] }, note: "House robber: you can't take two adjacent houses. best[i] = most money from houses 0..i. At each house: SKIP it (keep best[i−1]) or TAKE it (a[i] + best[i−2])." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 0 }, highlight: [0], window: [0, 0], aux: { label: "best[i]", items: [2] }, vars: { skip: 0, take: 2 }, note: "House 0 (2): skip → 0, take → 2 + 0 = 2. Keep 2." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 1 }, highlight: [1], window: [0, 1], aux: { label: "best[i]", items: [2, 7] }, vars: { skip: 2, take: 7 }, note: "House 1 (7): skip → 2, take → 7 + 0 = 7. Keep 7." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 2 }, highlight: [2], window: [0, 2], aux: { label: "best[i]", items: [2, 7, 11] }, vars: { skip: 7, take: 11 }, note: "House 2 (9): skip → 7, take → 9 + 2 = 11. Keep 11." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 3 }, highlight: [3], window: [0, 3], aux: { label: "best[i]", items: [2, 7, 11, 11] }, vars: { skip: 11, take: 10 }, note: "House 3 (3): skip → 11, take → 3 + 7 = 10. Keep 11." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 4 }, highlight: [4], window: [0, 4], aux: { label: "best[i]", items: [2, 7, 11, 11, 12] }, vars: { skip: 11, take: 12 }, note: "House 4 (1): skip → 11, take → 1 + 11 = 12. Keep 12." },
+  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 5 }, highlight: [5], window: [0, 5], aux: { label: "best[i]", items: [2, 7, 11, 11, 12, 15] }, vars: { skip: 12, take: 15 }, note: "House 5 (4): skip → 12, take → 4 + 11 = 15. Keep 15." },
+  { arr: [2, 7, 9, 3, 1, 4], aux: { label: "best[i]", items: [2, 7, 11, 11, 12, 15] }, vars: { answer: 15 }, note: "Answer 15. \"Take or skip\" + \"the last decision only depends on the previous two\" is the whole pattern." }
+]} />
+
+```java
+static int rob(int[] a) {
+    int prev2 = 0, prev1 = 0;                          // best up to i−2 and i−1
+    for (int x : a) {
+        int cur = Math.max(prev1, prev2 + x);          // skip vs take
+        prev2 = prev1;
+        prev1 = cur;
+    }
+    return prev1;
+}
+```
+
+### Variation: houses in a circle
+
+The first and last houses are now neighbours, so they can't both be taken. Split into two linear problems — **without the last house** and **without the first** — and take the better:
+
+```java
+static int robCircular(int[] a) {
+    if (a.length == 0) return 0;
+    if (a.length == 1) return a[0];
+    return Math.max(rob(Arrays.copyOfRange(a, 0, a.length - 1)), rob(Arrays.copyOfRange(a, 1, a.length)));
+}
+```
+
+"Break a circle into two lines" is a reusable trick.
+
+## Shape 2: best ending here — Kadane's algorithm
+
+> Maximum sum of a contiguous subarray.
+
+Define the state as the best subarray **ending exactly at i**. That subarray either extends the best one ending at i − 1, or starts fresh at i — whichever is larger:
+
+```java
+static int maxSubArray(int[] a) {
+    int endingHere = a[0], best = a[0];
+    for (int i = 1; i < a.length; i++) {
+        endingHere = Math.max(a[i], endingHere + a[i]);   // extend, or start over
+        best = Math.max(best, endingHere);
+    }
+    return best;
+}
+```
+
+"Ending here" is a powerful state definition: it turns "best subarray anywhere" (O(n²) choices) into one decision per position. Start `best` at `a[0]`, not 0 — an all-negative array must return its largest element.
+
+### Variation: maximum product subarray
+
+A negative number turns the **smallest** product into the largest. So track both the max and the min ending here:
+
+```java
+static int maxProduct(int[] a) {
+    int hi = a[0], lo = a[0], best = a[0];
+    for (int i = 1; i < a.length; i++) {
+        int x = a[i];
+        int h = Math.max(x, Math.max(hi * x, lo * x));
+        int l = Math.min(x, Math.min(hi * x, lo * x));
+        hi = h; lo = l;                                   // compute both before overwriting either
+        best = Math.max(best, hi);
+    }
+    return best;
+}
+```
+
+## Shape 3: look back at all earlier positions — LIS
+
+> Length of the longest strictly increasing subsequence (not necessarily contiguous).
+
+**State:** `dp[i]` = length of the longest increasing subsequence **ending at i**. It extends the best one ending at any earlier `j` with `a[j] < a[i]`:
+
+```java
+static int lengthOfLIS(int[] a) {                      // O(n²)
+    int n = a.length, best = 0;
+    int[] dp = new int[n];
+    for (int i = 0; i < n; i++) {
+        dp[i] = 1;                                     // just a[i] on its own
+        for (int j = 0; j < i; j++) if (a[j] < a[i]) dp[i] = Math.max(dp[i], dp[j] + 1);
+        best = Math.max(best, dp[i]);
+    }
+    return best;
+}
+```
+
+### The O(n log n) version (patience sorting)
+
+Keep `tails[k]` = the **smallest possible last element** of an increasing subsequence of length k + 1. For each value, [binary search](/dsa/patterns/binary-search) the first tail that is ≥ it and replace it (or append if none):
+
+```java
+static int lisNlogN(int[] a) {
+    int[] tails = new int[a.length];
+    int len = 0;
+    for (int x : a) {
+        int lo = 0, hi = len;
+        while (lo < hi) { int mid = (lo + hi) >>> 1; if (tails[mid] >= x) hi = mid; else lo = mid + 1; }
+        tails[lo] = x;                                 // a smaller tail for length lo + 1
+        if (lo == len) len++;                          // x extends the longest subsequence
+    }
+    return len;
+}
+```
+
+`tails` is always sorted, which is why binary search works. Note that `tails` is **not** an actual subsequence — only its length is meaningful. The reference solution checks both versions against trying every subsequence.
+
+## Shape 4: segmenting a string
+
+### Decode ways
+
+> Digits map to letters (1 → A … 26 → Z). Count decodings of a digit string.
+
+`dp[i]` = ways to decode the first `i` characters. The last piece is either one digit (1–9) or two digits (10–26):
+
+```java
+static int numDecodings(String s) {
+    int n = s.length();
+    int[] dp = new int[n + 1];
+    dp[0] = 1;                                         // empty prefix: one way
+    for (int i = 1; i <= n; i++) {
+        if (s.charAt(i - 1) != '0') dp[i] += dp[i - 1];                    // last piece: one digit
+        if (i >= 2) {
+            int two = Integer.parseInt(s.substring(i - 2, i));
+            if (two >= 10 && two <= 26) dp[i] += dp[i - 2];                // last piece: two digits
+        }
+    }
+    return dp[n];
+}
+```
+
+Zeros are the whole difficulty: `'0'` alone is invalid, and `"06"` is not 6. Checking `two >= 10` handles the second case.
+
+### Word break
+
+> Can a string be split into dictionary words?
+
+`ok[i]` = the first `i` characters can be segmented. It's true if some earlier split point `j` is `ok` and `s[j..i)` is a word:
+
+```java
+static boolean wordBreak(String s, List<String> words) {
+    Set<String> dict = new HashSet<>(words);
+    boolean[] ok = new boolean[s.length() + 1];
+    ok[0] = true;
+    for (int i = 1; i <= s.length(); i++)
+        for (int j = 0; j < i && !ok[i]; j++)
+            if (ok[j] && dict.contains(s.substring(j, i))) ok[i] = true;
+    return ok[s.length()];
+}
+```
+
+O(n²) substring checks (each O(n) to hash, so O(n³) worst case). Limiting `j` to `i − maxWordLength` speeds it up a lot in practice.
+
+## Patterns at a glance
+
+| Problem | State | Transition |
+| --- | --- | --- |
+| House robber | best up to i | max(skip, take + best[i−2]) |
+| Max subarray | best ending at i | max(a[i], end[i−1] + a[i]) |
+| Max product | max and min ending at i | try a[i], hi·a[i], lo·a[i] |
+| LIS | longest ending at i | 1 + max over j before i with a[j] smaller |
+| Decode ways | ways for prefix of length i | one-digit + two-digit cases |
+| Word break | prefix of length i segmentable | some j with ok[j] and word s[j..i) |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Initialising "best" with 0** when all values can be negative (max subarray, max product).
+- **Overwriting `hi` before computing `lo`** in max product — compute both from the old values.
+- **Forgetting the circle** in house robber II — first and last are adjacent.
+- **Treating `tails` as the LIS itself** — it only gives the length.
+- **Zero handling** in decode ways.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 198 | [House Robber](https://leetcode.com/problems/house-robber/) | Medium | Take or skip |
+| 213 | [House Robber II](https://leetcode.com/problems/house-robber-ii/) | Medium | Circle → two lines |
+| 53 | [Maximum Subarray](https://leetcode.com/problems/maximum-subarray/) | Medium | Best ending here (Kadane) |
+| 152 | [Maximum Product Subarray](https://leetcode.com/problems/maximum-product-subarray/) | Medium | Track max and min |
+| 91 | [Decode Ways](https://leetcode.com/problems/decode-ways/) | Medium | Segmenting with validity rules |
+| 139 | [Word Break](https://leetcode.com/problems/word-break/) | Medium | Look back at all split points |
+| 300 | [Longest Increasing Subsequence](https://leetcode.com/problems/longest-increasing-subsequence/) | Medium | O(n²), then O(n log n) |
+| 673 | [Number of Longest Increasing Subsequence](https://leetcode.com/problems/number-of-longest-increasing-subsequence/) | Medium | Length and count per index |
+| 309 | [Best Time to Buy and Sell Stock with Cooldown](https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/) | Medium | A few states per day |
+| 354 | [Russian Doll Envelopes](https://leetcode.com/problems/russian-doll-envelopes/) | Hard | Sort + LIS |
+
+## Interview questions
+
+<QA q="Why does Kadane's algorithm work?">
+It defines the state as the best sum of a subarray ending exactly at index i. Such a subarray either consists of a[i] alone or extends the best subarray ending at i − 1 — any other subarray ending at i − 1 would be worse to extend. So endingHere = max(a[i], endingHere + a[i]), and the overall answer is the maximum over all positions. It runs in O(n) time and O(1) space.
+</QA>
+
+<QA q="How does the O(n log n) LIS algorithm work?">
+It maintains tails[k], the smallest possible tail value of any increasing subsequence of length k + 1 seen so far. That array stays sorted. For each new value, binary search for the first tail at least as large; replacing it keeps the same lengths possible with a smaller tail, which only helps future elements. If no tail is that large, the value extends the longest subsequence. The final length of tails is the LIS length.
+</QA>
+
+<Practice task="Stock with cooldown: buy and sell many times, but after selling you must wait one day before buying again. Define the states for each day.">
+
+Three states per day: **hold** (own a share), **sold** (just sold today — cooldown tomorrow), **rest** (no share, free to buy). Transitions: `hold = max(hold, rest − price)`, `sold = hold_prev + price`, `rest = max(rest, sold_prev)`. Answer: `max(sold, rest)` on the last day. When a single state isn't enough, adding a small "mode" to the state (holding / cooling down) is the standard move — it's still 1D DP, just with a few values per position.
+
+</Practice>
+
+<Practice task="Russian doll envelopes: an envelope fits in another if both width and height are strictly smaller. Maximum nesting depth? Reduce it to a problem from this lesson.">
+
+Sort by width ascending, and for **equal widths by height descending**, then find the LIS of the heights (O(n log n)). The descending tie-break prevents two envelopes of the same width from both being counted, since their heights can't form an increasing pair. This "sort one dimension, LIS on the other" reduction is a classic.
+
+</Practice>
+
+<Takeaways>
+
+- 1D DP walks the sequence once; the state is usually "best up to i" or "best ending at i".
+- Take or skip (house robber); extend or restart (Kadane); look back at all j (LIS, word break).
+- Track extra values when signs flip (max and min for products).
+- LIS: O(n²) DP, or O(n log n) with sorted tails and binary search.
+- Break circular problems into two linear ones.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Knapsack Family](/dsa/patterns/dp-knapsack).
+- [DP Without Fear](/dsa/patterns/dp-made-easy) — the four steps used throughout.

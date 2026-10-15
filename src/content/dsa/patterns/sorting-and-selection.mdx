@@ -1,0 +1,220 @@
+You'll rarely be asked to *implement* a sorting algorithm in an interview — but you'll constantly use sorting as a **tool**. Sorting first is often the step that turns a messy problem into a simple pass: duplicates become neighbours, overlaps become adjacent, pairs become findable with two pointers. And when you only need part of the order — the top k, the k-th largest — you can do better than sorting everything.
+
+<Callout type="tip" title="How to spot it">
+
+- The problem gets easy **"if only the input were sorted"** — and the original order doesn't matter.
+- You need to **arrange items by a custom rule** ("largest number formed", "sort by frequency then value").
+- Values come from a **small, known range** (ages, ratings 0–5, lowercase letters) — counting sort beats O(n log n).
+- You need **the k-th largest/smallest** or **top k** — don't sort everything; select.
+
+</Callout>
+
+## Sort first: the cheapest trick in the book
+
+Sorting costs O(n log n), and that's below most problems' budget (see the constraints table in [Big-O](/dsa/start-here/complexity-made-easy)). After sorting:
+
+| Problem becomes… | Because |
+| --- | --- |
+| Duplicates → compare neighbours | Equal values are adjacent |
+| Pair/triplet sums → [two pointers](/dsa/patterns/two-pointers) | Order lets you discard |
+| [Intervals](/dsa/patterns/intervals) → one merge pass | Overlaps are adjacent |
+| Anagram check → compare sorted strings | Same letters, same order |
+| Greedy choices → process in order | e.g. smallest first, earliest deadline |
+
+The catch: sorting **loses the original indexes**. If the answer needs them, sort an array of indexes (`Integer[] idx`) by value, or sort pairs `{value, index}`.
+
+## Custom comparators
+
+A comparator returns negative if `a` should come first, positive if `b` should, zero if tied. Build multi-key orders with `Comparator` helpers:
+
+```java
+// by frequency descending, then value ascending
+list.sort(Comparator.comparing((Integer x) -> freq.get(x)).reversed().thenComparing(x -> x));
+
+// int[][] by first column, then second column descending
+Arrays.sort(pairs, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(b[1], a[1]));
+```
+
+### Largest Number — when the comparator *is* the solution
+
+> Arrange `[3, 30, 34, 5, 9]` to form the largest number: `"9534330"`.
+
+Sorting numerically fails (30 > 3, but "3" should come before "30"). The right rule compares the two possible concatenations: put `a` before `b` if `a + b > b + a` as strings.
+
+```java
+static String largestNumber(int[] nums) {
+    String[] s = new String[nums.length];
+    for (int i = 0; i < nums.length; i++) s[i] = String.valueOf(nums[i]);
+    Arrays.sort(s, (a, b) -> (b + a).compareTo(a + b));     // "a first" if a+b is bigger
+    if (s[0].equals("0")) return "0";                        // every number was 0
+    return String.join("", s);
+}
+```
+
+The reference solution checks this against trying every permutation. The `"0"` guard handles `[0, 0]`, which would otherwise return `"00"`.
+
+## Counting and bucket sort: O(n) when values are small
+
+Comparison sorts can't beat O(n log n). But if values lie in a small range `[0, k]`, you don't need comparisons — just **count**:
+
+```java
+static int[] countingSort(int[] a, int maxValue) {           // O(n + maxValue)
+    int[] count = new int[maxValue + 1];
+    for (int x : a) count[x]++;
+    int[] out = new int[a.length];
+    int i = 0;
+    for (int v = 0; v <= maxValue; v++) while (count[v]-- > 0) out[i++] = v;
+    return out;
+}
+```
+
+**Bucket by frequency** is the same idea one level up: a value's frequency is between 1 and n, so frequencies index an array of buckets.
+
+### Top K Frequent Elements in O(n)
+
+```java
+static int[] topKFrequent(int[] nums, int k) {
+    Map<Integer, Integer> freq = new HashMap<>();
+    for (int x : nums) freq.merge(x, 1, Integer::sum);
+    List<List<Integer>> bucket = new ArrayList<>();
+    for (int i = 0; i <= nums.length; i++) bucket.add(new ArrayList<>());
+    freq.forEach((value, f) -> bucket.get(f).add(value));     // bucket[f] = values seen f times
+    int[] out = new int[k];
+    int i = 0;
+    for (int f = nums.length; f >= 1 && i < k; f--)            // highest frequency first
+        for (int value : bucket.get(f)) if (i < k) out[i++] = value;
+    return out;
+}
+```
+
+A heap does it in O(n log k) (see [Heaps](/dsa/patterns/heap-patterns)); buckets do it in O(n). Mentioning both is a strong answer.
+
+### H-Index with counting
+
+> The h-index is the largest h such that at least h papers have h or more citations.
+
+Citations above n can be capped at n (h can't exceed n), so count into n + 1 buckets and walk down:
+
+```java
+static int hIndex(int[] citations) {
+    int n = citations.length;
+    int[] count = new int[n + 1];
+    for (int c : citations) count[Math.min(c, n)]++;
+    int atLeast = 0;
+    for (int h = n; h >= 0; h--) {
+        atLeast += count[h];                                    // papers with ≥ h citations
+        if (atLeast >= h) return h;
+    }
+    return 0;
+}
+```
+
+## Quickselect: the k-th element without sorting
+
+To find the k-th largest, you don't need the full order — just the element that would land at index `n − k`. **Partition** around a pivot (as in quicksort), and the pivot ends up at its final sorted position. Then continue into **only one side**.
+
+<ArrayViz title="One partition step" frames={[
+  { arr: [7, 2, 9, 4, 3, 8, 5], pointers: { pivot: 6 }, highlight: [6], vars: { pivot: 5 }, note: "Partition around the pivot 5 (parked at the end). Goal: smaller values to the left, larger to the right. Shaded = \"smaller than pivot\" zone, which grows from the left." },
+  { arr: [7, 2, 9, 4, 3, 8, 5], pointers: { store: 0, i: 0 }, highlight: [0], vars: { pivot: 5 }, note: "7 ≥ 5: leave it. Only i moves." },
+  { arr: [2, 7, 9, 4, 3, 8, 5], pointers: { store: 0, i: 1 }, window: [0, 0], highlight: [0], vars: { pivot: 5 }, note: "2 < 5: swap it into the smaller zone at position 0, then store++." },
+  { arr: [2, 7, 9, 4, 3, 8, 5], pointers: { store: 1, i: 2 }, window: [0, 0], highlight: [2], vars: { pivot: 5 }, note: "9 ≥ 5: leave it. Only i moves." },
+  { arr: [2, 4, 9, 7, 3, 8, 5], pointers: { store: 1, i: 3 }, window: [0, 1], highlight: [1], vars: { pivot: 5 }, note: "4 < 5: swap it into the smaller zone at position 1, then store++." },
+  { arr: [2, 4, 3, 7, 9, 8, 5], pointers: { store: 2, i: 4 }, window: [0, 2], highlight: [2], vars: { pivot: 5 }, note: "3 < 5: swap it into the smaller zone at position 2, then store++." },
+  { arr: [2, 4, 3, 7, 9, 8, 5], pointers: { store: 3, i: 5 }, window: [0, 2], highlight: [5], vars: { pivot: 5 }, note: "8 ≥ 5: leave it. Only i moves." },
+  { arr: [2, 4, 3, 5, 9, 8, 7], pointers: { pivot: 3 }, window: [0, 2], highlight: [3], vars: { "pivot index": 3 }, note: "Swap the pivot into position 3. It is now exactly where it would be in sorted order: everything left is smaller, everything right is larger." },
+  { arr: [2, 4, 3, 5, 9, 8, 7], pointers: { pivot: 3 }, highlight: [3], done: [0, 1, 2], vars: { "pivot index": 3, want: 4 }, note: "Looking for index 4 (the 3rd largest)? 4 > 3, so the answer is on the right. Discard the left side — and never sort it. Average total work n + n/2 + n/4 + … ≈ 2n." }
+]} />
+
+```java
+static int findKthLargest(int[] a, int k, Random rnd) {
+    int target = a.length - k, lo = 0, hi = a.length - 1;
+    while (true) {
+        int p = partition(a, lo, hi, lo + rnd.nextInt(hi - lo + 1));   // random pivot
+        if (p == target) return a[p];
+        if (p < target) lo = p + 1; else hi = p - 1;                  // keep ONE side
+    }
+}
+
+static int partition(int[] a, int lo, int hi, int pivotIndex) {      // Lomuto partition
+    int pivot = a[pivotIndex];
+    swap(a, pivotIndex, hi);                                          // park the pivot at the end
+    int store = lo;
+    for (int i = lo; i < hi; i++) if (a[i] < pivot) swap(a, i, store++);
+    swap(a, store, hi);                                               // pivot into its final place
+    return store;
+}
+```
+
+- **Average O(n):** each round keeps about half, so the work is n + n/2 + n/4 + … ≈ 2n.
+- **Worst case O(n²)** if pivots are consistently bad (e.g. always the largest on sorted input) — a **random pivot** makes that vanishingly unlikely.
+- It **reorders the array** — copy it first if the caller needs the original.
+
+## Which tool when?
+
+| Need | Tool | Cost |
+| --- | --- | --- |
+| Everything in order | `Arrays.sort` | O(n log n) |
+| Small value range | Counting sort | O(n + range) |
+| Top k by frequency | Buckets | O(n) |
+| Top k, streaming input | Min-heap of size k | O(n log k) |
+| Exactly the k-th element | Quickselect | O(n) average |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Losing indexes** when sorting — sort indexes or pairs if the answer needs positions.
+- **Subtracting in comparators** (`a - b`) — overflows on large values; use `Integer.compare`.
+- **Inconsistent comparators** (not transitive) — `Arrays.sort` may throw "Comparison method violates its general contract".
+- **Quickselect with a fixed pivot** on sorted input — O(n²); randomise.
+- **Forgetting that counting sort needs a small range** — values up to 10⁹ need a different approach.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1636 | [Sort Array by Increasing Frequency](https://leetcode.com/problems/sort-array-by-increasing-frequency/) | Easy | Multi-key comparator |
+| 912 | [Sort an Array](https://leetcode.com/problems/sort-an-array/) | Medium | Write merge sort or heap sort once |
+| 179 | [Largest Number](https://leetcode.com/problems/largest-number/) | Medium | Comparator as the solution |
+| 274 | [H-Index](https://leetcode.com/problems/h-index/) | Medium | Counting with a cap |
+| 347 | [Top K Frequent Elements](https://leetcode.com/problems/top-k-frequent-elements/) | Medium | Bucket by frequency |
+| 451 | [Sort Characters By Frequency](https://leetcode.com/problems/sort-characters-by-frequency/) | Medium | Buckets on characters |
+| 215 | [Kth Largest Element in an Array](https://leetcode.com/problems/kth-largest-element-in-an-array/) | Medium | Quickselect vs heap |
+| 973 | [K Closest Points to Origin](https://leetcode.com/problems/k-closest-points-to-origin/) | Medium | Quickselect on a key |
+| 164 | [Maximum Gap](https://leetcode.com/problems/maximum-gap/) | Hard | Buckets for O(n) |
+
+## Interview questions
+
+<QA q="What is the time complexity of quickselect, and how do you avoid the worst case?">
+Average O(n): each partition is linear and, with a reasonable pivot, removes a constant fraction of the elements, so the total is a geometric series of about 2n. The worst case is O(n²) when pivots are always extreme, such as choosing the first element of an already sorted array. Choosing the pivot uniformly at random makes the worst case extremely unlikely; median-of-medians guarantees O(n) but is rarely used in practice.
+</QA>
+
+<QA q="Why can counting sort beat O(n log n)?">
+The O(n log n) lower bound applies to comparison-based sorting, which learns about the order only by comparing pairs. Counting sort never compares elements; it uses each value directly as an array index, which takes O(n + k) for values in a range of size k. It's only practical when k is small relative to n.
+</QA>
+
+<Practice task="Given meetings with start times and their original positions, return the positions in order of start time, breaking ties by original position. How do you sort without losing the positions?">
+
+Sort an array of indexes rather than the data: `Integer[] idx = {0, 1, …, n−1}; Arrays.sort(idx, (i, j) -> starts[i] != starts[j] ? Integer.compare(starts[i], starts[j]) : Integer.compare(i, j));` The tie-break by index makes the order deterministic (Java's object sort is stable anyway, so sorting by start alone already keeps ties in original order — but saying the tie-break explicitly shows you thought about it).
+
+</Practice>
+
+<Practice task="An array contains n integers in the range 1 to n, some repeated. Find all duplicates in O(n) time and O(1) extra space. Which idea from this lesson does it use?">
+
+The values are a small known range, so they can serve as **indexes** — counting sort's idea, but storing the "count" in the input itself. For each value `v`, look at position `|v| − 1`: if it's already negative, `|v|` is a duplicate; otherwise negate it to mark `|v|` as seen. (Or swap each value to its "home" index — cyclic sort.) Restore signs afterwards if the input must be preserved.
+
+</Practice>
+
+<Takeaways>
+
+- Sorting first is often the step that makes a problem easy — but it loses indexes, so sort indexes or pairs when needed.
+- Comparators can *be* the solution (largest number); use `Integer.compare`, never subtraction.
+- Small value ranges → counting or bucket sort in O(n).
+- k-th element → quickselect, O(n) average with a random pivot; top k streaming → a heap.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers).
+- Thomas Cormen et al., *Introduction to Algorithms* (4th ed., 2022) — chapters 7–9 (quicksort, linear-time sorting, selection).

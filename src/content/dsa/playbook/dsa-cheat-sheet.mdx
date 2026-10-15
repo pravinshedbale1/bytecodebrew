@@ -1,0 +1,356 @@
+This page is for revision, not for learning: use it the night before an interview or as a warm-up before a mock. Each pattern gets its signal, its template and its cost on one screen. Every template is copied from its lesson, and the code is verified in this site's Java test suite. If any line here looks unfamiliar, follow the link back to its lesson.
+
+## Complexity budget
+
+| Largest n | Target | Typical patterns |
+| --- | --- | --- |
+| ≤ 12 | O(n!) | Permutations |
+| ≤ 25 | O(2ⁿ) | Subsets, bitmasks |
+| ≤ 500 | O(n³) | Interval DP, Floyd–Warshall |
+| ≤ 5,000 | O(n²) | 2D DP, all pairs |
+| ≤ 10⁶ | O(n log n) / O(n) | Sort, heap, hashing, two pointers, window, stack, BFS/DFS |
+| ≥ 10⁹ (values) | O(log n) | Binary search on the answer |
+
+## Java collections
+
+| Structure | Java | Key operations |
+| --- | --- | --- |
+| Dynamic array | `ArrayList` | get/set O(1); add at end O(1) amortised; add/remove in middle O(n) |
+| Hash map / set | `HashMap`, `HashSet` | get/put/contains O(1) average |
+| Sorted map / set | `TreeMap`, `TreeSet` | O(log n); `floorKey`, `ceilingKey`, `firstKey` |
+| Stack / queue / deque | `ArrayDeque` | push/pop/offer/poll/peek O(1) |
+| Heap | `PriorityQueue` | offer/poll O(log n); peek O(1); remove(x) O(n) |
+| Sort | `Arrays.sort`, `Collections.sort` | O(n log n) |
+
+## Pattern → signal → cost
+
+| Pattern | Signal | Time | Space |
+| --- | --- | --- | --- |
+| [Hashing](/dsa/patterns/hashing) | "Have I seen this?", pairs, counts, grouping | O(n) | O(n) |
+| [Two pointers](/dsa/patterns/two-pointers) | Sorted array, pairs, in-place, palindrome | O(n) | O(1) |
+| [Sliding window](/dsa/patterns/sliding-window) | Longest/shortest contiguous with a condition | O(n) | O(k) |
+| [Prefix sums](/dsa/patterns/prefix-sums) | Range sums, "subarray sum equals k", negatives | O(n) | O(n) |
+| [Intervals](/dsa/patterns/intervals) | Merge, overlap, meeting rooms | O(n log n) | O(n) |
+| [Binary search](/dsa/patterns/binary-search) | Sorted, first/last position, O(log n) | O(log n) | O(1) |
+| [On the answer](/dsa/patterns/binary-search-on-answer) | "Minimum X that makes it possible" | O(n log range) | O(1) |
+| [Sorting / selection](/dsa/patterns/sorting-and-selection) | Order helps; k-th element | O(n log n) / O(n) avg | varies |
+| [Fast & slow](/dsa/patterns/fast-slow-pointers) | Cycle, middle, k-th from end | O(n) | O(1) |
+| [Linked-list surgery](/dsa/patterns/linked-list-manipulation) | Reverse, merge, reorder | O(n) | O(1) |
+| [Stack](/dsa/patterns/stack-patterns) | Nesting, matching, undo, evaluate | O(n) | O(n) |
+| [Monotonic stack](/dsa/patterns/monotonic-stack) | Next greater/smaller, histogram | O(n) | O(n) |
+| [Heap](/dsa/patterns/heap-patterns) | Top k, k-way merge, running median | O(n log k) | O(k) |
+| [Tree DFS](/dsa/patterns/tree-dfs) | Depth, paths, subtree answers | O(n) | O(h) |
+| [Tree BFS](/dsa/patterns/tree-bfs) | Levels, views, minimum depth | O(n) | O(w) |
+| [BST](/dsa/patterns/bst-patterns) | In-order is sorted; search by value | O(h) | O(h) |
+| [Graph BFS/DFS](/dsa/patterns/graph-traversal) | Islands, regions, fewest steps | O(V + E) | O(V) |
+| [Topological sort](/dsa/patterns/topological-sort) | Prerequisites, dependency order | O(V + E) | O(V) |
+| [Union-find](/dsa/patterns/union-find) | Connectivity as edges arrive, redundant edge | ~O(1) per op | O(V) |
+| [Dijkstra](/dsa/patterns/shortest-paths) | Cheapest path, non-negative weights | O(E log V) | O(V + E) |
+| [Backtracking](/dsa/patterns/backtracking) | All subsets/permutations/placements | O(2ⁿ) / O(n!) | O(n) |
+| [DP](/dsa/patterns/dp-made-easy) | Count / min / max over overlapping choices | states × transitions | states |
+| [Greedy](/dsa/patterns/greedy) | Safe local choice (exchange argument) | O(n) / O(n log n) | O(1) |
+| [Trie](/dsa/patterns/tries) | Prefixes, autocomplete, many words | O(L) per word | O(total chars) |
+| [Bits](/dsa/patterns/bit-manipulation) | Appears twice except one, subsets of n ≤ 20 | O(n) | O(1) |
+
+## Arrays and strings
+
+**Two pointers** (opposite ends / read–write):
+
+```java
+int left = 0, right = a.length - 1;
+while (left < right) {
+    if (/* found */) { /* record or return */ }
+    else if (/* need something bigger */) left++;
+    else right--;
+}
+
+int write = 0;
+for (int read = 0; read < a.length; read++)
+    if (/* a[read] should be kept */) a[write++] = a[read];
+```
+
+**Sliding window**: longest valid window (for the shortest, record inside the shrink loop while the window is still valid):
+
+```java
+int left = 0, best = 0;
+for (int right = 0; right < n; right++) {
+    add(a[right]);                                       // 1. expand
+    while (/* window is invalid */) remove(a[left++]);   // 2. shrink until valid
+    best = Math.max(best, right - left + 1);             // 3. valid: record
+}
+```
+
+**Prefix sums + hash map** (subarray sum equals k, works with negatives):
+
+```java
+Map<Long, Integer> seen = new HashMap<>();
+seen.put(0L, 1);                                   // the empty prefix
+long prefix = 0; int count = 0;
+for (int x : nums) {
+    prefix += x;
+    count += seen.getOrDefault(prefix - k, 0);
+    seen.merge(prefix, 1, Integer::sum);           // store AFTER using it
+}
+```
+
+**Merge intervals:**
+
+```java
+Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+List<int[]> out = new ArrayList<>();
+for (int[] cur : intervals) {
+    if (!out.isEmpty() && cur[0] <= out.get(out.size() - 1)[1])
+        out.get(out.size() - 1)[1] = Math.max(out.get(out.size() - 1)[1], cur[1]);
+    else out.add(cur);
+}
+```
+
+## Binary search
+
+One template covers both kinds. Use it to search positions in sorted data, or to search a range of possible answers with a yes/no check:
+
+```java
+/** Smallest x in [lo, hi) with ok(x) true, or hi if none. ok must be false…false, true…true. */
+static int firstTrue(int lo, int hi, IntPredicate ok) {
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (ok.test(mid)) hi = mid; else lo = mid + 1;
+    }
+    return lo;
+}
+
+int lowerBound = firstTrue(0, a.length, i -> a[i] >= x);    // first index with a[i] ≥ x
+```
+
+To search on the answer, pass the range of possible answers, e.g. `firstTrue(1, max, k -> canFinish(piles, h, k))`. Use a `long` range when the values can reach 10⁹.
+
+## Linked lists
+
+```java
+ListNode slow = head, fast = head;                 // middle / cycle
+while (fast != null && fast.next != null) {
+    slow = slow.next;
+    fast = fast.next.next;
+    if (slow == fast) return true;                 // cycle (omit for middle)
+}
+
+ListNode prev = null, cur = head;                  // reverse
+while (cur != null) {
+    ListNode next = cur.next;
+    cur.next = prev;
+    prev = cur;
+    cur = next;
+}
+return prev;
+```
+
+Use a **dummy node** (`ListNode dummy = new ListNode(0, head)`) whenever the head might change.
+
+## Stacks and heaps
+
+**Monotonic stack** (next greater element; store indexes):
+
+```java
+int[] ans = new int[a.length];
+Arrays.fill(ans, -1);
+Deque<Integer> stack = new ArrayDeque<>();
+for (int i = 0; i < a.length; i++) {
+    while (!stack.isEmpty() && a[stack.peek()] < a[i]) ans[stack.pop()] = a[i];
+    stack.push(i);
+}
+```
+
+**Top k** with a heap of size k:
+
+```java
+PriorityQueue<Integer> heap = new PriorityQueue<>();    // min-heap keeps the k LARGEST
+for (int x : nums) {
+    heap.offer(x);
+    if (heap.size() > k) heap.poll();
+}
+return heap.peek();                                     // k-th largest
+```
+
+For a max-heap use `new PriorityQueue<>(Comparator.reverseOrder())`. For a running median keep two heaps (a max-heap for the low half, a min-heap for the high half) whose sizes differ by at most one.
+
+## Trees
+
+**DFS** (trust the recursion and combine):
+
+```java
+static int maxDepth(TreeNode root) {
+    if (root == null) return 0;
+    return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));
+}
+```
+
+To return one thing but track another (diameter, max path sum), have the helper return the downward answer and update a field with the through-this-node answer.
+
+**BFS by levels:**
+
+```java
+Deque<TreeNode> queue = new ArrayDeque<>(List.of(root));
+while (!queue.isEmpty()) {
+    int size = queue.size();                      // one level
+    for (int i = 0; i < size; i++) {
+        TreeNode n = queue.poll();
+        if (n.left != null) queue.offer(n.left);
+        if (n.right != null) queue.offer(n.right);
+    }
+}
+```
+
+**BST:** in-order traversal is sorted. To validate a BST, pass `(min, max)` bounds down the recursion.
+
+## Graphs
+
+**Grid BFS** (fewest steps). Mark cells visited when you enqueue them, and for multi-source BFS enqueue every source first:
+
+```java
+static final int[][] DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+Deque<int[]> queue = new ArrayDeque<>();
+queue.offer(start); markVisited(start);
+while (!queue.isEmpty()) {
+    int[] cur = queue.poll();
+    for (int[] d : DIRS) {
+        int nr = cur[0] + d[0], nc = cur[1] + d[1];
+        if (inBounds(nr, nc) && !visited(nr, nc)) { markVisited(nr, nc); queue.offer(new int[] { nr, nc }); }
+    }
+}
+```
+
+**Topological sort** (Kahn's algorithm):
+
+```java
+Deque<Integer> q = new ArrayDeque<>();
+for (int i = 0; i < n; i++) if (indegree[i] == 0) q.offer(i);
+int done = 0;
+while (!q.isEmpty()) {
+    int u = q.poll(); done++;
+    for (int v : graph.get(u)) if (--indegree[v] == 0) q.offer(v);
+}
+return done == n;                                 // fewer than n ⇒ a cycle
+```
+
+**Union-find** (path halving + union by size):
+
+```java
+int find(int x) {
+    while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+}
+boolean union(int a, int b) {
+    int ra = find(a), rb = find(b);
+    if (ra == rb) return false;                   // already connected: this edge closes a cycle
+    if (size[ra] < size[rb]) { int t = ra; ra = rb; rb = t; }
+    parent[rb] = ra; size[ra] += size[rb];
+    return true;
+}
+```
+
+**Dijkstra** (non-negative weights):
+
+```java
+PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> Integer.compare(a[1], b[1]));   // {node, dist}
+dist[src] = 0; pq.offer(new int[] { src, 0 });
+while (!pq.isEmpty()) {
+    int[] top = pq.poll();
+    int u = top[0], d = top[1];
+    if (d > dist[u]) continue;                    // stale entry
+    for (int[] e : graph.get(u)) {
+        int v = e[0], nd = d + e[1];
+        if (nd < dist[v]) { dist[v] = nd; pq.offer(new int[] { v, nd }); }
+    }
+}
+```
+
+There are three variants:
+
+- **0-1 BFS** for edge weights of 0 or 1.
+- **Bellman–Ford** for negative weights, or for "at most k edges", where each round relaxes from a copy of the previous round's costs.
+- **BFS** when every edge has the same weight.
+
+## Backtracking
+
+```java
+void backtrack(int start, List<Integer> path) {
+    out.add(new ArrayList<>(path));               // subsets: record every node (else only complete ones)
+    for (int i = start; i < nums.length; i++) {
+        if (i > start && nums[i] == nums[i - 1]) continue;   // skip duplicates (sorted input)
+        path.add(nums[i]);                        // choose
+        backtrack(i + 1, path);                   // explore (i, not i + 1, to allow reuse)
+        path.remove(path.size() - 1);             // un-choose
+    }
+}
+```
+
+The loop shape depends on what you're generating:
+
+- **Permutations** loop over all indexes with a `used[]` array.
+- **Combinations** stop early once there isn't room left for the remaining picks.
+- **Copy the path** when you record it.
+
+## Dynamic programming
+
+Define the state in words, write the recurrence, choose the base cases and the order of evaluation, then compress the space if you can.
+
+| Family | State | Recurrence |
+| --- | --- | --- |
+| Linear (house robber) | `dp[i]` = best using first i | `max(dp[i−1], dp[i−2] + a[i])` |
+| LIS | `dp[i]` = longest ending at i | `1 + max dp[j]` for `j` before `i` with `a[j]` smaller |
+| 0/1 knapsack | `dp[c]` = best with capacity c | capacity loop **downward**: `max(dp[c], dp[c−w] + v)` |
+| Unbounded (coin change) | `dp[a]` = fewest coins for a | amount loop **upward**: `min(dp[a], dp[a−coin] + 1)` |
+| Counting combinations | `dp[a]` = ways to make a | coins outer, amounts inner: `dp[a] += dp[a−coin]` |
+| Grid paths | `dp[r][c]` | `dp[r−1][c] + dp[r][c−1]` (or min + cost) |
+| LCS | `dp[i][j]` over prefixes | match: `dp[i−1][j−1] + 1`; else `max(up, left)` |
+| Edit distance | `dp[i][j]` over prefixes | match: diagonal; else `1 + min(diag, up, left)` |
+| Palindromes | `dp[i][j]` = is `s[i..j]` one | `s[i] == s[j]` and `dp[i+1][j−1]`; or expand around centres |
+
+```java
+static int coinChange(int[] coins, int amount) {
+    int[] dp = new int[amount + 1];
+    Arrays.fill(dp, amount + 1);                  // "infinity" that can't overflow
+    dp[0] = 0;
+    for (int a = 1; a <= amount; a++)
+        for (int c : coins) if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);
+    return dp[amount] > amount ? -1 : dp[amount];
+}
+```
+
+## Greedy, tries, bits
+
+- **Greedy:** sort by the right key, make the safe choice, and justify it with an exchange argument. Test a tiny counterexample first; if one exists, use DP.
+- **Trie:** `Node[] next = new Node[26]; boolean end;`. Insert and search walk one character at a time, so each takes O(word length).
+- **Bits:**
+  - `n & (n − 1)` clears the lowest set bit.
+  - `x ^ x = 0`, so XOR everything to find the single number.
+  - `n & -n` isolates the lowest set bit.
+  - Use `>>>` for unsigned shifts.
+  - Always parenthesise: `(n & 1) == 0`.
+
+## Edge cases to test every time
+
+| Input | Check |
+| --- | --- |
+| Arrays | Empty, one element, all equal, negatives, already sorted, reversed |
+| Strings | Empty, one char, all same char, case, spaces |
+| Numbers | 0, negative, `Integer.MAX_VALUE` overflow (use `long`), division by zero |
+| Linked lists | Empty, one node, two nodes, cycle |
+| Trees | Null root, one node, skewed (a line), duplicates |
+| Graphs | Disconnected, self-loop, cycle, single node |
+| Windows / k | k = 0, k = 1, k = n, k bigger than n |
+
+<Takeaways>
+
+- Constraints give the target complexity, and the target narrows the pattern.
+- Every pattern has a short template; know each one well enough to write it from memory.
+- Complexity always comes with a reason: count what each element does.
+- Test the edge-case table on every problem before saying "done".
+
+</Takeaways>
+
+## Further reading
+
+- [The Pattern Picker](/dsa/playbook/pattern-picker), for deciding which template to use.
+- [Solving Out Loud](/dsa/playbook/interview-communication), for presenting the solution.
+- [Back to the start](/dsa/start-here/dsa-is-not-hard), the full DSA track.

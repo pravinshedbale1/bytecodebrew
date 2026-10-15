@@ -1,0 +1,214 @@
+Some problems are only about one question, asked over and over while connections keep being added: **"are these two things in the same group?"** You could run a BFS each time — O(n) per question. **Union-Find** (also called Disjoint Set Union, DSU) answers it in effectively **constant time**, with about fifteen lines of code you can write from memory. It shines when edges arrive one at a time, or when you only care about *which group* something is in, not the path to it.
+
+<Callout type="tip" title="How to spot it">
+
+- "**Connected** components", "number of **groups**/provinces/friend circles" — especially when edges are given as a list.
+- Edges **arrive over time** and you must answer connectivity after each one (dynamic connectivity, "number of islands II").
+- "Which edge creates a **cycle**?" / "is this graph a valid tree?"
+- **Equivalence** rules: `a == b`, `b == c` → `a == c`; accounts sharing an email belong to one person.
+- **Minimum spanning tree** (Kruskal's algorithm).
+
+</Callout>
+
+## The idea: every group has a representative
+
+Each element points to a **parent**; following parents leads to the group's **root** — its representative. Two elements are connected exactly when they have the same root.
+
+- **find(x)** — follow parents to the root.
+- **union(a, b)** — find both roots; if they differ, point one root at the other. The groups are merged.
+
+<ArrayViz title="Union-Find: merging groups and compressing paths" frames={[
+  { arr: ["0*", "1*", "2*", "3*", "4*", "5*", "6*"], vars: { groups: 7 }, note: "Seven people, each in their own group. Cells show \"person→parent\"; * marks a root (the group's representative). Two people are connected iff they have the same root." },
+  { arr: ["0*", "1→0", "2*", "3*", "4*", "5*", "6*"], highlight: [1], pointers: { root: 0 }, vars: { groups: 6 }, note: "union(0, 1): roots 0 and 1. Attach the smaller group's root (1) under the larger (0). Groups: 6." },
+  { arr: ["0*", "1→0", "2*", "3→2", "4*", "5*", "6*"], highlight: [3], pointers: { root: 2 }, vars: { groups: 5 }, note: "union(2, 3): roots 2 and 3. Attach the smaller group's root (3) under the larger (2). Groups: 5." },
+  { arr: ["0*", "1→0", "2*", "3→2", "4*", "5→4", "6*"], highlight: [5], pointers: { root: 4 }, vars: { groups: 4 }, note: "union(4, 5): roots 4 and 5. Attach the smaller group's root (5) under the larger (4). Groups: 4." },
+  { arr: ["0*", "1→0", "2→0", "3→2", "4*", "5→4", "6*"], highlight: [2], pointers: { root: 0 }, vars: { groups: 3 }, note: "union(1, 3): roots 0 and 2. Attach the smaller group's root (2) under the larger (0). Groups: 3." },
+  { arr: ["0*", "1→0", "2→0", "3→2", "4→0", "5→4", "6*"], highlight: [4], pointers: { root: 0 }, vars: { groups: 2 }, note: "union(3, 5): roots 0 and 4. Attach the smaller group's root (4) under the larger (0). Groups: 2." },
+  { arr: ["0*", "1→0", "2→0", "3→2", "4→0", "5→4", "6→0"], highlight: [6], pointers: { root: 0 }, vars: { groups: 1 }, note: "union(0, 6): roots 0 and 6. Attach the smaller group's root (6) under the larger (0). Groups: 1." },
+  { arr: ["0*", "1→0", "2→0", "3→2", "4→0", "5→4", "6→0"], pointers: { find: 3 }, highlight: [3], vars: { groups: 1 }, note: "find(3) walks up 2 parent links to the root. Path halving rewires nodes on the way to point closer to the root, so the next find is shorter." },
+  { arr: ["0*", "1→0", "2→0", "3→0", "4→0", "5→4", "6→0"], pointers: { root: 0 }, highlight: [3], vars: { groups: 1 }, note: "After find(3): 3 now points nearer the root. With union by size + path compression, operations are effectively O(1) (inverse Ackermann)." }
+]} />
+
+## The template (memorise this)
+
+```java
+static class DSU {
+    final int[] parent, size;
+    int components;
+
+    DSU(int n) {
+        parent = new int[n]; size = new int[n]; components = n;
+        for (int i = 0; i < n; i++) { parent[i] = i; size[i] = 1; }   // everyone is their own root
+    }
+
+    int find(int x) {
+        while (parent[x] != x) {
+            parent[x] = parent[parent[x]];          // path halving: point to the grandparent
+            x = parent[x];
+        }
+        return x;
+    }
+
+    boolean union(int a, int b) {
+        int ra = find(a), rb = find(b);
+        if (ra == rb) return false;                 // already in the same group
+        if (size[ra] < size[rb]) { int t = ra; ra = rb; rb = t; }
+        parent[rb] = ra;                            // union by size: smaller tree under the larger
+        size[ra] += size[rb];
+        components--;
+        return true;
+    }
+}
+```
+
+Two optimisations make it fast:
+
+- **Union by size** keeps trees shallow — a tree only gets taller when merged with one at least as big, so height stays O(log n).
+- **Path compression** (here, *path halving*) flattens paths during `find`, so later finds are almost direct.
+
+Together they make each operation **O(α(n))** — the inverse Ackermann function, which is at most 4 for any input size you'll ever see. Say "effectively constant".
+
+`union` returning `false` when the two are already connected is the most useful detail in the template: it's a free **cycle detector**.
+
+## Worked problems
+
+### Number of connected components / provinces
+
+```java
+static int countComponents(int n, int[][] edges) {
+    DSU dsu = new DSU(n);
+    for (int[] e : edges) dsu.union(e[0], e[1]);
+    return dsu.components;                          // decremented on every successful union
+}
+```
+
+### Redundant connection — the edge that closes a cycle
+
+> A tree plus one extra edge. Return that edge.
+
+Add edges one by one; the first edge whose endpoints are **already connected** creates the cycle.
+
+```java
+static int[] findRedundantConnection(int[][] edges) {
+    DSU dsu = new DSU(edges.length + 1);            // nodes are 1..n
+    for (int[] e : edges) if (!dsu.union(e[0], e[1])) return e;
+    return new int[0];
+}
+```
+
+### Satisfiability of equality equations
+
+> `["a==b", "b!=c", "c==a"]` — can all hold? No.
+
+Two passes: first **union** every `==` pair, then check that no `!=` pair ended up in the same group.
+
+```java
+static boolean equationsPossible(String[] equations) {
+    DSU dsu = new DSU(26);
+    for (String e : equations) if (e.charAt(1) == '=') dsu.union(e.charAt(0) - 'a', e.charAt(3) - 'a');
+    for (String e : equations)
+        if (e.charAt(1) == '!' && dsu.find(e.charAt(0) - 'a') == dsu.find(e.charAt(3) - 'a')) return false;
+    return true;
+}
+```
+
+Order matters: all the "same" facts must be merged before checking any "different" facts.
+
+### Minimum spanning tree with Kruskal
+
+> Connect all points with the minimum total cost (cost = Manhattan distance).
+
+Sort every edge by cost and add the cheapest edge that connects two **different** groups; skip edges inside a group (they'd form a cycle). Stop after n − 1 edges.
+
+```java
+static int minCostConnectPoints(int[][] p) {
+    int n = p.length;
+    List<int[]> edges = new ArrayList<>();                         // {cost, i, j}
+    for (int i = 0; i < n; i++) for (int j = i + 1; j < n; j++)
+        edges.add(new int[] { Math.abs(p[i][0] - p[j][0]) + Math.abs(p[i][1] - p[j][1]), i, j });
+    edges.sort((a, b) -> Integer.compare(a[0], b[0]));
+    DSU dsu = new DSU(n);
+    int total = 0, used = 0;
+    for (int[] e : edges)
+        if (dsu.union(e[1], e[2])) { total += e[0]; if (++used == n - 1) break; }
+    return total;
+}
+```
+
+The reference solution checks Kruskal's total against Prim's algorithm on random point sets.
+
+### Grids with Union-Find
+
+Map cell `(r, c)` to the index `r * cols + c`, and union each land cell with its right and down neighbours. The number of islands is `components − water cells`. DFS is usually simpler for a static grid, but union-find wins when land is **added over time** (each addition is one or a few unions instead of a fresh search).
+
+## Union-Find or BFS/DFS?
+
+| Situation | Better choice |
+| --- | --- |
+| Static graph, one question ("how many components?") | Either; DFS is simpler |
+| Edges added over time, connectivity asked after each | **Union-Find** |
+| Need the actual path or the distance | BFS/DFS |
+| Detect the edge that creates a cycle (undirected) | **Union-Find** |
+| Cycle detection in a **directed** graph | DFS / topological sort (Union-Find doesn't handle direction) |
+| Minimum spanning tree | Union-Find (Kruskal) or a heap (Prim) |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Comparing parents instead of roots** — `parent[a] == parent[b]` is not "connected"; compare `find(a) == find(b)`.
+- **Forgetting the optimisations** — without union by size and path compression, a chain makes `find` O(n).
+- **Off-by-one node numbering** — many problems number nodes from 1; size the arrays `n + 1`.
+- **Using Union-Find for directed reachability** — it only models undirected connectivity.
+- **Recursive `find` with full path compression on huge inputs** — fine in practice, but the iterative halving version can't overflow the stack.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1971 | [Find if Path Exists in Graph](https://leetcode.com/problems/find-if-path-exists-in-graph/) | Easy | find(a) == find(b) |
+| 547 | [Number of Provinces](https://leetcode.com/problems/number-of-provinces/) | Medium | Counting components |
+| 684 | [Redundant Connection](https://leetcode.com/problems/redundant-connection/) | Medium | union() == false → cycle |
+| 990 | [Satisfiability of Equality Equations](https://leetcode.com/problems/satisfiability-of-equality-equations/) | Medium | Merge equalities, then check |
+| 1202 | [Smallest String With Swaps](https://leetcode.com/problems/smallest-string-with-swaps/) | Medium | Groups that can be freely sorted |
+| 721 | [Accounts Merge](https://leetcode.com/problems/accounts-merge/) | Medium | Union by shared key |
+| 1584 | [Min Cost to Connect All Points](https://leetcode.com/problems/min-cost-to-connect-all-points/) | Medium | Kruskal's MST |
+| 959 | [Regions Cut By Slashes](https://leetcode.com/problems/regions-cut-by-slashes/) | Medium | Modelling cells as sub-nodes |
+| 952 | [Largest Component Size by Common Factor](https://leetcode.com/problems/largest-component-size-by-common-factor/) | Hard | Union through shared factors |
+
+## Interview questions
+
+<QA q="What is the complexity of Union-Find with path compression and union by size?">
+Each operation runs in O(α(n)) amortised time, where α is the inverse Ackermann function. α(n) is at most 4 for any n that fits in the physical universe, so it's effectively constant. Union by size alone gives O(log n) per find; path compression alone gives O(log n) amortised; together they give the near-constant bound.
+</QA>
+
+<QA q="How do you detect a cycle in an undirected graph with Union-Find?">
+Process edges one at a time. For each edge, find the roots of its two endpoints. If they're already the same, the endpoints were connected before this edge, so adding it closes a cycle. Otherwise, union them. This works only for undirected graphs; directed cycle detection needs DFS with three colours or a topological sort.
+</QA>
+
+<Practice task="Accounts merge: each account has a name and emails; accounts sharing any email belong to the same person. What do you union, and how do you build the output?">
+
+Give each email an index (a `Map<String, Integer>`) and **union all emails within the same account** (each with the first email of that account). Then group emails by `find(emailIndex)`, sort each group, and prefix the name (remember any account's name for that root). O(E α(E) + E log E) for E emails, with the log from sorting the output.
+
+</Practice>
+
+<Practice task="Smallest string with swaps: you may swap characters at given index pairs any number of times. Return the lexicographically smallest string. Why does Union-Find fit?">
+
+Swaps are transitive: if you can swap (0,1) and (1,2), you can arrange positions 0, 1, 2 in **any** order. So union every pair; each group of indexes is a set of positions whose characters can be freely reordered. For each group, sort its characters and write them back into its sorted indexes. O(n log n).
+
+</Practice>
+
+<Takeaways>
+
+- Union-Find tracks groups: `find` returns a representative, `union` merges two groups.
+- Union by size + path compression → effectively O(1) per operation.
+- `union` returning false means "already connected" — a built-in cycle detector for undirected graphs.
+- Best when edges arrive over time or only group membership matters; Kruskal's MST is Union-Find plus sorting.
+- Compare roots, never parents.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Shortest Paths](/dsa/patterns/shortest-paths).
+- Robert Tarjan, "Efficiency of a Good But Not Linear Set Union Algorithm" (Journal of the ACM, 1975).

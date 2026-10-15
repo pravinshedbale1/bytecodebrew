@@ -1,0 +1,192 @@
+You don't need all of Java for DSA — about a dozen classes and twenty methods cover nearly every interview problem. Knowing them well means you think about the algorithm, not the syntax. This lesson is that toolkit, plus the Java pitfalls that make correct ideas fail on hidden test cases.
+
+## Which structure for which job
+
+| You need… | Use | Key operations (cost) |
+| --- | --- | --- |
+| A resizable list | `ArrayList<E>` | `get`, `set`, `add` at end: O(1); `add`/`remove` in middle: O(n) |
+| A stack | `ArrayDeque<E>` | `push`, `pop`, `peek`: O(1) |
+| A queue | `ArrayDeque<E>` | `offer`, `poll`, `peek`: O(1) |
+| A double-ended queue | `ArrayDeque<E>` | `offerFirst/Last`, `pollFirst/Last`, `peekFirst/Last`: O(1) |
+| Key → value lookup | `HashMap<K, V>` | `get`, `put`, `containsKey`: O(1) average |
+| "Have I seen it?" | `HashSet<E>` | `add`, `contains`, `remove`: O(1) average |
+| Sorted keys, nearest key | `TreeMap<K, V>` / `TreeSet<E>` | `put`, `get`, `floorKey`, `ceilingKey`, `firstKey`: O(log n) |
+| Repeated min (or max) | `PriorityQueue<E>` | `offer`, `poll`: O(log n); `peek`: O(1) |
+| Fixed-size counts | `int[]` | `count[c - 'a']++`: O(1), fastest of all |
+
+<Callout type="tip" title="Use ArrayDeque, not Stack or LinkedList">
+`java.util.Stack` is a legacy, synchronised class, and `LinkedList` allocates a node per element. `ArrayDeque` is faster for both stacks and queues. One catch: `ArrayDeque` rejects `null` elements.
+</Callout>
+
+## The idioms you'll write constantly
+
+### Counting
+
+```java
+// characters, when the alphabet is small and known
+int[] count = new int[26];
+for (char c : s.toCharArray()) count[c - 'a']++;
+
+// anything else
+Map<Integer, Integer> freq = new HashMap<>();
+for (int x : nums) freq.merge(x, 1, Integer::sum);          // add 1, or start at 1
+int timesSeen = freq.getOrDefault(42, 0);
+```
+
+### Grouping
+
+```java
+Map<String, List<String>> groups = new HashMap<>();
+for (String w : words) {
+    char[] key = w.toCharArray();
+    Arrays.sort(key);                                        // anagrams share a sorted key
+    groups.computeIfAbsent(new String(key), k -> new ArrayList<>()).add(w);
+}
+```
+
+### Building a graph (adjacency list)
+
+```java
+List<List<Integer>> graph = new ArrayList<>();
+for (int i = 0; i < n; i++) graph.add(new ArrayList<>());
+for (int[] e : edges) {
+    graph.get(e[0]).add(e[1]);
+    graph.get(e[1]).add(e[0]);                               // omit for a directed graph
+}
+```
+
+### Stack and queue
+
+```java
+Deque<Integer> stack = new ArrayDeque<>();
+stack.push(1); stack.push(2);
+int top = stack.pop();                                       // 2
+
+Deque<int[]> queue = new ArrayDeque<>();
+queue.offer(new int[] { 0, 0 });                             // e.g. grid coordinates for BFS
+int[] cell = queue.poll();
+```
+
+### Heaps
+
+```java
+PriorityQueue<Integer> minHeap = new PriorityQueue<>();
+PriorityQueue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());
+PriorityQueue<int[]> byDistance = new PriorityQueue<>((a, b) -> Integer.compare(a[1], b[1]));
+```
+
+### Sorting
+
+```java
+Arrays.sort(nums);                                                    // int[] ascending
+Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));       // int[][] by first column
+Integer[] boxed = { 3, 1, 2 };
+Arrays.sort(boxed, Comparator.reverseOrder());                        // descending needs boxed values
+words.sort(Comparator.comparing(String::length).thenComparing(Comparator.naturalOrder()));
+```
+
+`Arrays.sort` on primitives uses a dual-pivot quicksort (O(n log n) on average, not stable — stability doesn't matter for primitives); on objects it uses TimSort (O(n log n) worst case, **stable**).
+
+### Strings
+
+```java
+char[] cs = s.toCharArray();                  // mutate characters, then new String(cs)
+StringBuilder sb = new StringBuilder();
+sb.append('a').append(42);                    // never s += … in a loop
+sb.reverse(); sb.setCharAt(0, 'z'); sb.deleteCharAt(sb.length() - 1);
+int digit = c - '0';                          // '7' → 7
+boolean ok = Character.isLetterOrDigit(c);
+char lower = Character.toLowerCase(c);
+```
+
+### TreeMap: the "nearest key" tool
+
+```java
+TreeMap<Integer, String> events = new TreeMap<>();
+events.put(10, "a"); events.put(20, "b"); events.put(30, "c");
+events.floorKey(25);      // 20 — largest key ≤ 25
+events.ceilingKey(25);    // 30 — smallest key ≥ 25
+events.firstKey();        // 10
+events.headMap(20);       // keys < 20 (a view)
+```
+
+Whenever a problem says "the closest …", "the previous/next booking", or "how many keys are below x", think `TreeMap`/`TreeSet`.
+
+## The pitfalls that fail hidden tests
+
+### 1. Comparing `Integer` objects with `==`
+
+```java
+Integer a = 127, b = 127;   a == b   // true — small values are cached
+Integer c = 128, d = 128;   c == d   // false — different objects!
+c.equals(d)                          // true — always compare boxed values with equals
+```
+
+This bites when comparing values pulled from a `Map<Integer, Integer>` or a `List<Integer>`: the code passes small tests and fails large ones. Unbox first (`int x = map.get(k);`) or use `.equals`.
+
+### 2. Integer overflow
+
+`int` holds up to about **2.1 billion** (2³¹ − 1).
+
+- Sums of many values, products, or squares overflow quietly and become negative. Use `long`.
+- The midpoint `(lo + hi) / 2` can overflow when both are large: write `lo + (hi - lo) / 2` (or `(lo + hi) >>> 1`).
+- `Math.abs(Integer.MIN_VALUE)` is still **negative** — there's no positive int that large.
+
+### 3. Comparators that subtract
+
+```java
+(a, b) -> a - b                    // ❌ overflows when a and b have opposite signs and are large
+(a, b) -> Integer.compare(a, b)    // ✅ always correct
+```
+
+With values near ±2 billion, `a - b` overflows, the sign flips, and the sort or heap order silently becomes wrong.
+
+### 4. Negative remainders
+
+In Java, `-7 % 3` is **−1**, not 2. For a non-negative result (array indexes, circular buffers, hashing), use `((a % m) + m) % m` or `Math.floorMod(a, m)`.
+
+### 5. Modifying a collection while iterating it
+
+Removing from an `ArrayList` or `HashMap` inside a for-each loop usually throws `ConcurrentModificationException`. Worse, it doesn't always: removing the second-to-last element of a list ends the loop early and **silently skips the last element** — no error, just a wrong answer. Use `removeIf`, an explicit `Iterator.remove()`, or collect changes and apply them after the loop.
+
+### 6. Adding a mutable list to results
+
+```java
+result.add(current);                       // ❌ every entry is the same list, changed later
+result.add(new ArrayList<>(current));      // ✅ a snapshot
+```
+
+### 7. Deep recursion
+
+Recursion tens of thousands of levels deep can throw `StackOverflowError` — for very long linked lists or skewed trees, use an iterative version with an explicit `ArrayDeque` stack.
+
+## Interview questions
+
+<QA q="Why does 'Integer a = 1000, b = 1000; a == b' print false?">
+Autoboxing creates Integer objects, and == compares object references. Java caches Integer objects only for values from -128 to 127, so small values share an object and compare equal, while 1000 creates two separate objects. Use equals, or unbox to int before comparing.
+</QA>
+
+<QA q="When would you use a TreeMap instead of a HashMap?">
+When order matters: you need keys in sorted order, the smallest or largest key, or the nearest key above or below a value (floorKey, ceilingKey), or a range of keys. Operations cost O(log n) instead of O(1) on average, so use a HashMap when you only need exact-key lookups.
+</QA>
+
+<Practice task="This code finds the k-th largest element but fails some hidden tests: PriorityQueue<Integer> pq = new PriorityQueue<>((a, b) -> b - a); then poll k−1 times and peek. What's wrong, and how do you fix it?">
+
+The comparator `b - a` overflows when the values are far apart (for example `b = 2,000,000,000` and `a = -2,000,000,000`), flipping the sign and breaking the heap order. Use `Comparator.reverseOrder()` or `(a, b) -> Integer.compare(b, a)`. Separately, a max-heap of all n elements is O(n log n); a **min-heap of size k** (keep only the k largest seen so far) is O(n log k) — see [Heaps](/dsa/patterns/heap-patterns).
+
+</Practice>
+
+<Takeaways>
+
+- `ArrayList`, `ArrayDeque`, `HashMap`, `HashSet`, `TreeMap`/`TreeSet`, `PriorityQueue` and plain arrays cover almost every problem.
+- Know the idioms: `merge` for counting, `computeIfAbsent` for grouping, adjacency lists, `int[26]` for letters.
+- Compare boxed values with `equals`; use `long` for big sums and `Integer.compare` in comparators.
+- Watch negative `%`, modifying collections while iterating, and copying lists before storing them.
+
+</Takeaways>
+
+## Further reading
+
+- Next: start the patterns with [Hash Maps & Sets](/dsa/patterns/hashing).
+- Java SE API documentation — `java.util` collections, `Arrays`, `Collections`.
+- Joshua Bloch, *Effective Java* (3rd ed.) — Item 14 (comparators) and Item 61 (prefer primitives to boxed primitives).

@@ -1,0 +1,143 @@
+Big-O notation looks like maths, which is why it scares people. It isn't maths in any deep sense. It answers one practical question: **if the input gets 10 times bigger, roughly how much longer does my code take?** You can answer that by counting loops. This lesson shows how — and then gives you the most useful trick in interview DSA: reading the constraints to know which complexity the problem wants *before* you start.
+
+## What Big-O actually says
+
+Big-O describes how the amount of work **grows** with the input size `n`, ignoring constant factors and small terms. "This is O(n)" means "double the input, roughly double the work". "This is O(n²)" means "double the input, roughly four times the work".
+
+| Big-O | Name | Feel | Double n → work becomes |
+| --- | --- | --- | --- |
+| O(1) | constant | look up a value in a hash map | the same |
+| O(log n) | logarithmic | binary search; halving each step | +1 step |
+| O(n) | linear | one pass over the array | ×2 |
+| O(n log n) | linearithmic | sorting | a bit more than ×2 |
+| O(n²) | quadratic | every pair | ×4 |
+| O(2ⁿ) | exponential | every subset | squared (!) |
+| O(n!) | factorial | every ordering | astronomically more |
+
+How big is log n? Smaller than you think: log₂ of a **million** is about **20**; of a **billion**, about **30**. That's why binary search feels instant even on huge inputs.
+
+## Counting rules (all you really need)
+
+**1. Sequential steps add; keep the biggest.**
+
+```java
+for (int x : arr) sum += x;            // O(n)
+Arrays.sort(arr);                      // O(n log n)
+// total O(n + n log n) = O(n log n): the bigger term wins
+```
+
+**2. Nested loops multiply.**
+
+```java
+for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+        count++;                       // n × n = O(n²)
+```
+
+A common trap: `j` starting at `i + 1` still gives O(n²) — it's about n²/2 iterations, and Big-O drops the ½.
+
+**3. Halving (or doubling) gives log n.**
+
+```java
+int steps = 0;
+for (int x = n; x > 1; x /= 2) steps++;   // n, n/2, n/4, … 1 → about log₂ n steps
+```
+
+**4. Different inputs get different letters.** Looping over an array of size `n` inside a loop over a string of length `m` is **O(n·m)**, not O(n²).
+
+**5. Recursion: count the calls, multiply by the work per call.** A function that calls itself twice with `n − 1` makes about 2ⁿ calls (that's why naïve Fibonacci is slow). One that calls itself once with `n / 2` makes log n calls.
+
+**6. Watch for loops that move a pointer only forward.** This looks like nested loops but is O(n):
+
+```java
+int left = 0;
+for (int right = 0; right < n; right++) {
+    while (left < right && bad(left, right)) left++;   // left only moves forward, at most n times in total
+}
+```
+
+Each index enters once and leaves once, so the total work across *all* iterations is about 2n. This is why [sliding window](/dsa/patterns/sliding-window) and [two pointers](/dsa/patterns/two-pointers) are O(n) despite the inner `while`. It's called **amortised** analysis: some steps are expensive, but the total is bounded.
+
+## The trick: read the constraints first
+
+Interview problems (and online judges) usually state the input limits — "1 ≤ n ≤ 10⁵". A rough budget is about **10⁸ simple operations** for a solution to run in time. Divide, and you know which complexity the problem expects:
+
+| Largest n | Target complexity | What that usually means |
+| --- | --- | --- |
+| n ≤ 10–12 | O(n!) | Try every permutation — [backtracking](/dsa/patterns/backtracking) |
+| n ≤ 20–25 | O(2ⁿ) | Try every subset — backtracking or bitmask DP |
+| n ≤ 100–500 | O(n³) | Three nested loops; interval DP; Floyd–Warshall |
+| n ≤ 2,000–5,000 | O(n²) | Every pair; 2D DP over two strings |
+| n ≤ 10⁵–10⁶ | O(n log n) or O(n) | Sorting, heaps, binary search, hashing, one pass |
+| n up to 10⁹ or more | O(log n) or O(√n) or O(1) | Binary search on the answer, maths |
+
+This table is a superpower. See `n ≤ 10⁵`? Don't even try nested loops — you're looking for sorting, a hash map, two pointers, a heap or binary search. See `n ≤ 20`? The problem is *inviting* you to try all subsets.
+
+<Callout type="tip" title="Use it in the interview">
+If the interviewer doesn't state limits, ask: "Roughly how large can the input be?" The answer tells both of you what complexity to aim for — and asking it is itself a strong signal.
+</Callout>
+
+## Space complexity
+
+Space counts the **extra** memory your algorithm uses, beyond the input.
+
+- A few variables → **O(1)**.
+- A hash map or a copy of the array → **O(n)**.
+- A 2D table of size n × m → **O(n·m)**.
+- **Recursion uses space too**: each pending call sits on the call stack. Recursion depth `d` costs **O(d)** space, even if you allocate nothing — so a recursive tree traversal on a tree of height `h` is O(h) space.
+
+Interviewers often ask, "can you do it in O(1) extra space?" — that usually points to two pointers, in-place swaps, or reusing the input array.
+
+## Hidden costs in Java
+
+Some lines look like O(1) but aren't:
+
+| Code | Real cost | Better |
+| --- | --- | --- |
+| `s = s + c` inside a loop | O(length) per step → O(n²) total | `StringBuilder.append` |
+| `list.contains(x)` on an `ArrayList` | O(n) | a `HashSet` |
+| `list.remove(0)` on an `ArrayList` | O(n) (shifts everything) | `ArrayDeque.pollFirst()` |
+| `s.substring(i, j)` | O(j − i) (copies) | work with indexes |
+| `Arrays.sort` / `Collections.sort` | O(n log n) | — just count it |
+| `new int[n]` | O(n) (zeroes memory) | — just count it |
+
+## Best, average, worst — and amortised
+
+- Big-O in interviews usually means **worst case**.
+- **Average** case matters for hashing: a `HashMap` lookup is O(1) on average (with a good hash function); you can say "O(1) average".
+- **Amortised** means "averaged over a sequence of operations". `ArrayList.add` is occasionally O(n) when it grows its internal array, but O(1) amortised, because growth doubles the capacity and is rare.
+
+## Interview questions
+
+<QA q="What is the time complexity of a loop with a while loop inside it that moves a left pointer forward?">
+If the inner pointer only ever moves forward and never resets, the total number of inner-loop steps across the whole run is at most n, so the whole thing is O(n) — not O(n²). Each element is added once (by the outer loop) and removed at most once (by the inner loop). This amortised argument is why sliding-window solutions are linear.
+</QA>
+
+<QA q="Why is recursive Fibonacci slow, and what is its complexity?">
+fib(n) calls fib(n − 1) and fib(n − 2), each of which calls two more, so the number of calls roughly doubles at each level — exponential, about O(1.6ⁿ), usually stated as O(2ⁿ). The waste is that the same values (fib(3), fib(2)…) are recomputed many times. Storing each result once it's computed (memoisation) makes it O(n) — the core idea of dynamic programming.
+</QA>
+
+<QA q="The constraints say n ≤ 10⁵. What complexity should you aim for?">
+O(n log n) or better. O(n²) would be about 10¹⁰ operations, far beyond the roughly 10⁸ budget, while O(n log n) is under 2 million. That rules out nested loops over all pairs and points toward sorting, hashing, two pointers, heaps or binary search.
+</QA>
+
+<Practice task="Give the time complexity of each: (a) for i in 0..n, for j in i..n, for k in 0..10 → count++; (b) for i = 1; i < n; i *= 3 → count++; (c) for each of n words of length up to m, insert it into a HashSet<String>; (d) sort n strings of length up to m.">
+
+(a) The inner `k` loop is a constant 10, so it's about 10 · n²/2 → **O(n²)**. (b) `i` triples each step → about log₃ n steps → **O(log n)** (the base doesn't matter in Big-O). (c) Hashing a string reads all its characters, so each insert is O(m) → **O(n·m)**. (d) Sorting does O(n log n) comparisons and each string comparison can take O(m) → **O(m · n log n)**. Parts (c) and (d) are the kind of detail that impresses interviewers: string operations aren't free.
+
+</Practice>
+
+<Takeaways>
+
+- Big-O = how work grows with input size: count loops, multiply nested ones, halving gives log n.
+- A pointer that only moves forward makes nested-looking code O(n) (amortised).
+- Read the constraints: n ≤ 10⁵ → aim for O(n log n) or O(n); n ≤ 20 → subsets are fine; budget about 10⁸ operations.
+- Space includes the recursion stack.
+- Beware hidden costs: string concatenation in loops, `list.contains`, `list.remove(0)`.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Recursion Without Fear](/dsa/start-here/recursion-made-easy).
+- Steven Skiena, *The Algorithm Design Manual* (3rd ed., 2020) — chapter 2, "Algorithm Analysis".

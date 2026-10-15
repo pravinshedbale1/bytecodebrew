@@ -1,0 +1,252 @@
+"For each day, how many days until a warmer temperature?" The brute force looks right from each day until it finds a warmer one — O(n²) on a long cold spell. A **monotonic stack** answers it in one pass. It's one of the most surprising patterns the first time you see it, and one of the most reusable once it clicks: next greater element, stock spans, the largest rectangle in a histogram, and sliding-window maximum all use it.
+
+<Callout type="tip" title="How to spot it">
+
+- "For each element, find the **next (or previous) greater / smaller** element" — or its distance.
+- "How far can each element **extend** left/right before hitting something smaller/bigger?" (histograms, spans, visibility).
+- Sums or counts over **all subarrays** of their minimum or maximum.
+- "Smallest/largest number after removing k digits" — keep a **greedy increasing** sequence.
+- "Maximum (or minimum) of every window of size k" — the **monotonic deque**.
+
+</Callout>
+
+## The idea: a stack of things still waiting for an answer
+
+Walk left to right. The stack holds indexes that **haven't found their next greater element yet**. When a new element arrives, it is the answer for every waiting element smaller than it — pop them all and record it. Then the new element joins the waiting list.
+
+Because we pop everything smaller before pushing, the waiting values are always in **decreasing** order from bottom to top — that's the "monotonic" part.
+
+<ArrayViz title="Next greater element with a monotonic stack" frames={[
+  { arr: [2, 1, 2, 4, 3, 1, 5], aux: { label: "stack (waiting, as values)", items: [] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "Next greater element for every position. The stack holds indexes still WAITING for a bigger number — their values are always decreasing from bottom to top." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 0 }, highlight: [0], aux: { label: "stack (waiting, as values)", items: [2] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "2 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 1 }, highlight: [1], aux: { label: "stack (waiting, as values)", items: [2, 1] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "1 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 2 }, highlight: [1], aux: { label: "stack (waiting, as values)", items: [2, 2] }, vars: { answers: "? 2 ? ? ? ? ?" }, note: "2 is bigger than 1 on top of the stack — it's their next greater. Pop them, record 2, then push 2 to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 3 }, highlight: [2, 0], aux: { label: "stack (waiting, as values)", items: [4] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "4 is bigger than 2, 2 on top of the stack — it's their next greater. Pop them, record 4, then push 4 to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 4 }, highlight: [4], aux: { label: "stack (waiting, as values)", items: [4, 3] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "3 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 5 }, highlight: [5], aux: { label: "stack (waiting, as values)", items: [4, 3, 1] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "1 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 6 }, highlight: [5, 4, 3], aux: { label: "stack (waiting, as values)", items: [5] }, vars: { answers: "4 2 4 5 5 5 ?" }, note: "5 is bigger than 1, 3, 4 on top of the stack — it's their next greater. Pop them, record 5, then push 5 to wait." },
+  { arr: [2, 1, 2, 4, 3, 1, 5], aux: { label: "stack (waiting, as values)", items: [] }, vars: { answers: "4 2 4 5 5 5 -1" }, note: "Anything still waiting has no greater element to its right: −1. Every index was pushed once and popped at most once — O(n)." }
+]} />
+
+```java
+static int[] nextGreater(int[] a) {
+    int[] ans = new int[a.length];
+    Arrays.fill(ans, -1);                                  // default: none to the right
+    Deque<Integer> stack = new ArrayDeque<>();             // indexes; their values decrease toward the top
+    for (int i = 0; i < a.length; i++) {
+        while (!stack.isEmpty() && a[stack.peek()] < a[i])
+            ans[stack.pop()] = a[i];                       // a[i] is the next greater for each popped index
+        stack.push(i);
+    }
+    return ans;
+}
+```
+
+**Why O(n):** every index is pushed once and popped at most once. The inner `while` does at most n pops in total.
+
+### The four variants, one template
+
+| Want | Pop while top is… | Stack values are… |
+| --- | --- | --- |
+| Next **greater** | `<` current | decreasing |
+| Next **greater or equal** | `<=` current | strictly decreasing |
+| Next **smaller** | `>` current | increasing |
+| Next **smaller or equal** | `>=` current | strictly increasing |
+
+For **previous** greater/smaller, use the same loop: after popping, the element left on top of the stack *is* the previous one (or none if empty). Or scan right to left.
+
+## Worked problems
+
+### Daily temperatures — distance instead of value
+
+```java
+static int[] dailyTemperatures(int[] t) {
+    int[] ans = new int[t.length];                           // 0 = no warmer day
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (int i = 0; i < t.length; i++) {
+        while (!stack.isEmpty() && t[stack.peek()] < t[i]) {
+            int j = stack.pop();
+            ans[j] = i - j;                                  // storing indexes gives distances for free
+        }
+        stack.push(i);
+    }
+    return ans;
+}
+```
+
+### Next greater element in a circular array
+
+Walk the array **twice** (indexes `0 … 2n − 1`, using `i % n`), but only push during the first lap — the second lap just resolves the elements still waiting.
+
+```java
+static int[] nextGreaterCircular(int[] a) {
+    int n = a.length;
+    int[] ans = new int[n];
+    Arrays.fill(ans, -1);
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (int i = 0; i < 2 * n; i++) {
+        int v = a[i % n];
+        while (!stack.isEmpty() && a[stack.peek()] < v) ans[stack.pop()] = v;
+        if (i < n) stack.push(i);
+    }
+    return ans;
+}
+```
+
+### Largest rectangle in a histogram (hard, classic)
+
+For each bar, the widest rectangle using it as the **shortest** bar extends left and right until it meets a **smaller** bar. Keep an **increasing** stack. When a bar is popped, the bar that popped it is the first smaller one on the right, and the bar beneath it on the stack is the first smaller one on the left — so the popped bar knows its full width.
+
+```java
+static int largestRectangleArea(int[] h) {
+    Deque<Integer> stack = new ArrayDeque<>();               // increasing heights
+    int best = 0;
+    for (int i = 0; i <= h.length; i++) {
+        int cur = i == h.length ? 0 : h[i];                  // a final 0 flushes every remaining bar
+        while (!stack.isEmpty() && h[stack.peek()] >= cur) {
+            int height = h[stack.pop()];
+            int left = stack.isEmpty() ? -1 : stack.peek();  // first smaller bar on the left
+            best = Math.max(best, height * (i - left - 1));  // i = first smaller bar on the right
+        }
+        stack.push(i);
+    }
+    return best;
+}
+```
+
+The **sentinel** (a height-0 bar after the end) saves a second cleanup loop — a trick worth reusing.
+
+### Sum of subarray minimums — counting contributions
+
+> Sum the minimum of every subarray.
+
+Instead of enumerating O(n²) subarrays, ask: **how many subarrays have `a[i]` as their minimum?** That's `(i − left) × (right − i)`, where `left` is the previous smaller element and `right` the next smaller-or-equal one. Two monotonic passes give both:
+
+```java
+static long sumSubarrayMins(int[] a) {
+    int n = a.length;
+    int[] left = new int[n], right = new int[n];
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) {                            // previous STRICTLY smaller
+        while (!stack.isEmpty() && a[stack.peek()] >= a[i]) stack.pop();
+        left[i] = stack.isEmpty() ? -1 : stack.peek();
+        stack.push(i);
+    }
+    stack.clear();
+    for (int i = n - 1; i >= 0; i--) {                       // next smaller OR EQUAL
+        while (!stack.isEmpty() && a[stack.peek()] > a[i]) stack.pop();
+        right[i] = stack.isEmpty() ? n : stack.peek();
+        stack.push(i);
+    }
+    long total = 0;
+    for (int i = 0; i < n; i++) total += (long) a[i] * (i - left[i]) * (right[i] - i);
+    return total;
+}
+```
+
+The **asymmetry** (strict on one side, non-strict on the other) is deliberate: with duplicate values, it makes each subarray's minimum belong to exactly one index. Using strict comparisons on both sides would count `[2, 2]` twice. The reference solution checks this against brute force on thousands of arrays with many duplicates.
+
+### Remove k digits — a greedy increasing stack
+
+> Remove k digits from a number to make it as small as possible: `"1432219"`, k = 3 → `"1219"`.
+
+A smaller digit further left beats anything after it, so whenever the current digit is smaller than the previous kept digit, drop the previous one (while you still can):
+
+```java
+static String removeKdigits(String num, int k) {
+    StringBuilder stack = new StringBuilder();               // kept digits, non-decreasing
+    for (char c : num.toCharArray()) {
+        while (k > 0 && stack.length() > 0 && stack.charAt(stack.length() - 1) > c) {
+            stack.deleteCharAt(stack.length() - 1);
+            k--;
+        }
+        stack.append(c);
+    }
+    stack.setLength(stack.length() - k);                     // still must remove some: drop from the end
+    int i = 0;
+    while (i < stack.length() - 1 && stack.charAt(i) == '0') i++;   // strip leading zeros
+    String out = stack.substring(i);
+    return out.isEmpty() ? "0" : out;
+}
+```
+
+## The monotonic deque: sliding-window maximum
+
+> Maximum of every window of size k.
+
+A heap would give O(n log k). A **deque** of indexes with **decreasing** values gives O(n): the front is always the window's maximum. When a new element arrives, smaller elements at the back can **never** be a maximum again (the new one is bigger and stays longer), so drop them. When the front slides out of the window, drop it too.
+
+```java
+static int[] maxSlidingWindow(int[] a, int k) {
+    int[] out = new int[a.length - k + 1];
+    Deque<Integer> dq = new ArrayDeque<>();                  // indexes, values decreasing front → back
+    for (int i = 0; i < a.length; i++) {
+        if (!dq.isEmpty() && dq.peekFirst() <= i - k) dq.pollFirst();        // front left the window
+        while (!dq.isEmpty() && a[dq.peekLast()] <= a[i]) dq.pollLast();     // can never be max again
+        dq.offerLast(i);
+        if (i >= k - 1) out[i - k + 1] = a[dq.peekFirst()];
+    }
+    return out;
+}
+```
+
+<Callout type="warning" title="Common mistakes">
+
+- **Pushing values instead of indexes** — you lose distances and can't tell when an element has left a window.
+- **Wrong comparison** (`<` vs `<=`) for the variant you need — use the table above.
+- **Strict on both sides** in contribution counting — double-counts equal values.
+- **Forgetting the leftovers** after the loop (they get −1 or 0), or forgetting a sentinel to flush them.
+- **Overflow** in contribution sums — use `long`.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 496 | [Next Greater Element I](https://leetcode.com/problems/next-greater-element-i/) | Easy | The template + a map |
+| 739 | [Daily Temperatures](https://leetcode.com/problems/daily-temperatures/) | Medium | Indexes give distances |
+| 503 | [Next Greater Element II](https://leetcode.com/problems/next-greater-element-ii/) | Medium | Circular: two laps |
+| 901 | [Online Stock Span](https://leetcode.com/problems/online-stock-span/) | Medium | Previous greater, streaming |
+| 402 | [Remove K Digits](https://leetcode.com/problems/remove-k-digits/) | Medium | Greedy increasing stack |
+| 907 | [Sum of Subarray Minimums](https://leetcode.com/problems/sum-of-subarray-minimums/) | Medium | Contribution counting |
+| 239 | [Sliding Window Maximum](https://leetcode.com/problems/sliding-window-maximum/) | Hard | Monotonic deque |
+| 84 | [Largest Rectangle in Histogram](https://leetcode.com/problems/largest-rectangle-in-histogram/) | Hard | Both boundaries from one pop |
+| 85 | [Maximal Rectangle](https://leetcode.com/problems/maximal-rectangle/) | Hard | Histogram per row |
+
+## Interview questions
+
+<QA q="Why is the monotonic stack solution O(n) even though there's a while loop inside the for loop?">
+Each index is pushed onto the stack exactly once and popped at most once. The total number of pops across the entire run is therefore at most n, so the while loop contributes O(n) work overall, and the algorithm is O(n) time with O(n) space for the stack.
+</QA>
+
+<QA q="How does the largest-rectangle-in-histogram algorithm know each bar's width?">
+It keeps bar indexes in increasing order of height. When a bar is popped because the current bar is lower, the current index is the first smaller bar to its right, and the index left on top of the stack is the first smaller bar to its left. The rectangle with the popped bar as its shortest bar spans strictly between those two, giving width i − left − 1.
+</QA>
+
+<Practice task="Online stock span: for each new price, return how many consecutive days (including today) the price was at most today's. Which variant of the template, and what do you store?">
+
+It's **previous greater** with a stack of `{price, span}` pairs. For a new price, pop every entry with price ≤ today's and add their spans to today's span (starting at 1); push `{price, span}`. The popped days are absorbed into today's entry, so each day is pushed and popped once — O(1) amortised per call. Storing the span (instead of re-walking) is what keeps it linear.
+
+</Practice>
+
+<Practice task="Maximal rectangle of 1s in a binary matrix. How do you reduce it to the histogram problem?">
+
+Process row by row, maintaining `heights[j]` = number of consecutive 1s ending at the current row in column j (reset to 0 on a 0). Each row's `heights` is a histogram; run the largest-rectangle algorithm on it and take the maximum over rows. O(rows × cols). Recognising "2D problem = 1D problem per row" is a recurring trick.
+
+</Practice>
+
+<Takeaways>
+
+- A monotonic stack holds indexes still waiting for their next greater/smaller element; a new element resolves the ones it beats.
+- Pop condition and strictness decide the variant; storing indexes gives distances and widths.
+- Each element is pushed and popped once → O(n).
+- Contribution counting: element × (left choices) × (right choices), strict on one side only.
+- Monotonic deque: window maximum in O(n) — drop dominated elements from the back, expired ones from the front.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Heaps: Top-K, K-Way Merge, Two Heaps](/dsa/patterns/heap-patterns).
+- [Sliding Window](/dsa/patterns/sliding-window) — the window mechanics the deque builds on.

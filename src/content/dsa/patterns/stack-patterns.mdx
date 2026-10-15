@@ -1,0 +1,237 @@
+A stack is the simplest data structure there is — push on top, pop from top — and that's exactly why people miss it. The signal is **nesting** or **"the most recent thing matters most"**: brackets inside brackets, an operation that undoes the previous one, an expression where the last operator seen decides what happens next. Whenever the problem has that last-in-first-out shape, a stack turns a confusing scan into a clean one-pass solution.
+
+<Callout type="tip" title="How to spot it">
+
+- **Matching pairs** that can nest: brackets, tags, quotes.
+- Something **cancels the most recent** item: backspaces, adjacent duplicates, colliding asteroids, undo.
+- **Evaluating or parsing** expressions with precedence or nesting (`3[a2[c]]`, `2 + 3 * 4`).
+- You need to **remember context** while you go deeper and restore it when you come back up — the same job the call stack does in recursion.
+- "Next greater / smaller element" — that's the [monotonic stack](/dsa/patterns/monotonic-stack), the next lesson.
+
+</Callout>
+
+## The idea: the newest open thing must close first
+
+<ArrayViz title="Valid brackets with a stack" frames={[
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], aux: { label: "stack (expected closers)", items: [] }, note: "Valid brackets? The most recently opened bracket must close first — last in, first out. On each opener, push the closer we now expect." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 0 }, highlight: [0], done: [], aux: { label: "stack (expected closers)", items: ["}"] }, note: "'{' opens: push the closer we expect, '}'." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 1 }, highlight: [1], done: [0], aux: { label: "stack (expected closers)", items: ["}", "]"] }, note: "'[' opens: push the closer we expect, ']'." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 2 }, highlight: [2], done: [0, 1], aux: { label: "stack (expected closers)", items: ["}", "]", ")"] }, note: "'(' opens: push the closer we expect, ')'." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 3 }, highlight: [3], done: [0, 1, 2], aux: { label: "stack (expected closers)", items: ["}", "]"] }, note: "')' matches the top of the stack: pop." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 4 }, highlight: [4], done: [0, 1, 2, 3], aux: { label: "stack (expected closers)", items: ["}"] }, note: "']' matches the top of the stack: pop." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], aux: { label: "stack (expected closers)", items: ["}", ")"] }, note: "'(' opens: push the closer we expect, ')'." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "stack (expected closers)", items: ["}"] }, note: "')' matches the top of the stack: pop." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 7 }, highlight: [7], done: [0, 1, 2, 3, 4, 5, 6], aux: { label: "stack (expected closers)", items: [] }, note: "'}' matches the top of the stack: pop." },
+  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], done: [0, 1, 2, 3, 4, 5, 6, 7], aux: { label: "stack (expected closers)", items: [] }, note: "End of string and the stack is empty: every bracket was closed in the right order. Valid." }
+]} />
+
+```java
+static boolean isValid(String s) {
+    Deque<Character> stack = new ArrayDeque<>();
+    for (char c : s.toCharArray()) {
+        if (c == '(') stack.push(')');                // push the closer we expect
+        else if (c == '[') stack.push(']');
+        else if (c == '{') stack.push('}');
+        else if (stack.isEmpty() || stack.pop() != c) return false;   // wrong closer, or nothing open
+    }
+    return stack.isEmpty();                           // anything left was never closed
+}
+```
+
+Pushing the **expected closer** (instead of the opener) makes the check a single comparison. Two failure modes, two checks: a closer with nothing open (`stack.isEmpty()`), and an opener never closed (non-empty at the end).
+
+In Java, use `ArrayDeque` as the stack (`push`, `pop`, `peek`), or a `StringBuilder` when the items are characters.
+
+## Worked problems
+
+### Remove all adjacent duplicates
+
+> Repeatedly remove pairs of equal adjacent letters: `"abbaca"` → `"ca"`.
+
+Removing `bb` makes the two `a`s adjacent — the "most recent survivor" is what matters. A stack of survivors handles chains of removals in one pass:
+
+```java
+static String removeDuplicates(String s) {
+    StringBuilder stack = new StringBuilder();
+    for (char c : s.toCharArray()) {
+        int top = stack.length() - 1;
+        if (top >= 0 && stack.charAt(top) == c) stack.deleteCharAt(top);   // cancels the most recent
+        else stack.append(c);
+    }
+    return stack.toString();
+}
+```
+
+### Asteroid collision
+
+> Positive = moving right, negative = moving left, same speed. Colliding asteroids: the smaller explodes; equal sizes both explode.
+
+Only a right-mover followed by a left-mover can collide, and a new left-mover hits the **most recent** right-mover first:
+
+```java
+static int[] asteroidCollision(int[] asteroids) {
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (int a : asteroids) {
+        boolean alive = true;
+        while (alive && a < 0 && !stack.isEmpty() && stack.peek() > 0) {
+            if (stack.peek() < -a) stack.pop();                         // the right-mover explodes; keep going
+            else { if (stack.peek() == -a) stack.pop(); alive = false; }   // equal: both; bigger: a explodes
+        }
+        if (alive) stack.push(a);
+    }
+    int[] out = new int[stack.size()];
+    for (int i = out.length - 1; i >= 0; i--) out[i] = stack.pop();
+    return out;
+}
+```
+
+### Min stack — every operation in O(1)
+
+> A stack that also returns its minimum in O(1).
+
+Store, with each element, **the minimum at the moment it was pushed**. When you pop, the previous minimum comes back automatically.
+
+```java
+static class MinStack {
+    private final Deque<int[]> stack = new ArrayDeque<>();     // {value, minimum so far}
+    void push(int v) { stack.push(new int[] { v, stack.isEmpty() ? v : Math.min(v, stack.peek()[1]) }); }
+    void pop()       { stack.pop(); }
+    int top()        { return stack.peek()[0]; }
+    int getMin()     { return stack.peek()[1]; }
+}
+```
+
+### Basic calculator: `+ − * /` with precedence
+
+> Evaluate `"3+2*2 - 8/4"` (no parentheses) → 5.
+
+Additions and subtractions can wait; multiplications and divisions must happen **now**, using the most recent term. Push signed terms; for `*` and `/`, pop the last term, combine, push it back. Sum the stack at the end.
+
+```java
+static int calculate(String s) {
+    Deque<Integer> stack = new ArrayDeque<>();
+    int num = 0; char op = '+';                                  // the operator BEFORE the current number
+    for (int i = 0; i < s.length(); i++) {
+        char c = s.charAt(i);
+        if (Character.isDigit(c)) num = num * 10 + (c - '0');
+        if ((!Character.isDigit(c) && c != ' ') || i == s.length() - 1) {
+            switch (op) {
+                case '+' -> stack.push(num);
+                case '-' -> stack.push(-num);
+                case '*' -> stack.push(stack.pop() * num);       // apply * and / immediately
+                case '/' -> stack.push(stack.pop() / num);
+            }
+            op = c; num = 0;
+        }
+    }
+    int total = 0;
+    for (int x : stack) total += x;
+    return total;
+}
+```
+
+### Decode string: nesting with two stacks
+
+> `"3[a2[c]]"` → `"accaccacc"`.
+
+On `[`, save the current string and the repeat count, and start a fresh string. On `]`, repeat the inner string and append it to the saved outer one. That's recursion done by hand — the stacks hold exactly what the call stack would.
+
+```java
+static String decodeString(String s) {
+    Deque<Integer> counts = new ArrayDeque<>();
+    Deque<StringBuilder> outer = new ArrayDeque<>();
+    StringBuilder cur = new StringBuilder();
+    int k = 0;
+    for (char c : s.toCharArray()) {
+        if (Character.isDigit(c)) k = k * 10 + (c - '0');                   // counts can be multi-digit
+        else if (c == '[') { counts.push(k); outer.push(cur); cur = new StringBuilder(); k = 0; }
+        else if (c == ']') { String inner = cur.toString(); cur = outer.pop(); cur.append(inner.repeat(counts.pop())); }
+        else cur.append(c);
+    }
+    return cur.toString();
+}
+```
+
+### Longest valid parentheses (hard)
+
+Push **indexes**. Keep the index just before the current valid run at the bottom of the stack; the run's length is `i − stack.peek()`.
+
+```java
+static int longestValidParentheses(String s) {
+    Deque<Integer> stack = new ArrayDeque<>();
+    stack.push(-1);                                    // base: "before the start"
+    int best = 0;
+    for (int i = 0; i < s.length(); i++) {
+        if (s.charAt(i) == '(') stack.push(i);
+        else {
+            stack.pop();
+            if (stack.isEmpty()) stack.push(i);       // unmatched ')': it becomes the new base
+            else best = Math.max(best, i - stack.peek());
+        }
+    }
+    return best;
+}
+```
+
+Storing **indexes rather than values** is a recurring stack trick: the index tells you distances, and you can always look the value up.
+
+<Callout type="warning" title="Common mistakes">
+
+- **Popping an empty stack** — check `isEmpty()` before `pop()`/`peek()`.
+- **Forgetting the final check** — a valid scan must also end with an empty stack.
+- **Multi-digit numbers** — accumulate `num = num * 10 + digit`; don't treat each digit as a number.
+- **Using `java.util.Stack`** — prefer `ArrayDeque`.
+- **Iterating an `ArrayDeque` used as a stack** iterates from the **top** (most recent) down — reverse if you need bottom-to-top order.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 20 | [Valid Parentheses](https://leetcode.com/problems/valid-parentheses/) | Easy | Matching pairs |
+| 1047 | [Remove All Adjacent Duplicates In String](https://leetcode.com/problems/remove-all-adjacent-duplicates-in-string/) | Easy | Cancel the most recent |
+| 844 | [Backspace String Compare](https://leetcode.com/problems/backspace-string-compare/) | Easy | Undo as a stack |
+| 155 | [Min Stack](https://leetcode.com/problems/min-stack/) | Medium | Extra state per entry |
+| 150 | [Evaluate Reverse Polish Notation](https://leetcode.com/problems/evaluate-reverse-polish-notation/) | Medium | Operands on a stack |
+| 735 | [Asteroid Collision](https://leetcode.com/problems/asteroid-collision/) | Medium | Repeated cancellation |
+| 71 | [Simplify Path](https://leetcode.com/problems/simplify-path/) | Medium | `..` pops a directory |
+| 227 | [Basic Calculator II](https://leetcode.com/problems/basic-calculator-ii/) | Medium | Precedence with a stack |
+| 394 | [Decode String](https://leetcode.com/problems/decode-string/) | Medium | Nesting with saved context |
+| 32 | [Longest Valid Parentheses](https://leetcode.com/problems/longest-valid-parentheses/) | Hard | Indexes on the stack |
+
+## Interview questions
+
+<QA q="How do you design a stack that returns its minimum in O(1)?">
+Store alongside every pushed value the minimum of the stack at that moment (or keep a second stack of minimums, pushing only when a new value is at most the current minimum). getMin reads the top's stored minimum. When you pop, the stored minimum of the new top is automatically the minimum of the remaining elements, so all operations stay O(1).
+</QA>
+
+<QA q="When does a problem call for a stack?">
+When the most recent unfinished item is the one that must be dealt with next: nested structures like brackets or encoded strings, operations that cancel or undo the previous item, expression evaluation where pending lower-precedence work waits while higher-precedence work happens now, and iterative versions of recursive algorithms. If you find yourself scanning backwards to find "the last unmatched thing", a stack removes that scan.
+</QA>
+
+<Practice task="Simplify a Unix path: '/a/./b/../../c/' becomes '/c'. Which items go on the stack, and what does '..' do?">
+
+Split on `/`. Ignore empty parts and `.`. For `..`, pop the last directory if the stack isn't empty (going above the root stays at the root). Anything else is a directory name: push it. Finally join the stack bottom-to-top with `/` and prefix `/` — careful: an `ArrayDeque` iterates from the top, so use `offerLast/pollLast` (treating the deque's tail as the top) or reverse before joining.
+
+</Practice>
+
+<Practice task="Evaluate a Reverse Polish Notation expression like ['2', '1', '+', '3', '*'] (= 9). What's on the stack and in what order are operands popped?">
+
+Operands go on the stack. On an operator, pop **b first, then a** (the right operand is on top), compute `a op b`, and push the result. At the end the single remaining value is the answer. The pop order matters for `-` and `/`: `["4","13","5","/","+"]` is `4 + 13 / 5 = 6`, which you only get if you compute `13 / 5`, not `5 / 13`.
+
+</Practice>
+
+<Takeaways>
+
+- Stacks handle nesting and "most recent first": matching, cancelling, undo, parsing.
+- Push the expected closer to make bracket matching a single comparison; check empty both mid-scan and at the end.
+- Store extra state per entry (the running minimum) or store indexes instead of values.
+- Two stacks (counts + saved context) replace recursion for nested decoding.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Monotonic Stack & Queue](/dsa/patterns/monotonic-stack).
+- [Recursion Without Fear](/dsa/start-here/recursion-made-easy) — the call stack these problems imitate.

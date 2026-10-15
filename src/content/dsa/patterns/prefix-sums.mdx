@@ -1,0 +1,217 @@
+"What's the sum of elements from index 3 to 9?" A loop answers it in O(n). Ask that a thousand times and you've done a thousand loops — over the same numbers. A **prefix sum** array does the adding once, up front, and then answers every range-sum question with a single subtraction. Combined with a hash map, it also solves the "subarray sum equals k" family — including the cases with negative numbers where a sliding window fails.
+
+<Callout type="tip" title="How to spot it">
+
+- Many questions about **sums over ranges** of an array that doesn't change.
+- "**Count** (or find the longest) subarrays whose sum is k / divisible by k / zero" — especially when **negatives are allowed**.
+- Problems that become "zero-sum subarray" after a **transformation** (treat 0 as −1, map letters to +1/−1).
+- "Product of all elements **except** the current one" — prefix and suffix products.
+- Many **range updates** ("add v to every element from l to r") followed by reading the final array — the difference array.
+
+</Callout>
+
+## The idea
+
+Let `p[i]` be the sum of the first `i` elements. Then any range sum is a difference of two prefixes:
+
+**sum(a[l..r]) = p[r + 1] − p[l]**
+
+```java
+long[] p = new long[a.length + 1];                  // p[0] = 0: the empty prefix
+for (int i = 0; i < a.length; i++) p[i + 1] = p[i] + a[i];
+
+long sum = p[r + 1] - p[l];                         // a[l] + … + a[r], in O(1)
+```
+
+Making `p` one longer than `a`, with `p[0] = 0`, removes every special case for ranges starting at index 0. Use `long` — prefix sums grow quickly.
+
+## Prefix sums + hash map: counting subarrays
+
+The same identity, read backwards, is the key to a whole family of problems. A subarray ending at `i` sums to `k` exactly when some **earlier prefix** equals `prefix(i) − k`. So walk once, keep a count of every prefix seen so far, and at each step ask "how many earlier prefixes equal `current − k`?"
+
+<ArrayViz title="Count subarrays that sum to k = 3" frames={[
+  { arr: [2, 1, -1, 3, -2, 2], vars: { k: 3, prefix: 0, count: 0 }, aux: { label: "prefix counts", items: ["0:1"] }, note: "Count subarrays that sum to 3 (negatives allowed, so no sliding window). Seed the map with prefix 0 seen once — the empty prefix before the array." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 0 }, window: [0, 0], highlight: [0], vars: { k: 3, prefix: 2, need: -1, count: 0 }, aux: { label: "prefix counts", items: ["0:1"] }, note: "Prefix is 2. Need an earlier prefix of -1; none seen, so no subarray ending here sums to 3." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 1 }, window: [0, 1], highlight: [1], vars: { k: 3, prefix: 3, need: 0, count: 1 }, aux: { label: "prefix counts", items: ["0:1", "2:1"] }, note: "Prefix is 3. Any earlier prefix of 0 means the part after it sums to 3 − 0 = 3. Seen 1× → count += 1." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 2 }, window: [0, 2], highlight: [2], vars: { k: 3, prefix: 2, need: -1, count: 1 }, aux: { label: "prefix counts", items: ["0:1", "2:1", "3:1"] }, note: "Prefix is 2. Need an earlier prefix of -1; none seen, so no subarray ending here sums to 3." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 3 }, window: [0, 3], highlight: [3], vars: { k: 3, prefix: 5, need: 2, count: 3 }, aux: { label: "prefix counts", items: ["0:1", "2:2", "3:1"] }, note: "Prefix is 5. Any earlier prefix of 2 means the part after it sums to 5 − 2 = 3. Seen 2× → count += 2." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 4 }, window: [0, 4], highlight: [4], vars: { k: 3, prefix: 3, need: 0, count: 4 }, aux: { label: "prefix counts", items: ["0:1", "2:2", "3:1", "5:1"] }, note: "Prefix is 3. Any earlier prefix of 0 means the part after it sums to 3 − 0 = 3. Seen 1× → count += 1." },
+  { arr: [2, 1, -1, 3, -2, 2], pointers: { i: 5 }, window: [0, 5], highlight: [5], vars: { k: 3, prefix: 5, need: 2, count: 6 }, aux: { label: "prefix counts", items: ["0:1", "2:2", "3:2", "5:1"] }, note: "Prefix is 5. Any earlier prefix of 2 means the part after it sums to 5 − 2 = 3. Seen 2× → count += 2." },
+  { arr: [2, 1, -1, 3, -2, 2], vars: { k: 3, count: 6 }, aux: { label: "prefix counts", items: ["0:1", "2:2", "3:2", "5:2"] }, note: "Done: 6 subarrays sum to 3, in one pass. Each prefix was stored after it was used, so a subarray is never empty." }
+]} />
+
+```java
+static int subarraySum(int[] nums, int k) {
+    Map<Long, Integer> seen = new HashMap<>();
+    seen.put(0L, 1);                                   // the empty prefix: subarrays starting at index 0
+    long prefix = 0; int count = 0;
+    for (int x : nums) {
+        prefix += x;
+        count += seen.getOrDefault(prefix - k, 0);     // earlier prefixes that complete a sum of k
+        seen.merge(prefix, 1, Integer::sum);           // store AFTER using it
+    }
+    return count;
+}
+```
+
+It's the hashing pattern's "check, then store" applied to prefix sums. It works with negative numbers, because it never relies on the sum growing or shrinking monotonically.
+
+## Worked problems
+
+### Subarray sums divisible by k — remainders instead of values
+
+Two prefixes with the **same remainder** mod k bracket a subarray whose sum is a multiple of k. Count remainders:
+
+```java
+static int subarraysDivByK(int[] nums, int k) {
+    int[] seen = new int[k];                           // remainder → how many prefixes had it
+    seen[0] = 1;
+    int prefix = 0, count = 0;
+    for (int x : nums) {
+        prefix = Math.floorMod(prefix + x, k);         // floorMod keeps it in [0, k) even for negatives
+        count += seen[prefix];
+        seen[prefix]++;
+    }
+    return count;
+}
+```
+
+Using `%` instead of `Math.floorMod` here is a classic bug: `-1 % 5` is `−1` in Java, which indexes outside the array (or splits one remainder class into two).
+
+### Contiguous array — transform, then zero-sum
+
+> Longest subarray with an equal number of 0s and 1s.
+
+Treat `0` as `−1`. Now "equal counts" means "sum is 0", and a zero-sum subarray lies between two **equal prefixes**. For the *longest*, remember each prefix's **earliest** index:
+
+```java
+static int findMaxLength(int[] nums) {
+    Map<Integer, Integer> firstIndex = new HashMap<>();
+    firstIndex.put(0, -1);                             // prefix 0 is "seen" before index 0
+    int prefix = 0, best = 0;
+    for (int i = 0; i < nums.length; i++) {
+        prefix += nums[i] == 1 ? 1 : -1;
+        Integer j = firstIndex.get(prefix);
+        if (j != null) best = Math.max(best, i - j);   // equal prefixes → zero sum in (j, i]
+        else firstIndex.put(prefix, i);                // only the EARLIEST index matters
+    }
+    return best;
+}
+```
+
+Counting problems store **how many times** each prefix appeared; longest problems store the **first index**. That's the main fork in this pattern.
+
+### Product of array except self — prefix and suffix
+
+> No division allowed, O(n).
+
+The answer at `i` is (product of everything left of `i`) × (product of everything right of `i`). Two passes, reusing the output array:
+
+```java
+static int[] productExceptSelf(int[] nums) {
+    int n = nums.length;
+    int[] out = new int[n];
+    int left = 1;
+    for (int i = 0; i < n; i++) { out[i] = left; left *= nums[i]; }           // product of a[0..i−1]
+    int right = 1;
+    for (int i = n - 1; i >= 0; i--) { out[i] *= right; right *= nums[i]; }  // × product of a[i+1..]
+    return out;
+}
+```
+
+### 2D prefix sums — rectangle sums in O(1)
+
+```java
+long[][] P = new long[R + 1][C + 1];
+for (int i = 0; i < R; i++)
+    for (int j = 0; j < C; j++)
+        P[i + 1][j + 1] = m[i][j] + P[i][j + 1] + P[i + 1][j] - P[i][j];   // add two strips, remove the overlap
+
+// sum of the rectangle (r1, c1) to (r2, c2), inclusive
+long sum = P[r2 + 1][c2 + 1] - P[r1][c2 + 1] - P[r2 + 1][c1] + P[r1][c1];
+```
+
+The `− P[i][j]` / `+ P[r1][c1]` terms are inclusion–exclusion: the overlapping corner was subtracted (or added) twice.
+
+## The reverse: difference arrays for range updates
+
+Prefix sums make **range queries** cheap. Difference arrays make **range updates** cheap. To add `v` to every element in `[l, r]`, mark only the two edges, then take one running sum at the end:
+
+```java
+static int[] applyRangeAdds(int n, int[][] updates) {     // each update: {l, r, v}
+    int[] diff = new int[n + 1];
+    for (int[] u : updates) {
+        diff[u[0]] += u[2];                                // start adding v at l
+        diff[u[1] + 1] -= u[2];                            // stop after r
+    }
+    int[] out = new int[n];
+    int running = 0;
+    for (int i = 0; i < n; i++) { running += diff[i]; out[i] = running; }
+    return out;
+}
+```
+
+m updates on an array of size n cost O(m + n) instead of O(m · n). This shows up as "car pooling", "flight bookings", "how many meetings are active at each minute".
+
+<Callout type="warning" title="Common mistakes">
+
+- **Forgetting to seed the map** with prefix 0 (count 1, or index −1) — misses subarrays that start at index 0.
+- **Storing the prefix before checking it** — counts empty subarrays when k = 0.
+- **Using `%` with negative numbers** — use `Math.floorMod`.
+- **Overwriting the earliest index** in "longest" problems — only store a prefix the first time.
+- **`int` overflow** in prefix arrays of large values — use `long`.
+- **Reaching for a sliding window** when the array has negatives and the condition is a sum.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1480 | [Running Sum of 1d Array](https://leetcode.com/problems/running-sum-of-1d-array/) | Easy | Building a prefix array |
+| 303 | [Range Sum Query - Immutable](https://leetcode.com/problems/range-sum-query-immutable/) | Easy | p[r + 1] − p[l] |
+| 724 | [Find Pivot Index](https://leetcode.com/problems/find-pivot-index/) | Easy | Left sum vs total − left − self |
+| 560 | [Subarray Sum Equals K](https://leetcode.com/problems/subarray-sum-equals-k/) | Medium | Prefix + hash map (counts) |
+| 974 | [Subarray Sums Divisible by K](https://leetcode.com/problems/subarray-sums-divisible-by-k/) | Medium | Remainders, floorMod |
+| 525 | [Contiguous Array](https://leetcode.com/problems/contiguous-array/) | Medium | Transform + earliest index |
+| 238 | [Product of Array Except Self](https://leetcode.com/problems/product-of-array-except-self/) | Medium | Prefix × suffix |
+| 304 | [Range Sum Query 2D - Immutable](https://leetcode.com/problems/range-sum-query-2d-immutable/) | Medium | 2D inclusion–exclusion |
+| 1109 | [Corporate Flight Bookings](https://leetcode.com/problems/corporate-flight-bookings/) | Medium | Difference array |
+| 1074 | [Number of Submatrices That Sum to Target](https://leetcode.com/problems/number-of-submatrices-that-sum-to-target/) | Hard | 2D → many 1D "subarray sum = k" |
+
+## Interview questions
+
+<QA q="Why initialise the hash map with prefix 0 when counting subarrays that sum to k?">
+A subarray that starts at index 0 has sum equal to the current prefix itself, which corresponds to an 'earlier prefix' of 0 — the empty prefix before the array starts. Without seeding the map with 0 → 1 (or 0 → index −1 for longest-length problems), every subarray beginning at index 0 is missed.
+</QA>
+
+<QA q="When do you store counts and when do you store the first index?">
+Store how many times each prefix has occurred when the question asks to count subarrays, because each earlier occurrence pairs with the current position to form a distinct subarray. Store only the earliest index when it asks for the longest subarray, because the earliest matching prefix gives the longest span; later occurrences should not overwrite it.
+</QA>
+
+<Practice task="Find the pivot index: the index where the sum of everything to its left equals the sum of everything to its right. Do it in O(n) time and O(1) extra space.">
+
+Compute the total once. Walk left to right keeping `leftSum`; at index `i`, the right sum is `total − leftSum − nums[i]`. If they're equal, return `i`; then add `nums[i]` to `leftSum`. It's a prefix sum where you only ever need the current prefix, so no array is required — a common simplification when the queries come in order.
+
+</Practice>
+
+<Practice task="A road has n kilometre markers. You're given trips as {passengers, from, to}, and a car with a given capacity. Can the car complete all trips? Which technique, and why not simulate each trip?">
+
+Difference array: for each trip add `passengers` at `from` and subtract at `to` (passengers leave at `to`, so the range is `[from, to)`). One running sum over the markers gives the load at every point; if it ever exceeds capacity, the answer is no. Simulating each trip kilometre by kilometre costs O(trips × length); the difference array costs O(trips + length).
+
+</Practice>
+
+<Takeaways>
+
+- A prefix array (length n + 1, `p[0] = 0`) answers any range sum in O(1): `p[r + 1] − p[l]`.
+- Prefix + hash map counts subarrays with a target sum in O(n), negatives included: look up `prefix − k`, then store.
+- Seed the map (0 → 1 for counts, 0 → −1 for longest); counts for "how many", earliest index for "longest".
+- Transform problems into zero-sum form; use `Math.floorMod` for remainders.
+- Difference arrays make range updates O(1), with one prefix pass at the end.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Intervals](/dsa/patterns/intervals).
+- Related: [Sliding Window](/dsa/patterns/sliding-window) — use it instead when all numbers are positive.

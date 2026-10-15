@@ -1,0 +1,216 @@
+"Shortest path" sounds like one problem, but the right algorithm depends entirely on **the edge weights**. All edges cost the same? Plain [BFS](/dsa/patterns/graph-traversal). Weights of 0 or 1? A deque. Non-negative weights? **Dijkstra**. A limit on the number of edges, or negative weights? **Bellman–Ford**. Picking correctly is most of the problem — the code for each is short.
+
+<Callout type="tip" title="How to spot it">
+
+- "**Minimum cost / time / distance** to get from A to B" in a graph or grid with **weights**.
+- "Time for a signal to reach every node" → the largest shortest-path distance.
+- "Path that **minimises the maximum** step" (minimum effort, swim in rising water) — Dijkstra with a different cost.
+- "Cheapest route with **at most k stops**" → a bounded Bellman–Ford.
+- Moves that are sometimes **free** and sometimes cost 1 → 0-1 BFS.
+
+</Callout>
+
+## Choose by weights
+
+| Edge weights | Algorithm | Time |
+| --- | --- | --- |
+| All equal (unweighted) | BFS | O(V + E) |
+| Only 0 or 1 | 0-1 BFS (deque) | O(V + E) |
+| Non-negative | **Dijkstra** (min-heap) | O((V + E) log V) |
+| At most k edges, or negative weights | Bellman–Ford (k + 1 rounds, or V − 1) | O(k · E) or O(V · E) |
+| All pairs, small V (≈ 400 or fewer) | Floyd–Warshall | O(V³) |
+
+## Dijkstra: always expand the closest unfinished node
+
+Keep a tentative distance for every node. Repeatedly take the node with the **smallest** tentative distance from a min-heap; since all weights are non-negative, nothing found later can make it cheaper — its distance is **final**. Then **relax** its edges: if going through it improves a neighbour's distance, update and push.
+
+<ArrayViz title="Dijkstra from A" frames={[
+  { arr: ["A:0", "B:∞", "C:∞", "D:∞", "E:∞"], highlight: [0], aux: { label: "heap", items: ["A(0)"] }, note: "Edges: A→B 4, A→C 1, C→B 2, B→D 1, C→D 5, D→E 3. Distances start at ∞ except the source A = 0. The heap always gives the closest node not yet finalised." },
+  { arr: ["A:0", "B:4", "C:1", "D:∞", "E:∞"], pointers: { settle: 0 }, highlight: [1, 2], done: [0], aux: { label: "heap", items: ["C(1)", "B(4)"] }, note: "Pop A (distance 0) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: B → 4, C → 1." },
+  { arr: ["A:0", "B:3", "C:1", "D:6", "E:∞"], pointers: { settle: 2 }, highlight: [1, 3], done: [0, 2], aux: { label: "heap", items: ["B(3)", "B(4)", "D(6)"] }, note: "Pop C (distance 1) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: B → 3, D → 6." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:∞"], pointers: { settle: 1 }, highlight: [3], done: [0, 2, 1], aux: { label: "heap", items: ["B(4)", "D(4)", "D(6)"] }, note: "Pop B (distance 3) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: D → 4." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:∞"], done: [0, 2, 1], aux: { label: "heap", items: ["D(4)", "D(6)"] }, note: "Pop B(4) — stale: we already found B at distance 3. Skip it." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], pointers: { settle: 3 }, highlight: [4], done: [0, 2, 1, 3], aux: { label: "heap", items: ["D(6)", "E(7)"] }, note: "Pop D (distance 4) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: E → 7." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], done: [0, 2, 1, 3], aux: { label: "heap", items: ["E(7)"] }, note: "Pop D(6) — stale: we already found D at distance 4. Skip it." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], pointers: { settle: 4 }, highlight: [], done: [0, 2, 1, 3, 4], aux: { label: "heap", items: [] }, note: "Pop E (distance 7) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: no improvements." },
+  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], done: [0, 2, 1, 3, 4], note: "Done. B was first offered at 4 (A→B) but improved to 3 via C — that is why a node is only final when it is POPPED, not when it is first reached." }
+]} />
+
+```java
+/** times[i] = {from, to, weight}, nodes 1..n. Time for a signal from k to reach every node, or −1. */
+static int networkDelayTime(int[][] times, int n, int k) {
+    List<List<int[]>> graph = new ArrayList<>();
+    for (int i = 0; i <= n; i++) graph.add(new ArrayList<>());
+    for (int[] e : times) graph.get(e[0]).add(new int[] { e[1], e[2] });
+
+    int[] dist = new int[n + 1];
+    Arrays.fill(dist, Integer.MAX_VALUE);
+    dist[k] = 0;
+    PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> Integer.compare(a[1], b[1]));   // {node, distance}
+    pq.offer(new int[] { k, 0 });
+    while (!pq.isEmpty()) {
+        int[] top = pq.poll();
+        int u = top[0], d = top[1];
+        if (d > dist[u]) continue;                       // stale entry: u was already finalised cheaper
+        for (int[] e : graph.get(u)) {
+            int v = e[0], nd = d + e[1];
+            if (nd < dist[v]) { dist[v] = nd; pq.offer(new int[] { v, nd }); }   // relax
+        }
+    }
+    int worst = 0;
+    for (int i = 1; i <= n; i++) worst = Math.max(worst, dist[i]);
+    return worst == Integer.MAX_VALUE ? -1 : worst;
+}
+```
+
+Java's `PriorityQueue` has no "decrease key", so we simply push a new entry when a distance improves and **skip stale entries** when they come out (`d > dist[u]`). This "lazy deletion" is the standard interview implementation.
+
+<Callout type="warning" title="Dijkstra fails with negative weights">
+Dijkstra assumes that once a node is popped, no cheaper path can appear. A negative edge discovered later breaks that assumption and gives wrong answers. With negative weights, use Bellman–Ford.
+</Callout>
+
+## Dijkstra with a different cost: minimise the maximum step
+
+> Path from top-left to bottom-right of a height grid that minimises the **largest** height difference between consecutive cells.
+
+The cost of a path isn't a sum — it's its worst step. Dijkstra still works, because extending a path can never make its maximum smaller (the cost is monotonic). Replace `d + w` with `max(d, w)`:
+
+```java
+static int minimumEffortPath(int[][] h) {
+    int R = h.length, C = h[0].length;
+    int[][] effort = new int[R][C];
+    for (int[] row : effort) Arrays.fill(row, Integer.MAX_VALUE);
+    effort[0][0] = 0;
+    PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> Integer.compare(a[2], b[2]));   // {r, c, effort}
+    pq.offer(new int[] { 0, 0, 0 });
+    while (!pq.isEmpty()) {
+        int[] cur = pq.poll();
+        if (cur[2] > effort[cur[0]][cur[1]]) continue;
+        if (cur[0] == R - 1 && cur[1] == C - 1) return cur[2];   // the target is final when popped
+        for (int[] d : DIRS) {
+            int nr = cur[0] + d[0], nc = cur[1] + d[1];
+            if (nr < 0 || nc < 0 || nr >= R || nc >= C) continue;
+            int ne = Math.max(cur[2], Math.abs(h[nr][nc] - h[cur[0]][cur[1]]));
+            if (ne < effort[nr][nc]) { effort[nr][nc] = ne; pq.offer(new int[] { nr, nc, ne }); }
+        }
+    }
+    return 0;
+}
+```
+
+(This problem can also be solved with [binary search on the answer](/dsa/patterns/binary-search-on-answer) + BFS, or with union-find adding edges in increasing order.)
+
+## Bellman–Ford with a limit: cheapest flights within k stops
+
+> Cheapest price from `src` to `dst` using at most `k` stops (k + 1 flights).
+
+Dijkstra optimises cost but not the number of edges, so it can discard a pricier path that had fewer stops. **Bellman–Ford** in rounds handles the limit directly: after round `i`, `cost[v]` is the cheapest price using at most `i` flights. Run k + 1 rounds — and relax from a **copy** of the previous round, so one round can't chain several flights together.
+
+```java
+static int findCheapestPrice(int n, int[][] flights, int src, int dst, int k) {
+    int[] cost = new int[n];
+    Arrays.fill(cost, Integer.MAX_VALUE);
+    cost[src] = 0;
+    for (int round = 0; round <= k; round++) {
+        int[] next = cost.clone();                       // relax from LAST round's costs only
+        for (int[] f : flights)
+            if (cost[f[0]] != Integer.MAX_VALUE && cost[f[0]] + f[2] < next[f[1]])
+                next[f[1]] = cost[f[0]] + f[2];
+        cost = next;
+    }
+    return cost[dst] == Integer.MAX_VALUE ? -1 : cost[dst];
+}
+```
+
+The reference solution checks this against trying every route of up to k + 1 flights. Without the `clone()`, a single round could use several flights in sequence and break the stop limit — a very common bug.
+
+Plain Bellman–Ford (V − 1 rounds, in place) handles negative weights; if a V-th round still improves something, the graph has a **negative cycle**.
+
+## 0-1 BFS: when edges cost 0 or 1
+
+When every move costs either 0 or 1, you don't need a heap. Use a **deque**: push 0-cost moves to the **front** (they're as close as the current node) and 1-cost moves to the **back**. The deque stays sorted by distance, like Dijkstra's heap, in O(V + E).
+
+```java
+static int zeroOneBFS(int[][] grid) {                  // entering a 1-cell costs 1, a 0-cell costs 0
+    int R = grid.length, C = grid[0].length;
+    int[][] dist = new int[R][C];
+    for (int[] row : dist) Arrays.fill(row, Integer.MAX_VALUE);
+    dist[0][0] = grid[0][0];
+    Deque<int[]> dq = new ArrayDeque<>(List.of(new int[] { 0, 0 }));
+    while (!dq.isEmpty()) {
+        int[] cur = dq.pollFirst();
+        for (int[] d : DIRS) {
+            int nr = cur[0] + d[0], nc = cur[1] + d[1];
+            if (nr < 0 || nc < 0 || nr >= R || nc >= C) continue;
+            int w = grid[nr][nc], nd = dist[cur[0]][cur[1]] + w;
+            if (nd < dist[nr][nc]) {
+                dist[nr][nc] = nd;
+                if (w == 0) dq.offerFirst(new int[] { nr, nc });
+                else dq.offerLast(new int[] { nr, nc });
+            }
+        }
+    }
+    return dist[R - 1][C - 1];
+}
+```
+
+Typical problems: minimum obstacles to remove to reach a corner, minimum cost to make a grid path valid (following an arrow is free, changing it costs 1).
+
+<Callout type="warning" title="Common mistakes">
+
+- **Dijkstra with negative edges** — wrong answers; use Bellman–Ford.
+- **Treating a node as final when first reached** — it's final only when **popped** from the heap.
+- **Not skipping stale heap entries** — correct but slow, and wrong for "stop at the target" variants that return on the first pop of a stale entry.
+- **Overflow** adding a weight to `Integer.MAX_VALUE` — check for "unreached" before adding.
+- **Bellman–Ford rounds without a copy** when the number of edges is limited.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 743 | [Network Delay Time](https://leetcode.com/problems/network-delay-time/) | Medium | Dijkstra template |
+| 1631 | [Path With Minimum Effort](https://leetcode.com/problems/path-with-minimum-effort/) | Medium | Dijkstra with max instead of sum |
+| 787 | [Cheapest Flights Within K Stops](https://leetcode.com/problems/cheapest-flights-within-k-stops/) | Medium | Bounded Bellman–Ford |
+| 1514 | [Path with Maximum Probability](https://leetcode.com/problems/path-with-maximum-probability/) | Medium | Dijkstra maximising a product |
+| 2290 | [Minimum Obstacle Removal to Reach Corner](https://leetcode.com/problems/minimum-obstacle-removal-to-reach-corner/) | Hard | 0-1 BFS |
+| 1368 | [Minimum Cost to Make at Least One Valid Path in a Grid](https://leetcode.com/problems/minimum-cost-to-make-at-least-one-valid-path-in-a-grid/) | Hard | 0-1 BFS with directions |
+| 778 | [Swim in Rising Water](https://leetcode.com/problems/swim-in-rising-water/) | Hard | Minimise the maximum |
+| 1334 | [Find the City With the Smallest Number of Neighbors at a Threshold Distance](https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/) | Medium | Floyd–Warshall |
+
+## Interview questions
+
+<QA q="Why does Dijkstra's algorithm need non-negative edge weights?">
+It finalises a node when it's popped as the closest unfinished node, assuming any other route must pass through nodes that are at least as far away and can only add more distance. A negative edge breaks that: a path through a farther node could later become cheaper, but the popped node has already been finalised and its neighbours relaxed with the wrong value. Bellman–Ford, which repeatedly relaxes all edges, handles negative weights.
+</QA>
+
+<QA q="Why can't you use plain Dijkstra for cheapest flights with at most k stops?">
+Dijkstra keeps only the cheapest known cost per city. A path with more stops might be cheaper and overwrite a slightly more expensive path that used fewer stops — the one that could still reach the destination within the limit. You need state that includes the number of stops: either run Bellman–Ford for exactly k + 1 rounds from a copy of the previous round, or run Dijkstra/BFS over (city, stops) states.
+</QA>
+
+<Practice task="Path with maximum probability: edges have success probabilities in (0, 1]; find the most reliable path. How do you adapt Dijkstra, and why is it still correct?">
+
+Use a **max**-heap on probability, start at 1.0 for the source, and relax with **multiplication**: `p_new = p[u] × prob(u, v)`. Correctness relies on monotonicity: multiplying by a value at most 1 never increases a probability, just as adding a non-negative weight never decreases a distance. (Equivalently, run normal Dijkstra on weights −log(prob), which are non-negative.)
+
+</Practice>
+
+<Practice task="Find the city with the fewest cities reachable within a distance threshold (n up to 100). Which algorithm, and why is its O(n³) acceptable here?">
+
+**Floyd–Warshall**: `dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])` for every intermediate k — all pairs in three nested loops. With n ≤ 100 that's 10⁶ operations, well within budget, and far simpler than running Dijkstra from every node. Then count, for each city, how many others are within the threshold.
+
+</Practice>
+
+<Takeaways>
+
+- Pick by weights: equal → BFS; 0/1 → deque; non-negative → Dijkstra; limited edges or negative → Bellman–Ford; all pairs on small graphs → Floyd–Warshall.
+- Dijkstra: min-heap, finalise on pop, relax neighbours, skip stale entries.
+- Change "cost" to max or product and Dijkstra still works if extending a path never makes it better.
+- Bounded Bellman–Ford: k + 1 rounds, each relaxing from a copy of the previous round.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Backtracking](/dsa/patterns/backtracking).
+- Edsger Dijkstra, "A note on two problems in connexion with graphs" (Numerische Mathematik, 1959).

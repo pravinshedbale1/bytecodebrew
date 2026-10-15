@@ -4,32 +4,6 @@
  * picks them up without any component changes.
  */
 
-export const dsa = {
-  id: 'dsa',
-  title: 'Data Structures & Algorithms',
-  icon: 'binary',
-  description:
-    'Pattern-first problem solving: arrays to graphs, with the reasoning interviewers want to hear.',
-  courses: [
-    {
-      id: 'patterns',
-      title: 'Problem-Solving Patterns',
-      shortTitle: 'Patterns',
-      description: 'Two pointers, sliding window, binary search, BFS/DFS, DP and more.',
-      outcomes: [],
-      modules: [],
-    },
-    {
-      id: 'data-structures',
-      title: 'Core Data Structures',
-      shortTitle: 'Data Structures',
-      description: 'Arrays, hash maps, heaps, trees, tries and graphs from the inside.',
-      outcomes: [],
-      modules: [],
-    },
-  ],
-};
-
 export const csFundamentals = {
   id: 'cs-fundamentals',
   title: 'CS Fundamentals',

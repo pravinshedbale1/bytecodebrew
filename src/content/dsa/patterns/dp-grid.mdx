@@ -1,0 +1,198 @@
+Grid DP is the friendliest DP family because you can **see** the table: it's the grid itself. You move only right or down (usually), so a cell can only be reached from the cell **above** or the cell to the **left** — and its answer is built from theirs. Count paths, minimise cost, find the largest square: fill the grid row by row and read the answer from the corner.
+
+<Callout type="tip" title="How to spot it">
+
+- A 2D grid with moves restricted to **right/down** (or another fixed direction set with no cycles).
+- "**How many paths**", "**minimum path sum**", "**largest square/rectangle** of 1s", "**minimum health** needed".
+- Triangle or staircase shapes where each row depends on the row above.
+- If moves can go in **all four directions**, it's a graph problem ([BFS](/dsa/patterns/graph-traversal) or [Dijkstra](/dsa/patterns/shortest-paths)), not grid DP — cycles break the "fill in order" idea.
+
+</Callout>
+
+## Unique paths — the template
+
+<ArrayViz title="Counting paths: each cell = above + left" frames={[
+  { grid: [["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], note: "Unique paths from the top-left to the bottom-right, moving only right or down. dp[r][c] = number of ways to reach cell (r, c)." },
+  { grid: [[1, "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[0, 0]], note: "Start: 1 way to be where you start." },
+  { grid: [[1, 1, 1, 1, 1], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], window: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], note: "Top row: only one way to reach each cell (keep moving right)." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 1]], window: [[0, 1], [1, 0]], note: "(1,1): arrive from above (1 ways) or from the left (1): 2." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 2]], window: [[0, 2], [1, 1]], note: "(1,2): arrive from above (1 ways) or from the left (2): 3." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 3]], window: [[0, 3], [1, 2]], note: "(1,3): arrive from above (1 ways) or from the left (3): 4." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 4]], window: [[0, 4], [1, 3]], note: "(1,4): arrive from above (1 ways) or from the left (4): 5." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, "", "", ""], ["", "", "", "", ""]], highlight: [[2, 1]], window: [[1, 1], [2, 0]], note: "(2,1): arrive from above (2 ways) or from the left (1): 3." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, "", ""], ["", "", "", "", ""]], highlight: [[2, 2]], window: [[1, 2], [2, 1]], note: "(2,2): arrive from above (3 ways) or from the left (3): 6." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, ""], ["", "", "", "", ""]], highlight: [[2, 3]], window: [[1, 3], [2, 2]], note: "(2,3): arrive from above (4 ways) or from the left (6): 10." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], ["", "", "", "", ""]], highlight: [[2, 4]], window: [[1, 4], [2, 3]], note: "(2,4): arrive from above (5 ways) or from the left (10): 15." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], [1, "", "", "", ""]], window: [[0, 0], [1, 0], [2, 0], [3, 0]], note: "Left column: only one way too (keep moving down)." },
+  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], [1, 4, 10, 20, 35]], highlight: [[3, 4]], note: "Answer 35. Each cell needs only the cell above and the cell to the left — one row of memory is enough." }
+]} />
+
+**State:** `dp[r][c]` = number of ways to reach `(r, c)`. **Transition:** `dp[r][c] = dp[r − 1][c] + dp[r][c − 1]`. **Base:** the first row and first column are all 1.
+
+Because each cell only needs the cell above and the cell to its left, **one row** is enough — `dp[c]` holds the value from the row above until it's overwritten:
+
+```java
+static int uniquePaths(int m, int n) {
+    int[] dp = new int[n];
+    Arrays.fill(dp, 1);                                       // the first row: one way to each cell
+    for (int r = 1; r < m; r++)
+        for (int c = 1; c < n; c++)
+            dp[c] += dp[c - 1];                               // old dp[c] = from above, dp[c−1] = from the left
+    return dp[n - 1];
+}
+```
+
+(Unique paths has a closed form too — choose which of the `m + n − 2` moves go down: C(m + n − 2, m − 1). The reference solution checks the DP against it. But the DP generalises to obstacles and costs; the formula doesn't.)
+
+## Obstacles
+
+A blocked cell has **zero** ways to stand on it — that's the only change:
+
+```java
+static int uniquePathsWithObstacles(int[][] g) {
+    int n = g[0].length;
+    int[] dp = new int[n];
+    dp[0] = g[0][0] == 1 ? 0 : 1;
+    for (int[] row : g)
+        for (int c = 0; c < n; c++) {
+            if (row[c] == 1) dp[c] = 0;                       // blocked
+            else if (c > 0) dp[c] += dp[c - 1];
+        }
+    return dp[n - 1];
+}
+```
+
+Note that the first row and column are no longer "all 1": an obstacle blocks everything after it in that row or column, which this loop handles naturally.
+
+## Minimum path sum — min instead of +
+
+```java
+static int minPathSum(int[][] g) {
+    int R = g.length, C = g[0].length;
+    int[][] dp = new int[R][C];
+    for (int r = 0; r < R; r++)
+        for (int c = 0; c < C; c++) {
+            if (r == 0 && c == 0) dp[r][c] = g[0][0];
+            else if (r == 0) dp[r][c] = dp[r][c - 1] + g[r][c];      // top row: only from the left
+            else if (c == 0) dp[r][c] = dp[r - 1][c] + g[r][c];      // left column: only from above
+            else dp[r][c] = Math.min(dp[r - 1][c], dp[r][c - 1]) + g[r][c];
+        }
+    return dp[R - 1][C - 1];
+}
+```
+
+Counting uses `+`; optimising uses `min`/`max`. The edges are the only place you need care: cells in the top row have no "above", and cells in the left column have no "left".
+
+## Maximal square — a three-neighbour recurrence
+
+> Largest square containing only 1s.
+
+**State:** `dp[r][c]` = side length of the largest all-1 square whose **bottom-right corner** is `(r, c)`. A square ending here can only be as big as the smallest square ending at its three neighbours (top, left, top-left), plus one:
+
+```java
+static int maximalSquare(char[][] m) {
+    int R = m.length, C = m[0].length, best = 0;
+    int[][] dp = new int[R + 1][C + 1];                       // padded: row 0 and column 0 are zeros
+    for (int r = 1; r <= R; r++)
+        for (int c = 1; c <= C; c++)
+            if (m[r - 1][c - 1] == '1') {
+                dp[r][c] = 1 + Math.min(dp[r - 1][c - 1], Math.min(dp[r - 1][c], dp[r][c - 1]));
+                best = Math.max(best, dp[r][c]);
+            }
+    return best * best;                                       // area
+}
+```
+
+**Padding** the table with an extra row and column of zeros removes all the edge special cases — a trick worth reusing.
+
+## Dungeon game — fill backwards
+
+> A knight starts at the top-left and must reach the princess at the bottom-right, moving right or down. Cells add or subtract health; health must stay at least 1. Minimum starting health?
+
+Going forward fails: the best path to a cell depends on both the health you've *lost* and the health you *have*, which can't be combined into one number. Going **backwards** works: `need[r][c]` = minimum health needed when *entering* `(r, c)` to survive the rest. It depends only on the future, which is already computed.
+
+```java
+static int calculateMinimumHP(int[][] d) {
+    int R = d.length, C = d[0].length;
+    int[][] need = new int[R + 1][C + 1];
+    for (int[] row : need) Arrays.fill(row, Integer.MAX_VALUE);
+    need[R][C - 1] = need[R - 1][C] = 1;                      // just past the princess: need 1
+    for (int r = R - 1; r >= 0; r--)
+        for (int c = C - 1; c >= 0; c--)
+            need[r][c] = Math.max(1, Math.min(need[r + 1][c], need[r][c + 1]) - d[r][c]);
+    return need[0][0];
+}
+```
+
+When the forward state would need two numbers, check whether the **reverse** direction needs only one. The reference solution checks this by trying every starting health on every path for small grids.
+
+## Saving memory
+
+| Recurrence uses | Memory needed |
+| --- | --- |
+| above + left | one row (`dp[c]` and `dp[c − 1]`) |
+| above + left + top-left (diagonal) | one row plus one saved variable for the old `dp[c − 1]` |
+| the whole previous row | two rows |
+
+Always mention the O(cols) space version — it's the standard follow-up question.
+
+<Callout type="warning" title="Common mistakes">
+
+- **First row and column** — they have only one neighbour; handle them (or pad the table).
+- **Obstacles on the first row/column** — everything after the obstacle is unreachable; don't fill them with 1.
+- **Overwriting the diagonal value** when compressing to one row — save it in a variable first.
+- **Using grid DP when moves can go up or left** — that's a graph with cycles.
+- **Forward DP when the state needs two numbers** — try filling backwards.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 62 | [Unique Paths](https://leetcode.com/problems/unique-paths/) | Medium | The template + one row |
+| 63 | [Unique Paths II](https://leetcode.com/problems/unique-paths-ii/) | Medium | Obstacles |
+| 64 | [Minimum Path Sum](https://leetcode.com/problems/minimum-path-sum/) | Medium | min instead of + |
+| 120 | [Triangle](https://leetcode.com/problems/triangle/) | Medium | Bottom-up from the last row |
+| 931 | [Minimum Falling Path Sum](https://leetcode.com/problems/minimum-falling-path-sum/) | Medium | Three parents per cell |
+| 221 | [Maximal Square](https://leetcode.com/problems/maximal-square/) | Medium | Three-neighbour min + padding |
+| 1277 | [Count Square Submatrices with All Ones](https://leetcode.com/problems/count-square-submatrices-with-all-ones/) | Medium | Sum of the same table |
+| 174 | [Dungeon Game](https://leetcode.com/problems/dungeon-game/) | Hard | Fill backwards |
+| 741 | [Cherry Pickup](https://leetcode.com/problems/cherry-pickup/) | Hard | Two walkers at once |
+
+## Interview questions
+
+<QA q="How do you reduce the space of the unique-paths DP to one row?">
+Each cell needs only the value above it and the value to its left. Keep a single array dp of length cols. When processing cell c in the current row, dp[c] still holds the value from the row above, and dp[c − 1] already holds the current row's value to the left, so dp[c] += dp[c − 1] computes the new value in place. Space drops from O(rows × cols) to O(cols).
+</QA>
+
+<QA q="Why does the dungeon game have to be solved from the bottom-right?">
+Going forward, whether a path is good depends on two things — the health lost so far and the current health — and you can't pick a single best value per cell. Going backward, the minimum health needed on entering a cell depends only on the cells after it, so one number per cell is enough: need = max(1, min(need below, need right) − cell value).
+</QA>
+
+<Practice task="Triangle: find the minimum path sum from top to bottom, where each step moves to one of the two adjacent numbers in the row below. Why is bottom-up the cleaner direction?">
+
+Start with the **last row** as the table and move upward: `dp[c] = triangle[r][c] + min(dp[c], dp[c + 1])`. The answer ends up in `dp[0]`, and there are no edge cases — every cell has exactly two children below. Top-down needs special handling for the left and right edges (one parent only) and a final scan of the last row for the minimum.
+
+</Practice>
+
+<Practice task="Count all square submatrices that contain only 1s. Which table from this lesson answers it with one extra line?">
+
+The **maximal square** table: `dp[r][c]` is the largest square ending at `(r, c)`, which also means there are exactly `dp[r][c]` squares ending there (sizes 1 to `dp[r][c]`). So the answer is the **sum** of all `dp` values. Same recurrence, sum instead of max.
+
+</Practice>
+
+<Takeaways>
+
+- In grid DP the table is the grid; each cell combines the cell above and the cell to the left.
+- Counting → `+`; optimising → `min`/`max`; obstacles → 0.
+- Pad the table with a zero row and column to remove edge cases.
+- One row of memory is usually enough; save the diagonal when needed.
+- If the forward state needs two numbers, fill backwards.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [String DP](/dsa/patterns/dp-strings).
+- [DP Without Fear](/dsa/patterns/dp-made-easy) — the four steps behind every table here.

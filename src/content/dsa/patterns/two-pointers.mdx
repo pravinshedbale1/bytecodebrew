@@ -1,0 +1,267 @@
+Picture finding two numbers in a **sorted** array that add up to a target. The brute force tries every pair — O(n²). But the array is sorted, and that's information the brute force ignores. Two pointers use it: one at each end, moving inward, each step **ruling out** a whole row of pairs at once. One pass, no extra memory.
+
+Two pointers come in two flavours, and recognising which one you need is half the battle.
+
+<Callout type="tip" title="How to spot it">
+
+- The array is **sorted** (or sorting it doesn't break the problem) and you're looking for a **pair or triplet** with a target sum or difference.
+- You're checking something **symmetric**: palindromes, reversing, comparing both ends.
+- You must modify an array **in place** with O(1) extra space: remove duplicates, move zeroes, partition.
+- You're **merging** two sorted sequences.
+- The brute force is a nested loop over pairs and the constraints want O(n) or O(n log n).
+
+</Callout>
+
+## Flavour 1: opposite ends, moving inward
+
+<ArrayViz title="Two Sum on a sorted array" frames={[
+  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 6 }, window: [0, 6], vars: { target: 14 }, note: "Sorted array, target 14. Start with the smallest (L) and largest (R) numbers." },
+  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 6 }, window: [0, 6], highlight: [6], done: [], vars: { target: 14, sum: 16 }, note: "16 is too big. 15 paired with the SMALLEST remaining number is still too big, so 15 is out. Discard it: R--." },
+  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 5 }, window: [0, 5], highlight: [0], done: [6], vars: { target: 14, sum: 12 }, note: "12 is too small. 1 paired with the LARGEST remaining number is still too small, so 1 can't be in any answer. Discard it: L++." },
+  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 1, R: 5 }, window: [1, 5], highlight: [1, 5], done: [6, 0], vars: { target: 14, sum: 14 }, note: "3 + 11 = 14. Found it in 3 steps instead of checking every pair." }
+]} />
+
+**Why it's safe to discard.** When `a[L] + a[R]` is too small, `a[L]` is paired with the *largest* number still available — and that's still not enough. So `a[L]` can't be part of any answer, and moving `L` right loses nothing. The mirror argument works for `R` when the sum is too big. Each step throws away one number for good, so there are at most n steps.
+
+```java
+int left = 0, right = a.length - 1;
+while (left < right) {
+    // look at a[left] and a[right]
+    if (/* found */) { /* record or return */ }
+    else if (/* need something bigger */) left++;
+    else right--;
+}
+```
+
+## Flavour 2: same direction — read and write
+
+One pointer (**read**) scans every element; the other (**write**) marks where the next "kept" element goes. Everything before `write` is the finished result.
+
+<ArrayViz title="Remove duplicates from a sorted array, in place" frames={[
+  { arr: [1, 1, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 1 }, window: [0, 0], note: "Remove duplicates in place. Everything left of `write` is the clean result so far (shaded). `read` scans ahead." },
+  { arr: [1, 1, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 1 }, window: [0, 0], highlight: [1], note: "1 equals the last kept value: skip it. Only read moves." },
+  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 2 }, window: [0, 1], highlight: [1], note: "2 differs from the last kept value (1): copy it to position 1, then write++." },
+  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 2, read: 3 }, window: [0, 1], highlight: [3], note: "2 equals the last kept value: skip it. Only read moves." },
+  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 2, read: 4 }, window: [0, 1], highlight: [4], note: "2 equals the last kept value: skip it. Only read moves." },
+  { arr: [1, 2, 3, 2, 2, 3, 5, 5], pointers: { write: 2, read: 5 }, window: [0, 2], highlight: [2], note: "3 differs from the last kept value (2): copy it to position 2, then write++." },
+  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 3, read: 6 }, window: [0, 3], highlight: [3], note: "5 differs from the last kept value (3): copy it to position 3, then write++." },
+  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 4, read: 7 }, window: [0, 3], highlight: [7], note: "5 equals the last kept value: skip it. Only read moves." },
+  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 4 }, window: [0, 3], note: "Done. The first 4 cells hold the distinct values; return 4. O(n) time, O(1) extra space." }
+]} />
+
+```java
+int write = 0;
+for (int read = 0; read < a.length; read++) {
+    if (/* a[read] should be kept */) a[write++] = a[read];
+}
+// a[0..write) is the answer
+```
+
+(The [fast & slow pointers](/dsa/patterns/fast-slow-pointers) lesson is the same-direction idea applied to linked lists.)
+
+## Worked problems — opposite ends
+
+### Two Sum II (sorted input)
+
+```java
+static int[] twoSumSorted(int[] a, int target) {
+    int left = 0, right = a.length - 1;
+    while (left < right) {
+        int sum = a[left] + a[right];
+        if (sum == target) return new int[] { left, right };
+        if (sum < target) left++;            // need a bigger sum: only moving left up can help
+        else right--;                        // need a smaller sum: only moving right down can help
+    }
+    return new int[0];
+}
+```
+
+O(n) time, **O(1) space** — the advantage over the hash-map version when the input is sorted.
+
+### Valid Palindrome (ignoring non-alphanumerics and case)
+
+```java
+static boolean isPalindrome(String s) {
+    int left = 0, right = s.length() - 1;
+    while (left < right) {
+        while (left < right && !Character.isLetterOrDigit(s.charAt(left))) left++;    // skip junk
+        while (left < right && !Character.isLetterOrDigit(s.charAt(right))) right--;
+        if (Character.toLowerCase(s.charAt(left)) != Character.toLowerCase(s.charAt(right))) return false;
+        left++; right--;
+    }
+    return true;
+}
+```
+
+### Container With Most Water
+
+> Vertical lines of heights `h[i]`. Pick two lines that, with the x-axis, hold the most water.
+
+Area = `min(h[left], h[right]) × (right − left)`. Start with the widest container. Moving the **taller** wall inward can never help — width shrinks and the height is still capped by the shorter wall. So always move the **shorter** one:
+
+```java
+static int maxArea(int[] height) {
+    int left = 0, right = height.length - 1, best = 0;
+    while (left < right) {
+        best = Math.max(best, Math.min(height[left], height[right]) * (right - left));
+        if (height[left] < height[right]) left++;     // the shorter wall limits the area: move it
+        else right--;
+    }
+    return best;
+}
+```
+
+### 3Sum — fix one, two-pointer the rest
+
+> Find all **unique** triplets that sum to zero.
+
+Sort. For each `i`, the problem becomes Two Sum II on the rest of the array with target `−nums[i]`. The hard part is **duplicates**: skip a repeated first number, and after a match skip repeated second numbers.
+
+```java
+static List<List<Integer>> threeSum(int[] nums) {
+    Arrays.sort(nums);
+    List<List<Integer>> out = new ArrayList<>();
+    for (int i = 0; i < nums.length - 2; i++) {
+        if (i > 0 && nums[i] == nums[i - 1]) continue;          // same first number → same triplets
+        int left = i + 1, right = nums.length - 1;
+        while (left < right) {
+            int sum = nums[i] + nums[left] + nums[right];
+            if (sum < 0) left++;
+            else if (sum > 0) right--;
+            else {
+                out.add(List.of(nums[i], nums[left], nums[right]));
+                left++; right--;
+                while (left < right && nums[left] == nums[left - 1]) left++;   // skip duplicate seconds
+            }
+        }
+    }
+    return out;
+}
+```
+
+O(n²) — the best possible for 3Sum in general. The same idea extends to 4Sum (two fixed loops + two pointers).
+
+### Trapping Rain Water (hard)
+
+Water above bar `i` = `min(highest bar to its left, highest to its right) − h[i]`. Move the pointer on the **lower** side: that side's maximum is the limiting wall, whatever lies beyond the other pointer.
+
+```java
+static int trap(int[] h) {
+    int left = 0, right = h.length - 1, leftMax = 0, rightMax = 0, water = 0;
+    while (left < right) {
+        if (h[left] < h[right]) {                    // the left side is the limit here
+            leftMax = Math.max(leftMax, h[left]);
+            water += leftMax - h[left];
+            left++;
+        } else {
+            rightMax = Math.max(rightMax, h[right]);
+            water += rightMax - h[right];
+            right--;
+        }
+    }
+    return water;
+}
+```
+
+## Worked problems — read and write
+
+### Move Zeroes (keep the order of non-zeros)
+
+```java
+static void moveZeroes(int[] a) {
+    int write = 0;
+    for (int read = 0; read < a.length; read++)
+        if (a[read] != 0) { int tmp = a[write]; a[write] = a[read]; a[read] = tmp; write++; }
+}
+```
+
+Swapping (instead of copying and filling zeros later) does it in one pass.
+
+### Sort Colors — three pointers (Dutch national flag)
+
+> Sort an array of 0s, 1s and 2s in one pass, in place.
+
+Keep three regions: `[0, low)` are 0s, `[low, mid)` are 1s, `(high, end]` are 2s; `mid` scans the unknown middle.
+
+```java
+static void sortColors(int[] a) {
+    int low = 0, mid = 0, high = a.length - 1;
+    while (mid <= high) {
+        if (a[mid] == 0) swap(a, low++, mid++);
+        else if (a[mid] == 1) mid++;
+        else swap(a, mid, high--);          // don't advance mid: the value swapped in is unchecked
+    }
+}
+```
+
+## Which flavour?
+
+| Situation | Flavour |
+| --- | --- |
+| Pair/triplet with a target in sorted data | Opposite ends |
+| Symmetry: palindrome, reverse | Opposite ends |
+| Area or water between two boundaries | Opposite ends (move the limiting side) |
+| Keep/remove/compact elements in place | Read & write |
+| Partition into groups (0s/1s/2s, evens/odds) | Read & write (or three pointers) |
+| Merge two sorted arrays | One pointer per array, same direction |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Using opposite-end pointers on unsorted data.** The "discard" argument only holds when the array is sorted.
+- **`left <= right` vs `left < right`.** For pairs, the pointers must not meet (an element can't pair with itself): use `<`.
+- **Forgetting duplicate-skipping** in 3Sum/4Sum, which produces repeated triplets.
+- **Advancing `mid` after swapping with `high`** in Dutch flag — the swapped-in value hasn't been checked.
+- **Overflow** in sums of large values — use `long` when values are near ±10⁹.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 125 | [Valid Palindrome](https://leetcode.com/problems/valid-palindrome/) | Easy | Opposite ends with skipping |
+| 26 | [Remove Duplicates from Sorted Array](https://leetcode.com/problems/remove-duplicates-from-sorted-array/) | Easy | Read & write |
+| 283 | [Move Zeroes](https://leetcode.com/problems/move-zeroes/) | Easy | Read & write, keep order |
+| 977 | [Squares of a Sorted Array](https://leetcode.com/problems/squares-of-a-sorted-array/) | Easy | Largest values are at the ends |
+| 167 | [Two Sum II](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/) | Medium | The core converging template |
+| 11 | [Container With Most Water](https://leetcode.com/problems/container-with-most-water/) | Medium | Move the limiting side |
+| 15 | [3Sum](https://leetcode.com/problems/3sum/) | Medium | Fix one + two pointers + dedupe |
+| 75 | [Sort Colors](https://leetcode.com/problems/sort-colors/) | Medium | Three pointers |
+| 42 | [Trapping Rain Water](https://leetcode.com/problems/trapping-rain-water/) | Hard | Two pointers with running maxima |
+
+## Interview questions
+
+<QA q="Why is it safe to move the left pointer when the sum is too small in a sorted array?">
+Because a[left] is currently paired with the largest remaining value, a[right], and the sum is still too small. Every other partner for a[left] is smaller than a[right], so a[left] cannot be in any valid pair. Discarding it loses no answers, and each step removes one element, giving O(n) total.
+</QA>
+
+<QA q="Two Sum: hash map or two pointers?">
+If the input is unsorted and you need the original indexes, the hash map gives O(n) time and O(n) space. If the input is already sorted, two pointers give O(n) time with O(1) space. Sorting first costs O(n log n) and loses the original indexes unless you store them, so for unsorted input the hash map is usually better.
+</QA>
+
+<Practice task="Merge two sorted arrays nums1 (with enough empty space at the end) and nums2 into nums1, in place. Which direction should the pointers move, and why?">
+
+Fill from the **back**. Use `i` at the last real element of `nums1`, `j` at the end of `nums2`, and `write` at the very end of `nums1`; place the larger of `nums1[i]` and `nums2[j]` at `write` and move that pointer left. Filling from the front would overwrite elements of `nums1` you haven't read yet; from the back, `write` is always at or ahead of `i`, so nothing unread is overwritten. When `nums2` is exhausted, the rest of `nums1` is already in place. O(m + n), O(1) extra space.
+
+</Practice>
+
+<Practice task="Spot the pattern: 'Given a sorted array of integers, return an array of their squares, also sorted.' Why do two pointers work even though squares change the order?">
+
+Negative numbers square to large values, so the largest squares are at the **two ends** of the original array, never in the middle. Compare `|a[left]|` and `|a[right]|`, write the larger square at the end of the result, and move that pointer inward — filling the result from the back. O(n) instead of squaring and sorting in O(n log n).
+
+</Practice>
+
+<Takeaways>
+
+- Opposite ends: on sorted data, each comparison discards one element for good → O(n), O(1) space.
+- Read & write: `read` scans, `write` marks where kept elements go → in-place filtering and partitioning.
+- 3Sum = sort + fix one element + two pointers, with careful duplicate skipping.
+- For area/water problems, move the pointer at the limiting (shorter) side.
+- Use `left < right` for pairs; don't advance `mid` after swapping with `high`.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Sliding Window](/dsa/patterns/sliding-window).
+- Edsger Dijkstra, *A Discipline of Programming* (1976) — the Dutch national flag problem.
