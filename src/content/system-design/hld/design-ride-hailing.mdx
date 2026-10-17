@@ -69,6 +69,17 @@ Rides need transactional state transitions → a relational/NewSQL store (sharde
 
 ## 6. High-level design
 
+<FlowSteps title='Requesting a ride' steps={[
+  { path: ['DRV', 'DGW', 'LOC', 'GEO'], text: 'Drivers send their location every few seconds; the location service updates the in-memory geo index.' },
+  { path: ['LOC', 'K', 'SURGE'], nodes: ['HIST'], edges: [['K', 'HIST']], text: 'Locations also stream into Kafka for history and for supply and demand (surge) calculations.' },
+  { path: ['RID', 'RGW', 'RIDE', 'RDB'], text: 'A rider requests a trip; the ride service creates it in the trip state machine.' },
+  { path: ['RIDE', 'MATCH', 'GEO'], text: 'Matching searches the geo index for nearby available drivers…' },
+  { path: ['MATCH', 'ETA'], text: '…ranks them by ETA from the routing service…' },
+  { path: ['MATCH', 'DSTATE'], text: '…and reserves the best driver with an atomic compare-and-set, so two trips cannot take the same driver.' },
+  { path: ['MATCH', 'DGW', 'DRV'], text: 'The offer goes to the driver\'s app; when the driver accepts, the trip moves to \'driver en route\'.' },
+  { path: ['LOC', 'RGW', 'RID'], text: 'During the trip, the driver\'s position is forwarded to the rider\'s app.' },
+]}>
+
 ```mermaid
 flowchart LR
   DRV[Driver apps] <-->|persistent conn| DGW[Driver gateway]
@@ -90,6 +101,8 @@ flowchart LR
   RIDE -. events .-> K2[["Kafka: ride events"]] --> NOTIF[Notifications / analytics]
   LOC -. driver location for active trip .-> RGW
 ```
+
+</FlowSteps>
 
 ## 7. Deep dives
 

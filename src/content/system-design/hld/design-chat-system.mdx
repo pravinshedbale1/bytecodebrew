@@ -75,6 +75,17 @@ Partitioning by `conversation_id` makes "latest 50 messages in this conversation
 
 ## 6. High-level design
 
+<FlowSteps title='One message, end to end' steps={[
+  { path: ['A', 'G1'], text: 'The sender\'s device sends the message over its WebSocket to the gateway it is connected to.' },
+  { path: ['G1', 'MS', 'SEQ'], text: 'The message service takes the next sequence number for the conversation.' },
+  { path: ['MS', 'MDB'], text: 'It stores the message, and only then acknowledges the sender.' },
+  { path: ['MS', 'K', 'DEL'], text: 'The message is published to Kafka, keyed by conversation, and delivery workers pick it up.' },
+  { path: ['DEL', 'REG'], text: 'Workers look up which gateway each recipient device is connected to.' },
+  { path: ['DEL', 'G7', 'B'], text: 'The message is pushed down the recipient\'s socket on gateway 7, and the device acknowledges it.' },
+  { path: ['DEL', 'PN', 'APNS'], text: 'Offline recipients get a push notification instead, and sync missed messages when they reconnect.' },
+  { nodes: ['G1', 'G7', 'PRES'], edges: [['G1', 'PRES'], ['G7', 'PRES']], text: 'Gateways keep presence in Redis with a TTL, so \'online\' expires on its own if heartbeats stop.' },
+]}>
+
 ```mermaid
 flowchart LR
   A[Sender device] <-->|WebSocket| G1[Gateway 1]
@@ -90,6 +101,8 @@ flowchart LR
   G1 & G7 --> PRES[("Presence<br/>(Redis, TTL)")]
   A -.media.-> OS[("Object storage + CDN")]
 ```
+
+</FlowSteps>
 
 **Send flow**
 

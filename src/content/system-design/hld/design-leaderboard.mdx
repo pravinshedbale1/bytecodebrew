@@ -58,6 +58,16 @@ A skip list can answer "how many elements come before this one" in O(log n) beca
 
 ## 6. High-level design
 
+<FlowSteps title='A score update and a rank lookup' steps={[
+  { path: ['P', 'API', 'GS'], text: 'A player finishes a match. The game server decides the result; the client never reports its own score.' },
+  { path: ['GS', 'DB'], text: 'The match result is stored in the database, the source of truth.' },
+  { path: ['GS', 'K', 'LBW'], text: 'A score event travels through Kafka to the leaderboard writer.' },
+  { path: ['LBW', 'R'], text: 'The writer applies ZINCRBY to this month\'s sorted set, skipping match IDs it has already applied.' },
+  { path: ['API', 'LBS', 'R'], text: 'Reads (top 10, my rank, players around me) go to the leaderboard service, which queries the sorted set in O(log n).' },
+  { path: ['LBS', 'PROF'], text: 'Names and avatars are added from the profile store.' },
+  { path: ['K', 'ARCH'], text: 'Score events are archived, so the board can be audited or rebuilt.' },
+]}>
+
 ```mermaid
 flowchart LR
   P[Players] --> API[Game API]
@@ -70,6 +80,8 @@ flowchart LR
   LBS --> PROF[("Player profiles<br/>names, avatars")]
   K --> ARCH[("Monthly archive")]
 ```
+
+</FlowSteps>
 
 **Update flow**
 1. The match result is decided by the game server, never by the client, and stored in the match results database.

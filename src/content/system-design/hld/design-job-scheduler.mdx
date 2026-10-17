@@ -59,6 +59,16 @@ The `UNIQUE (job_id, scheduled_for)` constraint is the key to preventing duplica
 
 ## 6. High-level design
 
+<FlowSteps title='A job, from creation to completion' steps={[
+  { path: ['API', 'JDB'], text: 'A client creates a job; it is stored with its next run time in the partitioned job store.' },
+  { nodes: ['COORD', 'S1', 'S2'], edges: [['COORD', 'S1'], ['COORD', 'S2']], text: 'Each scheduler holds leases on a range of partitions, so every partition has exactly one owner at a time.' },
+  { path: ['S1', 'JDB'], text: 'Scheduler A polls its partitions for jobs that are due.' },
+  { path: ['S1', 'Q'], text: 'For each due job it creates an execution record and puts it on the execution queue.' },
+  { path: ['Q', 'W1', 'T'], text: 'A worker takes the execution and calls the target service.' },
+  { path: ['W1', 'EDB'], text: 'The worker reports heartbeats while running and records the final status once.' },
+  { path: ['REAPER', 'EDB'], text: 'The lease reaper finds executions whose heartbeats stopped and makes them available for retry.' },
+]}>
+
 ```mermaid
 flowchart LR
   API[Job API] --> JDB[("Job store<br/>partitioned by job_id")]
@@ -77,6 +87,8 @@ flowchart LR
   W1 & W2 -. heartbeats .-> EDB
   REAPER["Lease reaper"] --> EDB
 ```
+
+</FlowSteps>
 
 **Flow**
 

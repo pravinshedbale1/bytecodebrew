@@ -5,6 +5,19 @@ import { Callout } from './Callout';
 import { Takeaways } from './Takeaways';
 import { QA } from './QA';
 import { Mermaid } from './Mermaid';
+import { FlowSteps } from './FlowSteps';
+import { lazySim } from '../sim/lazySim.jsx';
+
+// Each simulator appears in one lesson, so it is loaded only when that lesson is opened
+const HashRingSim = lazySim(() => import('../sim/HashRingSim'), 'HashRingSim');
+const RateLimiterSim = lazySim(() => import('../sim/RateLimiterSim'), 'RateLimiterSim');
+const CacheSim = lazySim(() => import('../sim/CacheSim'), 'CacheSim');
+const QuorumSim = lazySim(() => import('../sim/QuorumSim'), 'QuorumSim');
+const LoadBalancerSim = lazySim(() => import('../sim/LoadBalancerSim'), 'LoadBalancerSim');
+const BloomSim = lazySim(() => import('../sim/BloomSim'), 'BloomSim');
+const PartitionSim = lazySim(() => import('../sim/PartitionSim'), 'PartitionSim');
+const GrowthSim = lazySim(() => import('../sim/GrowthSim'), 'GrowthSim');
+const HeapSim = lazySim(() => import('../sim/HeapSim'), 'HeapSim');
 import { HashRing } from './HashRing';
 import { Related } from './Related';
 import { Practice } from './Practice';
@@ -115,6 +128,16 @@ export const mdxComponents = {
   Takeaways,
   QA,
   Mermaid,
+  FlowSteps,
+  HashRingSim,
+  RateLimiterSim,
+  CacheSim,
+  QuorumSim,
+  LoadBalancerSim,
+  BloomSim,
+  PartitionSim,
+  GrowthSim,
+  HeapSim,
   HashRing,
   Related,
   Practice,

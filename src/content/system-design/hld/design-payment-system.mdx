@@ -95,6 +95,16 @@ Use **integers in minor units** (paise, cents) — never floating point. Use a r
 
 ## 6. High-level design
 
+<FlowSteps title='A payment, end to end' steps={[
+  { path: ['OS', 'PAPI', 'IDEM'], text: 'The order service asks for a charge with an idempotency key; a retry gets the stored result instead of a second charge.' },
+  { path: ['PAPI', 'PSM', 'PDB'], text: 'The payment service creates the payment in its state machine and stores it.' },
+  { path: ['PSM', 'ROUTER', 'PSP1'], text: 'The PSP router picks a provider by health, cost and payment method, and the charge is sent.' },
+  { path: ['PSP1', 'WH', 'PSM'], text: 'The provider\'s signed webhook confirms the outcome and moves the state machine forward.' },
+  { path: ['PSM', 'LEDGER', 'LDB'], text: 'The ledger records balanced, append-only double-entry postings.' },
+  { path: ['PSM', 'K', 'OS'], text: 'A payment event is published through the outbox, and the order service reacts to it.' },
+  { path: ['RECON', 'LDB'], nodes: ['REPORTS'], edges: [['RECON', 'REPORTS']], text: 'Every day, reconciliation jobs compare the ledger with the PSP and bank settlement files.' },
+]}>
+
 ```mermaid
 flowchart LR
   OS[Order service] --> PAPI[Payment API]
@@ -114,6 +124,8 @@ flowchart LR
   RECON --> REPORTS[("PSP & bank settlement files")]
   VAULT["Token vault (PSP-hosted)"] -.-> PSP1
 ```
+
+</FlowSteps>
 
 ## 7. Deep dives
 

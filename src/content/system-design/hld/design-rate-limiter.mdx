@@ -86,6 +86,15 @@ Braces denote a Redis Cluster **hash tag**: all keys with the same tag land on t
 
 ## 6. High-level design
 
+<FlowSteps title='Checking one request' steps={[
+  { path: ['C', 'LB', 'G1'], text: 'A request reaches an API gateway through the load balancer.' },
+  { path: ['G1', 'L1'], text: 'The gateway\'s rate-limit module matches the request against rules cached in memory.' },
+  { path: ['L1', 'RC'], text: 'For the matching rules it runs one atomic Lua script on the Redis shard that owns the counter.' },
+  { path: ['G1', 'SVC'], text: 'If every rule allows the request, it goes to the backend. Otherwise the gateway answers 429 with retry headers.' },
+  { path: ['CFG', 'RS', 'L1'], nodes: ['L2'], edges: [['RS', 'L2']], text: 'Rule changes are pushed from the rules service into every gateway\'s cache.' },
+  { path: ['L1', 'OBS'], text: 'Allow and deny metrics feed dashboards and alerts.' },
+]}>
+
 ```mermaid
 flowchart LR
   C[Clients] --> LB[Load balancer]
@@ -101,6 +110,8 @@ flowchart LR
   G2 --> SVC
   L1 -. metrics .-> OBS[Observability]
 ```
+
+</FlowSteps>
 
 **Request flow**
 

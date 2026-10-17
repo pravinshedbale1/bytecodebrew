@@ -46,6 +46,17 @@ Our 100 KB average page is an assumption for HTML only. Alex Xu's crawler chapte
 
 ## 4. High-level design
 
+<FlowSteps title='One crawl cycle' steps={[
+  { path: ['SEED'], nodes: ['PRI', 'POL'], edges: [['SEED', 'FR'], ['PRI', 'POL']], text: 'Seed URLs enter the frontier, which orders them by priority and routes them into one queue per host.' },
+  { path: ['POL', 'F'], text: 'Fetchers take URLs from the host queues, respecting each host\'s crawl delay and robots.txt.' },
+  { path: ['F', 'CS'], text: 'Fetched pages are stored in the content store.' },
+  { path: ['F', 'P', 'CD'], text: 'The parser extracts links, and content dedup drops pages that were already seen.' },
+  { path: ['P', 'UF', 'UD'], text: 'Extracted URLs are normalised and checked against the \'seen\' Bloom filter.' },
+  { path: ['UD'], nodes: ['PRI'], edges: [['UD', 'FR']], text: 'New URLs go back into the frontier.' },
+  { path: ['P', 'META', 'SCHED'], edges: [['SCHED', 'FR']], text: 'Crawl metadata drives the recrawl scheduler, which re-queues pages as they go stale.' },
+  { path: ['CS', 'IDX'], text: 'Downstream, the indexer processes the stored content.' },
+]}>
+
 ```mermaid
 flowchart LR
   SEED[Seed URLs] --> FR
@@ -63,6 +74,8 @@ flowchart LR
   P --> META[("URL metadata DB<br/>last crawl, hash, status")]
   META --> SCHED["Recrawl scheduler"] --> FR
 ```
+
+</FlowSteps>
 
 **Crawl loop**
 

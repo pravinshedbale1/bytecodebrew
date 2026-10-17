@@ -49,6 +49,15 @@ Click URLs are **signed** (HMAC over ad ID and impression ID) so they can't be f
 
 ## 5. High-level design
 
+<FlowSteps title='A click, from redirect to bill' steps={[
+  { path: ['U', 'CS', 'LP'], text: 'The click service checks the signed click URL and redirects the user (302) straight away.' },
+  { path: ['CS', 'K'], text: 'In parallel it writes the click event to Kafka, partitioned by ad ID.' },
+  { path: ['K', 'FL'], text: 'Flink drops duplicate click IDs, filters obvious fraud and counts clicks per ad per minute by event time.' },
+  { path: ['FL', 'K2', 'OLAP', 'QAPI', 'DASH'], text: 'Minute aggregates are upserted into the OLAP store, which serves the advertiser dashboards.' },
+  { path: ['K', 'RAW'], text: 'Every raw click is also archived in object storage.' },
+  { path: ['RAW', 'BATCH', 'RECON', 'BILL'], text: 'A daily batch job recounts from the archive; reconciliation with the streamed counts produces billing-grade totals.' },
+]}>
+
 ```mermaid
 flowchart LR
   U[User clicks ad] --> CS["Click service<br/>(validate, redirect)"]
@@ -63,6 +72,8 @@ flowchart LR
   BATCH --> RECON["Reconciliation<br/>stream vs batch"]
   RECON --> BILL[("Billing-grade daily totals")]
 ```
+
+</FlowSteps>
 
 ## 6. Deep dives
 

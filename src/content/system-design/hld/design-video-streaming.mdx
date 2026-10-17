@@ -38,6 +38,18 @@ At large-volume CDN prices of a few cents per GB, even a much smaller platform p
 
 ## 4. High-level design
 
+<FlowSteps title='Upload, process, play' steps={[
+  { path: ['CR', 'UAPI', 'META'], text: 'The creator starts an upload; the API records metadata and returns upload URLs.' },
+  { path: ['CR', 'RAW'], text: 'The video is uploaded in resumable parts directly to the raw bucket.' },
+  { path: ['RAW', 'EV', 'ORCH'], text: 'The upload event starts the processing workflow.' },
+  { path: ['ORCH', 'SPLIT', 'TQ', 'TW'], text: 'The video is split into chunks that many workers transcode in parallel.' },
+  { path: ['TW', 'ASM', 'OUT'], text: 'Chunks are assembled into HLS/DASH segments and manifests in the processed bucket.' },
+  { path: ['ORCH', 'THUMB', 'OUT'], nodes: ['MOD'], edges: [['ORCH', 'MOD']], text: 'Thumbnails and content moderation run alongside.' },
+  { path: ['V', 'PAPI', 'META'], text: 'A viewer asks the playback API for the manifest URL (after authorisation).' },
+  { path: ['V', 'CDN', 'OUT'], text: 'The player fetches segments from the CDN, choosing the bitrate segment by segment.' },
+  { path: ['V', 'K', 'AGG'], text: 'Playback events feed view counts and quality-of-experience analytics.' },
+]}>
+
 ```mermaid
 flowchart LR
   subgraph Upload["Upload & processing"]
@@ -61,6 +73,8 @@ flowchart LR
     V -. QoE + view events .-> K[["Kafka"]] --> AGG[View counts / analytics]
   end
 ```
+
+</FlowSteps>
 
 ## 5. Deep dives
 

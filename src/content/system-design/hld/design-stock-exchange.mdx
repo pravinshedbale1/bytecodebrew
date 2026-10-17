@@ -73,6 +73,17 @@ Market data (multicast, binary):
 
 ## 6. High-level design
 
+<FlowSteps title='An order, end to end' steps={[
+  { path: ['BR', 'GW'], text: 'A broker sends a new order; the gateway authenticates it and applies rate limits.' },
+  { path: ['GW', 'RISK'], text: 'Risk checks reserve the funds or shares the order needs.' },
+  { path: ['RISK', 'SEQ', 'LOG'], text: 'The sequencer gives the order its place in line and writes it to the replicated log. From now on it cannot be lost.' },
+  { path: ['LOG', 'ME'], text: 'The matching engine reads the log in order and matches the order against the book.' },
+  { path: ['LOG', 'ME2'], text: 'The hot standby replays the same log and keeps an identical book, ready to take over.' },
+  { path: ['ME', 'OUT', 'GW', 'BR'], text: 'Executions are sequenced on the way out and sent to both brokers.' },
+  { path: ['OUT', 'MD', 'BR'], text: 'Book changes become market data, multicast to every participant at the same time.' },
+  { path: ['OUT', 'REP'], text: 'Clearing, reporting and audit consume the same events, off the critical path.' },
+]}>
+
 ```mermaid
 flowchart LR
   BR[Brokers] --> GW["Client gateways<br/>(auth, throttle, validate)"]
@@ -87,6 +98,8 @@ flowchart LR
   OUT --> REP[("Reporting, clearing,<br/>audit store")]
   MD --> BR
 ```
+
+</FlowSteps>
 
 **Order flow**
 1. A gateway authenticates the broker, checks message format and rate limits.

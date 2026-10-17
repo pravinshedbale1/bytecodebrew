@@ -69,6 +69,15 @@ topic "orders", partition 7
 
 ## 6. High-level design
 
+<FlowSteps title='Produce, replicate, consume' steps={[
+  { path: ['P1', 'B1'], text: 'A producer sends a batch for partition orders-0 to that partition\'s leader, broker 1.' },
+  { path: ['B1', 'B3'], text: 'Broker 3, a follower of orders-0, fetches the new data from the leader.' },
+  { path: ['B3', 'B1'], text: 'With acks=all, broker 1 acknowledges once every in-sync replica has the batch. Consumers can read up to the high watermark.' },
+  { path: ['B1', 'G1'], text: 'Consumers in group A pull from partition leaders; each consumer owns some of the partitions.' },
+  { path: ['B3', 'G2'], text: 'Group B reads the same topic independently, at its own pace and offsets.' },
+  { nodes: ['C', 'B1', 'B2', 'B3'], edges: [['C', 'B1'], ['C', 'B2'], ['C', 'B3']], text: 'The controller quorum tracks leaders and in-sync replicas, and elects a new leader when a broker fails.' },
+]}>
+
 ```mermaid
 flowchart LR
   P1[Producer] --> B1
@@ -87,6 +96,8 @@ flowchart LR
   B2 --> G1
   B3 --> G2["Consumer group B"]
 ```
+
+</FlowSteps>
 
 **Write path**
 1. The producer library batches messages per partition (by size or a few ms of `linger`), compresses the batch and sends it to the **leader** broker of that partition.

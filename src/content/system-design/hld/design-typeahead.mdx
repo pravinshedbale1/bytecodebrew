@@ -69,6 +69,15 @@ For serving at scale, the trie is usually **flattened into a key-value map**: `p
 
 ## 6. High-level design
 
+<FlowSteps title='Serving suggestions and keeping them fresh' steps={[
+  { path: ['C', 'CDN'], text: 'Each (debounced) keystroke asks for suggestions; popular prefixes are answered from the edge cache.' },
+  { path: ['CDN', 'LB', 'SS'], text: 'Misses go to the suggest service shard that owns the prefix, which reads its precomputed top-k from memory.' },
+  { path: ['SL', 'K'], text: 'Meanwhile, the search service logs every query to Kafka.' },
+  { path: ['K', 'B', 'BUILD'], text: 'A daily batch job counts queries with time decay, and the index builder computes the top-k for every prefix.' },
+  { path: ['K', 'ST', 'BUILD'], text: 'A stream job adds trending queries within minutes.' },
+  { path: ['BUILD', 'SNAP', 'SS'], text: 'New versioned snapshots are hot-swapped into the suggest servers.' },
+]}>
+
 ```mermaid
 flowchart LR
   subgraph Serving["Serving path (online)"]
@@ -86,6 +95,8 @@ flowchart LR
   end
   SNAP -. load / hot swap .-> SS
 ```
+
+</FlowSteps>
 
 **Serving:** client debounces keystrokes (e.g., 100–150 ms), requests the prefix; the CDN serves popular prefixes; misses go to a suggest server that holds its shard of the prefix map **in memory** and returns the list.
 

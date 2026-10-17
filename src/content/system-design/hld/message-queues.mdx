@@ -96,6 +96,9 @@ Introductory texts sometimes describe a message queue as "durable, stored in mem
 If you need events for one entity processed in order (e.g., "order created" before "order paid"), use that entity's ID as the message key. Global ordering across all messages requires a single partition — which caps throughput — and is rarely necessary.
 </Callout>
 
+
+<PartitionSim />
+
 ## Delivery semantics
 
 Failures can happen at any point: a producer may not receive the broker's ack, or a consumer may crash after processing but before acknowledging.

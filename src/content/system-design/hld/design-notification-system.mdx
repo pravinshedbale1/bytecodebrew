@@ -88,6 +88,16 @@ Notifications are only as good as the addresses you hold. On app install or logi
 
 ## 6. High-level design
 
+<FlowSteps title='One notification, end to end' steps={[
+  { path: ['S', 'API', 'DEDUP'], text: 'A service sends a notification request; the API checks its idempotency key so retries do not create duplicates.' },
+  { path: ['API', 'Q0'], text: 'The request is queued on a Kafka topic chosen by priority (high, normal or bulk).' },
+  { path: ['Q0', 'ROUTER', 'PREF'], text: 'The router loads preferences, consent, quiet hours and device tokens, renders the template and applies frequency caps.' },
+  { path: ['ROUTER', 'QP', 'WP', 'APNS'], text: 'Each channel has its own queue and workers: push notifications go through APNs or FCM…' },
+  { path: ['ROUTER', 'QE', 'WE', 'ESP'], text: '…and emails through the email providers, so a slow channel cannot hold up the others.' },
+  { path: ['WP', 'STATUS'], nodes: ['WE', 'WS'], edges: [['WE', 'STATUS'], ['WS', 'STATUS']], text: 'Workers record every delivery attempt in the status store.' },
+  { path: ['APNS', 'CB', 'STATUS'], nodes: ['ESP', 'SMSP'], edges: [['ESP', 'CB'], ['SMSP', 'CB']], text: 'Provider receipts and webhooks update the final delivery status.' },
+]}>
+
 ```mermaid
 flowchart LR
   S[Internal services] --> API[Notification API]
@@ -104,6 +114,8 @@ flowchart LR
   WP & WE & WS --> STATUS[("Delivery status store")]
   APNS & ESP & SMSP -. webhooks / receipts .-> CB["Callback handler"] --> STATUS
 ```
+
+</FlowSteps>
 
 **Flow**
 

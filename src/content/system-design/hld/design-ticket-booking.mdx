@@ -63,6 +63,17 @@ Seat inventory needs **transactions and conditional updates** → a relational d
 
 ## 6. High-level design
 
+<FlowSteps title='Booking seats for a hot event' steps={[
+  { path: ['U', 'EDGE', 'WR'], text: 'Users pass the edge\'s bot checks and rate limits and wait in the virtual waiting room.' },
+  { path: ['WR', 'GW', 'CAT', 'ES'], text: 'Admitted users browse the event through the catalog service.' },
+  { path: ['GW', 'INV', 'SMC'], text: 'The seat map comes from a cache that is updated as holds change.' },
+  { path: ['INV', 'DB'], text: 'Choosing seats places a hold with a conditional update, so only one user can hold a seat.' },
+  { path: ['GW', 'BK', 'PAY', 'PSP'], text: 'At checkout, the booking service charges the user through the payment service.' },
+  { path: ['BK', 'DB'], text: 'On success the held seats are marked sold, on the condition that the hold is still yours.' },
+  { path: ['BK', 'K', 'TIX'], text: 'A booking event triggers ticket issuing and the confirmation email.' },
+  { path: ['EXP', 'DB'], text: 'Holds that expire without payment are released for other users.' },
+]}>
+
 ```mermaid
 flowchart LR
   U[Users] --> CDN["CDN (static, event pages)"]
@@ -80,6 +91,8 @@ flowchart LR
   BK -. events .-> K[["Kafka"]] --> TIX[Ticket issuing / email]
   EXP["Hold expiry worker"] --> DB
 ```
+
+</FlowSteps>
 
 ## 7. Deep dives
 

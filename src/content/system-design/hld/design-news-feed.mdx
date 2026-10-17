@@ -122,6 +122,16 @@ Some sources suggest consistent hashing as the fix for the celebrity "hot key" p
 
 ## 7. High-level design
 
+<FlowSteps title='Posting, then reading the feed' steps={[
+  { path: ['C', 'GW', 'PS', 'PDB'], text: 'Posting: the post service stores the new post.' },
+  { path: ['PS', 'K', 'FO'], text: 'A post event goes to Kafka, and the fan-out service picks it up.' },
+  { path: ['FO', 'GS', 'GDB'], text: 'Fan-out asks the graph service for the author\'s followers.' },
+  { path: ['FO', 'FC'], text: 'It inserts the post ID into each follower\'s cached feed (skipped for celebrity authors, whose posts are pulled at read time).' },
+  { path: ['C', 'GW', 'FS', 'FC'], text: 'Reading: the feed service takes post IDs from the user\'s cached feed…' },
+  { path: ['FS', 'PC', 'PDB'], text: '…and hydrates them from the post cache, falling back to the posts store.' },
+  { path: ['GW', 'MS', 'OS', 'CDN'], nodes: ['C'], edges: [['C', 'CDN']], text: 'Images and videos are uploaded through the media service to object storage and served to clients from the CDN.' },
+]}>
+
 ```mermaid
 flowchart LR
   C[Clients] --> CDN[CDN: media]
@@ -138,6 +148,8 @@ flowchart LR
   K --> SRCH[Search indexer]
   K --> NOTIF[Notifications]
 ```
+
+</FlowSteps>
 
 ## 8. Deep dives
 

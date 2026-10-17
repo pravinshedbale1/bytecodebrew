@@ -70,6 +70,16 @@ Alert rule (stored config):
 
 ## 6. High-level design
 
+<FlowSteps title='From sample to page' steps={[
+  { path: ['A1', 'COL'], text: 'Agents scrape the processes on their host and push batches of samples to collectors.' },
+  { path: ['COL', 'K', 'ING'], text: 'Collectors enforce series limits and write to Kafka by series hash, so each series lands on one ingester.' },
+  { path: ['ING', 'TS'], nodes: ['IDX'], edges: [['ING', 'IDX']], text: 'Ingesters keep recent samples in memory (with a write-ahead log) and flush compressed blocks to object storage, updating the label index.' },
+  { path: ['DASH', 'Q', 'IDX'], text: 'A dashboard query first finds the matching series in the label index…' },
+  { path: ['Q', 'ING'], nodes: ['TS'], edges: [['Q', 'TS']], text: '…then reads recent data from the ingesters and older data from the blocks.' },
+  { path: ['K', 'RULE', 'AM', 'N'], text: 'The rule evaluator checks alert rules; the alert manager deduplicates, groups and routes the notifications.' },
+  { path: ['CMP', 'TS'], text: 'The compactor merges blocks and writes downsampled rollups for long-range queries.' },
+]}>
+
 ```mermaid
 flowchart LR
   A1["Agents on hosts<br/>(push) / scrapers (pull)"] --> COL[Collectors]
@@ -86,6 +96,8 @@ flowchart LR
   AM --> N["Email / chat / pager"]
   CMP["Compactor<br/>(merge blocks, downsample)"] --> TS
 ```
+
+</FlowSteps>
 
 **Write path:** agents batch samples and send them to collectors (or a scraper pulls them). Collectors validate, enforce per-tenant limits on series count, and write to Kafka partitioned by series hash, so all samples of a series go to the same ingester. Ingesters append samples to an in-memory "head" block (with a write-ahead log for crash recovery) and, every couple of hours, flush a compressed, immutable block to object storage.
 

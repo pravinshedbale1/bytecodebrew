@@ -112,6 +112,9 @@ W + R ≤ N   → faster, more available, but reads may be stale
 Quorum reads and writes are **not** automatically linearizable. Concurrent writes resolved by LWW, partially failed writes, and sloppy quorums can all violate it. For true linearizability on a key, systems use consensus or compare-and-set (e.g., Cassandra lightweight transactions via Paxos).
 </Callout>
 
+
+<QuorumSim />
+
 ## Comparing the models
 
 | Model | Guarantee | Available during partition? | Latency | Example uses |

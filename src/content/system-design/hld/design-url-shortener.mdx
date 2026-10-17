@@ -100,6 +100,16 @@ The access pattern is a pure **key lookup by code**, with no joins on the hot pa
 
 ## 6. High-level design
 
+<FlowSteps title="Create and redirect, step by step" steps={[
+  { path: ['C', 'CDN', 'LB', 'WS'], text: 'Create: POST /links passes through the edge (writes are not cached) and the load balancer to the link service.' },
+  { path: ['WS', 'KG'], text: 'The link service takes the next code from a block of IDs it reserved earlier. It asks the key generator for a new block only when the current one runs out.' },
+  { path: ['WS', 'DB'], text: 'It writes code → long URL to the links store and returns the short URL.' },
+  { path: ['C', 'CDN'], text: 'Redirect: GET /x7Kp2Qa reaches the nearest CDN edge. Popular links are answered right there.' },
+  { path: ['CDN', 'LB', 'RS', 'RC'], text: 'On an edge miss, the redirect service looks the code up in Redis, which holds the hot links.' },
+  { path: ['RS', 'DB'], text: 'On a Redis miss it reads the store, fills the cache, checks status and expiry, and answers 302 with the Location header.' },
+  { path: ['RS', 'K', 'SP', 'AN'], nodes: ['LAKE'], edges: [['K', 'LAKE']], text: 'Without waiting, it emits a click event to Kafka. A stream job aggregates clicks for analytics, and raw events land in object storage.' },
+]}>
+
 ```mermaid
 flowchart LR
   C[Client] --> CDN["CDN / edge"]
@@ -114,6 +124,8 @@ flowchart LR
   K --> SP["Stream aggregator"] --> AN[("Analytics store")]
   K --> LAKE[("Object storage<br/>raw events")]
 ```
+
+</FlowSteps>
 
 **Create flow**
 

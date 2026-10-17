@@ -38,6 +38,13 @@ On one machine, a key-value store is a hash table. You can stretch it with compr
 
 ## 4. High-level design
 
+<FlowSteps title='A write with N = 3, W = 2' steps={[
+  { path: ['C', 'CO'], text: 'The client sends put(key) to any node, which acts as the coordinator (or a partition-aware client goes straight to the right node).' },
+  { path: ['CO', 'N1'], nodes: ['N2', 'N3'], edges: [['CO', 'N2'], ['CO', 'N3']], text: 'The coordinator sends the write to the three replicas on the key\'s preference list.' },
+  { path: ['N1', 'CO'], nodes: ['N2'], edges: [['N2', 'CO']], text: 'As soon as W = 2 replicas acknowledge, it answers the client. The third replica catches up (or is repaired later).' },
+  { nodes: ['N1', 'N2', 'N3'], edges: [['N1', 'N2'], ['N2', 'N3'], ['N3', 'N1']], text: 'All the while, nodes gossip membership and failure information, so every node learns about changes within seconds.' },
+]}>
+
 ```mermaid
 flowchart LR
   C[Client] --> CO["Coordinator node<br/>(any node; or partition-aware client)"]
@@ -48,6 +55,8 @@ flowchart LR
   N2 <-. gossip .-> N3
   N3 <-. gossip .-> N1
 ```
+
+</FlowSteps>
 
 Every node is identical (no leader): each owns ranges of the hash ring, stores data in a local LSM engine, gossips membership, and can act as **coordinator** for any request.
 

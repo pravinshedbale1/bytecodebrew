@@ -99,6 +99,16 @@ Metadata must be **strongly consistent** — two devices must never disagree abo
 
 ## 7. High-level design
 
+<FlowSteps title='Syncing a changed file' steps={[
+  { path: ['D1', 'API', 'BLK'], text: 'The desktop client splits the changed file into blocks and asks which block hashes the server does not have yet.' },
+  { path: ['D1', 'OS'], text: 'It uploads only the missing blocks, directly to the block store with presigned URLs.' },
+  { path: ['API', 'META'], text: 'It commits the new version (an ordered list of block hashes) to the metadata database.' },
+  { path: ['META', 'K', 'NOTIF'], text: 'The commit is appended to the namespace\'s journal and published through Kafka to the notification service.' },
+  { path: ['NOTIF', 'D1'], text: 'Devices holding a long-poll or WebSocket hear \'namespace changed\' and pull the new journal entries and any blocks they lack.' },
+  { path: ['K', 'SRCH'], text: 'Search and preview workers process the change in the background.' },
+  { path: ['OS', 'CDN'], text: 'Shared-link downloads are served through a CDN in front of the block store.' },
+]}>
+
 ```mermaid
 flowchart LR
   D1[Desktop client] --> API[API servers]
@@ -113,6 +123,8 @@ flowchart LR
   K --> SRCH[Search / preview workers]
   OS --> CDN[CDN for shared-link downloads]
 ```
+
+</FlowSteps>
 
 ### Upload / sync flow
 

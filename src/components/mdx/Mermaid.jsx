@@ -1,4 +1,6 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { SequenceSteps } from './FlowSteps';
+import { parseSequence } from './sequenceSteps';
 import { getActiveTheme } from '../../hooks/useTheme';
 import styles from './Mermaid.module.css';
 
@@ -80,7 +82,10 @@ export function Mermaid({ chart, caption }) {
     };
   }, [chart, id, themeTick]);
 
-  return (
+  // Sequence diagrams with a few messages get a step-through, one message at a time
+  const messages = useMemo(() => (chart.trim().startsWith('sequenceDiagram') ? parseSequence(chart) : []), [chart]);
+
+  const figure = (
     <figure className={styles.figure}>
       {error ? (
         <pre className={styles.fallback}>{chart}</pre>
@@ -93,4 +98,5 @@ export function Mermaid({ chart, caption }) {
       {caption && <figcaption className={styles.caption}>{caption}</figcaption>}
     </figure>
   );
+  return messages.length >= 3 && !error ? <SequenceSteps messages={messages}>{figure}</SequenceSteps> : figure;
 }

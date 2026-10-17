@@ -83,6 +83,16 @@ Either approach is acceptable — what matters is explaining **why concurrent ed
 
 ## 7. High-level design
 
+<FlowSteps title='One edit, end to end' steps={[
+  { path: ['C1', 'GW', 'RT'], text: 'Editor A\'s operation arrives over a WebSocket, and the gateway routes it by document ID.' },
+  { path: ['RT', 'SS'], text: 'Every operation for document 42 reaches the one session server that owns the document.' },
+  { path: ['SS', 'OPLOG'], text: 'The session server puts the operation in order (transforming it if needed) and appends it to the operation log.' },
+  { path: ['SS', 'RT', 'GW', 'C2'], text: 'The ordered operation is broadcast to every connected editor, so Editor B applies the same change.' },
+  { path: ['SS', 'SNAP'], text: 'Every so often the server saves a snapshot, so opening a document does not replay its whole history.' },
+  { path: ['SS', 'PRES'], text: 'Cursors and selections travel through a separate, short-lived presence channel.' },
+  { path: ['API', 'META'], nodes: ['OPLOG', 'HIST'], edges: [['OPLOG', 'HIST']], text: 'Listing, sharing and version history use the ordinary API, the metadata store and the history service.' },
+]}>
+
 ```mermaid
 flowchart LR
   C1[Editor A] <-->|WebSocket| GW[Gateway]
@@ -95,6 +105,8 @@ flowchart LR
   API[Docs API: list, share, history] --> META[("Metadata + ACLs")]
   OPLOG --> HIST["History / versions service"]
 ```
+
+</FlowSteps>
 
 **Editing flow**
 
