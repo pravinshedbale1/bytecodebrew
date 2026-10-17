@@ -121,6 +121,24 @@ for (const f of readdirSync(probDir).filter((f) => f.endsWith('.json') && !['ind
 }
 for (const slug of Object.keys(problemIndex)) if (!shipped.has(slug)) fail(`index.json lists ${slug}, but no data file has it`);
 
+// ---- synced stores: every store is in the rules and gets erased by "Delete my data"
+{
+  const names = new Set();
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) walk(p);
+    else if (/\.(js|jsx)$/.test(e.name)) for (const m of readFileSync(p, 'utf8').matchAll(/createSyncedStore\(\{[^]*?name:\s*'([a-z]+)'/g)) names.add(m[1]);
+  });
+  walk(src);
+  if (names.size < 10) fail(`only found ${names.size} synced stores — the check's pattern needs updating`);
+  const erased = readFileSync(join(src, 'lib', 'accountData.js'), 'utf8');
+  const rules = readFileSync(join(src, '..', 'firestore.rules'), 'utf8');
+  for (const n of names) {
+    if (!new RegExp(`STATE_DOCS = \\[[^\\]]*'${n}'`).test(erased)) fail(`synced store "${n}" is missing from STATE_DOCS in src/lib/accountData.js (Delete my data would leave it behind)`);
+    if (!rules.includes(`'${n}'`)) fail(`synced store "${n}" is missing from firestore.rules`);
+  }
+}
+
 // ---- behavioral question bank links
 const { THEME_INFO } = await load(join(src, 'data', 'behavioralQuestions.js'));
 for (const [theme, info] of Object.entries(THEME_INFO)) checkLink(`behavioral theme ${theme}`, info.lesson);

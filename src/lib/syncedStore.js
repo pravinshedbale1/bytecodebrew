@@ -103,6 +103,8 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
         const merged = remote == null ? state : merge(state, remote);
         lastRemoteJson = remote == null ? null : snap.data().json;
         applyLocal(merged);
+        // Nothing saved yet and nothing to save: don't create an empty document (e.g. right after "Delete my data")
+        if (remote == null && JSON.stringify(merged) === JSON.stringify(initial)) return;
         if (JSON.stringify(merged) !== lastRemoteJson) pushRemote().catch(() => { lastRemoteJson = null; });
         return;
       }

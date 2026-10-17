@@ -1,4 +1,5 @@
 import { SYNCED_STORES } from './syncedStore';
+import { loadFirebase } from './firebase';
 
 /**
  * "Download my data" and "Delete my data": everything ByteCodeBrew keeps about a learner lives in
@@ -32,9 +33,21 @@ export function exportData() {
   URL.revokeObjectURL(a.href);
 }
 
+/**
+ * Every synced document a learner can have (users/{uid}/state/{name}); the same list as freeNames and
+ * premiumNames in firestore.rules. Deleted by name so nothing survives just because the store that
+ * owns it (e.g. the story bank, which lives in a lesson component) wasn't loaded in this session.
+ */
+export const STATE_DOCS = ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reviews', 'mocks', 'profile', 'drills', 'stories'];
+
 /** Erase progress, solves, reviews, notes… here and in the signed-in account; keeps only the theme. */
 export async function deleteAllData() {
   await Promise.all(SYNCED_STORES.map((s) => s.reset().catch(() => {})));
+  const fb = await loadFirebase();
+  const uid = fb?.auth.currentUser?.uid;
+  if (uid) {
+    await Promise.all(STATE_DOCS.map((name) => fb.fsMod.deleteDoc(fb.fsMod.doc(fb.db, 'users', uid, 'state', name))));
+  }
   for (const k of browserKeys()) if (k !== 'bcb:theme') {
     try { localStorage.removeItem(k); } catch { /* ignore */ }
   }
