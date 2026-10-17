@@ -125,6 +125,7 @@ function CheckoutDialog({ plan, access, onClose }) {
             {busy ? <Loader2 size={16} className={styles.spin} /> : <Lock size={15} />} {busy ? 'Opening secure checkout…' : `Pay ${inr(plan.price)}`}
           </button>
           <p className={styles.secure}><ShieldCheck size={14} aria-hidden="true" /> You'll complete the payment on Cashfree's secure page: UPI, cards, net banking or wallets.</p>
+          <p className={styles.hintText}>By paying you agree to the <Link to="/terms" target="_blank">Terms</Link> and the <Link to="/refund-policy" target="_blank">Refund Policy</Link>. Access is delivered instantly online.</p>
         </form>
       )}
     </dialog>
@@ -136,7 +137,7 @@ const FAQ = [
   ['When does premium start?', 'Immediately after the payment succeeds, on every device where you sign in with the same Google account.'],
   ['What happens when it ends?', 'Premium content locks again. Your progress, highlights, notes and solved problems are kept.'],
   ['How do I pay?', 'Through Cashfree Payments: UPI, debit and credit cards, net banking and wallets.'],
-  ['Refunds or problems with a payment?', `Email ${CONTACT_EMAIL} with your order number and we'll sort it out.`],
+  ['Can I get a refund?', <>Yes: a full refund within 7 days of purchase, and always if you were charged but Premium didn't activate. Email {CONTACT_EMAIL} with your order number. Details in the <Link to="/refund-policy">Refund & Cancellation Policy</Link>.</>],
 ];
 
 /** /premium — the plans, what's free and what's premium, and the questions people ask. */
@@ -222,7 +223,7 @@ export function PricingPage() {
             </details>
           ))}
         </div>
-        <p className={styles.fine}>Payments are processed by Cashfree Payments. Prices are in Indian rupees and include applicable taxes. <Link to="/">Back to learning</Link></p>
+        <p className={styles.fine}>Payments are processed by Cashfree Payments. Prices are in Indian rupees and include applicable taxes. Sold by ByteCodeBrew Solutions. <Link to="/terms">Terms</Link> · <Link to="/refund-policy">Refunds</Link> · <Link to="/contact">Contact</Link></p>
       </div>
       <CheckoutDialog plan={chosen} access={access} onClose={() => setChosen(null)} />
     </PageLayout>

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp dist/index.html dist/404.html",
+    "build": "vite build && node scripts/static-pages.mjs",
     "preview": "vite preview",
     "emulators": "npx --yes firebase-tools@15.34.0 emulators:start --project demo-bytecodebrew",
     "dev:emulator": "VITE_FIREBASE_EMULATOR=1 vite",

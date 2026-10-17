@@ -5,6 +5,7 @@ import { TopBar, crumbsFor } from './TopBar';
 import { site } from '../../config/site';
 import { SearchDialog } from '../search/SearchDialog';
 import { SignInNudge } from './SignInNudge';
+import { SiteFooter } from './SiteFooter';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
@@ -36,6 +37,7 @@ export function AppShell() {
         <main id="main" className={styles.main}>
           <Outlet />
         </main>
+        <SiteFooter />
       </div>
       <SearchDialog />
       <SignInNudge />

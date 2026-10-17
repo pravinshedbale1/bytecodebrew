@@ -19,6 +19,11 @@ const PAGE_CRUMBS = {
   problems: 'Problems',
   admin: 'Admin',
   premium: 'Premium',
+  contact: 'Contact us',
+  terms: 'Terms & Conditions',
+  privacy: 'Privacy Policy',
+  'refund-policy': 'Refund & Cancellation',
+  'delivery-policy': 'Delivery Policy',
 };
 
 export function crumbsFor(pathname) {

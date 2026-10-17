@@ -19,6 +19,12 @@ const SolvePage = named(() => import('./pages/SolvePage'), 'SolvePage');
 const ProblemsPage = named(() => import('./pages/ProblemsPage'), 'ProblemsPage');
 const AdminPage = named(() => import('./pages/AdminPage'), 'AdminPage');
 const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
+const policy = (name) => named(() => import('./pages/PolicyPages'), name);
+const ContactPage = policy('ContactPage');
+const TermsPage = policy('TermsPage');
+const PrivacyPage = policy('PrivacyPage');
+const RefundPage = policy('RefundPage');
+const DeliveryPage = policy('DeliveryPage');
 const page = (el) => <Suspense fallback={null}>{el}</Suspense>;
 
 export function App() {
@@ -36,6 +42,11 @@ export function App() {
         <Route path="problems" element={page(<ProblemsPage />)} />
         <Route path="admin" element={page(<AdminPage />)} />
         <Route path="premium" element={page(<PricingPage />)} />
+        <Route path="contact" element={page(<ContactPage />)} />
+        <Route path="terms" element={page(<TermsPage />)} />
+        <Route path="privacy" element={page(<PrivacyPage />)} />
+        <Route path="refund-policy" element={page(<RefundPage />)} />
+        <Route path="delivery-policy" element={page(<DeliveryPage />)} />
         <Route path=":trackId" element={<TrackPage />} />
         <Route path=":trackId/:courseId" element={<CoursePage />} />
         <Route path=":trackId/:courseId/:lessonId" element={<LessonPage />} />
