@@ -123,6 +123,10 @@ Decision template: **requirement → options → choice → cost**. ([Framework]
 | [Job scheduler](/system-design/hld/design-job-scheduler) | Partitioned schedulers with leases; unique execution per occurrence; worker leases |
 | [Collaborative editor](/system-design/hld/design-collaborative-editor) | OT or CRDT; one session owner per doc; op log + snapshots |
 | [Key-value store](/system-design/hld/design-key-value-store) | Consistent hashing + N replicas + quorums + hinted handoff + Merkle repair + LSM |
+| [Leaderboard](/system-design/hld/design-leaderboard) | Redis sorted set (skip list) for O(log n) ranks; DB as source of truth; time in the score for ties; key per month |
+| [Message queue](/system-design/hld/design-message-queue) | Partitioned append-only log; ISR + acks=all + min.insync.replicas; pull consumers; idempotent producer |
+| [Metrics monitoring](/system-design/hld/design-metrics-monitoring) | Series = name + labels, watch cardinality; Gorilla compression; label index; rollups; redundant alerting |
+| [Stock exchange](/system-design/hld/design-stock-exchange) | Sequencer + replicated log → single-threaded deterministic matcher; hot standby replays; shard by symbol |
 
 ## Final-minute checklist
 

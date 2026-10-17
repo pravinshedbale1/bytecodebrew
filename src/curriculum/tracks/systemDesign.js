@@ -128,6 +128,7 @@ const hld = {
         L('design-news-feed', 'Design a News Feed', 'Fan-out on write vs read, ranking and celebrity users.', 30, 'Intermediate'),
         L('design-chat-system', 'Design a Chat System', 'WebSockets, message ordering, presence, groups and offline delivery.', 30, 'Intermediate'),
         L('design-file-storage', 'Design Cloud File Storage (Dropbox)', 'Chunking, deduplication, sync, conflicts and metadata.', 28, 'Advanced'),
+        L('design-leaderboard', 'Design a Real-Time Leaderboard', 'Sorted sets, O(log n) ranks, ties, monthly boards and sharding by score.', 20, 'Intermediate'),
       ],
     },
     {
@@ -143,6 +144,9 @@ const hld = {
         L('design-job-scheduler', 'Design a Distributed Job Scheduler', 'Scheduling at scale, leases, retries and exactly-once execution.', 26, 'Advanced'),
         L('design-collaborative-editor', 'Design a Collaborative Editor (Google Docs)', 'OT vs CRDTs, sessions, presence and persistence.', 27, 'Advanced'),
         L('design-key-value-store', 'Design a Distributed Key-Value Store', 'Partitioning, replication, quorums, repair and storage engine.', 30, 'Advanced'),
+        L('design-message-queue', 'Design a Distributed Message Queue (Kafka)', 'Partitioned logs, replication and ISR, consumer groups and delivery semantics.', 24, 'Advanced'),
+        L('design-metrics-monitoring', 'Design Metrics Monitoring & Alerting', 'Time-series storage and compression, cardinality, rollups and reliable alerting.', 22, 'Advanced'),
+        L('design-stock-exchange', 'Design a Stock Exchange', 'Order books, price-time matching, sequencing, determinism and low latency.', 24, 'Advanced'),
       ],
     },
     {
