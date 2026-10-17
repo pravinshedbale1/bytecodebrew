@@ -1,19 +1,45 @@
 rules_version = '2';
 
-// ByteCodeBrew: each signed-in user owns users/{uid}/state/{name}, one document per synced store
-// (see src/lib/syncedStore.js). Nobody can read or write anyone else's data, and nothing else
-// in the database is accessible from the browser.
+// ByteCodeBrew security rules.
+//
+//  users/{uid}/state/{name}   one document per synced store (src/lib/syncedStore.js). Each user reads and
+//                             writes only their own. Premium stores accept writes only from premium accounts.
+//  entitlements/{email}       premium access, one document per approved Google account email (lower case).
+//                             Only the admin can create or remove them; a user may read their own.
+//
+// Keep the lists below in sync with src/config/access.js (ADMIN_EMAILS, PREMIUM_STORES).
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isOwner(uid) {
-      return request.auth != null && request.auth.uid == uid;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // One document per synced store; keep in sync with every createSyncedStore({ name }) in src/.
-    function stateNames() {
-      return ['progress', 'solved', 'stories', 'drills', 'highlights',
-              'activity', 'quiz', 'practice', 'reviews', 'mocks', 'profile'];
+    function verifiedEmail() {
+      return signedIn() && request.auth.token.email_verified == true ? request.auth.token.email.lower() : '';
+    }
+
+    function isAdmin() {
+      return verifiedEmail() in ['bytecodebrew@gmail.com'];
+    }
+
+    function isPremium() {
+      return isAdmin()
+        || (verifiedEmail() != '' && exists(/databases/$(database)/documents/entitlements/$(verifiedEmail())));
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Free for every signed-in user: reading progress, highlights, lesson quizzes and practice.
+    function freeNames() {
+      return ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity'];
+    }
+
+    // Premium: review deck, mock interviews, study plan + LeetCode profile, behavioral drill, story bank.
+    function premiumNames() {
+      return ['reviews', 'mocks', 'profile', 'drills', 'stories'];
     }
 
     function validState() {
@@ -25,12 +51,20 @@ service cloud.firestore {
     }
 
     match /users/{uid}/state/{name} {
-      allow read: if isOwner(uid)
-        && name in stateNames();
-      allow write: if isOwner(uid)
-        && name in stateNames()
-        && validState();
+      allow read: if isOwner(uid) && (name in freeNames() || name in premiumNames());
+      allow write: if isOwner(uid) && validState()
+        && (name in freeNames() || (name in premiumNames() && isPremium()));
       allow delete: if isOwner(uid);
+    }
+
+    match /entitlements/{email} {
+      allow read: if isAdmin() || (verifiedEmail() != '' && verifiedEmail() == email);
+      allow create, update: if isAdmin()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['premium', 'note', 'addedAt', 'addedBy'])
+        && request.resource.data.premium == true
+        && request.resource.data.addedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     // Deny everything else.

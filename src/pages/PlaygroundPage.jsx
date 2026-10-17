@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Play, RotateCcw, Info, Keyboard } from 'lucide-react';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { runJava } from '../lib/judge0';
 import { CodeEditor } from '../components/solve/CodeEditor';
@@ -31,7 +32,7 @@ public class Main {
 }
 `;
 
-export function PlaygroundPage() {
+function PlaygroundPageInner() {
   const [code, setCode] = useState(() => readJSON(STORAGE, null)?.code ?? STARTER);
   const [stdin, setStdin] = useState(() => readJSON(STORAGE, null)?.stdin ?? '');
   const [from, setFrom] = useState(null);
@@ -143,5 +144,13 @@ export function PlaygroundPage() {
         </div>
       </div>
     </PageLayout>
+  );
+}
+
+export function PlaygroundPage() {
+  return (
+    <PremiumPage eyebrow="Practise" title="Code playground" lead="Write and run Java in the browser." feature="The code playground">
+      <PlaygroundPageInner />
+    </PremiumPage>
   );
 }

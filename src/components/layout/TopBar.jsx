@@ -17,6 +17,7 @@ const PAGE_CRUMBS = {
   cheatsheet: 'Cheat sheet',
   solve: 'Solve',
   problems: 'Problems',
+  admin: 'Admin',
 };
 
 export function crumbsFor(pathname) {

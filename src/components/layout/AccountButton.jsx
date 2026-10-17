@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { LogIn, LogOut, Highlighter, LayoutDashboard } from 'lucide-react';
+import { LogIn, LogOut, Highlighter, LayoutDashboard, ShieldCheck, Sparkles } from 'lucide-react';
+import { useAccess } from '../../hooks/useAccess';
 import { useAuth, signIn, signOutUser } from '../../hooks/useAuth';
 import { useSyncIssues } from '../../lib/syncedStore';
 import styles from './AccountButton.module.css';
@@ -9,6 +10,7 @@ import styles from './AccountButton.module.css';
 export function AccountButton() {
   const { status, user, error } = useAuth();
   const syncIssues = useSyncIssues();
+  const access = useAccess();
   const [open, setOpen] = useState(false);
   const box = useRef(null);
 
@@ -47,6 +49,7 @@ export function AccountButton() {
           <div className={styles.who}>
             <strong>{user.name}</strong>
             <span>{user.email}</span>
+            {access.status === 'premium' && <span className={styles.premium}><Sparkles size={12} /> Premium access</span>}
           </div>
           {syncIssues.length > 0 ? (
             <p className={`${styles.sync} ${styles.syncWarn}`} role="status">
@@ -54,6 +57,11 @@ export function AccountButton() {
             </p>
           ) : (
             <p className={styles.sync}>Progress, solved problems, reviews, stories and highlights sync to this account.</p>
+          )}
+          {access.isAdmin && (
+            <Link to="/admin" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
+              <ShieldCheck size={15} /> Admin: premium access
+            </Link>
           )}
           <Link to="/dashboard" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
             <LayoutDashboard size={15} /> Dashboard &amp; profile

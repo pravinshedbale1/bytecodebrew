@@ -8,10 +8,15 @@ LeetCode sync goes through this small Cloudflare Worker. It is free on Cloudflar
 - Each username is fetched from LeetCode at most once an hour (edge cache), each IP is limited to
   20 uncached lookups an hour, and only the site's origins may call it from a browser.
 - The site itself also allows one refresh per hour per learner (`src/lib/leetcode.js`).
+- **Premium only** (`auth.js`): requests need `Authorization: Bearer <Firebase ID token>`. The Worker
+  verifies the token's signature against Google's public keys and its claims (`FIREBASE_PROJECT_ID`
+  in `wrangler.toml`, expiry, verified email), then allows the admin email or anyone with an
+  `entitlements/{email}` document (read from Firestore with the learner's own token). No secrets needed.
 
 ## Local development
 
-Nothing to deploy: `npm run dev` serves the same code at `/api/leetcode` (see `vite.config.js`).
+Nothing to deploy: `npm run dev` serves the same code at `/api/leetcode` (see `vite.config.js`), with the
+same premium check. With `npm run dev:emulator` it accepts the Auth emulator's unsigned tokens.
 
 ## Deploy
 

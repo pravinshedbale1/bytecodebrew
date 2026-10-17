@@ -3,6 +3,7 @@ import { getProfile, updateProfile } from '../hooks/useProfile';
 import { markSolvedFrom } from '../hooks/useSolved';
 import { logActivity } from '../hooks/useActivity';
 import { dayKey } from './dates';
+import { loadFirebase } from './firebase';
 
 /**
  * LeetCode sync. A successful refresh is allowed once an hour per learner (the time is stored in the
@@ -25,11 +26,15 @@ export async function syncLeetCode(username) {
   const name = username.trim();
   const wait = refreshWait();
   if (wait > 0) throw new Error('You can refresh LeetCode data once an hour.');
+  const fb = await loadFirebase();
+  const user = fb?.auth.currentUser;
+  if (!user) throw new Error('Sign in to sync LeetCode.');
   lastAttempt = Date.now();
 
   let res;
   try {
-    res = await fetch(`${LEETCODE_API}?username=${encodeURIComponent(name)}`);
+    const token = await user.getIdToken();
+    res = await fetch(`${LEETCODE_API}?username=${encodeURIComponent(name)}`, { headers: { Authorization: `Bearer ${token}` } });
   } catch {
     throw new Error('Could not reach the LeetCode sync service. Check your connection.');
   }

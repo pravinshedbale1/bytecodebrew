@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, Code2 } from 'lucide-react';
+import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, Code2, SkipForward, Undo2, Check } from 'lucide-react';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { AiInterviewer, requestFeedback } from '../components/mock/AiInterviewer';
 import { ProblemSolver } from '../components/solve/ProblemSolver';
-import { MOCK_TYPES, SIGNALS, phaseAt } from '../data/mockInterviews';
+import { MOCK_TYPES, SIGNALS, withPhases, nextPhase, previousPhase, tick, phaseTimes } from '../data/mockInterviews';
 import { useMocks } from '../hooks/useLearning';
 import { useSolved } from '../hooks/useSolved';
 import { getApiKey } from '../lib/claude';
@@ -18,7 +19,7 @@ const LIVE = 'bcb:mock-live';
 const mmss = (s) => `${s < 0 ? '-' : ''}${String(Math.floor(Math.abs(s) / 60)).padStart(2, '0')}:${String(Math.abs(s) % 60).padStart(2, '0')}`;
 
 /** Timed mock interviews with phases, a scratchpad, an optional AI interviewer and a self-scoring rubric. */
-export function MockPage() {
+function MockPageInner() {
   const [params] = useSearchParams();
   const { isSolved } = useSolved();
   const { mocks, addMock, updateMock, removeMock } = useMocks();
@@ -31,7 +32,7 @@ export function MockPage() {
 
   const start = () => {
     const type = MOCK_TYPES[typeId];
-    setSession({ typeId, level, prompt: type.pick(isSolved, level), seconds: 0, running: true, notes: '', chat: [], stage: 'live', rubric: {}, signal: null });
+    setSession({ typeId, level, prompt: type.pick(isSolved, level), seconds: 0, phaseIndex: 0, phaseStart: 0, phaseLog: [], running: true, notes: '', chat: [], stage: 'live', rubric: {}, signal: null });
     setViewing(null);
   };
 
@@ -119,30 +120,37 @@ export function MockPage() {
   );
 }
 
-function LiveMock({ session, setSession, onSave, onDiscard, isSolved }) {
-  const type = MOCK_TYPES[session.typeId];
+function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
+  const type = MOCK_TYPES[raw.typeId];
+  const session = withPhases(type.phases, raw);
   const total = type.minutes * 60;
-  const { index, phase, phaseLeft, overtime } = phaseAt(type.phases, session.seconds);
-  const patch = (p) => setSession((s) => ({ ...s, ...(typeof p === 'function' ? p(s) : p) }));
+  const index = session.phaseIndex;
+  const phase = type.phases[index];
+  const isLast = index === type.phases.length - 1;
+  const phaseLeft = phase.min * 60 - (session.seconds - session.phaseStart);
+  const overtime = Math.max(0, session.seconds - total);
+  const patch = (p) => setSession((s) => ({ ...withPhases(type.phases, s), ...(typeof p === 'function' ? p(withPhases(type.phases, s)) : p) }));
   const sessionRef = useRef(session);
   sessionRef.current = session;
+  const used = Object.fromEntries(session.phaseLog.map((p) => [p.name, p.end - p.start]));
 
   useEffect(() => {
-    if (!session.running || session.stage !== 'live') return undefined;
-    const t = setInterval(() => setSession((s) => ({ ...s, seconds: s.seconds + 1 })), 1000);
+    if (!raw.running || raw.stage !== 'live') return undefined;
+    const t = setInterval(() => setSession((s) => tick(type.phases, withPhases(type.phases, s))), 1000);
     return () => clearInterval(t);
-  }, [session.running, session.stage, setSession]);
+  }, [raw.running, raw.stage, setSession, type.phases]);
 
   const finish = () => patch({ running: false, stage: 'score' });
   // a different prompt is allowed in the first minute, before the AI interviewer has started
   const canShuffle = session.stage === 'live' && session.seconds < 60 && !session.chat.length;
-  const shuffle = () => patch({ prompt: type.pick(isSolved, session.level), seconds: 0 });
+  const shuffle = () => patch({ prompt: type.pick(isSolved, session.level), seconds: 0, phaseIndex: 0, phaseStart: 0, phaseLog: [] });
   const save = () =>
     onSave({
       at: new Date().toISOString(),
       type: session.typeId,
       prompt: session.prompt,
       seconds: session.seconds,
+      phases: phaseTimes(type.phases, session),
       notes: session.notes,
       chat: session.chat.filter((m) => !m.hidden).slice(-40),
       code: session.prompt.slug ? readJSON(`bcb:code:${session.prompt.slug}`, null) : null,
@@ -180,13 +188,25 @@ function LiveMock({ session, setSession, onSave, onDiscard, isSolved }) {
           <div>
             <p className={styles.clock}>{mmss(session.seconds)} <span>/ {mmss(total)}</span></p>
             <p className={styles.phaseNow}>
-              {overtime ? <span className={styles.over}>Over time by {mmss(overtime)}</span> : <>Now: <strong>{phase.name}</strong> · {mmss(phaseLeft)} left in this phase</>}
+              Now: <strong>{phase.name}</strong> ·{' '}
+              {phaseLeft >= 0 ? <>{mmss(phaseLeft)} left in this phase</> : <span className={styles.over}>{mmss(-phaseLeft)} over this phase</span>}
+              {overtime > 0 && <span className={styles.over}> · {mmss(overtime)} over the round</span>}
             </p>
           </div>
           {session.stage === 'live' && (
             <div className={ui.row}>
               {session.prompt.slug && canShuffle && (
                 <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={shuffle}><Shuffle size={14} /> Different problem</button>
+              )}
+              {session.phaseLog.length > 0 && (
+                <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={() => patch((s) => previousPhase(s))} title="Back to the previous phase">
+                  <Undo2 size={14} /> Back
+                </button>
+              )}
+              {!isLast && (
+                <button type="button" className={ui.btn} onClick={() => patch((s) => nextPhase(type.phases, s))} title="Done with this phase? Move on now">
+                  <SkipForward size={14} /> Next phase
+                </button>
               )}
               <button type="button" className={ui.btn} onClick={() => patch((s) => ({ running: !s.running }))}>
                 {session.running ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Resume</>}
@@ -197,8 +217,14 @@ function LiveMock({ session, setSession, onSave, onDiscard, isSolved }) {
         </div>
         <div className={styles.phases}>
           {type.phases.map((p, i) => (
-            <span key={p.name} style={{ flex: p.min }} className={i < index || overtime ? styles.phaseDone : i === index ? styles.phaseCurrent : ''}>
-              {p.name}
+            <span
+              key={p.name}
+              style={{ flex: `${p.min} 1 auto` }}
+              className={i < index ? styles.phaseDone : i === index ? styles.phaseCurrent : ''}
+              title={i < index ? `${p.name}: ${mmss(used[p.name] ?? 0)} of ${p.min} min` : `${p.name}: ${p.min} min`}
+            >
+              {i < index && <Check size={11} aria-hidden="true" />} {p.name}
+              {i < index && <em className={styles.phaseUsed}> {mmss(used[p.name] ?? 0)}</em>}
             </span>
           ))}
         </div>
@@ -226,7 +252,7 @@ function LiveMock({ session, setSession, onSave, onDiscard, isSolved }) {
               prompt={session.prompt}
               chat={session.chat}
               setChat={(chat) => patch({ chat })}
-              getContext={() => ({ seconds: sessionRef.current.seconds, phase: phaseAt(type.phases, sessionRef.current.seconds).phase.name })}
+              getContext={() => ({ seconds: sessionRef.current.seconds, phase: type.phases[sessionRef.current.phaseIndex].name })}
             />
           </section>
         </div>
@@ -289,6 +315,20 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
       <h2 className={styles.promptTitle}>{mock.prompt.title}</h2>
       {mock.prompt.afterLink && <p><Link to={mock.prompt.afterLink.path}>{mock.prompt.afterLink.label} →</Link></p>}
 
+      {mock.phases && (
+        <>
+          <h3 className={styles.subhead}>Time per phase</h3>
+          <ul className={styles.phaseResult}>
+            {mock.phases.map((p) => (
+              <li key={p.name}>
+                <span>{p.name}</span>
+                <span className={p.used > p.planned ? styles.over : ''}>{mmss(p.used)} <em>/ {mmss(p.planned)}</em></span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       <h3 className={styles.subhead}>Rubric · {met.length}/{type.rubric.length}{mock.signal && ` · ${SIGNALS.find((s) => s.id === mock.signal)?.label}`}</h3>
       <ul className={styles.rubricResult}>
         {type.rubric.map((r) => <li key={r} className={mock.rubric?.[r] ? styles.met : styles.gap}>{r}</li>)}
@@ -342,5 +382,13 @@ function RubricGaps({ mocks }) {
         {top.map(([r, n]) => <li key={r}>{r} <span>×{n}</span></li>)}
       </ul>
     </div>
+  );
+}
+
+export function MockPage() {
+  return (
+    <PremiumPage eyebrow="Practise" title="Mock interview" lead="Timed rounds with the phases a real interviewer expects, a self-scoring rubric and an optional AI interviewer." feature="Mock interviews">
+      <MockPageInner />
+    </PremiumPage>
   );
 }

@@ -143,7 +143,48 @@ export const SIGNALS = [
   { id: 'strong-hire', label: 'Strong hire' },
 ];
 
-/** Which phase a moment falls in: { index, phase, phaseLeft (s), overtime (s) }. */
+/**
+ * Phase progress lives on the session: phaseIndex (current phase), phaseStart (the second it began) and
+ * phaseLog ([{ name, start, end }] for finished phases). A phase ends when its time runs out, or earlier
+ * when the candidate moves on with "Next phase".
+ */
+export function withPhases(phases, s) {
+  if (s.phaseIndex != null) return s;
+  // sessions saved before phases could be skipped: derive the position from the clock
+  const { index } = phaseAt(phases, s.seconds);
+  let start = 0;
+  const log = [];
+  for (let i = 0; i < index; i++) { log.push({ name: phases[i].name, start, end: start + phases[i].min * 60 }); start += phases[i].min * 60; }
+  return { ...s, phaseIndex: index, phaseStart: start, phaseLog: log };
+}
+
+export function nextPhase(phases, s) {
+  const i = s.phaseIndex ?? 0;
+  if (i >= phases.length - 1) return s;
+  return { ...s, phaseIndex: i + 1, phaseStart: s.seconds, phaseLog: [...(s.phaseLog ?? []), { name: phases[i].name, start: s.phaseStart ?? 0, end: s.seconds }] };
+}
+
+export function previousPhase(s) {
+  const log = s.phaseLog ?? [];
+  if (!log.length) return s;
+  return { ...s, phaseIndex: (s.phaseIndex ?? 1) - 1, phaseStart: log[log.length - 1].start, phaseLog: log.slice(0, -1) };
+}
+
+/** One second of the clock; moves on automatically when the current phase's time is up (except the last). */
+export function tick(phases, s) {
+  const next = { ...s, seconds: s.seconds + 1 };
+  const i = next.phaseIndex ?? 0;
+  if (i < phases.length - 1 && next.seconds - (next.phaseStart ?? 0) >= phases[i].min * 60) return nextPhase(phases, next);
+  return next;
+}
+
+/** Every phase with its time used so far, for saving: [{ name, planned, used }] in seconds. */
+export function phaseTimes(phases, s) {
+  const log = [...(s.phaseLog ?? []), { name: phases[s.phaseIndex ?? 0].name, start: s.phaseStart ?? 0, end: s.seconds }];
+  return log.map((p) => ({ name: p.name, planned: (phases.find((x) => x.name === p.name)?.min ?? 0) * 60, used: p.end - p.start }));
+}
+
+/** Which phase a moment falls in by the planned schedule: { index, phase, phaseLeft (s), overtime (s) }. */
 export function phaseAt(phases, seconds) {
   let acc = 0;
   for (let i = 0; i < phases.length; i++) {

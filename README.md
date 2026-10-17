@@ -104,8 +104,16 @@ How it works:
 
 - `src/lib/syncedStore.js`: every saved store lives in `localStorage` and, when signed in, in Firestore at `users/{uid}/state/{name}` as `{ json, updatedAt }`. The first sync after sign-in **merges** device and account data; later changes from other devices are applied live.
 - `src/components/highlights/`: highlights use the CSS Custom Highlight API (`CSS.highlights`), so lesson DOM is never modified. Each highlight is stored as its text plus surrounding context (`src/lib/highlights/anchor.js`) and re-located on load.
-- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names (`stateNames()`; add new synced stores there and republish the rules). Everything else is denied.
+- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names (`freeNames()` / `premiumNames()`; add new synced stores there and republish the rules). Premium stores accept writes only from premium accounts. Everything else is denied.
 - Firebase is loaded lazily after the first paint. With an empty `apiKey` in `src/config/firebase.js`, accounts are switched off and the sign-in button is hidden.
+
+## Free and premium access
+
+Everyone (signed in or not) can read lessons, highlight, mark lessons complete, take lesson quizzes and practice boxes, search and use the cheat sheets. **Premium** features: Problems and solving with tests, mock interviews, the review deck, the dashboard (study plan, LeetCode sync and import), the code playground, the behavioral drill and story bank. Locked features show a notice asking people to email bytecodebrew@gmail.com.
+
+- `src/config/access.js`: the admin email(s) and the premium synced stores. Keep it in sync with `firestore.rules` and `workers/leetcode/auth.js`.
+- Approval is a Firestore document `entitlements/{email}` (lower case). Only the admin can write them, at **`/admin`** (visible only when signed in as the admin, linked from the account menu). A learner can read only their own, and `src/hooks/useAccess.js` watches it, so access switches on and off live.
+- Enforcement is not only in the UI: the rules refuse writes to premium stores from other accounts, and the LeetCode Worker verifies the Firebase ID token and checks the entitlement before calling LeetCode.
 
 Local development against the emulators (no Firebase project needed; requires Java):
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, Layers, Timer, Code2, ListChecks } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, Layers, Timer, Code2, ListChecks, Lock } from 'lucide-react';
+import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
 import { useProgress } from '../../hooks/useProgress';
@@ -48,6 +49,8 @@ export function AppSidebar({ open, onClose }) {
 }
 
 function GlobalNav({ activeTrackId }) {
+  const premium = usePremium();
+  const lock = premium ? null : <Lock size={13} className={styles.lock} aria-label="Premium" />;
   const [expanded, setExpanded] = useState(() => new Set([activeTrackId ?? 'system-design']));
   const toggle = (id) =>
     setExpanded((prev) => {
@@ -66,6 +69,7 @@ function GlobalNav({ activeTrackId }) {
       <NavLink to="/dashboard" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
         <LayoutDashboard size={18} strokeWidth={1.75} aria-hidden="true" />
         Dashboard
+        {lock}
       </NavLink>
 
       <p className={styles.section}>Learn</p>
@@ -129,6 +133,7 @@ function GlobalNav({ activeTrackId }) {
         <NavLink key={to} to={to} className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
           <I size={18} strokeWidth={1.75} aria-hidden="true" />
           {label}
+          {lock}
         </NavLink>
       ))}
     </nav>

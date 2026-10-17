@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Flame, Target, UserRound, Timer, Database, Download, Trash2 } from 'lucide-react';
 import { exportData, deleteAllData } from '../lib/accountData';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { DailyPlan } from '../components/dashboard/DailyPlan';
 import { Heatmap } from '../components/dashboard/Heatmap';
 import { LeetCodeCard } from '../components/dashboard/LeetCodeCard';
@@ -28,7 +29,7 @@ const SOURCES = [
   { id: 'both', label: 'Both' },
 ];
 
-export function DashboardPage() {
+function DashboardInner() {
   const activity = useActivity();
   const { isComplete, completedAt } = useProgress();
   const { solved } = useSolved();
@@ -86,26 +87,7 @@ export function DashboardPage() {
       <RailCard title="Daily goals" icon={<Target size={14} aria-hidden="true" />}>
         <GoalsForm goals={goalsOf(profile, countdownPlan(profile, isComplete, completedAt))} />
       </RailCard>
-      <RailCard title="Your data" icon={<Database size={14} aria-hidden="true" />}>
-        <p className={ui.help} style={{ marginTop: 0 }}>
-          Everything you've done here, as one file — or erase it{status === 'signed-in' ? ' from this browser and your account' : ''}.
-        </p>
-        <div className={ui.row} style={{ marginTop: 'var(--space-3)' }}>
-          <button type="button" className={`${ui.btn} ${ui.small}`} onClick={exportData}><Download size={13} /> Download</button>
-          <button
-            type="button"
-            className={`${ui.btn} ${ui.ghost} ${ui.small}`}
-            onClick={async () => {
-              const ok = window.prompt('This erases your progress, solved problems, reviews, quiz results, mocks, stories and highlights' + (status === 'signed-in' ? ' here and in your account' : '') + '. Type DELETE to confirm.');
-              if (ok !== 'DELETE') return;
-              await deleteAllData();
-              window.location.assign('/');
-            }}
-          >
-            <Trash2 size={13} /> Delete
-          </button>
-        </div>
-      </RailCard>
+      <YourDataCard />
       <RailCard title="Mock interviews" icon={<Timer size={14} aria-hidden="true" />}>
         <p className={ui.help} style={{ marginTop: 0 }}>
           {mocks.length ? `${mocks.length} done · last on ${new Date(mocks[0].at).toLocaleDateString()}` : 'None yet.'}
@@ -217,5 +199,46 @@ function GoalsForm({ goals }) {
       })}
       {goals.lessonsFromPlan && <p className={ui.help} style={{ marginTop: 0 }}>Lessons a day follows your interview countdown. Clear the date to set it yourself.</p>}
     </div>
+  );
+}
+
+/** Download or erase everything — available to every signed-in or local user, premium or not. */
+function YourDataCard() {
+  const { status } = useAuth();
+  return (
+    <RailCard title="Your data" icon={<Database size={14} aria-hidden="true" />}>
+      <p className={ui.help} style={{ marginTop: 0 }}>
+        Everything you've done here, as one file — or erase it{status === 'signed-in' ? ' from this browser and your account' : ''}.
+      </p>
+      <div className={ui.row} style={{ marginTop: 'var(--space-3)' }}>
+        <button type="button" className={`${ui.btn} ${ui.small}`} onClick={exportData}><Download size={13} /> Download</button>
+        <button
+          type="button"
+          className={`${ui.btn} ${ui.ghost} ${ui.small}`}
+          onClick={async () => {
+            const ok = window.prompt('This erases your progress, solved problems, reviews, quiz results, mocks, stories and highlights' + (status === 'signed-in' ? ' here and in your account' : '') + '. Type DELETE to confirm.');
+            if (ok !== 'DELETE') return;
+            await deleteAllData();
+            window.location.assign('/');
+          }}
+        >
+          <Trash2 size={13} /> Delete
+        </button>
+      </div>
+    </RailCard>
+  );
+}
+
+export function DashboardPage() {
+  return (
+    <PremiumPage
+      eyebrow="Dashboard"
+      title="Your study dashboard"
+      lead="Today's plan, your streak, an interview countdown, weak areas and LeetCode sync."
+      feature="The dashboard"
+      rail={<YourDataCard />}
+    >
+      <DashboardInner />
+    </PremiumPage>
   );
 }

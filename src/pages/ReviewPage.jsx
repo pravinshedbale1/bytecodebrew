@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Layers, CalendarDays, Info } from 'lucide-react';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { MultipleChoice } from '../components/mdx/Quiz';
@@ -22,7 +23,7 @@ function lessonOf(key) {
   return getLessonContext(t, c, l)?.lesson ?? null;
 }
 
-export function ReviewPage() {
+function ReviewPageInner() {
   const deck = useDeck();
   const [queue, setQueue] = useState(null);       // snapshot for this session
   const [done, setDone] = useState(0);
@@ -188,5 +189,13 @@ function ReviewCard({ card, onRate }) {
         </div>
       )}
     </article>
+  );
+}
+
+export function ReviewPage() {
+  return (
+    <PremiumPage eyebrow="Spaced repetition" title="Review" lead="Questions from the lessons you complete come back just before you would forget them." feature="The review deck">
+      <ReviewPageInner />
+    </PremiumPage>
   );
 }

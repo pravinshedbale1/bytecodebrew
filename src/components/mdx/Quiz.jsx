@@ -3,6 +3,7 @@ import { Check, X, RotateCcw } from 'lucide-react';
 import { useLessonKey } from '../lesson/LessonContext';
 import { recordQuizAnswer, useQuizResults } from '../../hooks/useLearning';
 import { loadLessonQuiz, quizId } from '../../data/quizzes';
+import { usePremium } from '../../hooks/useAccess';
 import ui from '../common/ui.module.css';
 import styles from './Quiz.module.css';
 
@@ -58,6 +59,7 @@ export function MultipleChoice({ question, number, onAnswer, initialChoice = nul
 export function Quiz({ questions, title = 'Quick check', intro }) {
   const lessonKey = useLessonKey();
   const results = useQuizResults();
+  const premium = usePremium();
   const [round, setRound] = useState(0);
   const [score, setScore] = useState({ answered: 0, correct: 0 });
 
@@ -95,7 +97,7 @@ export function Quiz({ questions, title = 'Quick check', intro }) {
             <strong>{score.correct}/{questions.length}</strong>
             {score.correct === questions.length
               ? ' — solid. This lesson is ready to mark complete.'
-              : lessonKey
+              : lessonKey && premium
                 ? ' — the ones you missed are now in your review deck.'
                 : ' — reread the sections behind the ones you missed.'}
           </span>

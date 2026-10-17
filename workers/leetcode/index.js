@@ -1,4 +1,5 @@
 import { fetchLeetCodeProfile, ProfileError, USERNAME, CACHE_SECONDS } from './leetcode.js';
+import { requirePremium, AuthError } from './auth.js';
 
 /**
  * Cloudflare Worker: GET /leetcode?username=<name>
@@ -7,7 +8,8 @@ import { fetchLeetCodeProfile, ProfileError, USERNAME, CACHE_SECONDS } from './l
  * Protection against hammering LeetCode or the Worker:
  *  - each username is fetched from LeetCode at most once an hour (edge cache);
  *  - each IP gets at most IP_LIMIT uncached lookups an hour;
- *  - only the site's own origins may call it from a browser.
+ *  - only the site's own origins may call it from a browser;
+ *  - only signed-in learners with premium access (see auth.js) may call it at all.
  */
 const ALLOWED_ORIGINS = [
   'https://bytecodebrew.com',
@@ -21,6 +23,7 @@ function cors(origin) {
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -48,6 +51,13 @@ export default {
     const url = new URL(request.url);
     if (request.method !== 'GET' || url.pathname !== '/leetcode') return json({ error: 'Not found' }, 404, origin);
     if (origin && !ALLOWED_ORIGINS.includes(origin)) return json({ error: 'Origin not allowed' }, 403, origin);
+
+    try {
+      await requirePremium(request.headers.get('Authorization'), { projectId: env.FIREBASE_PROJECT_ID });
+    } catch (e) {
+      if (e instanceof AuthError) return json({ error: e.message }, e.status, origin);
+      throw e;
+    }
 
     const username = (url.searchParams.get('username') ?? '').trim();
     if (!USERNAME.test(username)) return json({ error: 'That does not look like a LeetCode username.' }, 400, origin);

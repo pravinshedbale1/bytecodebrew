@@ -22,6 +22,8 @@ import { problemSlug } from '../../hooks/useSolved';
 import { useLessonKey } from '../lesson/LessonContext';
 import { openInPlayground } from '../../lib/playground';
 import { SolveLink } from '../solve/SolveLink';
+import { PremiumGate } from '../access/PremiumGate';
+import { usePremium } from '../../hooks/useAccess';
 
 /** Plain text of rendered (highlighted) code. */
 function nodeText(node) {
@@ -43,10 +45,11 @@ function Pre({ children, ...rest }) {
   const lessonKey = useLessonKey();
   const navigate = useNavigate();
   const ref = useRef(null);
+  const premium = usePremium();
   if (code?.className === 'language-mermaid') {
     return <Mermaid chart={String(code.children)} />;
   }
-  const runnable = lessonKey?.startsWith('dsa/') && /\blanguage-java\b/.test(code?.className ?? '') && DECLARES.test(nodeText(code?.children));
+  const runnable = premium && lessonKey?.startsWith('dsa/') && /\blanguage-java\b/.test(code?.className ?? '') && DECLARES.test(nodeText(code?.children));
   if (!runnable) return <pre {...rest}>{children}</pre>;
   const run = () => {
     openInPlayground(ref.current?.textContent ?? '', lessonKey);
@@ -118,8 +121,8 @@ export const mdxComponents = {
   ArrayViz,
   TreeViz,
   GraphViz,
-  StoryBank,
-  BehavioralDrill,
+  StoryBank: (props) => <PremiumGate feature="The story bank" compact><StoryBank {...props} /></PremiumGate>,
+  BehavioralDrill: (props) => <PremiumGate feature="The behavioral drill" compact><BehavioralDrill {...props} /></PremiumGate>,
   QuestionList,
   StackedBar,
   ProblemTracker,

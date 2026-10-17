@@ -7,8 +7,14 @@ import rehypeHighlight from 'rehype-highlight';
 import { dsaLadders } from './build/ladders-plugin.js';
 import { lessonContent } from './build/content-plugin.js';
 import { fetchLeetCodeProfile, ProfileError, CACHE_SECONDS } from './workers/leetcode/leetcode.js';
+import { requirePremium, AuthError } from './workers/leetcode/auth.js';
 
-/** Dev-only stand-in for the LeetCode Worker (workers/leetcode), with the same one-hour cache. */
+const emulator = process.env.VITE_FIREBASE_EMULATOR === '1';
+const authOpts = emulator
+  ? { projectId: 'demo-bytecodebrew', emulator: true, firestoreBase: 'http://127.0.0.1:8080' }
+  : { projectId: 'bytecodebrew-53f0c' };
+
+/** Dev-only stand-in for the LeetCode Worker (workers/leetcode), with the same premium check and one-hour cache. */
 function leetcodeDevApi() {
   const cache = new Map();
   return {
@@ -22,6 +28,12 @@ function leetcodeDevApi() {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify(body));
         };
+        try {
+          await requirePremium(req.headers.authorization, authOpts);
+        } catch (e) {
+          if (e instanceof AuthError) return send(e.status, { error: e.message });
+          return send(503, { error: 'Could not check your access.' });
+        }
         const hit = cache.get(username.toLowerCase());
         if (hit && Date.now() - hit.fetchedAt < CACHE_SECONDS * 1000) return send(200, hit);
         try {

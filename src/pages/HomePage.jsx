@@ -11,6 +11,7 @@ import { ProgressCard, NoteCard } from '../components/rail/RailWidgets';
 import { RailCard } from '../components/layout/PageLayout';
 import { DailyPlan } from '../components/dashboard/DailyPlan';
 import { Welcome } from '../components/navigation/Welcome';
+import { usePremium } from '../hooks/useAccess';
 import { useActivity, streakOf } from '../hooks/useActivity';
 import { site } from '../config/site';
 import styles from './Page.module.css';
@@ -29,17 +30,18 @@ export function HomePage() {
   const { next, mode } = getNextUp(getCourseLessons(trackId, courseId), isComplete);
   const overall = overallProgress(isComplete);
   const streak = streakOf(useActivity());
+  const premium = usePremium();
 
   const rail = (
     <>
-      <RailCard
+      {premium && <RailCard
         title="Today"
         icon={<Flame size={14} aria-hidden="true" />}
         action={<span className={styles.railMeta}>{streak ? `${streak}-day streak` : 'Start a streak'}</span>}
       >
         <DailyPlan compact />
         <Link to="/dashboard" className={styles.railLink}>Open your dashboard →</Link>
-      </RailCard>
+      </RailCard>}
       <ProgressCard
         title="Overall progress"
         completed={overall.completed}

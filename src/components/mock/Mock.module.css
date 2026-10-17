@@ -86,6 +86,15 @@
   margin-bottom: 0;
 }
 
+/* live bar: segments keep their full label (they wrap onto a second line on narrow screens) */
+.timerBox .phases {
+  flex-wrap: wrap;
+}
+
+.timerBox .phases span {
+  overflow: visible;
+}
+
 .phaseDone {
   background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface)) !important;
 }
@@ -447,4 +456,37 @@
   font-size: var(--text-sm);
   font-weight: 570;
   margin-right: var(--space-1);
+}
+
+.phases span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.phaseUsed {
+  font-style: normal;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.phaseResult {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.95rem;
+  max-width: 420px;
+}
+
+.phaseResult li {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.phaseResult em {
+  font-style: normal;
+  color: var(--color-text-subtle);
 }

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
+import { PREMIUM_STORES } from '../config/access';
 
 /**
  * A small store that always saves to localStorage and, when the user is signed in,
@@ -20,6 +21,15 @@ export const SYNCED_NAMES = [];
 // Every store, for "download my data" and "delete my data" (src/lib/accountData.js).
 export const SYNCED_STORES = [];
 
+// Premium stores sync only while the signed-in account has premium access (src/hooks/useAccess.js).
+let premiumAllowed = false;
+const premiumListeners = new Set();
+export function setPremiumSync(allowed) {
+  if (premiumAllowed === allowed) return;
+  premiumAllowed = allowed;
+  premiumListeners.forEach((l) => l());
+}
+
 // Stores whose last sync attempt failed (e.g. Firestore rules not yet allowing them), shown in the account menu.
 let issues = [];
 const issueListeners = new Set();
@@ -34,6 +44,7 @@ export function useSyncIssues() {
 }
 
 export function createSyncedStore({ name, storageKey, initial, merge }) {
+  const premium = PREMIUM_STORES.includes(name);
   SYNCED_NAMES.push(name);
   let state = readJSON(storageKey, initial);
   const listeners = new Set();
@@ -54,6 +65,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
 
   async function pushRemote() {
     if (!uid || !docRef) return;
+    if (premium && !premiumAllowed) return;     // the rules would refuse it; keep it on this device
     const fb = await loadFirebase();
     const json = JSON.stringify(state);
     if (json === lastRemoteJson) return;
@@ -146,6 +158,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
       }
     },
   };
+  premiumListeners.add(() => { if (premium && premiumAllowed) schedulePush(); });
   SYNCED_STORES.push(api);
   return api;
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ExternalLink, Info, Download } from 'lucide-react';
 import ladderData from 'virtual:dsa-ladders';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { SolvedToggle } from '../components/mdx/SolvedToggle';
 import { dsa } from '../curriculum/tracks/dsa';
@@ -29,7 +30,7 @@ function allProblems() {
 }
 
 /** /problems — the place to pick a problem and solve it with tests. */
-export function ProblemsPage() {
+function ProblemsPageInner() {
   const groups = useMemo(allProblems, []);
   const { isSolved, solvedBy } = useSolved();
   const [query, setQuery] = useState('');
@@ -135,5 +136,13 @@ export function ProblemsPage() {
       ))}
       {count === 0 && <p className={styles.count}>Nothing matches these filters.</p>}
     </PageLayout>
+  );
+}
+
+export function ProblemsPage() {
+  return (
+    <PremiumPage eyebrow="Practise" title="Problems" lead="Every problem from the DSA ladders, solvable here with starter code and tests." feature="Solving problems with tests">
+      <ProblemsPageInner />
+    </PremiumPage>
   );
 }

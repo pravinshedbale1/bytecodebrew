@@ -21,7 +21,7 @@ function start() {
   loadFirebase().then((fb) => {
     fb.authMod.onAuthStateChanged(fb.auth, (u) => {
       set(u
-        ? { status: 'signed-in', user: { uid: u.uid, name: u.displayName, email: u.email, photo: u.photoURL }, error: null }
+        ? { status: 'signed-in', user: { uid: u.uid, name: u.displayName, email: u.email, emailVerified: u.emailVerified, photo: u.photoURL }, error: null }
         : { status: 'signed-out', user: null });
     });
   }).catch(() => set({ status: 'signed-out', error: 'Could not reach the sign-in service.' }));

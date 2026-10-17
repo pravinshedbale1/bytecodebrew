@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLessonKey } from '../lesson/LessonContext';
 import { usePracticeLog, savePracticeAttempt } from '../../hooks/useLearning';
 import { hashText } from '../../lib/hash';
+import { usePremium } from '../../hooks/useAccess';
 import ui from '../common/ui.module.css';
 import styles from './Practice.module.css';
 
@@ -20,6 +21,7 @@ export const PRACTICE_RATING_LABEL = Object.fromEntries(RATINGS.map((r) => [r.id
 export function Practice({ task, children }) {
   const lessonKey = useLessonKey();
   const log = usePracticeLog();
+  const premium = usePremium();
   const id = lessonKey ? `${lessonKey}#${hashText(task)}` : null;
   const saved = id ? log[id] : null;
 
@@ -91,7 +93,7 @@ export function Practice({ task, children }) {
               {rated ? (
                 <p className={styles.rated}>
                   Saved as <strong>{PRACTICE_RATING_LABEL[rated]}</strong>
-                  {rated !== 'nailed' && id && ' — it will come back in your review deck.'}
+                  {rated !== 'nailed' && id && premium && ' — it will come back in your review deck.'}
                 </p>
               ) : (
                 <>
