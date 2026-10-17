@@ -514,3 +514,522 @@
   font-style: normal;
   color: var(--color-text-subtle);
 }
+
+/* ---- the interview room (live round) */
+
+.room {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sessionBar {
+  container-type: inline-size;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.sessionTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+
+.sessionClock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* clock beside the phase bar only when the bar is wide enough; the clock box has a fixed width so the
+   ticking text can't move anything */
+@container (min-width: 760px) {
+  .sessionClock {
+    grid-template-columns: 250px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-5);
+  }
+  .phaseNow {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.sessionWhat .promptKind {
+  margin-bottom: 2px;
+}
+
+.sessionTitle {
+  font-size: var(--text-lg);
+  font-weight: 680;
+  line-height: 1.3;
+}
+
+.sessionTitle a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sessionTitle a:hover {
+  color: var(--color-accent);
+}
+
+.sessionTitle svg {
+  vertical-align: -1px;
+  color: var(--color-text-subtle);
+}
+
+.clockBox .clock {
+  font-size: var(--text-xl);
+}
+
+.sessionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sessionBar .phases {
+  margin: 0;
+}
+
+.aiCollapsed {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.aiCollapsed .aiFree {
+  margin-top: var(--space-3);
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: var(--space-4);
+  height: clamp(560px, calc(100vh - 230px), 940px);
+}
+
+.roomMain {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.roomMain > div {
+  flex: 1;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+}
+
+@media (max-width: 1000px) {
+  .roomGrid {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+  .roomMain > div {
+    height: 720px;
+    max-height: 85vh;
+    flex: none;
+  }
+  .side {
+    height: 560px;
+  }
+}
+
+/* the solver stacks its panels on small screens and needs its natural height */
+@media (max-width: 900px) {
+  .roomMain > div {
+    height: auto;
+    max-height: none;
+  }
+  .padText {
+    min-height: 360px;
+  }
+}
+
+/* design and behavioural rounds: brief or questions above a big whiteboard */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.boardBrief {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.questionCards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.questionCards li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.qNo {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.qNow {
+  background: var(--color-accent-soft);
+  color: var(--color-text) !important;
+  font-weight: 580;
+}
+
+.qNow .qNo {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.qDone {
+  opacity: 0.65;
+}
+
+.qDone .qNo {
+  color: var(--color-success);
+}
+
+/* ---- scratchpad */
+
+.pad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.padTall {
+  flex: 1;
+}
+
+.padHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.padTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 640;
+  font-size: var(--text-sm);
+}
+
+.padText {
+  flex: 1;
+  min-height: 260px;
+  width: 100%;
+  resize: none;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.padText:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+  background: var(--color-surface);
+}
+
+/* ---- side panel: interviewer / notes / guide */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.sideTabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.sideTab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.sideTab:hover {
+  color: var(--color-text);
+}
+
+.sideTabOn {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.sideBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+/* the chat fills the panel and scrolls; the input stays at the bottom */
+.sideBody > .ai {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sideBody .chat {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+}
+
+.sideBody .chat li {
+  max-width: 100%;
+}
+
+.aiFree {
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+/* ---- phase guide */
+
+.guide {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.guideNow,
+.guideNext,
+.guideAll {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 650;
+  font-size: var(--text-sm);
+}
+
+.guideNow span,
+.guideNext span {
+  color: var(--color-text-subtle);
+  font-weight: 500;
+}
+
+.guideNext,
+.guideAll {
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.guideList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.guideList li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.guideList svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--color-accent);
+}
+
+.guideListMuted {
+  color: var(--color-text-subtle);
+}
+
+.guideListMuted li::before {
+  content: '·';
+}
+
+.guidePlan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-sm);
+}
+
+.guidePlan li {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.planDone {
+  color: var(--color-text-subtle) !important;
+  text-decoration: line-through;
+}
+
+.planNow {
+  color: var(--color-text) !important;
+  font-weight: 650;
+}
+
+/* ---- end of round: score + AI review side by side */
+
+.reviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.reviewGrid > * + * {
+  margin-top: 0 !important;
+}
+
+.review {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.reviewHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.reviewHead svg {
+  color: var(--color-accent);
+}
+
+.reviewText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.reviewWarn {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warn-soft);
+  font-size: var(--text-sm);
+}
+
+.assistants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-2);
+}
+
+.assistant {
+  justify-content: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 620;
+  border-left: 3px solid var(--as-color);
+}
+
+.as_chatgpt { --as-color: #10a37f; }
+.as_claude { --as-color: #d97757; }
+.as_gemini { --as-color: #4285f4; }
+
+.reviewStatus {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--color-success);
+}
+
+.reviewStatus svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.promptPreview {
+  max-height: 360px;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.pastReview {
+  margin: var(--space-5) 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+}

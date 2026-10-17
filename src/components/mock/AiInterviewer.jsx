@@ -79,8 +79,15 @@ export function AiInterviewer({ type, prompt, chat, setChat, getContext }) {
     return (
       <div className={styles.aiCollapsed}>
         <p className={styles.aiHead}><Bot size={16} /> AI interviewer <span className={styles.optional}>optional</span></p>
-        <p className={ui.help} style={{ marginTop: 0 }}>Claude asks follow-ups and writes feedback. Needs your own Claude API key.</p>
+        <p className={ui.help} style={{ marginTop: 0 }}>
+          A live interviewer that asks clarifying questions, pushes back on your choices and probes the deep dives, the
+          way a real one would. It runs on Claude with your own API key, kept only in this browser.
+        </p>
         <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => setSetupOpen(true)}>Set it up</button>
+        <p className={styles.aiFree}>
+          No key? Interview yourself out loud with the Guide tab. When you end the round, one click sends your whole
+          mock to ChatGPT, Claude or Gemini for a free review.
+        </p>
       </div>
     );
   }

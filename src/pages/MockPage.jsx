@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, Code2, SkipForward, Undo2, Check } from 'lucide-react';
+import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, SkipForward, Undo2, Check, Bot, NotebookPen, Compass, ListTree } from 'lucide-react';
+import { AiReview } from '../components/mock/AiReview';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { AiInterviewer, requestFeedback } from '../components/mock/AiInterviewer';
@@ -63,6 +64,20 @@ function MockPageInner() {
     </RailCard>
   );
 
+  if (session && !viewing) {
+    return (
+      <PageLayout>
+        <LiveMock
+          session={session}
+          setSession={setSession}
+          onSave={(m) => { addMock(m); setSession(null); setViewing(m); }}
+          onDiscard={() => setSession(null)}
+          isSolved={isSolved}
+        />
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout rail={rail}>
       <header className={page.header}>
@@ -76,7 +91,7 @@ function MockPageInner() {
 
       {viewing ? (
         <PastMock mock={viewing} onClose={() => setViewing(null)} onDelete={() => { removeMock(viewing.at); setViewing(null); }} onFeedback={(fb) => { updateMock(viewing.at, { aiFeedback: fb }); setViewing({ ...viewing, aiFeedback: fb }); }} />
-      ) : !session ? (
+      ) : (
         <section className={ui.panel}>
           <h2 className={ui.panelTitle}>Pick a round</h2>
           <div className={styles.types}>
@@ -107,16 +122,86 @@ function MockPageInner() {
             <Play size={15} /> Start the {MOCK_TYPES[typeId].title} round
           </button>
         </section>
-      ) : (
-        <LiveMock
-          session={session}
-          setSession={setSession}
-          onSave={(m) => { addMock(m); setSession(null); setViewing(m); }}
-          onDiscard={() => setSession(null)}
-          isSolved={isSolved}
-        />
       )}
     </PageLayout>
+  );
+}
+
+/** Tabs on the side of the interview room. */
+function SidePanel({ tabs, active, setActive }) {
+  const current = tabs.find((t) => t.id === active) ?? tabs[0];
+  return (
+    <aside className={styles.side} aria-label="Interview tools">
+      <div className={styles.sideTabs} role="tablist">
+        {tabs.map((t) => (
+          <button key={t.id} type="button" role="tab" aria-selected={t.id === current.id} className={`${styles.sideTab} ${t.id === current.id ? styles.sideTabOn : ''}`} onClick={() => setActive(t.id)}>
+            <t.icon size={14} aria-hidden="true" /> {t.label}
+          </button>
+        ))}
+      </div>
+      <div className={styles.sideBody}>{current.body}</div>
+    </aside>
+  );
+}
+
+/** What interviewers look for in the current phase, and what comes next. */
+function PhaseGuide({ type, index, used }) {
+  const phase = type.phases[index];
+  const next = type.phases[index + 1];
+  return (
+    <div className={styles.guide}>
+      <p className={styles.guideNow}>Now · {phase.name} <span>{phase.min} min</span></p>
+      <ul className={styles.guideList}>
+        {(phase.guide ?? []).map((g) => <li key={g}><Check size={13} aria-hidden="true" /> {g}</li>)}
+      </ul>
+      {next && (
+        <>
+          <p className={styles.guideNext}>Next · {next.name} <span>{next.min} min</span></p>
+          <ul className={`${styles.guideList} ${styles.guideListMuted}`}>
+            {(next.guide ?? []).slice(0, 2).map((g) => <li key={g}>{g}</li>)}
+          </ul>
+        </>
+      )}
+      <p className={styles.guideAll}>Round plan</p>
+      <ol className={styles.guidePlan}>
+        {type.phases.map((p, i) => (
+          <li key={p.name} className={i < index ? styles.planDone : i === index ? styles.planNow : ''}>
+            <span>{p.name}</span>
+            <span>{i < index ? mmss(used[p.name] ?? 0) : `${p.min}m`}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** A large scratchpad, with an outline of the round's phases on request. */
+function Scratchpad({ type, value, onChange, tall = false }) {
+  const outline = () => {
+    const heads = type.phases.filter((p) => !/^Question \d|Your questions/.test(p.name)).map((p) => `## ${p.name}\n\n`).join('');
+    onChange(value.trim() ? `${value.trimEnd()}\n\n${heads}` : heads);
+  };
+  return (
+    <div className={`${styles.pad} ${tall ? styles.padTall : ''}`}>
+      <div className={styles.padHead}>
+        <label htmlFor="mock-notes" className={styles.padTitle}><NotebookPen size={15} aria-hidden="true" /> Scratchpad</label>
+        {type !== MOCK_TYPES.behavioral && (
+          <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={outline} title="Add a heading for each phase of the round"><ListTree size={13} /> Insert outline</button>
+        )}
+      </div>
+      <textarea
+        id="mock-notes"
+        className={styles.padText}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={type === MOCK_TYPES.dsa
+          ? 'Clarifications, examples, brute force, the optimal idea, complexity… write what you would say out loud.'
+          : type === MOCK_TYPES.behavioral
+            ? 'Bullet your STAR points for each answer: situation, task, what you did, the result.'
+            : 'Requirements, estimates, APIs, data model, components, trade-offs… this is your whiteboard.'}
+        spellCheck
+      />
+    </div>
   );
 }
 
@@ -133,6 +218,8 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const used = Object.fromEntries(session.phaseLog.map((p) => [p.name, p.end - p.start]));
+  const judged = Boolean(session.prompt.slug);
+  const [tab, setTab] = useState(() => (getApiKey() ? 'interviewer' : 'guide'));
 
   useEffect(() => {
     if (!raw.running || raw.stage !== 'live') return undefined;
@@ -149,78 +236,73 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
   // a different prompt is allowed in the first minute, before the AI interviewer has started
   const canShuffle = session.stage === 'live' && session.seconds < 60 && !session.chat.length;
   const shuffle = () => patch({ prompt: type.pick(isSolved, session.level), seconds: 0, phaseIndex: 0, phaseStart: 0, phaseLog: [] });
-  const save = () =>
-    onSave({
-      at: new Date().toISOString(),
-      type: session.typeId,
-      prompt: session.prompt,
-      seconds: session.seconds,
-      phases: phaseTimes(type.phases, session),
-      notes: session.notes,
-      chat: session.chat.filter((m) => !m.hidden).slice(-40),
-      code: session.prompt.slug ? readJSON(`bcb:code:${session.prompt.slug}`, null) : null,
-      rubric: session.rubric,
-      signal: session.signal,
-    });
+  const snapshot = () => ({
+    at: new Date().toISOString(),
+    type: session.typeId,
+    prompt: session.prompt,
+    seconds: session.seconds,
+    phases: phaseTimes(type.phases, session),
+    notes: session.notes,
+    chat: session.chat.filter((m) => !m.hidden).slice(-40),
+    code: judged ? readJSON(`bcb:code:${session.prompt.slug}`, null) : null,
+    rubric: session.rubric,
+    signal: session.signal,
+  });
+
+  const interviewer = (
+    <AiInterviewer
+      type={type}
+      prompt={session.prompt}
+      chat={session.chat}
+      setChat={(chat) => patch({ chat })}
+      getContext={() => ({ seconds: sessionRef.current.seconds, phase: type.phases[sessionRef.current.phaseIndex].name })}
+    />
+  );
+  const tabs = [
+    { id: 'interviewer', label: 'Interviewer', icon: Bot, body: interviewer },
+    ...(judged ? [{ id: 'notes', label: 'Notes', icon: NotebookPen, body: <Scratchpad type={type} value={session.notes} onChange={(notes) => patch({ notes })} tall /> }] : []),
+    { id: 'guide', label: 'Guide', icon: Compass, body: <PhaseGuide type={type} index={index} used={used} /> },
+  ];
 
   return (
-    <>
-      {!session.prompt.slug && (
-      <section className={`${ui.panel} ${styles.promptBox}`}>
-        <p className={styles.promptKind}>{type.title} · {session.prompt.detail}</p>
-        {!session.prompt.slug && (
-          <h2 className={styles.promptTitle}>
-            {session.prompt.href ? (
-              <a href={session.prompt.href} target="_blank" rel="noopener noreferrer">{session.prompt.title} <ExternalLink size={14} /></a>
-            ) : session.prompt.title}
-          </h2>
-        )}
-        {session.prompt.questions && (
-          <ol className={styles.questions}>
-            {session.prompt.questions.map((q, i) => <li key={q} className={i === index ? styles.currentQ : ''}>{q}</li>)}
-          </ol>
-        )}
-        {canShuffle && (
-          <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={shuffle}>
-            <Shuffle size={13} /> Different prompt
-          </button>
-        )}
-      </section>
-      )}
-
-      <section className={`${ui.panel} ${styles.timerBox}`}>
-        <div className={styles.timerRow}>
-          <div>
-            <p className={styles.clock}>{mmss(session.seconds)} <span>/ {mmss(total)}</span></p>
-            <p className={styles.phaseNow}>
-              Now: <strong>{phase.name}</strong> ·{' '}
-              {phaseLeft >= 0 ? <>{mmss(phaseLeft)} left in this phase</> : <span className={styles.over}>{mmss(-phaseLeft)} over this phase</span>}
-              {overtime > 0 && <span className={styles.over}> · {mmss(overtime)} over the round</span>}
-            </p>
+    <div className={styles.room}>
+      <section className={styles.sessionBar} aria-label="Round">
+        <div className={styles.sessionTop}>
+          <div className={styles.sessionWhat}>
+            <p className={styles.promptKind}>{type.title} · {session.prompt.detail}</p>
+            <h2 className={styles.sessionTitle}>
+              {session.prompt.href ? (
+                <a href={session.prompt.href} target="_blank" rel="noopener noreferrer">{session.prompt.title} <ExternalLink size={13} /></a>
+              ) : session.prompt.title}
+            </h2>
           </div>
           {session.stage === 'live' && (
-            <div className={ui.row}>
-              {session.prompt.slug && canShuffle && (
-                <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={shuffle}><Shuffle size={14} /> Different problem</button>
+            <div className={styles.sessionActions}>
+              {canShuffle && (
+                <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={shuffle}><Shuffle size={13} /> {judged ? 'Different problem' : 'Different prompt'}</button>
               )}
               {session.phaseLog.length > 0 && (
-                <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={tap(() => patch((s) => previousPhase(s)))} title="Back to the previous phase">
-                  <Undo2 size={14} /> Back
-                </button>
+                <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={tap(() => patch((s) => previousPhase(s)))} title="Back to the previous phase"><Undo2 size={13} /> Back</button>
               )}
               {!isLast && (
-                <button type="button" className={ui.btn} onClick={tap(() => patch((s) => nextPhase(type.phases, s)))} title="Done with this phase? Move on now">
-                  <SkipForward size={14} /> Next phase
-                </button>
+                <button type="button" className={`${ui.btn} ${ui.small}`} onClick={tap(() => patch((s) => nextPhase(type.phases, s)))} title="Done with this phase? Move on now"><SkipForward size={13} /> Next phase</button>
               )}
-              <button type="button" className={ui.btn} onClick={tap(() => patch((s) => ({ running: !s.running })))}>
-                {session.running ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Resume</>}
+              <button type="button" className={`${ui.btn} ${ui.small}`} onClick={tap(() => patch((s) => ({ running: !s.running })))}>
+                {session.running ? <><Pause size={13} /> Pause</> : <><Play size={13} /> Resume</>}
               </button>
-              <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={finish}><Square size={14} /> End & score</button>
+              <button type="button" className={`${ui.btn} ${ui.primary} ${ui.small}`} onClick={finish}><Square size={13} /> End & review</button>
             </div>
           )}
         </div>
-        <div className={styles.phases}>
+        <div className={styles.sessionClock}>
+            <div className={styles.clockBox}>
+              <p className={styles.clock}>{mmss(session.seconds)} <span>/ {mmss(total)}</span></p>
+              <p className={styles.phaseNow}>
+                {phaseLeft >= 0 ? <>{mmss(phaseLeft)} left in <strong>{phase.name}</strong></> : <span className={styles.over}>{mmss(-phaseLeft)} over in {phase.name}</span>}
+                {overtime > 0 && <span className={styles.over}> · {mmss(overtime)} over the round</span>}
+              </p>
+            </div>
+          <div className={styles.phases}>
           {type.phases.map((p, i) => (
             <span
               key={p.name}
@@ -232,63 +314,70 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
               {i < index && <em className={styles.phaseUsed}> {mmss(used[p.name] ?? 0)}</em>}
             </span>
           ))}
+          </div>
         </div>
       </section>
 
-      {session.stage === 'live' && session.prompt.slug && (
-        <section className={`${ui.panel} ${styles.solverBox}`}>
-          <ProblemSolver slug={session.prompt.slug} compact />
-        </section>
-      )}
-
       {session.stage === 'live' ? (
-        <div className={styles.liveGrid}>
-          <section className={ui.panel}>
-            <label className={ui.panelTitle} htmlFor="mock-notes">Scratchpad</label>
-            <p className={ui.panelLead}>Requirements, examples, the approach, complexity… whatever you would say out loud.</p>
-            <textarea id="mock-notes" className={`${ui.textarea} ${styles.notes} ${session.prompt.slug ? styles.notesShort : ''}`} value={session.notes} onChange={(e) => patch({ notes: e.target.value })} />
-            {session.typeId === 'dsa' && !session.prompt.slug && (
-              <Link to="/playground" className={`${ui.btn} ${ui.small}`} style={{ marginTop: 'var(--space-3)' }} target="_blank"><Code2 size={13} /> Open the playground in a new tab</Link>
+        <div className={styles.roomGrid}>
+          <div className={styles.roomMain}>
+            {judged ? (
+              <ProblemSolver slug={session.prompt.slug} compact />
+            ) : (
+              <div className={styles.board}>
+                {session.prompt.questions ? (
+                  <ol className={styles.questionCards}>
+                    {session.prompt.questions.map((q, i) => (
+                      <li key={q} className={i === index ? styles.qNow : i < index ? styles.qDone : ''}>
+                        <span className={styles.qNo}>{i < index ? <Check size={13} /> : i + 1}</span>{q}
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className={styles.boardBrief}>
+                    Drive the round like a real interview: agree the requirements, size it, then design and go deep where it matters.
+                    {session.prompt.afterLink && <> When you're done, compare with <Link to={session.prompt.afterLink.path} target="_blank">{session.prompt.afterLink.label.replace(/^Compare with: /, '')}</Link>.</>}
+                  </p>
+                )}
+                <Scratchpad type={type} value={session.notes} onChange={(notes) => patch({ notes })} tall />
+              </div>
             )}
-          </section>
-          <section className={ui.panel}>
-            <AiInterviewer
-              type={type}
-              prompt={session.prompt}
-              chat={session.chat}
-              setChat={(chat) => patch({ chat })}
-              getContext={() => ({ seconds: sessionRef.current.seconds, phase: type.phases[sessionRef.current.phaseIndex].name })}
-            />
-          </section>
+          </div>
+          <SidePanel tabs={tabs} active={tab} setActive={setTab} />
         </div>
       ) : (
-        <section className={ui.panel}>
-          <h2 className={ui.panelTitle}>Score yourself</h2>
-          <p className={ui.panelLead}>Tick only what you actually did. Unticked items show up as gaps across your mocks.</p>
-          <ul className={styles.rubric}>
-            {type.rubric.map((r) => (
-              <li key={r}>
-                <label>
-                  <input type="checkbox" checked={Boolean(session.rubric[r])} onChange={(e) => patch((s) => ({ rubric: { ...s.rubric, [r]: e.target.checked } }))} />
-                  {r}
-                </label>
-              </li>
-            ))}
-          </ul>
-          <p className={ui.label}>If you were the interviewer, what would you say?</p>
-          <div className={ui.chips}>
-            {SIGNALS.map((s) => (
-              <button key={s.id} type="button" className={ui.chip} aria-pressed={session.signal === s.id} onClick={() => patch({ signal: s.id })}>{s.label}</button>
-            ))}
-          </div>
-          <div className={`${ui.row} ${styles.scoreActions}`}>
-            <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={save}>Save this mock</button>
-            <button type="button" className={ui.btn} onClick={() => patch({ stage: 'live', running: true })}>Back to the interview</button>
-            <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={() => { if (window.confirm('Discard this mock?')) onDiscard(); }}>Discard</button>
-          </div>
-        </section>
+        <div className={styles.reviewGrid}>
+          <section className={ui.panel}>
+            <h2 className={ui.panelTitle}>Score yourself</h2>
+            <p className={ui.panelLead}>Tick only what you actually did. Unticked items show up as gaps across your mocks.</p>
+            <ul className={styles.rubric}>
+              {type.rubric.map((r) => (
+                <li key={r}>
+                  <label>
+                    <input type="checkbox" checked={Boolean(session.rubric[r])} onChange={(e) => patch((s) => ({ rubric: { ...s.rubric, [r]: e.target.checked } }))} />
+                    {r}
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <p className={ui.label}>If you were the interviewer, what would you say?</p>
+            <div className={ui.chips}>
+              {SIGNALS.map((s) => (
+                <button key={s.id} type="button" className={ui.chip} aria-pressed={session.signal === s.id} onClick={() => patch({ signal: s.id })}>{s.label}</button>
+              ))}
+            </div>
+            <div className={`${ui.row} ${styles.scoreActions}`}>
+              <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={() => onSave(snapshot())}>Save this mock</button>
+              <button type="button" className={ui.btn} onClick={() => patch({ stage: 'live', running: true })}>Back to the interview</button>
+              <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={() => { if (window.confirm('Discard this mock?')) onDiscard(); }}>Discard</button>
+            </div>
+          </section>
+          <section className={ui.panel}>
+            <AiReview type={type} typeId={session.typeId} mock={snapshot()} />
+          </section>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -353,13 +442,17 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
         </>
       )}
 
-      <h3 className={styles.subhead}><Sparkles size={14} /> AI feedback</h3>
+      <div className={styles.pastReview}>
+        <AiReview type={type} typeId={mock.type} mock={mock} />
+      </div>
+
+      <h3 className={styles.subhead}><Sparkles size={14} /> Feedback with your Claude API key</h3>
       {fb ? (
         <div className={styles.feedback}><MiniMarkdown text={fb} /></div>
       ) : canAsk ? (
         <button type="button" className={`${ui.btn} ${ui.small}`} onClick={ask} disabled={busy}>{busy ? 'Writing feedback…' : 'Get feedback from Claude'}</button>
       ) : (
-        <p className={ui.help}>Add a Claude API key in the AI interviewer panel during a mock (and keep some notes) to get written feedback.</p>
+        <p className={ui.help}>Optional: with a Claude API key added in the interviewer panel, feedback can be written right here. The buttons above need no key.</p>
       )}
       {error && <p className={ui.error}>{error}</p>}
 
