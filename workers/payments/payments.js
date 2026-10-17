@@ -92,7 +92,8 @@ export async function startOrder(request, env) {
       },
       order_meta: {
         return_url: `${env.SITE_URL}/premium?order_id={order_id}`,
-        notify_url: `${env.PUBLIC_URL}/pay/webhook`,
+        // Cashfree can only call a public https address; locally the buyer's return confirms the payment
+        ...(String(env.PUBLIC_URL).startsWith('https://') || env.CASHFREE_BASE ? { notify_url: `${env.PUBLIC_URL}/pay/webhook` } : {}),
       },
       order_note: `ByteCodeBrew ${plan.name}`.slice(0, 200),
     });

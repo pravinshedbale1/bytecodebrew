@@ -47,3 +47,15 @@ checkout), and deploy again.
 
 `npm run emulators` and `npm run dev:emulator` serve this same code at `/api/pay` with a mock Cashfree:
 "Pay" on its test checkout page marks the order paid and sends a signed webhook. No keys needed.
+
+To use the real Cashfree sandbox locally (Firestore stays on the emulator), put the test keys in
+`workers/payments/.dev.vars` (git-ignored):
+
+```
+CASHFREE_APP_ID=TEST…
+CASHFREE_SECRET_KEY=cfsk_ma_test_…
+```
+
+and run `CASHFREE_SANDBOX=1 npm run dev:emulator`. On Cashfree's sandbox checkout, choose Test Wallet,
+then on the simulator enter OTP 111000 and pick SUCCESS. Cashfree cannot call a localhost webhook, so
+locally the payment is confirmed when you return to `/premium` (in production both paths run).
