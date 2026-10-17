@@ -1,0 +1,43 @@
+/* Full-height workspace under the top bar, like an IDE */
+.page {
+  height: calc(100vh - var(--topbar-height));
+  height: calc(100dvh - var(--topbar-height));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px 10px;
+  background: var(--color-bg);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 28px;
+  font-size: var(--text-sm);
+}
+
+.bar a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-weight: 550;
+}
+
+.bar a:hover {
+  color: var(--color-text);
+}
+
+.work {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .page {
+    height: auto;
+    padding: var(--space-3);
+  }
+}

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer } from 'lucide-react';
+import {
+  Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
+  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot,
+} from 'lucide-react';
 import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
+import { useSplit } from './useSplit';
 import { loadProblem, exampleCount } from '../../lib/judge/problems';
 import { starterCode } from '../../lib/judge/harness';
 import { runTests } from '../../lib/judge/runner';
@@ -12,6 +16,8 @@ import ui from '../common/ui.module.css';
 import styles from './ProblemSolver.module.css';
 
 const codeKey = (slug) => `bcb:code:${slug}`;
+const subsKey = (slug) => `bcb:subs:${slug}`;
+const MAX_SUBS = 20;
 
 /** Names for each test input, for display. */
 function inputNames(spec) {
@@ -21,16 +27,27 @@ function inputNames(spec) {
 
 const STATUS = {
   accepted: { label: 'Accepted', icon: CheckCircle2, cls: 'ok' },
-  wrong: { label: 'Wrong answer', icon: XCircle, cls: 'bad' },
-  error: { label: 'Runtime error', icon: AlertTriangle, cls: 'bad' },
+  wrong: { label: 'Wrong Answer', icon: XCircle, cls: 'bad' },
+  error: { label: 'Runtime Error', icon: AlertTriangle, cls: 'bad' },
   slow: { label: 'Correct, but too slow', icon: Timer, cls: 'bad' },
-  compile: { label: 'Compilation error', icon: AlertTriangle, cls: 'bad' },
+  compile: { label: 'Compile Error', icon: AlertTriangle, cls: 'bad' },
+  ran: { label: 'Finished', icon: CheckCircle2, cls: 'neutral' },
+};
+
+const validJson = (s) => {
+  try {
+    JSON.parse(s);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 /**
- * Solve a practice problem in the browser: LeetCode-style starter code, "Run" on the examples,
- * "Submit" on every test. Passing all tests marks the problem solved. Code is kept per problem in
- * this browser.
+ * A LeetCode-style workspace for one practice problem: the description and your submissions on the
+ * left; the editor, editable test cases and results on the right, with draggable dividers.
+ * "Run" runs the cases in the Testcase tab (your own included); "Submit" runs every test, and
+ * passing them all marks the problem solved. Code and submissions are kept in this browser.
  */
 export function ProblemSolver({ slug, compact = false }) {
   const [spec, setSpec] = useState(undefined);
@@ -38,18 +55,35 @@ export function ProblemSolver({ slug, compact = false }) {
   const [busy, setBusy] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [active, setActive] = useState(0);
+  const [cases, setCases] = useState([]);
+  const [caseIdx, setCaseIdx] = useState(0);
+  const [resultIdx, setResultIdx] = useState(0);
+  const [leftTab, setLeftTab] = useState('description');
+  const [bottomTab, setBottomTab] = useState('testcase');
+  const [subs, setSubs] = useState([]);
   const { isSolved } = useSolved();
+
+  // the mock round has less room, so it keeps its own divider positions
+  const where = compact ? 'mock' : 'solve';
+  const [colPct, colHandle, rowRef] = useSplit(`bcb:split:${where}-x`, compact ? 36 : 42, { axis: 'x', min: 22, max: 70 });
+  const [rowPct, rowHandle, colRef] = useSplit(`bcb:split:${where}-y`, compact ? 64 : 62, { axis: 'y', min: 25, max: 85 });
+
+  const examples = useMemo(() => (spec ? spec.tests.slice(0, exampleCount(spec)) : []), [spec]);
 
   useEffect(() => {
     let alive = true;
     setSpec(undefined);
     setResult(null);
     setError(null);
+    setBottomTab('testcase');
     loadProblem(slug).then((p) => {
       if (!alive) return;
       setSpec(p);
-      if (p) setCode(readJSON(codeKey(slug), null) ?? starterCode(p));
+      if (!p) return;
+      setCode(readJSON(codeKey(slug), null) ?? starterCode(p));
+      setCases(p.tests.slice(0, exampleCount(p)).map((t) => ({ in: [...t.in], out: t.out, original: [...t.in] })));
+      setCaseIdx(0);
+      setSubs(readJSON(subsKey(slug), []));
     });
     return () => { alive = false; };
   }, [slug]);
@@ -60,22 +94,47 @@ export function ProblemSolver({ slug, compact = false }) {
     return () => clearTimeout(t);
   }, [code, slug, spec]);
 
-  const examples = useMemo(() => (spec ? spec.tests.slice(0, exampleCount(spec)) : []), [spec]);
-
   if (spec === undefined) return <p className={styles.loading}>Loading the problem…</p>;
   if (spec === null) return <p className={styles.loading}>This problem has no built-in tests yet.</p>;
 
+  const names = inputNames(spec);
+
   const run = async (mode) => {
     if (busy) return;
+    let tests;
+    if (mode === 'submit') tests = spec.tests;
+    else {
+      const bad = cases.findIndex((c) => c.in.some((v) => !validJson(v)));
+      if (bad >= 0) {
+        setBottomTab('testcase');
+        setCaseIdx(bad);
+        setError(`Case ${bad + 1}: each input must be valid JSON, like [1,2,3], 5 or "abc".`);
+        return;
+      }
+      tests = cases.map((c) => (c.out !== undefined && c.in.every((v, k) => v === c.original?.[k]) ? { in: c.in, out: c.out } : { in: c.in }));
+    }
     setBusy(mode);
     setError(null);
+    setBottomTab('result');
     try {
-      const tests = mode === 'submit' ? spec.tests : examples;
       const r = await runTests(spec, code, tests);
       setResult({ ...r, mode });
-      const firstFail = r.tests.findIndex((t) => !t.pass);
-      setActive(firstFail >= 0 ? firstFail : 0);
-      if (mode === 'submit' && r.status === 'accepted') markSolved(slug);
+      const firstFail = r.tests.findIndex((t) => t.pass === false);
+      setResultIdx(firstFail >= 0 ? firstFail : 0);
+      if (mode === 'submit') {
+        if (r.status === 'accepted') markSolved(slug);
+        const entry = {
+          at: Date.now(),
+          status: r.status,
+          passed: r.tests.filter((t) => t.pass).length,
+          total: r.tests.length,
+          time: r.time ?? null,
+          code,
+        };
+        const next = [entry, ...subs].slice(0, MAX_SUBS);
+        setSubs(next);
+        writeJSON(subsKey(slug), next);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -90,112 +149,252 @@ export function ProblemSolver({ slug, compact = false }) {
     }
   };
 
-  const names = inputNames(spec);
-  const shown = result?.tests ?? [];
-  const status = result && STATUS[result.status];
-  const passed = shown.filter((t) => t.pass).length;
+  const editCase = (k, v) => setCases((cs) => cs.map((c, i) => (i === caseIdx ? { ...c, in: c.in.map((x, j) => (j === k ? v : x)) } : c)));
+  const addCase = () => {
+    setCases((cs) => [...cs, { in: [...(cs[caseIdx] ?? cs[0]).in] }]);
+    setCaseIdx(cases.length);
+  };
+  const removeCase = (i) => {
+    setCases((cs) => cs.filter((_, j) => j !== i));
+    setCaseIdx((c) => Math.max(0, c >= i ? c - 1 : c));
+  };
+  const resetCases = () => {
+    setCases(examples.map((t) => ({ in: [...t.in], out: t.out, original: [...t.in] })));
+    setCaseIdx(0);
+  };
+  const casesEdited = cases.length !== examples.length || cases.some((c) => c.in.some((v, k) => v !== c.original?.[k]));
+
+  const workStyle = { '--col': `${colPct}%`, '--row': `${rowPct}%` };
 
   return (
-    <div className={`${styles.solver} ${compact ? styles.compact : ''}`}>
-      <section className={styles.problem}>
-        <div className={styles.titleRow}>
-          <h2 className={styles.title}>{spec.title}</h2>
-          <span className={`${styles.level} ${styles[spec.level.toLowerCase()]}`}>{spec.level}</span>
-          {isSolved(slug) && <span className={styles.solved}><CheckCircle2 size={14} /> Solved</span>}
+    <div className={`${styles.workspace} ${compact ? styles.compact : ''}`} ref={rowRef} style={workStyle}>
+      {/* ---- left: description and submissions */}
+      <section className={`${styles.panel} ${styles.left}`}>
+        <div className={styles.panelHead} role="tablist" aria-label="Problem">
+          <TabButton active={leftTab === 'description'} onClick={() => setLeftTab('description')} icon={FileText}>Description</TabButton>
+          <TabButton active={leftTab === 'submissions'} onClick={() => setLeftTab('submissions')} icon={History}>
+            Submissions{subs.length ? <span className={styles.count}>{subs.length}</span> : null}
+          </TabButton>
         </div>
-        <p className={styles.summary}>{spec.summary}</p>
-        <p className={styles.links}>
-          <a href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noopener noreferrer">
-            Full statement on LeetCode <ExternalLink size={12} aria-hidden="true" />
-          </a>
-          {!compact && <Link to={`/dsa/patterns/${spec.lesson}`}>The pattern lesson</Link>}
-        </p>
-
-        <h3 className={styles.sub}>Examples</h3>
-        {examples.map((t, i) => (
-          <div key={i} className={styles.example}>
-            {t.in.map((v, k) => (
-              <p key={k}><span className={styles.name}>{names[k] ?? `input ${k + 1}`} =</span> <code>{v}</code></p>
-            ))}
-            <p><span className={styles.name}>expected</span> <code>{t.out}</code></p>
-          </div>
-        ))}
-        <p className={styles.mobileNote}>
-          Coding is easier on a larger screen. Your code is saved in this browser, so you can pick up where you left off.
-        </p>
-        <p className={styles.note}>
-          Submit runs {spec.tests.length} tests, including edge cases{spec.tests.some((t) => t.perf) ? ' and a large input that needs an efficient solution' : ''}.
-          {spec.check === 'any-order' || spec.check === 'any-order-deep' ? ' The answer may be in any order.' : ''}
-          {spec.check?.startsWith('custom:') ? ' Any valid answer is accepted.' : ''}
-        </p>
+        <div className={styles.panelBody}>
+          {leftTab === 'description' ? (
+            <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} />
+          ) : (
+            <Submissions subs={subs} onLoad={(c) => { setCode(c); setLeftTab('description'); }} />
+          )}
+        </div>
       </section>
 
-      <section className={styles.work}>
-        <div className={styles.editorWrap}>
-          <div className={styles.toolbar}>
-            <span className={styles.file}>Java 17</span>
-            <div className={ui.row}>
-              <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={reset} title="Reset to starter code">
-                <RotateCcw size={13} /> Reset
+      <div className={`${styles.divider} ${styles.dividerX}`} {...colHandle} aria-label="Resize problem and editor" />
+
+      {/* ---- right: editor and console */}
+      <div className={styles.right} ref={colRef}>
+        <section className={`${styles.panel} ${styles.editorPanel}`}>
+          <div className={styles.panelHead}>
+            <span className={styles.headLabel}><Code2 size={14} aria-hidden="true" /> Code</span>
+            <span className={styles.lang}>Java 17</span>
+            <div className={styles.actions}>
+              <button type="button" className={styles.iconBtn} onClick={reset} title="Reset to starter code" aria-label="Reset to starter code">
+                <RotateCcw size={14} />
               </button>
-              <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => run('run')} disabled={Boolean(busy)}>
-                <Play size={13} /> {busy === 'run' ? 'Running…' : 'Run'}
+              <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => run('run')} disabled={Boolean(busy)} title="Run the test cases (Ctrl/⌘ Enter)">
+                {busy === 'run' ? <Loader2 size={13} className={styles.spin} /> : <Play size={13} />} Run
               </button>
-              <button type="button" className={`${ui.btn} ${ui.primary} ${ui.small}`} onClick={() => run('submit')} disabled={Boolean(busy)}>
-                <Send size={13} /> {busy === 'submit' ? 'Submitting…' : 'Submit'}
+              <button type="button" className={`${ui.btn} ${ui.primary} ${ui.small}`} onClick={() => run('submit')} disabled={Boolean(busy)} title="Run every test">
+                {busy === 'submit' ? <Loader2 size={13} className={styles.spin} /> : <Send size={13} />} Submit
               </button>
             </div>
           </div>
-          <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} height={compact ? '420px' : 'min(62vh, 600px)'} />
-        </div>
+          <div className={styles.editorBody}>
+            <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} height="100%" />
+          </div>
+        </section>
 
-        <div className={styles.results} aria-live="polite">
-          {error && <p className={ui.error}>{error}</p>}
-          {!result && !error && (
-            <p className={styles.hint}>
-              {busy ? 'Compiling and running your code…' : 'Run tries the examples; Submit runs every test. Ctrl/⌘ Enter runs.'}
-            </p>
-          )}
-          {result && (
-            <>
-              <p className={`${styles.verdict} ${styles[status.cls]}`}>
-                <status.icon size={16} aria-hidden="true" />
-                {status.label}
-                {result.status !== 'compile' && <span> · {passed}/{shown.length} {result.mode === 'submit' ? 'tests' : 'examples'} passed</span>}
-                {result.time && <span className={styles.meta}> · {result.time}s</span>}
-                {result.mode === 'submit' && result.status === 'accepted' && <span className={styles.meta}> · marked solved</span>}
-              </p>
-              {result.compile && <pre className={styles.out}>{result.compile}</pre>}
-              {shown.length > 0 && (
-                <>
-                  <div className={styles.tabs} role="tablist">
-                    {shown.map((t, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        role="tab"
-                        aria-selected={i === active}
-                        className={`${styles.tab} ${t.pass ? styles.tabOk : styles.tabBad} ${i === active ? styles.tabActive : ''}`}
-                        onClick={() => setActive(i)}
-                      >
-                        {t.pass ? <CheckCircle2 size={12} /> : <XCircle size={12} />} {t.perf ? 'Performance' : `Case ${i + 1}`}
-                      </button>
+        <div className={`${styles.divider} ${styles.dividerY}`} {...rowHandle} aria-label="Resize editor and console" />
+
+        <section className={`${styles.panel} ${styles.console}`}>
+          <div className={styles.panelHead} role="tablist" aria-label="Console">
+            <TabButton active={bottomTab === 'testcase'} onClick={() => setBottomTab('testcase')} icon={SquareCheckBig}>Testcase</TabButton>
+            <TabButton active={bottomTab === 'result'} onClick={() => setBottomTab('result')} icon={Terminal}>Test Result</TabButton>
+          </div>
+          <div className={styles.panelBody} aria-live="polite">
+            {error && <p className={`${ui.error} ${styles.consoleError}`}>{error}</p>}
+            {bottomTab === 'testcase' ? (
+              <>
+                <div className={styles.caseTabs}>
+                  {cases.map((c, i) => (
+                    <span key={i} className={`${styles.caseChip} ${i === caseIdx ? styles.caseChipOn : ''}`}>
+                      <button type="button" onClick={() => setCaseIdx(i)}>Case {i + 1}</button>
+                      {cases.length > 1 && i >= examples.length && (
+                        <button type="button" className={styles.caseX} onClick={() => removeCase(i)} aria-label={`Remove case ${i + 1}`}><X size={11} /></button>
+                      )}
+                    </span>
+                  ))}
+                  {cases.length < 8 && (
+                    <button type="button" className={styles.caseAdd} onClick={addCase} aria-label="Add a test case" title="Add a test case (a copy of this one, to edit)"><Plus size={14} /></button>
+                  )}
+                  {casesEdited && <button type="button" className={styles.linkBtn} onClick={resetCases}>Reset cases</button>}
+                </div>
+                {cases[caseIdx] && (
+                  <div className={styles.fields}>
+                    {cases[caseIdx].in.map((v, k) => (
+                      <label key={k} className={styles.field}>
+                        <span className={styles.fieldName}>{names[k] ?? `input ${k + 1}`} =</span>
+                        <textarea
+                          className={`${styles.input} ${validJson(v) ? '' : styles.inputBad}`}
+                          value={v}
+                          onChange={(e) => editCase(k, e.target.value)}
+                          rows={Math.min(6, Math.max(1, Math.ceil(v.length / 70)))}
+                          spellCheck={false}
+                        />
+                      </label>
                     ))}
+                    <p className={styles.caseNote}>
+                      {cases[caseIdx].out !== undefined && cases[caseIdx].in.every((v, k) => v === cases[caseIdx].original?.[k])
+                        ? <>Expected output: <code>{cases[caseIdx].out}</code></>
+                        : 'Your own case: Run shows your output; there is no expected answer to compare with.'}
+                    </p>
                   </div>
-                  <CaseView test={shown[active]} names={names} />
-                </>
-              )}
-              {result.status !== 'accepted' && <PatternHint spec={spec} />}
-              {result.stdout && (
-                <>
-                  <p className={styles.sub}>Your prints</p>
-                  <pre className={styles.out}>{result.stdout}</pre>
-                </>
-              )}
-            </>
-          )}
+                )}
+              </>
+            ) : (
+              <TestResult busy={busy} result={result} names={names} idx={resultIdx} setIdx={setResultIdx} spec={spec} />
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon: Icon, children }) {
+  return (
+    <button type="button" role="tab" aria-selected={active} className={`${styles.tab} ${active ? styles.tabOn : ''}`} onClick={onClick}>
+      <Icon size={14} aria-hidden="true" /> {children}
+    </button>
+  );
+}
+
+function Description({ spec, slug, examples, names, solved, compact }) {
+  return (
+    <div className={styles.description}>
+      <h1 className={styles.title}>{spec.title}</h1>
+      <div className={styles.chips}>
+        <span className={`${styles.level} ${styles[spec.level.toLowerCase()]}`}>{spec.level}</span>
+        {solved && <span className={styles.solved}><CheckCircle2 size={13} /> Solved</span>}
+        {!compact && <Link className={styles.chip} to={`/dsa/patterns/${spec.lesson}`}><BookOpen size={12} aria-hidden="true" /> Pattern lesson</Link>}
+        <a className={styles.chip} href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noopener noreferrer">
+          LeetCode <ExternalLink size={11} aria-hidden="true" />
+        </a>
+      </div>
+      <p className={styles.summary}>{spec.summary}</p>
+
+      {examples.map((t, i) => (
+        <div key={i} className={styles.example}>
+          <p className={styles.exampleTitle}>Example {i + 1}:</p>
+          <pre className={styles.exampleBody}>
+            <strong>Input:</strong> {t.in.map((v, k) => `${names[k] ?? `input${k + 1}`} = ${v}`).join(', ')}{'\n'}
+            <strong>Output:</strong> {t.out}
+          </pre>
         </div>
-      </section>
+      ))}
+
+      <div className={styles.judging}>
+        <p className={styles.exampleTitle}>Judging</p>
+        <ul>
+          <li>Submit runs {spec.tests.length} tests, including edge cases{spec.tests.some((t) => t.perf) ? ' and a large input that needs an efficient solution' : ''}.</li>
+          {(spec.check === 'any-order' || spec.check === 'any-order-deep') && <li>The answer may be in any order.</li>}
+          {spec.check?.startsWith('custom:') && <li>Any valid answer is accepted.</li>}
+          <li>For the full statement and constraints, open the problem on LeetCode.</li>
+        </ul>
+      </div>
+      <p className={styles.mobileNote}>
+        Coding is easier on a larger screen. Your code is saved in this browser, so you can pick up where you left off.
+      </p>
+    </div>
+  );
+}
+
+function Submissions({ subs, onLoad }) {
+  const [open, setOpen] = useState(null);
+  if (!subs.length) return <p className={styles.empty}>No submissions yet. Submit runs every test and records the result here.</p>;
+  return (
+    <ul className={styles.subs}>
+      {subs.map((s, i) => {
+        const st = STATUS[s.status] ?? STATUS.error;
+        return (
+          <li key={s.at}>
+            <button type="button" className={styles.subRow} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+              <span className={`${styles.subStatus} ${styles[st.cls]}`}>{st.label}</span>
+              <span className={styles.subMeta}>{s.status === 'compile' ? '—' : `${s.passed}/${s.total} tests`}</span>
+              <span className={styles.subMeta}>{s.time ? `${s.time}s` : ''}</span>
+              <span className={styles.subMeta}>{new Date(s.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+            </button>
+            {open === i && (
+              <div className={styles.subCode}>
+                <pre>{s.code}</pre>
+                <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => { if (window.confirm('Replace the code in the editor with this submission?')) onLoad(s.code); }}>
+                  Load into editor
+                </button>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function TestResult({ busy, result, names, idx, setIdx, spec }) {
+  if (busy) {
+    return (
+      <p className={styles.pending}>
+        <Loader2 size={15} className={styles.spin} /> {busy === 'submit' ? 'Judging every test…' : 'Running your code…'}
+      </p>
+    );
+  }
+  if (!result) return <p className={styles.empty}>You must run your code first.</p>;
+  const status = STATUS[result.status];
+  const shown = result.tests;
+  const graded = shown.filter((t) => t.pass !== null);
+  const passed = graded.filter((t) => t.pass).length;
+  return (
+    <div>
+      <p className={`${styles.verdict} ${styles[status.cls]}`}>
+        {status.label}
+        {result.time && <span className={styles.runtime}>Runtime: {result.time}s</span>}
+      </p>
+      {result.status !== 'compile' && graded.length > 0 && (
+        <p className={styles.passed}>
+          {passed} / {graded.length} {result.mode === 'submit' ? 'test cases passed' : 'cases passed'}
+          {result.mode === 'submit' && result.status === 'accepted' && ' · marked solved'}
+        </p>
+      )}
+      {result.compile && <pre className={`${styles.out} ${styles.outBad}`}>{result.compile}</pre>}
+      {shown.length > 0 && (
+        <>
+          <div className={styles.caseTabs}>
+            {shown.map((t, i) => (
+              <span key={i} className={`${styles.caseChip} ${i === idx ? styles.caseChipOn : ''}`}>
+                <button type="button" onClick={() => setIdx(i)}>
+                  {t.pass === true && <CheckCircle2 size={12} className={styles.ok} />}
+                  {t.pass === false && <XCircle size={12} className={styles.bad} />}
+                  {t.pass === null && <CircleDot size={12} className={styles.neutral} />}
+                  {t.perf ? 'Performance' : `Case ${i + 1}`}
+                </button>
+              </span>
+            ))}
+          </div>
+          <CaseView test={shown[idx]} names={names} />
+        </>
+      )}
+      {result.stdout && (
+        <div className={styles.field}>
+          <span className={styles.fieldName}>Stdout</span>
+          <pre className={styles.out}>{result.stdout}</pre>
+        </div>
+      )}
+      {result.status !== 'accepted' && result.status !== 'ran' && <PatternHint spec={spec} />}
     </div>
   );
 }
@@ -205,7 +404,7 @@ function PatternHint({ spec }) {
   const lesson = getLessonContext('dsa', 'patterns', spec.lesson)?.lesson;
   if (!lesson) return null;
   return (
-    <p className={styles.hint2}>
+    <p className={styles.hint}>
       <BookOpen size={14} aria-hidden="true" />
       Stuck?{' '}
       <Link to={`${lesson.path}${spec.anchor ? `#${spec.anchor}` : ''}`}>
@@ -215,27 +414,39 @@ function PatternHint({ spec }) {
   );
 }
 
+function Field({ name, children, tone }) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.fieldName}>{name}</span>
+      <pre className={`${styles.out} ${tone ? styles[tone] : ''}`}>{children}</pre>
+    </div>
+  );
+}
+
 function CaseView({ test, names }) {
   if (!test) return null;
   if (test.perf) {
     return (
-      <div className={styles.case}>
-        <p><span className={styles.name}>input</span><span>Large generated input: {test.perf.label}</span></p>
-        {test.pass && <p><span className={styles.name}>result</span><code className={styles.gotOk}>Correct, in {test.ms} ms (limit {test.limitMs} ms)</code></p>}
-        {!test.pass && test.got !== undefined && !test.slow && <p><span className={styles.name}>result</span><code className={styles.gotBad}>Finished, but the answer differs from the reference</code></p>}
-        {test.slow && <p><span className={styles.name}>result</span><code className={styles.gotBad}>Correct answer, but an efficient solution is needed — look for the pattern that avoids repeated work</code></p>}
-        {test.error && <p><span className={styles.name}>error</span><code className={styles.gotBad}>{test.error}</code></p>}
-      </div>
+      <>
+        <Field name="Input">Large generated input: {test.perf.label}</Field>
+        {test.pass && <Field name="Result" tone="outOk">Correct, in {test.ms} ms (limit {test.limitMs} ms)</Field>}
+        {!test.pass && test.got !== undefined && !test.slow && <Field name="Result" tone="outBad">Finished, but the answer differs from the reference</Field>}
+        {test.slow && <Field name="Result" tone="outBad">Correct answer, but an efficient solution is needed — look for the pattern that avoids repeated work</Field>}
+        {test.error && !test.slow && <Field name="Error" tone="outBad">{test.error}</Field>}
+      </>
     );
   }
   return (
-    <div className={styles.case}>
-      {test.input.map((v, k) => (
-        <p key={k}><span className={styles.name}>{names[k] ?? `input ${k + 1}`}</span><code>{v}</code></p>
-      ))}
-      <p><span className={styles.name}>expected</span><code>{test.expected}</code></p>
-      {test.got !== undefined && <p><span className={styles.name}>your output</span><code className={test.pass ? styles.gotOk : styles.gotBad}>{test.got}</code></p>}
-      {test.error && <p><span className={styles.name}>error</span><code className={styles.gotBad}>{test.error}</code></p>}
-    </div>
+    <>
+      <div className={styles.field}>
+        <span className={styles.fieldName}>Input</span>
+        {test.input.map((v, k) => (
+          <pre key={k} className={styles.out}><span className={styles.inName}>{names[k] ?? `input ${k + 1}`} =</span>{'\n'}{v}</pre>
+        ))}
+      </div>
+      {test.error && <Field name="Error" tone="outBad">{test.error}</Field>}
+      {test.got !== undefined && <Field name="Output" tone={test.pass === false ? 'outBad' : undefined}>{test.got}</Field>}
+      {test.expected !== undefined && <Field name="Expected">{test.expected}</Field>}
+    </>
   );
 }

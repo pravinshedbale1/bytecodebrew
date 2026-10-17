@@ -6,10 +6,12 @@ import { runJava } from '../judge0';
 /**
  * Runs a learner's code against some of a problem's tests on Judge0 and grades each one.
  * Returns {
- *   status: 'accepted' | 'wrong' | 'slow' | 'compile' | 'error',
+ *   status: 'accepted' | 'wrong' | 'slow' | 'compile' | 'error' | 'ran',
  *   compile?: string, message?: string, stdout: string, time, memory,
- *   tests: [{ input: [json], expected: json, got?: json, error?: string, pass: boolean }]
+ *   tests: [{ input: [json], expected: json, got?: json, error?: string, pass: boolean | null }]
  * }
+ * A test without `out` is a learner's own case: it is run, not graded (pass: null), and a run made
+ * only of such cases ends as 'ran'.
  */
 export async function runTests(spec, code, tests) {
   const source = buildProgram(spec, code, tests);
@@ -26,6 +28,7 @@ export async function runTests(spec, code, tests) {
     const base = { input: t.in, expected: t.out, pass: false, perf: t.perf ?? null };
     if (!res) return { ...base, slow: Boolean(t.perf), error: t.perf ? 'Time limit exceeded: too slow for the large input' : fallback };
     if (res.error) return { ...base, error: res.error };
+    if (t.out === undefined) return { ...base, got: res.got, pass: null };
     if (t.perf) {
       const limitMs = perfLimitMs(t.refMs, meta.calibrationMs, calibrationMs, t.perf.floorMs);
       if (res.got !== t.out) return { ...base, got: res.got, ms: res.ms, limitMs };
@@ -38,12 +41,12 @@ export async function runTests(spec, code, tests) {
     return { ...base, got: res.got, pass };
   });
 
-  const allPass = graded.every((g) => g.pass);
+  const graded2 = graded.filter((g) => g.pass !== null);
+  const allPass = graded2.every((g) => g.pass);
   return {
-    status: allPass
-      ? 'accepted'
-      : graded.some((g) => g.error && !g.slow) ? 'error'
-      : graded.some((g) => !g.pass && !g.slow) ? 'wrong'
+    status: graded.some((g) => g.error && !g.slow) ? 'error'
+      : allPass ? (graded2.length ? 'accepted' : 'ran')
+      : graded2.some((g) => !g.pass && !g.slow) ? 'wrong'
       : 'slow',
     message: r.stderr ? r.stderr.split('\n').slice(0, 6).join('\n') : null,
     stdout,

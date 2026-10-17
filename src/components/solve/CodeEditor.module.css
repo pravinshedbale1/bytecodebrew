@@ -1,52 +1,12 @@
 .editor {
-  display: flex;
   background: var(--color-code-bg);
-  font-family: var(--font-mono);
   font-size: 0.86rem;
-  line-height: 1.6;
-}
-
-.gutter {
-  margin: 0;
-  padding: var(--space-4) var(--space-2) var(--space-4) var(--space-3);
-  text-align: right;
-  color: var(--color-text-subtle);
-  opacity: 0.7;
-  user-select: none;
   overflow: hidden;
-  font: inherit;
-  min-width: 3.2em;
-  border-right: 1px solid var(--color-border);
-}
-
-.code {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  border: 0;
-  outline: none;
-  resize: none;
-  padding: var(--space-4);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  white-space: pre;
-  overflow: auto;
-  tab-size: 4;
-  font-variant-ligatures: none;
 }
 
 /* phones: 16px stops iOS from zooming into the editor on focus */
 @media (max-width: 640px) {
   .editor {
     font-size: 16px;
-    line-height: 1.5;
-  }
-  .gutter {
-    min-width: 2.4em;
-    padding-left: var(--space-2);
-  }
-  .code {
-    padding: var(--space-3);
   }
 }
