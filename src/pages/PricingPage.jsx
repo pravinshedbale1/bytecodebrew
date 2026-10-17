@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
-import { Check, Sparkles, Lock, ShieldCheck, Loader2, LogIn, CircleCheck, CircleAlert } from 'lucide-react';
-import { PageLayout, RailCard } from '../components/layout/PageLayout';
+import { Check, Sparkles, Lock, ShieldCheck, Loader2, LogIn, CircleCheck, CircleAlert, X, CreditCard, RefreshCcw, Zap } from 'lucide-react';
+import { PageLayout } from '../components/layout/PageLayout';
 import { useAccess } from '../hooks/useAccess';
 import { signIn } from '../hooks/useAuth';
 import { listPlans, startCheckout, verifyOrder } from '../lib/payments';
@@ -48,12 +48,44 @@ function ReturnBanner({ orderId }) {
   return <div className={`${styles.banner} ${styles.warn}`}><CircleAlert size={20} /><span>{text}</span></div>;
 }
 
-function PlanCard({ plan, access }) {
-  const [open, setOpen] = useState(false);
+/** Price per 30 days, for comparing plans (lifetime plans are not compared). */
+const perMonth = (p) => (p.durationDays > 0 ? (p.price / p.durationDays) * 30 : null);
+
+function PlanCard({ plan, best, saving, onChoose, access }) {
+  const monthly = perMonth(plan);
+  const signedOut = access.status === 'signed-out';
+  return (
+    <div className={`${styles.plan} ${best ? styles.best : ''}`}>
+      {best && <span className={styles.ribbon}>Best value</span>}
+      <p className={styles.planName}>{planLength(plan.durationDays).replace('access', '')}</p>
+      <p className={styles.priceRow}>
+        <span className={styles.price}>{inr(plan.price)}</span>
+        {plan.durationDays > 0 && <span className={styles.per}>/ {planLength(plan.durationDays)}</span>}
+      </p>
+      <p className={styles.monthly}>
+        {monthly && plan.durationDays > 31 ? <>{inr(Math.round(monthly))} per month</> : plan.durationDays > 0 ? 'Billed once' : 'Pay once, keep forever'}
+        {saving > 0 && <span className={styles.save}>Save {saving}%</span>}
+      </p>
+      {plan.description && <p className={styles.planDesc}>{plan.description}</p>}
+      <button type="button" className={`${ui.btn} ${best ? ui.primary : styles.secondaryBtn} ${styles.cta}`} onClick={() => (signedOut ? signIn() : onChoose(plan))}>
+        {signedOut ? <><LogIn size={15} /> Sign in to buy</> : access.status === 'premium' ? 'Extend my premium' : `Choose ${planLength(plan.durationDays).toLowerCase()}`}
+      </button>
+    </div>
+  );
+}
+
+/** The checkout step: a dialog with the order summary and the mobile number Cashfree needs. */
+function CheckoutDialog({ plan, access, onClose }) {
+  const ref = useRef(null);
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const signedOut = access.status === 'signed-out';
+
+  useEffect(() => {
+    const d = ref.current;
+    if (plan && d && !d.open) d.showModal();
+    if (!plan && d?.open) d.close();
+  }, [plan]);
 
   const pay = async (e) => {
     e.preventDefault();
@@ -68,105 +100,131 @@ function PlanCard({ plan, access }) {
   };
 
   return (
-    <div className={styles.plan}>
-      <p className={styles.planName}>{plan.name}</p>
-      <p className={styles.price}>{inr(plan.price)}</p>
-      <p className={styles.length}>{planLength(plan.durationDays)} · one-time payment, no auto-renewal</p>
-      {plan.description && <p className={styles.planDesc}>{plan.description}</p>}
-      {signedOut ? (
-        <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={signIn}><LogIn size={15} /> Sign in to buy</button>
-      ) : !open ? (
-        <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={() => setOpen(true)}>
-          {access.status === 'premium' ? 'Extend my premium' : `Get ${plan.name}`}
-        </button>
-      ) : (
-        <form onSubmit={pay} className={styles.payForm}>
-          <label>
-            <span className={ui.label}>Mobile number (required by Cashfree)</span>
-            <input className={ui.input} type="tel" inputMode="numeric" autoComplete="tel" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+    <dialog ref={ref} className={styles.dialog} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()} aria-labelledby="checkout-title">
+      {plan && (
+        <form onSubmit={pay} className={styles.dialogBody}>
+          <div className={styles.dialogHead}>
+            <h2 id="checkout-title">Checkout</h2>
+            <button type="button" className={styles.close} onClick={onClose} aria-label="Close"><X size={18} /></button>
+          </div>
+          <div className={styles.summary}>
+            <div>
+              <p className={styles.summaryName}>{plan.name}</p>
+              <p className={styles.summarySub}>{planLength(plan.durationDays)} of ByteCodeBrew Premium · one-time payment</p>
+            </div>
+            <p className={styles.summaryPrice}>{inr(plan.price)}</p>
+          </div>
+          <p className={styles.account}>Premium will be added to <strong>{access.email}</strong>{access.status === 'premium' && access.expiresAt ? `, extending your access from ${fmtDate(access.expiresAt)}` : ''}.</p>
+          <label className={styles.field}>
+            <span className={ui.label}>Mobile number</span>
+            <input className={ui.input} type="tel" inputMode="numeric" autoComplete="tel" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required autoFocus />
+            <span className={styles.hintText}>Cashfree needs it to process the payment and send your receipt.</span>
           </label>
-          <button type="submit" className={`${ui.btn} ${ui.primary}`} disabled={busy}>
-            {busy ? <Loader2 size={15} className={styles.spin} /> : <Lock size={14} />} Pay {inr(plan.price)} securely
-          </button>
-          <p className={styles.fine}>You'll pay on Cashfree's secure page (UPI, cards, net banking, wallets). Premium is added to <strong>{access.email}</strong> as soon as the payment succeeds.</p>
           {error && <p className={ui.error} role="alert">{error}</p>}
+          <button type="submit" className={`${ui.btn} ${ui.primary} ${styles.payBtn}`} disabled={busy}>
+            {busy ? <Loader2 size={16} className={styles.spin} /> : <Lock size={15} />} {busy ? 'Opening secure checkout…' : `Pay ${inr(plan.price)}`}
+          </button>
+          <p className={styles.secure}><ShieldCheck size={14} aria-hidden="true" /> You'll complete the payment on Cashfree's secure page: UPI, cards, net banking or wallets.</p>
         </form>
       )}
-    </div>
+    </dialog>
   );
 }
 
-/** /premium — what's free, what's premium, and the plans. */
+const FAQ = [
+  ['Does it renew automatically?', 'No. Every plan is a one-time payment for its period. Buying again later extends your access from the current end date.'],
+  ['When does premium start?', 'Immediately after the payment succeeds, on every device where you sign in with the same Google account.'],
+  ['What happens when it ends?', 'Premium content locks again. Your progress, highlights, notes and solved problems are kept.'],
+  ['How do I pay?', 'Through Cashfree Payments: UPI, debit and credit cards, net banking and wallets.'],
+  ['Refunds or problems with a payment?', `Email ${CONTACT_EMAIL} with your order number and we'll sort it out.`],
+];
+
+/** /premium — the plans, what's free and what's premium, and the questions people ask. */
 export function PricingPage() {
   const access = useAccess();
   const [params] = useSearchParams();
   const orderId = params.get('order_id');
   const [plans, setPlans] = useState(null);
+  const [chosen, setChosen] = useState(null);
 
   useEffect(() => {
     listPlans().then(setPlans).catch(() => setPlans([]));
   }, []);
 
-  const rail = (
-    <RailCard title="Questions?" icon={<ShieldCheck size={14} aria-hidden="true" />}>
-      <ul className={styles.faq}>
-        <li><strong>Does it renew automatically?</strong> No. It's a one-time payment for the plan's period. Buying again extends your access.</li>
-        <li><strong>What happens when it ends?</strong> Premium features lock again; your progress, notes and highlights stay.</li>
-        <li><strong>Which account gets it?</strong> The Google account you're signed in with, on every device.</li>
-        <li><strong>Refunds or problems?</strong> Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</li>
-      </ul>
-    </RailCard>
-  );
+  // Best value = the lowest price per month; savings are measured against the dearest per-month plan
+  const timed = (plans ?? []).filter((p) => p.durationDays > 0);
+  const best = timed.length > 1 ? timed.reduce((a, b) => (perMonth(b) < perMonth(a) ? b : a)) : null;
+  const dearest = timed.length > 1 ? Math.max(...timed.map(perMonth)) : null;
+  const savingOf = (p) => (dearest && p.durationDays > 0 ? Math.round((1 - perMonth(p) / dearest) * 100) : 0);
 
   return (
-    <PageLayout rail={rail}>
-      <header className={page.header}>
-        <p className={page.eyebrow}>Premium</p>
-        <h1 className={page.title}>Prepare like it's the real interview</h1>
-        <p className={page.lead}>
-          The free lessons teach you the ideas. Premium adds the advanced topics, interactive simulations you can experiment with,
-          step-through diagrams, 314 problems you solve here with tests, mock interviews and a review deck that keeps it all fresh.
-        </p>
-      </header>
+    <PageLayout>
+      <div className={styles.page}>
+        <header className={styles.hero}>
+          <p className={page.eyebrow}>ByteCodeBrew Premium</p>
+          <h1 className={styles.heroTitle}>Prepare like it's the real interview</h1>
+          <p className={styles.heroLead}>
+            The free lessons teach the ideas. Premium adds the advanced topics, interactive simulations, step-through diagrams,
+            314 problems you solve here with tests, mock interviews and a review deck that keeps it all fresh.
+          </p>
+        </header>
 
-      {orderId && access.status !== 'loading' && access.status !== 'signed-out' && <ReturnBanner orderId={orderId} />}
+        {orderId && access.status !== 'loading' && access.status !== 'signed-out' && <ReturnBanner orderId={orderId} />}
+        {access.status === 'premium' && !orderId && (
+          <div className={`${styles.banner} ${styles.ok}`}>
+            <Sparkles size={18} />
+            <span><strong>You have premium.</strong> {access.isAdmin ? 'Admin account.' : access.expiresAt ? `Active until ${fmtDate(access.expiresAt)}. Buying again extends it.` : 'Lifetime access.'}</span>
+          </div>
+        )}
 
-      {access.status === 'premium' && !orderId && (
-        <div className={`${styles.banner} ${styles.ok}`}>
-          <Sparkles size={18} />
-          <span><strong>You have premium.</strong> {access.isAdmin ? 'Admin account.' : access.expiresAt ? `Active until ${fmtDate(access.expiresAt)}.` : 'Lifetime access.'}</span>
-        </div>
-      )}
-
-      <h2 className={styles.h2} id="plans">Choose a plan</h2>
-      {plans === null && <p className={styles.muted}>Loading plans…</p>}
-      {plans?.length === 0 && (
-        <p className={styles.muted}>Plans are being set up. Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get premium in the meantime.</p>
-      )}
-      {plans?.length > 0 && (
-        <div className={styles.plans}>
-          {plans.map((p) => <PlanCard key={p.id} plan={p} access={access} />)}
-        </div>
-      )}
-
-      <section className={styles.compare} aria-label="Free and premium compared">
-        <div className={styles.col}>
-          <h2 className={styles.colTitle}>Free</h2>
-          <p className={styles.colSub}>For everyone, no card needed</p>
-          <ul className={styles.list}>
-            {FREE_FEATURES.map((f) => <li key={f}><Check size={15} aria-hidden="true" /> {f}</li>)}
+        <section id="plans" aria-label="Plans">
+          {plans === null && <p className={styles.muted}>Loading plans…</p>}
+          {plans?.length === 0 && (
+            <p className={styles.muted}>Plans are being set up. Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to get premium in the meantime.</p>
+          )}
+          {plans?.length > 0 && (
+            <div className={styles.plans} style={{ '--cols': Math.min(plans.length, 3) }}>
+              {plans.map((p) => <PlanCard key={p.id} plan={p} best={best?.id === p.id} saving={savingOf(p)} onChoose={setChosen} access={access} />)}
+            </div>
+          )}
+          <ul className={styles.trust} aria-label="About payment">
+            <li><ShieldCheck size={15} aria-hidden="true" /> Secure payment by Cashfree</li>
+            <li><CreditCard size={15} aria-hidden="true" /> UPI, cards, net banking, wallets</li>
+            <li><RefreshCcw size={15} aria-hidden="true" /> One-time payment, no auto-renewal</li>
+            <li><Zap size={15} aria-hidden="true" /> Instant access on all your devices</li>
           </ul>
-        </div>
-        <div className={`${styles.col} ${styles.colPremium}`}>
-          <h2 className={styles.colTitle}><Sparkles size={16} aria-hidden="true" /> Premium</h2>
-          <p className={styles.colSub}>Everything in Free, plus:</p>
-          <ul className={styles.list}>
-            {PREMIUM_FEATURES.map(([f, d]) => <li key={f}><Check size={15} aria-hidden="true" /> <span><strong>{f}</strong>{d ? ` — ${d}` : ''}</span></li>)}
-          </ul>
-        </div>
-      </section>
+        </section>
 
-      <p className={styles.fine}>Payments are processed by Cashfree Payments. Prices include applicable taxes. <Link to="/">Back to learning</Link></p>
+        <h2 className={styles.h2}>What you get</h2>
+        <section className={styles.compare} aria-label="Free and premium compared">
+          <div className={styles.col}>
+            <h3 className={styles.colTitle}>Free</h3>
+            <p className={styles.colSub}>For everyone, no card needed</p>
+            <ul className={styles.list}>
+              {FREE_FEATURES.map((f) => <li key={f}><Check size={15} aria-hidden="true" /> {f}</li>)}
+            </ul>
+          </div>
+          <div className={`${styles.col} ${styles.colPremium}`}>
+            <h3 className={styles.colTitle}><Sparkles size={16} aria-hidden="true" /> Premium</h3>
+            <p className={styles.colSub}>Everything in Free, plus:</p>
+            <ul className={styles.list}>
+              {PREMIUM_FEATURES.map(([f, d]) => <li key={f}><Check size={15} aria-hidden="true" /> <span><strong>{f}</strong>{d ? ` — ${d}` : ''}</span></li>)}
+            </ul>
+          </div>
+        </section>
+
+        <h2 className={styles.h2}>Questions</h2>
+        <div className={styles.faq}>
+          {FAQ.map(([q, a]) => (
+            <details key={q}>
+              <summary>{q}</summary>
+              <p>{a}</p>
+            </details>
+          ))}
+        </div>
+        <p className={styles.fine}>Payments are processed by Cashfree Payments. Prices are in Indian rupees and include applicable taxes. <Link to="/">Back to learning</Link></p>
+      </div>
+      <CheckoutDialog plan={chosen} access={access} onClose={() => setChosen(null)} />
     </PageLayout>
   );
 }
