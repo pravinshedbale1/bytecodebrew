@@ -141,6 +141,11 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
   }, [raw.running, raw.stage, setSession, type.phases]);
 
   const finish = () => patch({ running: false, stage: 'score' });
+  // Mouse clicks shouldn't leave a focus ring on the timer controls (keyboard presses keep it)
+  const tap = (fn) => (e) => {
+    if (e.detail > 0) e.currentTarget.blur();
+    fn();
+  };
   // a different prompt is allowed in the first minute, before the AI interviewer has started
   const canShuffle = session.stage === 'live' && session.seconds < 60 && !session.chat.length;
   const shuffle = () => patch({ prompt: type.pick(isSolved, session.level), seconds: 0, phaseIndex: 0, phaseStart: 0, phaseLog: [] });
@@ -199,16 +204,16 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
                 <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={shuffle}><Shuffle size={14} /> Different problem</button>
               )}
               {session.phaseLog.length > 0 && (
-                <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={() => patch((s) => previousPhase(s))} title="Back to the previous phase">
+                <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={tap(() => patch((s) => previousPhase(s)))} title="Back to the previous phase">
                   <Undo2 size={14} /> Back
                 </button>
               )}
               {!isLast && (
-                <button type="button" className={ui.btn} onClick={() => patch((s) => nextPhase(type.phases, s))} title="Done with this phase? Move on now">
+                <button type="button" className={ui.btn} onClick={tap(() => patch((s) => nextPhase(type.phases, s)))} title="Done with this phase? Move on now">
                   <SkipForward size={14} /> Next phase
                 </button>
               )}
-              <button type="button" className={ui.btn} onClick={() => patch((s) => ({ running: !s.running }))}>
+              <button type="button" className={ui.btn} onClick={tap(() => patch((s) => ({ running: !s.running })))}>
                 {session.running ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Resume</>}
               </button>
               <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={finish}><Square size={14} /> End & score</button>
