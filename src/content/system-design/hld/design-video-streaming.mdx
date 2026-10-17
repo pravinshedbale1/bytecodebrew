@@ -186,6 +186,31 @@ Split it into many short chunks at keyframe boundaries, enqueue a task per chunk
 The streamer pushes a continuous feed (e.g., RTMP or SRT) to an ingest server near them, which transcodes in real time into a few renditions and packages short segments (low-latency HLS/DASH or chunked CMAF, 1–2 s) continuously, updating the manifest. The CDN serves segments as they're produced, so latency is several seconds. For sub-second interactivity, use WebRTC-based delivery instead. Recording the stream produces a VOD asset through the normal pipeline.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Users upload 500 hours of video per minute. Each hour is stored as 5 renditions totalling about 3 GB. How much new storage is needed per day, and why does adaptive bitrate streaming store multiple renditions at all?">
+
+500 hours/minute × 1,440 minutes = 720K hours/day. × 3 GB = 2.16 PB/day of new video, before replication. That is why video sits in object storage with lifecycle rules (rarely watched renditions can move to colder tiers or be deleted and regenerated on demand).
+
+Why several renditions: viewers' bandwidth varies from moment to moment. With adaptive bitrate (HLS or DASH), each rendition is split into short segments (2–6 s), and the player picks the highest bitrate it can sustain for the next segment. It switches quality between segments instead of stalling, which matters more to viewers than peak quality.
+
+</Practice>
+
+<Practice task="A creator uploads a 2-hour 4K video and expects it to be watchable within 10 minutes. A single machine needs 3 hours to transcode it. How do you meet the target?">
+
+Parallelise the transcoding.
+
+1. Split the source into chunks at keyframes (for example 30-second chunks → 240 chunks).
+2. Put one task per (chunk, rendition) on a work queue. Hundreds of workers transcode in parallel; each chunk takes well under a minute.
+3. A final step stitches each rendition's chunks and writes the HLS/DASH manifests.
+4. Publish progressively: make the low renditions (360p, 720p) available first so the video is watchable within minutes, while 4K finishes later.
+
+Retries are per chunk (idempotent, same output name), so a failed worker costs one chunk, not the whole job.
+
+</Practice>
+
 <Takeaways>
 
 - Upload directly and resumably to object storage; process asynchronously with a DAG orchestrator.

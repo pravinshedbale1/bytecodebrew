@@ -120,6 +120,23 @@ Treat the database as the source of truth and update the index asynchronously fr
 Lucene buffers new documents in memory and makes them searchable only when it writes them into a new immutable segment during a refresh, which by default happens about every second. Refreshing more often makes documents visible sooner but creates many small segments, increasing merge work and reducing indexing throughput. For bulk loads, refresh is often disabled temporarily.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Your product search runs WHERE name LIKE '%phone%' on a 50-million-row table. It is slow and ignores typos and relevance. What do you build instead, and how do you keep it in sync with the database?">
+
+Use a search engine (Elasticsearch or OpenSearch) with an inverted index: each term maps to the list of documents containing it, so a search looks up terms instead of scanning rows.
+
+1. Text analysis at index time: lowercasing, tokenising, stemming, synonyms, and n-grams or fuzzy matching for typos.
+2. Relevance ranking with BM25, plus boosts for popularity, stock and price.
+3. Sync: capture database changes (change data capture with Debezium, or the outbox pattern) into Kafka, and an indexer updates the search index. Search becomes eventually consistent, typically a few seconds behind.
+4. Periodically rebuild the index into a new index and switch an alias to it, which fixes any drift and lets you change mappings without downtime.
+
+The database remains the source of truth; the index is a derived view.
+
+</Practice>
+
 <Takeaways>
 
 - Search engines use inverted indexes: term → sorted postings list of documents.

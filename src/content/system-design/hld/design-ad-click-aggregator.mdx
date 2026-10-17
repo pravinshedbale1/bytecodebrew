@@ -144,6 +144,33 @@ Give each click (or impression) a unique ID and deduplicate in the stream proces
 Because raw events are retained in Kafka (long retention) and the object-storage archive, deploy the fixed job and replay that day's events into a fresh output (or recompute with the batch job), then overwrite the affected aggregates in the OLAP store (idempotent upserts keyed by window) and correct the billing totals through reconciliation, notifying affected advertisers if invoices were issued.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Advertisers need click counts per ad per minute with a delay of no more than one minute, from 10 billion clicks a day. What streaming design and what storage do you use?">
+
+10B ÷ 10^5 s ≈ 100K clicks/s average, peaks several times higher.
+
+1. Click servers validate the click, attach a unique click ID and write it to Kafka, partitioned by ad ID.
+2. A stream processor (Flink, Kafka Streams) aggregates per (ad, minute) in tumbling windows using event time with watermarks, so late events up to a limit still land in the right minute.
+3. Results go to an OLAP store built for time-series aggregates (Druid, ClickHouse, Pinot), which answers 'clicks per minute for ad X' quickly.
+4. Raw clicks also go to object storage for the batch reconciliation below.
+
+Each window emits within seconds of closing, meeting the one-minute target.
+
+</Practice>
+
+<Practice task="Billing depends on these counts, so they must be exact even if a stream job crashes and replays. How do you avoid double-counting and missing clicks?">
+
+1. Deduplicate by click ID: the stream job keeps recently seen click IDs in its state (or a short-TTL store) and drops repeats caused by client retries.
+2. Make processing exactly-once within the pipeline: Flink checkpoints its state together with the Kafka offsets, and writes to the sink transactionally (or the sink upserts by (ad, minute), so a replay overwrites the same rows instead of adding to them).
+3. Reconcile: a daily batch job recomputes counts from the raw clicks in object storage and compares them with the streamed results; differences are corrected before invoices are produced.
+
+Streaming gives speed; the batch recomputation gives the final, auditable number.
+
+</Practice>
+
 <Takeaways>
 
 - Keep the click path fast: validate, enqueue to Kafka, redirect.

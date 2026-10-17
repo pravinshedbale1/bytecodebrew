@@ -190,6 +190,33 @@ It decouples keys from nodes. Keys map to partitions permanently (e.g., hash mod
 Emails don't map to user shards, so a per-shard unique constraint isn't enough. Options: maintain a separate table (or service) keyed by email — itself sharded by email — and insert into it first as a reservation, then create the user (with cleanup if the second step fails); or use a distributed SQL database that supports global unique indexes; or route all sign-ups through a single uniqueness service. The reservation-table approach is the most common.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="You shard a multi-tenant SaaS database by tenant ID. One tenant grows to 40% of all traffic and overloads its shard. What are your options?">
+
+1. Move that tenant to its own dedicated shard (or cluster). A directory mapping tenant → shard makes this possible without changing the hash function.
+2. If one machine is still not enough, shard within the tenant by a second key (for example tenant ID + user ID, or + project ID), so the tenant's data spans several shards. Queries that need the whole tenant then scatter and gather.
+3. Add read replicas for that tenant's shard if most of the load is reads, and cache hot data.
+
+Lesson: hashing by tenant evens out many small tenants but cannot split one giant tenant. Plan for a lookup directory from the start so individual tenants can be moved.
+
+</Practice>
+
+<Practice task="After sharding orders by order ID, the 'my orders' page (all orders of one customer, newest first) has to query every shard. How do you make it fast?">
+
+The query's key (customer ID) is not the shard key, so it must scatter to every shard and merge the results — slow and expensive as shards are added.
+
+Options:
+1. Shard by customer ID instead, if most access is per customer: all of a customer's orders live together, and the page is one query on one shard.
+2. Keep order ID sharding, but maintain a secondary index (a global index table, or a denormalised `customer_orders` table sharded by customer ID) that maps a customer to their recent order IDs, updated asynchronously from the order events.
+3. Embed the customer's shard in the order ID itself, so lookups by order ID still find the right shard.
+
+The general rule: choose the shard key from your most important access pattern.
+
+</Practice>
+
 <Takeaways>
 
 - Sharding splits rows across machines to scale storage and writes; combine it with replication for availability.

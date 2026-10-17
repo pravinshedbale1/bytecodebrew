@@ -108,6 +108,32 @@ By default it's AP — it accepts writes and reads on available replicas and rec
 CAP only covers behaviour during partitions, which are rare. PACELC adds that in normal operation, there's still a trade-off between latency and consistency: strong consistency requires coordination between replicas (extra round trips, possibly cross-region), while weaker consistency lets you respond from the nearest replica immediately. In practice this everyday latency cost drives most database and configuration choices.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A network partition splits your two data centres. A bank balance service and a 'likes' counter both run across them. What should each do during the partition, and why?">
+
+Partition means choosing between consistency and availability (CAP).
+
+- Bank balance: choose consistency (CP). The side that cannot reach the majority (or the primary) rejects writes, or even reads, rather than risk letting money be spent twice. Users see errors, but the balance stays correct.
+- Likes counter: choose availability (AP). Both sides keep accepting likes and merge later (counters merge easily, for example with a CRDT counter). A slightly wrong count for a few minutes is harmless.
+
+The point is that CAP is a per-feature decision, not one setting for the whole company.
+
+</Practice>
+
+<Practice task="No partition is happening, yet the team argues about whether reads should go to the nearest replica or to the leader. Which part of PACELC is this, and how do you decide?">
+
+It is the 'else' part of PACELC: when there is no partition (E), you still choose between latency (L) and consistency (C).
+
+- Reading from the nearest replica (EL) is fast, but replication lag means a user might not see a change they just made.
+- Reading from the leader or a quorum (EC) is consistent, but adds latency, especially across regions.
+
+Decide per read: profile pages and feeds can read nearby; 'my own recent changes' can use read-your-writes (route that user to the leader for a short time after they write); balances and inventory at checkout read from the leader.
+
+</Practice>
+
 <Takeaways>
 
 - CAP: during a network partition, a replicated system must choose between consistency (linearizability) and availability.

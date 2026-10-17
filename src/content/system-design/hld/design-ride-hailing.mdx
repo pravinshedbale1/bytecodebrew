@@ -206,6 +206,33 @@ At over a million updates per second, writing each to a durable database would b
 Greedy matching assigns each request the nearest available driver as it arrives, which can be globally inefficient — taking a driver who would have been perfect for the next request. Collecting requests and available drivers in a short window (a second or two) and solving an assignment problem minimises total pickup ETA across all of them, improving average wait times and driver utilisation at the cost of a small added delay.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A city has 50,000 active drivers sending a location every 4 seconds, and riders request about 500 trips per second at peak. What write rate does the location service handle, and what index lets you find nearby drivers quickly?">
+
+50,000 ÷ 4 s = 12,500 location writes/s per city, and only the latest position matters.
+
+Store it in memory, keyed by driver, with a geospatial index: Redis `GEO` (geohash in a sorted set), or cells from H3/S2 mapping cell → set of driver IDs. On each update, move the driver between cells if the cell changed.
+
+A ride request searches the rider's cell and its neighbours (expanding rings until enough candidates are found), filters by status (available, vehicle type), then ranks by estimated time of arrival from a routing service, not straight-line distance. 500 searches/s against an in-memory index is easy; the 12.5K writes/s are what decide the sharding (by city or region).
+
+</Practice>
+
+<Practice task="Two riders request a ride at the same moment and the matcher offers both of them the same driver. How do you guarantee a driver is assigned to only one trip?">
+
+Make the assignment an atomic state change on the driver.
+
+1. Keep each driver's state (available, offered, on trip) in one place, owned by one shard.
+2. The matcher reserves a driver with a conditional update: set `state = offered(trip 123)` only if `state = available` (compare-and-set, Redis `SET` with `NX` on a lock key, or a database conditional update). Exactly one of the two attempts wins.
+3. The loser moves on to its next-best candidate.
+4. The offer has a timeout (say 15 s). If the driver does not accept, the state goes back to available.
+
+Optimistic CAS is better than a distributed lock here: it is one round trip, and contention on a single driver is rare.
+
+</Practice>
+
 <Takeaways>
 
 - The location firehose dominates: keep current positions in an in-memory, city-sharded geo index with TTLs.

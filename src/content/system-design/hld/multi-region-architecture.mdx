@@ -116,6 +116,31 @@ RPO is how much recent data you may lose when a region fails — with asynchrono
 Two regions can concurrently accept orders against the same stock, each believing units are available, and conflicts are only discovered after replication — leading to overselling. Inventory needs a single authority per item at commit time: a home region per warehouse or SKU, or a globally consistent database. Multi-writer works for data that merges safely, like counters or carts, not for invariants like "stock ≥ 0".
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Your app runs in one region and leadership wants 'multi-region'. Users write their own data (profiles, orders) and rarely see other users' data. Which deployment pattern fits, and how do you route users?">
+
+Partition users by home region (geo-partitioning): each user's data lives in one region, chosen by where they signed up or where they usually are. Each region is active for its own users.
+
+Routing: a global layer (GeoDNS or an anycast load balancer) sends requests to the nearest region; if the user's home region is different, that region forwards the request (or redirects the client) to the home region. A small global directory maps user → home region.
+
+Benefits: writes stay local and consistent, without multi-region write conflicts. For disaster recovery, replicate each region's data asynchronously to a second region and fail over users from a lost region, accepting a small amount of data loss (the RPO) and a failover time (the RTO).
+
+</Practice>
+
+<Practice task="Region A goes down. Your runbook says 'promote the replica in region B'. What can go wrong, and how do you make failover safe?">
+
+1. Data loss: asynchronous replication means the last few seconds of writes in A never reached B. Decide this in advance (the RPO) and reconcile afterwards.
+2. Split brain: A may not be fully down — just unreachable. If A comes back and keeps accepting writes, both regions think they are the leader. Prevent it by fencing A (revoke its write access, or require a majority of three sites to grant leadership).
+3. Capacity: B must absorb A's traffic. If B is sized only for its own users, it falls over too. Keep spare capacity or scale before shifting traffic.
+4. Hidden dependencies: a service in B may still call something only in A (an auth service, a config store).
+
+Practise failovers regularly; an untested runbook usually fails on the day.
+
+</Practice>
+
 <Takeaways>
 
 - Go multi-region for latency, disaster recovery, data residency or capacity — and say which.

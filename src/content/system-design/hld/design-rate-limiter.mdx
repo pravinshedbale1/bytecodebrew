@@ -190,6 +190,32 @@ Give each region a share of the budget — for example proportional to recent tr
 429 status with Retry-After telling the client when to try again, and limit headers (RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset) on all responses so well-behaved clients can pace themselves before being limited. This reduces wasted retries and helps developers debug.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Your API gateway handles 300K requests/s and checks 3 rules per request against Redis. Each Redis shard handles about 100K simple operations per second. How many shards do you need, and how can you cut that number?">
+
+300K × 3 = 900K counter operations/s ÷ 100K per shard ≈ 9 primary shards, plus replicas, and headroom for peaks — call it 12.
+
+Ways to reduce it:
+- Pipeline all rules for a key into one Lua script call, so 3 rules cost one round trip (it is still 3 counter updates, but far fewer network operations).
+- Check the coarse per-IP rule locally in each gateway (in-memory token bucket with the limit divided by the gateway count). Only the precise per-API-key quota goes to Redis.
+- Batch: each gateway takes a small allowance of tokens from Redis at a time (say 50) and spends them locally, syncing when it runs low. Accuracy drops slightly; Redis load drops by roughly the batch size.
+
+</Practice>
+
+<Practice task="Redis is completely down for five minutes. What should the rate limiter do, and what are the risks of each option?">
+
+The choice is fail-open versus fail-closed, and it depends on what the limit protects.
+
+- Fail open (allow everything): the API stays up for users, but abusive clients and expensive endpoints are unprotected. Acceptable for fairness limits on cheap endpoints.
+- Fail closed (reject everything): safest for the backend, but it turns a Redis outage into a full API outage. Only for limits that protect something fragile or costly (SMS sending, payments).
+
+The usual answer is a middle path: each gateway falls back to a local in-memory limiter using the global limit divided by the number of gateways. Limits become approximate, but both the backend and the users are protected. Add a circuit breaker so gateways stop waiting on Redis timeouts, alert on the fallback being active, and keep the rule set cached locally so rules still apply.
+
+</Practice>
+
 <Takeaways>
 
 - Enforce in the gateway with an in-memory rule cache and a shared, sharded counter store.

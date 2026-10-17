@@ -138,6 +138,37 @@ Options: return the updated data directly from the command response and have the
 When the history of changes is itself valuable or required: financial ledgers and wallets, order or claim lifecycles with many state transitions, audit-heavy regulated domains, or collaborative systems where operations are replayed. Also when you need to rebuild or add new read models from history. I'd apply it to those specific aggregates, use snapshots for fast loading, project read models for queries, and plan for event schema versioning — and avoid it for simple CRUD data.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="The order service writes the order to its database and then publishes an OrderPlaced event. Sometimes the event is never published because the service crashes in between. How do you fix it?">
+
+This is the dual-write problem: two separate systems (the database and the message broker) cannot be updated atomically.
+
+Use the transactional outbox:
+1. In the same database transaction that inserts the order, insert the event into an `outbox` table.
+2. A relay process reads the outbox (polling or change data capture such as Debezium) and publishes the events to the broker, then marks them as sent.
+3. If the relay crashes, it re-publishes from the outbox, so delivery is at least once. Consumers deduplicate by event ID.
+
+Now an order exists if and only if its event will eventually be published.
+
+</Practice>
+
+<Practice task="A team proposes event sourcing for every service. Where does event sourcing pay off, and what are the costs they should expect?">
+
+It pays off where the history itself matters: ledgers and payments, audit-heavy domains, workflows where you need to know how a state was reached, and cases where you want to rebuild new read models from past events.
+
+Costs:
+- Reads need projections (read models) built from events, which are eventually consistent.
+- Event schemas live forever; changing them needs versioning and upcasting.
+- Rebuilding state from long histories needs snapshots.
+- Debugging and 'fix this one record' operations become harder, because you append correcting events instead of editing rows.
+
+For simple CRUD services, a normal database plus an outbox for integration events is usually the better choice.
+
+</Practice>
+
 <Takeaways>
 
 - Commands request, events announce, queries ask; events decouple publishers from consumers.

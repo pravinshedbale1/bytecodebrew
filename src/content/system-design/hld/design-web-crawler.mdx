@@ -189,6 +189,36 @@ Partition URLs by host so each host maps to one frontier node, and within it kee
 Compute a SimHash fingerprint for each page: extract weighted features (e.g., shingles of words), hash each to 64 bits, and combine them so that similar feature sets produce fingerprints differing in few bits. Pages whose fingerprints are within a small Hamming distance (like 3 bits) are treated as near-duplicates. Finding such pairs at scale uses permuted, sorted tables of fingerprints so candidates can be looked up by matching blocks of bits.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="You must crawl 2 billion pages a month with an average page size of 500 KB. What download rate and bandwidth do you need, and how much storage per month?">
+
+2B ÷ (30 × 10^5 s) ≈ 670 pages/s average; plan for ~1,500/s peak.
+
+Bandwidth: 670 × 500 KB ≈ 335 MB/s ≈ 2.7 Gbit/s average, more at peak.
+
+Storage: 2B × 500 KB = 1 PB/month of raw HTML. Compress it (HTML compresses roughly 5×) and keep only what you need — often ~200 TB/month — in object storage.
+
+Implications: hundreds of fetcher workers (each handling tens of concurrent connections), DNS caching (DNS lookups otherwise dominate latency), and a URL frontier that can hold billions of URLs on disk, not in memory.
+
+</Practice>
+
+<Practice task="A site serves an endless calendar ('next month' links forever) and your crawler keeps finding new URLs on it. How do you detect and stop crawler traps without missing legitimate large sites?">
+
+Combine limits that a real site rarely hits:
+
+1. Per-host budgets: cap pages crawled per host per day, and give larger budgets to hosts with high quality signals.
+2. URL heuristics: maximum URL length and path depth, and a limit on repeated path segments.
+3. Content fingerprints: compute a SimHash of each page; if a host keeps producing near-duplicate pages, lower its priority or stop.
+4. Respect `robots.txt` and `rel=nofollow`; many calendars are disallowed.
+5. Track the 'new unique content per page fetched' ratio per host and stop when it drops near zero.
+
+Legitimate large sites keep producing distinct content, so they keep their budget; traps run out of novelty and get throttled.
+
+</Practice>
+
 <Takeaways>
 
 - The frontier is the heart of the crawler: priority (front queues) plus politeness (per-host back queues and a next-fetch heap).

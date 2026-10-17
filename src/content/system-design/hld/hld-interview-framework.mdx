@@ -226,6 +226,24 @@ Treat it as a discussion, not an attack. Restate the requirement that drove your
 Functional requirements describe *what* the system does (post a tweet, view a feed). Non-functional requirements describe *how well* it does it (latency, availability, scale, consistency, durability). Non-functional requirements drive architecture far more: a feed for 1,000 users and one for 500 million users have identical functional requirements but completely different designs.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="The interviewer says 'Design Instagram.' Write your first five minutes: the questions you ask and the scope you propose.">
+
+Clarify and scope before drawing anything:
+
+1. Users and scale: how many daily active users? (Say 500M.) Upload and view rates? Global?
+2. Core features to cover: post photos, follow users, home feed. Propose leaving out stories, direct messages and search unless asked.
+3. Non-functional priorities: feed latency (under 200 ms?), availability over strict consistency for the feed, durability for photos.
+4. Read/write ratio: views far exceed uploads, so expect a read-heavy design.
+5. Confirm: 'I will design upload, follow and feed, optimise for fast feed reads at 500M DAU, and treat the feed as eventually consistent. Does that match what you want?'
+
+Then do a quick estimate and move to the API and high-level design.
+
+</Practice>
+
 <Takeaways>
 
 - The interview evaluates reasoning and communication, not memorised architectures.

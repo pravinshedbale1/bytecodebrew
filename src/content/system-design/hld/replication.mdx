@@ -216,6 +216,23 @@ Yes, in edge cases. If a write succeeded on only one node (and the client saw it
 When users in multiple regions need low-latency writes and the system must keep accepting writes even if a whole region or the inter-region link fails, or for offline-first clients that sync later. It requires a clear conflict strategy — ideally conflict avoidance by routing each record's writes to a home region, or CRDTs for data that merges naturally. For a single-region system, single-leader is simpler and better.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Your database has one leader and two asynchronous followers. The leader crashes and a follower is promoted. What data can be lost, and how could you reduce that risk?">
+
+With asynchronous replication, the leader acknowledges writes before the followers have them. Writes acknowledged in the last moments before the crash may never have reached the new leader, so they are lost even though clients were told they succeeded.
+
+Reducing it:
+1. Semi-synchronous replication: the leader waits for at least one follower to confirm before acknowledging. One follower is always up to date, at the cost of write latency.
+2. Promote the follower with the most recent log position.
+3. Quorum-based systems (Raft-based databases) only acknowledge writes once a majority has them, so a new leader always has every acknowledged write.
+
+Also fence the old leader so it cannot keep accepting writes if it comes back (split brain).
+
+</Practice>
+
 <Takeaways>
 
 - Replication provides availability, read scaling and geographic locality.

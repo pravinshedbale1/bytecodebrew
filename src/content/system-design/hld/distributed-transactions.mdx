@@ -140,6 +140,37 @@ Use an orchestrated saga. The order service creates the order in PENDING state (
 Compensations must be retryable and idempotent, so the first response is to retry with backoff — a durable workflow engine does this automatically. If retries are exhausted, the saga moves to a failed state that's surfaced to an operations queue or dead-letter queue for manual intervention, with alerting. Design compensations to be as unlikely to fail as possible (e.g., a refund through the same provider that charged) and run reconciliation jobs to detect inconsistent states.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Placing an order must reserve stock (inventory service), charge the card (payment service) and create a shipment (shipping service). Design it as a saga, including what happens if the charge fails after the stock was reserved.">
+
+Run the steps in order, each a local transaction with its own compensation:
+
+1. Reserve stock → compensation: release stock.
+2. Charge card → compensation: refund.
+3. Create shipment → compensation: cancel shipment.
+
+If the charge fails, the saga runs the compensations for the steps already done in reverse: release the stock, then mark the order failed.
+
+Make it reliable: an orchestrator (or a workflow engine) stores the saga state, so it can continue after a crash; each step and compensation is idempotent (they may be retried); and steps communicate through the outbox pattern so state changes and messages are not lost.
+
+Note that a saga is not isolated: other orders may briefly see the reserved stock. That is usually acceptable.
+
+</Practice>
+
+<Practice task="Why do most microservice systems avoid two-phase commit (2PC) across services? Give two concrete failure scenarios.">
+
+2PC makes every participant lock resources until the coordinator decides, so it is blocking.
+
+1. The coordinator crashes after participants voted 'yes' but before sending the decision. Participants must keep their locks and wait — they cannot commit or abort on their own. Orders for those rows stall until the coordinator recovers.
+2. One participant is slow or unreachable during the prepare phase: the whole transaction waits, and locks are held in every other service in the meantime, so one slow service reduces throughput everywhere.
+
+Also, many systems (Kafka, many NoSQL databases, third-party APIs) do not support the XA protocol at all. Sagas with compensations trade isolation for availability and loose coupling.
+
+</Practice>
+
 <Takeaways>
 
 - 2PC gives atomic commit across participants but blocks on coordinator failure, adds latency, and needs every participant up.

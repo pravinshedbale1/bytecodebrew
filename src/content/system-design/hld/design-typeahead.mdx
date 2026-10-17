@@ -169,6 +169,37 @@ Run a streaming job over the query log that maintains short-window counts (e.g.,
 Split the response: the global top-k for a prefix is identical for everyone and stays cacheable at the CDN; personal suggestions (the user's recent searches) come from a small per-user store, fetched once per session or kept on the device, and are merged on the client. This preserves cache hit rates while adding personalisation.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Suggestions must appear within 100 ms of each keystroke for 50M daily users who type about 10 searches a day with 8 keystrokes each. What is the request rate, and what makes the latency target achievable?">
+
+50M × 10 × 8 = 4B requests/day ÷ 10^5 s ≈ 40K/s average, peak ~100–150K/s.
+
+Making it fast:
+1. Precompute the top suggestions for every prefix offline and store them in an in-memory trie (or a prefix → top-K map) on the serving nodes. A lookup is a few memory reads, so no ranking happens per keystroke.
+2. Debounce in the client (wait ~100 ms of no typing) and cancel in-flight requests, which removes many requests.
+3. Cache popular prefixes at the CDN/edge and in the browser — short prefixes are the most common and the most cacheable.
+4. Shard the trie by prefix range if it does not fit in one machine's memory, and replicate each shard for read throughput.
+
+The serving path then costs a network round trip plus a hash lookup, well under 100 ms.
+
+</Practice>
+
+<Practice task="A breaking news term goes from zero to millions of searches in ten minutes, but your suggestions are rebuilt once a day. How do you get trending terms into suggestions quickly?">
+
+Add a fast path next to the daily batch.
+
+1. Stream search events into a streaming job that counts terms over short windows (for example 5 minutes) using a Count-Min Sketch plus a top-K heap per window.
+2. Detect terms whose recent rate is far above their usual rate.
+3. Publish those trending terms (with a boost score) to the serving nodes every minute. At query time, merge the precomputed top-K for the prefix with any trending terms matching the prefix.
+4. Apply safety filters (blocklists, spam detection) before anything trending is shown, because this path is easy to abuse.
+
+The daily batch still produces the stable base; the stream only adds a small, fresh overlay.
+
+</Practice>
+
 <Takeaways>
 
 - Autocomplete is extremely read-heavy with a tight latency budget: precompute, don't compute.

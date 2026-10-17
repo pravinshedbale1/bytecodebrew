@@ -164,6 +164,33 @@ A Bloom filter is a compact bit array with several hash functions that answers "
 In a clustered B-Tree (e.g., InnoDB), rows are stored in primary-key order. Random UUIDs insert at random positions, causing page splits, fragmentation, poor cache locality and more I/O. They're also 16 bytes, which enlarges every secondary index that stores the PK. Time-ordered identifiers (auto-increment, UUIDv7, Snowflake IDs) append to the end of the tree and keep hot pages in memory.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A query SELECT * FROM orders WHERE customer_id = ? AND status = 'open' ORDER BY created_at DESC LIMIT 20 is slow on a 200-million-row table. Which index do you create, and why that column order?">
+
+Create a composite index on `(customer_id, status, created_at)`.
+
+- Equality columns come first (`customer_id`, then `status`), so the index jumps straight to that customer's open orders.
+- The sort column comes next, so the matching entries are already in `created_at` order. The database reads the last 20 entries in the index (backwards) and stops — no sort, no scan of the customer's other orders.
+
+Optionally make it a covering index (include the selected columns) if the query only needs a few columns, so the table rows are not fetched at all.
+
+An index starting with `created_at` would not help, because the equality filters could not use it.
+
+</Practice>
+
+<Practice task="A service writes 200,000 events per second and rarely updates them. Would you store them in a B-tree based database or an LSM-tree based one? What do you give up?">
+
+An LSM-tree store (Cassandra, RocksDB, ScyllaDB). LSM trees turn writes into sequential appends: new data goes to an in-memory table and a commit log, then is flushed as sorted files and merged in the background (compaction). That sustains very high write rates.
+
+A B-tree updates pages in place, which means random writes and page splits — far more expensive at 200K writes/s.
+
+The cost: reads may need to check several sorted files (Bloom filters reduce that), compaction uses disk bandwidth and can cause latency spikes, and space amplification is higher until old versions are compacted away. For append-mostly event data, those costs are usually acceptable.
+
+</Practice>
+
 <Takeaways>
 
 - Indexes trade write speed and storage for read speed — index for actual query patterns.

@@ -219,6 +219,33 @@ For internal service-to-service communication where performance and strong contr
 Compatible: adding new endpoints, adding optional request fields, adding response fields (if clients ignore unknown fields), adding new enum values only if clients handle unknown values. Breaking: removing or renaming fields or endpoints, changing a field's type or meaning, making an optional field required, changing error codes or default behaviour. Breaking changes require a new version and a deprecation period.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A mobile client calls POST /orders and the connection drops before the response arrives. The app retries. Design the API so the order is not created twice.">
+
+Make the create request idempotent with an idempotency key.
+
+1. The client generates a unique key per checkout attempt (a UUID) and sends it in an `Idempotency-Key` header on the first try and every retry.
+2. The server stores the key with a unique constraint together with a hash of the request body and, once done, the response.
+3. A retry with the same key returns the stored response (same order ID, same status code) instead of creating a new order. A different body with the same key is rejected as a client bug.
+4. Keys expire after a day or so.
+
+Plain `PUT /orders/{id}` with a client-chosen ID is another idempotent option.
+
+</Practice>
+
+<Practice task="Your GET /posts?page=500&size=20 endpoint is slow, and users see duplicates or missing items while new posts arrive. Why, and what do you replace it with?">
+
+Offset pagination makes the database scan and discard the first 10,000 rows on every request, so deep pages are slow. And when new posts are inserted at the top, every item shifts by one, so the next page repeats or skips items.
+
+Use cursor (keyset) pagination: return an opaque `nextCursor` that encodes the last item's sort key, for example `(createdAt, id)`. The next request asks for items after that key: `WHERE (createdAt, id) < (?, ?) ORDER BY createdAt DESC, id DESC LIMIT 20`, which uses an index and costs the same on page 500 as on page 1. Inserts above the cursor no longer shift the results.
+
+Trade-off: users cannot jump to page 500 directly, which is rarely needed in feeds.
+
+</Practice>
+
 <Takeaways>
 
 - REST for public, cacheable, resource-oriented APIs; gRPC for fast, typed internal calls; GraphQL for flexible client-driven data fetching.

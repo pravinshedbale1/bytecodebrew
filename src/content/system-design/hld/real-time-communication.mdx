@@ -169,6 +169,20 @@ All 200K clients disconnect and attempt to reconnect at about the same moment, h
 It works over plain HTTP request/response through virtually any proxy, firewall or legacy infrastructure, requires no special server or load-balancer support, and is easy to reason about. It's used as a fallback when WebSockets are blocked (libraries like Socket.IO fall back to it) and for moderate-frequency updates where per-message overhead doesn't matter.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Choose a technique for each: (a) a dashboard showing a live stock price, updated by the server only; (b) a multiplayer drawing board; (c) a payment provider telling your backend a payment succeeded.">
+
+(a) Server-Sent Events. Data flows only from server to client, SSE runs over plain HTTP, reconnects automatically and passes through most proxies. WebSockets would work but are more than needed.
+
+(b) WebSockets. Both sides send frequent, low-latency messages (strokes and cursors), so a persistent two-way connection fits.
+
+(c) Webhooks. It is server-to-server and event-driven: the provider sends an HTTP POST to your endpoint. Verify the signature, respond quickly, process asynchronously and handle duplicates (providers retry), and still poll or reconcile occasionally in case a webhook is lost.
+
+</Practice>
+
 <Takeaways>
 
 - Short polling is simple but wasteful; long polling gives near-real-time over plain HTTP.

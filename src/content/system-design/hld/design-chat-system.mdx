@@ -197,6 +197,31 @@ On reconnect, the device sends its last delivered sequence number per conversati
 Store presence as a TTL key per user, refreshed by connection heartbeats, so going offline is detected by expiry. Don't broadcast every status change to all contacts; instead, clients request presence for the conversations currently on screen and subscribe only to those users while visible, with throttled updates. For large groups, show only counts or omit presence. This makes cost proportional to what users are looking at.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A product with 20M concurrent users and 10B messages a day. How many gateway servers do you need, what is the message rate, and how much text storage per year?">
+
+Connections: at 50–100K WebSockets per gateway, 20M ÷ ~50K ≈ 400 gateways (plan for more so a failed zone does not overload the rest).
+
+Messages: 10B ÷ 10^5 s ≈ 100K/s average, peak ~250–300K/s.
+
+Storage: 10B × ~200 B ≈ 2 TB/day ≈ 730 TB/year, around 2 PB with three replicas — before media, which lives in object storage behind a CDN.
+
+What this tells you: the message store must be partitioned by conversation and append-only (wide-column), and routing between gateways (the session registry) is the key piece of infrastructure, not the gateways themselves.
+
+</Practice>
+
+<Practice task="A user has the app open on a phone and a laptop. Messages must appear on both, in the same order, and 'read' on one device should clear the unread badge on the other. What do you add to the design?">
+
+1. Make the session registry map user → set of (device, gateway), not user → one gateway. Delivery workers send to every connected device of each recipient, including the sender's other devices (so a message sent from the phone appears on the laptop).
+2. Ordering comes from the per-conversation sequence number assigned by the message service. Each device shows messages sorted by `seq` and tracks the highest `seq` it has seen, so out-of-order arrival is fixed on the client.
+3. Read state is per user, not per device: store `lastReadSeq` per (user, conversation). When one device sends a read receipt, update it and publish a small 'read up to N' event to the user's other devices so their badges update.
+4. Offline devices sync on reconnect by asking for everything after their last `seq`, and they fetch `lastReadSeq` to show the right badge.
+
+</Practice>
+
 <Takeaways>
 
 - Thin, stateful WebSocket gateways plus a session registry route messages across a large connection fleet.

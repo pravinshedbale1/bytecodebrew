@@ -215,6 +215,36 @@ It stored the last journal sequence it applied for each namespace. On reconnect 
 Both clients base their edit on the same revision. The first commit succeeds and becomes the new revision. The second commit's parent revision no longer matches, so the server reports a conflict; the client saves its version as a conflicted copy alongside the file and syncs both, so neither person's work is lost. Merging is left to the users — automatic merging requires a collaborative-editing design with OT or CRDTs.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A user edits one paragraph of a 200 MB file in a synced folder. How do you avoid uploading the whole file again, and what does the server store?">
+
+Split files into chunks and sync only changed chunks.
+
+1. The client splits the file into chunks (fixed 4 MB, or content-defined chunking so an insertion does not shift every later chunk) and hashes each one.
+2. It asks the server which chunk hashes it already has; it uploads only the missing ones (here one or two chunks).
+3. The server stores chunks in object storage keyed by hash (which also deduplicates identical chunks across users and versions) and writes a new file version: an ordered list of chunk hashes in the metadata database.
+4. Other devices receive a change notification, fetch the new chunk list and download only the chunks they lack.
+
+Old versions remain available because they are just older chunk lists; garbage collection removes chunks no version references.
+
+</Practice>
+
+<Practice task="Two devices edit the same file while one of them is offline. When it reconnects, both have changed version 7. What does the sync service do?">
+
+Detect the conflict with versions and never silently lose work.
+
+1. Each upload says which version it was based on ('based on v7'). The server accepts the first one as v8.
+2. The second upload is also based on v7, but the current version is now v8, so the server rejects it as a conflict (an optimistic concurrency check).
+3. The client keeps both: the server version stays as the file, and the local edits are saved as a 'conflicted copy' next to it (this is what Dropbox does), and the user decides.
+4. For formats that can be merged (plain text, or documents with operational transforms/CRDTs, as in collaborative editors), the client may merge automatically instead.
+
+The key rule: never apply a write blindly over a newer version.
+
+</Practice>
+
 <Takeaways>
 
 - Separate metadata (transactional, sharded by namespace) from content (content-addressed blocks in object storage).

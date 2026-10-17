@@ -124,6 +124,34 @@ Large blobs bloat the database: they slow backups, replication and restores, evi
 It splits data into k data fragments and computes m parity fragments; any k of the k+m fragments reconstruct the original. Spreading fragments across disks, racks or zones tolerates m simultaneous losses at an overhead of (k+m)/k — e.g., 1.4× for 10+4 — versus 3× for triple replication. The trade-off is CPU for encoding and slower reconstruction reads, so hot data is sometimes replicated while warm and cold data is erasure coded.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Users upload videos of up to 5 GB through your API servers, which keep running out of memory and bandwidth. How do you redesign uploads?">
+
+Take the bytes off your servers entirely.
+
+1. The client asks your API for an upload URL. The API checks permissions and quota, creates a metadata row (status 'pending') and returns a pre-signed URL for object storage (for large files, a multipart upload where each part has its own pre-signed URL).
+2. The client uploads directly to object storage, in parallel parts, retrying individual parts on failure.
+3. When the upload completes, object storage sends an event (or the client calls 'complete'), and your service marks the row 'uploaded' and starts processing (virus scan, transcoding).
+
+Your API now handles only small metadata requests, and uploads can resume after a dropped connection.
+
+</Practice>
+
+<Practice task="Images are stored in a private bucket. Logged-in users must see only their own images, but you still want CDN caching. How do you serve them?">
+
+Use short-lived signed URLs (or signed cookies) checked by the CDN.
+
+1. When the app needs an image, your API checks that the user may see it and returns a URL signed with your key and an expiry (for example 10 minutes).
+2. The CDN validates the signature and expiry before serving, fetching from the private bucket on a miss. Users cannot guess or share URLs for long.
+3. Cache at the CDN by the object path, ignoring the signature query parameters in the cache key, so the image is cached once for everyone allowed to see it.
+
+The bucket stays private, the CDN does the heavy lifting, and access control remains in your API.
+
+</Practice>
+
 <Takeaways>
 
 - Store blobs in object storage; keep metadata and the object key in a database.

@@ -171,6 +171,33 @@ OT represents edits as position-based operations and, when two are concurrent, t
 Shard by document: each document is owned by one session server (consistent hashing or a lease-based registry) that holds its state in memory and handles its connections, so servers scale horizontally with the number of active documents. Gateways route connections by doc_id. State is persisted as an op log plus snapshots so ownership can move on failure or rebalancing.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Two users type at the same position at the same moment: one inserts 'A' at index 5, the other inserts 'B' at index 5. Explain how operational transformation or a CRDT makes both editors end up with the same text.">
+
+With operational transformation (OT): the server orders the operations. Say A's insert is applied first. B's operation, which was made against the old document, is transformed against A's: because A inserted at or before position 5, B's insert shifts to index 6 (a tie-breaker such as the user ID decides who goes first at equal positions). Both clients apply the same transformed operations in the same order and converge to '…AB…'.
+
+With a CRDT: each character gets a unique, ordered position identifier (for example a fractional position plus the user ID). Inserting 'A' and 'B' at 'the same place' produces two distinct identifiers with a fixed order, so every replica sorts them the same way no matter which arrives first. No central ordering is needed.
+
+Either way, the result is identical on every screen.
+
+</Practice>
+
+<Practice task="A shared document is open in 300 browser tabs and the server for that document is overloaded. How do you scale the real-time part?">
+
+Real-time collaboration usually pins each document to one server (the document's 'owner') so it can order operations, which is why one hot document overloads one machine.
+
+1. Keep one authoritative sequencer per document, but move fan-out off it: the sequencer appends each operation to a per-document log, and separate relay servers subscribe and push to the connected tabs.
+2. Batch and compress: send operations in small batches every 50–100 ms instead of one message per keystroke.
+3. Send cursor and presence updates less often and with lower priority than edits.
+4. Snapshot periodically so new tabs load a snapshot plus recent operations instead of replaying the whole history.
+
+The sequencer's work is now proportional to edits, not to edits × viewers.
+
+</Practice>
+
 <Takeaways>
 
 - Concurrent edits must be merged at the operation level; naive application diverges.

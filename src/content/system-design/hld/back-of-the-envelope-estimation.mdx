@@ -250,6 +250,32 @@ Daily read volume = 10^9 × 2 KB = 2 TB. Using the 80/20 rule, caching 20% of th
 DAU = 200M. Posts/day = 400M → ÷ 10^5 ≈ 4,000–4,600 writes/s average, ~10,000 at a 2× peak. Media: 400M × 10% × 1 MB = 40 TB/day → × 365 × 5 ≈ 73 PB before replication. **So:** post metadata fits a sharded database, but media must go to object storage behind a CDN, and storage cost will push you toward compression, tiering and deduplication.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Estimate the storage for a photo app: 10 million daily active users, 10% of them upload 2 photos a day, each photo is stored as the original (2 MB) plus three resized versions totalling 500 KB. How much new storage per year, and what read bandwidth if each user views 50 thumbnails (30 KB) a day?">
+
+Uploads: 10M × 10% × 2 = 2M photos/day. Each costs 2.5 MB → 5 TB/day → about 1.8 PB/year (more with replication, though object storage handles durability for you).
+
+Reads: 10M × 50 × 30 KB = 15 TB/day ÷ 10^5 s ≈ 150 MB/s average, about 1.2 Gbit/s; peak maybe 3× that.
+
+What it tells you: storage growth is the main cost (lifecycle rules to move old originals to colder tiers), and the read traffic is moderate but should be served by a CDN, since thumbnails are small and highly cacheable.
+
+</Practice>
+
+<Practice task="An interviewer says 'assume 100 million requests per day'. Quickly turn that into requests per second, average and peak, and say how many servers you need if one server handles 2,000 requests per second.">
+
+A day has 86,400 s; round it to 10^5 for mental maths. 100M ÷ 10^5 = 1,000 requests/s average.
+
+Peak is commonly 2–5× the average; take 3× → ~3,000 requests/s.
+
+Servers: 3,000 ÷ 2,000 = 1.5 → 2 servers would be at their limit at peak, so plan 3–4 for headroom and so that losing one still leaves enough capacity (N + 1 or N + 2).
+
+Say the rounding out loud: the interviewer cares that the order of magnitude is right and that you plan for peaks and failures, not about the third digit.
+
+</Practice>
+
 <Takeaways>
 
 - Aim for the right order of magnitude, not precision.

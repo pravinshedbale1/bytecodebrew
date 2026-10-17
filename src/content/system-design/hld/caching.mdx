@@ -224,6 +224,32 @@ Ensure only one request recomputes the value: use single-flight/request coalesci
 For small, very hot, rarely changing data where even a network hop matters — configuration, feature flags, reference data, or the hottest few keys. In-process caches are fastest but each instance holds its own copy, so invalidation across instances is harder (use short TTLs or pub/sub invalidation messages) and memory is limited by the heap. Many systems use both: a small local L1 cache in front of a shared Redis L2.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Your product page reads from Redis with cache-aside and a 5-minute TTL. A product's price changes in the database, but customers keep seeing the old price for minutes. Fix it, and explain the race that can still serve a stale price.">
+
+On update, write the database first and then delete the cache key (not update it). The next read misses and loads the new price. Keep the TTL as a safety net.
+
+The remaining race: a reader misses the cache and reads the old price from the database; then the writer updates the database and deletes the key; then the reader writes its old value into the cache. Now the stale price sits there until the TTL expires.
+
+Mitigations: a short TTL for price data; a second, delayed delete a few hundred ms after the write; or versioned values where a cache write only succeeds if the version is newer. For truly critical values (the price at checkout), read from the database, not the cache.
+
+</Practice>
+
+<Practice task="A popular key's TTL expires and 10,000 requests miss the cache at the same moment, flattening the database. Name the problem and three ways to prevent it.">
+
+This is a cache stampede (thundering herd) on a hot key.
+
+1. Request coalescing (single flight): only one request per key rebuilds the value; the others wait for it or briefly get the stale value. A short lock in Redis (`SET NX` with a small TTL) works across servers.
+2. Refresh ahead / probabilistic early expiration: refresh hot keys shortly before they expire, so they never actually expire under load.
+3. Serve stale while revalidating: keep the old value past its soft TTL and refresh in the background.
+
+Also add jitter to TTLs so many keys created together do not expire together.
+
+</Practice>
+
 <Takeaways>
 
 - Caching exploits skewed access and the memory/disk speed gap; the hit ratio determines its value.

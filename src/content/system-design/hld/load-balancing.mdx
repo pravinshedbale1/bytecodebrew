@@ -182,6 +182,31 @@ Via connection draining and gradual rollout. To deploy an instance: mark it as d
 When N changes — a server is added, removed or fails — most clients map to a different server, breaking affinity for almost everyone at once. Also, many users behind one corporate NAT or mobile carrier share an IP, creating hot spots. Consistent hashing reduces remapping to about 1/N of keys, and cookie-based affinity avoids the shared-IP problem.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Your load balancer uses round robin. Some requests take 10 ms and others take 5 seconds, and one server keeps getting overloaded. Which algorithm would do better, and why?">
+
+Round robin assumes every request costs the same. With mixed durations, a server that happened to receive several slow requests keeps getting its share of new ones while it is still busy.
+
+Least connections (or least outstanding requests) sends each new request to the server with the fewest requests in progress, which naturally steers work away from busy servers. 'Power of two choices' — pick two servers at random and send to the less loaded one — gets most of the benefit with very little coordination, which is useful with many load balancer instances.
+
+Also consider separating slow endpoints into their own pool so they do not affect fast ones.
+
+</Practice>
+
+<Practice task="Should a WebSocket chat service sit behind an L4 or an L7 load balancer? What changes compared with a normal HTTP API?">
+
+Either works, but the concerns differ from a stateless API.
+
+- WebSockets are long-lived, so balancing happens once per connection, not per request. Least connections is a good algorithm; round robin can leave servers unbalanced after restarts.
+- An L7 balancer can terminate TLS, route the upgrade request by path, and do health checks, and most support WebSockets. An L4 balancer passes TCP through, which is simpler and handles huge connection counts cheaply.
+- Plan for draining: when deploying, stop sending new connections to a server and let clients reconnect gradually with jittered backoff, or you get a reconnect storm.
+- Idle timeouts on the balancer must be longer than your heartbeat interval, or it will cut idle connections.
+
+</Practice>
+
 <Takeaways>
 
 - Load balancers enable horizontal scaling, provide failover via health checks, and act as a control point.

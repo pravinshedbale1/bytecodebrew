@@ -168,6 +168,30 @@ An entry is committed only once stored on a majority. A candidate can win an ele
 Depends on what the lock protects. For efficiency — preventing duplicate work where an occasional overlap is harmless — Redis SET NX with an expiry is simple and fast. For correctness — where two holders would corrupt data or double-charge — use a consensus-backed system like ZooKeeper or etcd, and pass a fencing token to the protected resource so stale holders are rejected. Better still, avoid the lock with a conditional write or unique constraint in the database if possible.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A cluster runs Raft with 5 nodes. How many can fail while it still accepts writes? Why do teams run 3 or 5 nodes and not 4 or 6?">
+
+Raft needs a majority (a quorum) to elect a leader and commit writes. With 5 nodes the majority is 3, so up to 2 nodes can fail.
+
+With 4 nodes the majority is also 3, so only 1 can fail — the same tolerance as 3 nodes, with more machines to keep in sync and slower commits. Likewise 6 nodes tolerate 2 failures, the same as 5. Odd sizes give the most fault tolerance per node.
+
+Larger clusters (7+) tolerate more failures but every write must reach more nodes, so latency grows. That is why coordination services typically run 3 or 5 nodes and serve many applications.
+
+</Practice>
+
+<Practice task="Your service uses a Redis lock with a 30-second TTL to make sure only one worker processes a payment batch. A worker pauses for 40 seconds during a garbage-collection stop, the lock expires, and a second worker starts. What goes wrong, and how do fencing tokens fix it?">
+
+When the first worker wakes up, it still believes it holds the lock and writes its results — so two workers write at once, and the batch may be processed twice or corrupted. A lock with a timeout cannot know that its holder is paused.
+
+Fencing tokens: every time the lock is granted, the lock service hands out an increasing number (33, then 34). The worker sends its token with every write, and the storage system rejects writes with a token lower than the highest it has seen. The paused worker's writes (token 33) are rejected because the new worker already wrote with 34.
+
+This needs the storage side to check tokens, and a lock service that issues monotonic tokens (ZooKeeper's zxid, etcd revisions).
+
+</Practice>
+
 <Takeaways>
 
 - Consensus lets nodes agree on values or an ordered log despite failures; a 2f+1 cluster tolerates f failures.

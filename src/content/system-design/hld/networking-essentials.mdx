@@ -181,6 +181,22 @@ A health-checking DNS provider stops returning the IP of an unhealthy endpoint, 
 An L4 load balancer works with TCP/UDP: it sees source/destination IPs and ports and forwards connections without understanding their contents — fast and protocol-agnostic. An L7 load balancer terminates the connection, parses the application protocol (HTTP), and can route based on path, headers or cookies, rewrite requests, terminate TLS, and retry failed requests. This is covered fully in the Load Balancing lesson.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="A user in Sydney calls an API hosted in Virginia (about 200 ms round trip). A new HTTPS connection needs a TCP handshake and a TLS 1.3 handshake before the request. Roughly how long until the first byte of the response, and how do you cut it?">
+
+TCP handshake: 1 round trip (200 ms). TLS 1.3: 1 more (200 ms). The request and response: 1 more (200 ms), plus server time. So about 600 ms before the first byte, and more with TLS 1.2 (2 round trips for the handshake).
+
+Ways to cut it:
+1. Reuse connections (keep-alive, HTTP/2 multiplexing), so later requests cost one round trip.
+2. Terminate TLS close to the user: a CDN or edge point in Sydney does the handshakes with ~10 ms round trips, then uses a warm, long-lived connection to Virginia.
+3. HTTP/3 (QUIC) combines the transport and TLS handshakes, and 0-RTT resumption allows repeat visitors to send data immediately.
+4. Serve read-heavy data from a region closer to the user.
+
+</Practice>
+
 <Takeaways>
 
 - A new HTTPS connection costs ~3 round trips before data flows; reducing round trips on long paths is the main lever for latency.

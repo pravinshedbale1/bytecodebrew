@@ -138,6 +138,31 @@ A watermark is a moving threshold in event time that represents the engine's ass
 Usually Kappa: a single streaming pipeline over a durable, replayable log, with reprocessing done by replaying through a new job version. It avoids maintaining the same logic in two systems. I'd keep a batch reconciliation job where exact correctness matters for money (billing, payouts), which captures Lambda's main benefit without duplicating the whole pipeline.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A product team asks for 'real-time' revenue on a dashboard. When is a stream pipeline worth it, and when is an hourly batch job the better answer?">
+
+Ask what decision the number drives and how stale it may be.
+
+- If people watch it during an event (a flash sale, fraud monitoring) and act within minutes, stream it: events into Kafka, a windowed aggregation in Flink or similar, results into a fast store. Accept extra complexity: late events, exactly-once concerns, state management.
+- If it is read in daily reviews, an hourly or daily batch over the warehouse is simpler, cheaper and exact, and corrections such as refunds are easy to include.
+
+A common compromise: stream an approximate number for the live view, and let the batch job produce the official figure (similar to the Lambda architecture), or use one streaming system that can replay history (Kappa).
+
+</Practice>
+
+<Practice task="Your streaming job counts orders per minute. Mobile clients sometimes send events 3 minutes late (after being offline). How do you count them in the right minute, and what is the trade-off?">
+
+Use event time (the timestamp from the client), not processing time, and watermarks.
+
+A watermark says 'I believe all events up to time T have arrived'. Set it to lag the maximum seen event time by an allowed lateness, for example 5 minutes. A window for 12:00–12:01 is emitted once the watermark passes 12:01 (plus the lateness). Events later than that go to a side output or trigger an update to an already-emitted result.
+
+Trade-off: a larger allowed lateness gives more complete counts but delays results and keeps more state. Many systems emit an early result quickly and then corrections as late events arrive.
+
+</Practice>
+
 <Takeaways>
 
 - OLTP serves the application with row stores; OLAP serves analytics with columnar stores.

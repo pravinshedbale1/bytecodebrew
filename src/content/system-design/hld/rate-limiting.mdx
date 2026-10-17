@@ -235,6 +235,21 @@ It depends on what the limit protects. For general API fairness, fail open — a
 Token bucket when you want to enforce an average rate but allow short bursts — typical of user-facing APIs, where a page load sends many requests at once. Leaky bucket when you need a smooth, constant output rate to protect a downstream that can't handle bursts — e.g., sending to a third-party API with a strict per-second limit, or a job queue feeding a fixed-capacity worker.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="An API allows 100 requests per minute per key using a fixed window. A client sends 100 requests at 12:00:59 and another 100 at 12:01:00. What is the problem, and which algorithm fixes it?">
+
+A fixed window resets at the minute boundary, so both bursts are allowed: 200 requests in two seconds, twice the intended rate.
+
+Fixes:
+- A sliding window log keeps the timestamps of recent requests and counts those within the last 60 s — exact, but memory grows with the limit.
+- A sliding window counter estimates the rolling count from the current and previous window, weighted by how far into the current window you are — cheap and accurate enough for most APIs.
+- A token bucket refills at 100 tokens per minute with a capacity of, say, 100. It allows a burst of up to 100 but never a sustained rate above 100 per minute; it is the most common choice because it allows short bursts in a controlled way.
+
+</Practice>
+
 <Takeaways>
 
 - Rate limiting protects availability, prevents abuse, enforces fairness, and implements pricing tiers.

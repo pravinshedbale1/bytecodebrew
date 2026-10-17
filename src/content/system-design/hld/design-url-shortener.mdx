@@ -245,6 +245,35 @@ Don't use sequential codes directly. Use random codes from a large space, or pas
 No — each instance leases a block of, say, 10,000 IDs at once, so at 200 writes/s across the fleet the allocator sees about one request every 50 seconds. Unused IDs from crashed instances are skipped (gaps are fine). The allocator row should be on a replicated, strongly consistent store so two instances never receive the same block.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Estimate it again for a bigger product: 1 billion new links a month, a 50:1 read-to-write ratio, 10 years of retention. What are the average and peak read rates, the storage, and is a 7-character code still enough?">
+
+Writes: 1B ÷ (30 × 10^5 s) ≈ 330 links/s, peak ~1,500/s. Reads: 50 × 330 ≈ 17,000 redirects/s, peak ~80,000/s.
+
+Links over 10 years: 1B × 12 × 10 = 120B. At ~500 B each that is ~60 TB, about 180 TB with three replicas — a sharded KV store, not one database.
+
+Codes: 62^7 ≈ 3.5 trillion, so 120B uses about 3.4% of the space. That is still fine for range-allocated (counter-based) codes, which never collide. With random codes, collisions on insert become noticeable, so either keep 7 characters with a retry on conflict or move to 8 characters (≈ 218 trillion).
+
+The redirect path is now cache-heavy: 80,000/s at peak is a job for a CDN plus a Redis tier, with the store seeing only misses.
+
+</Practice>
+
+<Practice task="The marketing team wants an 'edit destination' feature: a link's long URL can be changed after it is shared, and changes must take effect within one minute everywhere. What in the current design blocks this, and how do you change it?">
+
+Two things assume links never change: the `301`-style caching and the long cache TTLs.
+
+1. Return `302` (temporary) for editable links so browsers do not cache the redirect forever. Keep `301` only for links marked immutable, if at all.
+2. Bound the TTL at every layer to the one-minute budget: CDN `Cache-Control: max-age=60` (or `s-maxage`), Redis TTL 60 s.
+3. Better than waiting for TTLs: on edit, write the store first, then delete the Redis key and issue a CDN purge for that path. Keep the short TTL as a safety net if a purge is lost.
+4. Store a `version`/`updatedAt` on the link and write an audit record of who changed it, because changing a shared link is a phishing risk — re-run the malware check on the new destination.
+
+Trade-off: shorter TTLs mean more cache misses, so watch the store's read load; hot links stay hot in Redis anyway.
+
+</Practice>
+
 <Takeaways>
 
 - A URL shortener is read-heavy and latency-sensitive: cache in Redis and at the edge, keep analytics asynchronous.

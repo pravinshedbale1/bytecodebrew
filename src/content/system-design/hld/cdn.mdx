@@ -141,6 +141,37 @@ Yes, for public, non-personalised responses — product details, catalogue pages
 Typically a hybrid. Popular titles are predictable and huge, so pre-position (push) them to edges before peak hours to guarantee hits and avoid origin surges on release. The long tail of rarely watched content is pulled on demand, since pushing everything everywhere would waste storage. Video is split into segments (HLS/DASH), which cache efficiently either way.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="You deploy a new version of your web app, but some users get the new HTML with old cached JavaScript and the page breaks. How do you deploy static assets safely through a CDN?">
+
+Use content-hashed file names and different cache rules for HTML and assets.
+
+1. Build assets with the content hash in the name (`app.3f9a1c.js`). A new version gets a new URL, so a cache can never serve an old file for it.
+2. Cache hashed assets for a long time: `Cache-Control: public, max-age=31536000, immutable`.
+3. Serve HTML with a short TTL or `no-cache` (revalidate every time), because the HTML is what points to the new asset names.
+4. Deploy assets before the HTML that references them, and keep old assets around for a while for users with an old page open.
+
+There is no need to purge the CDN at all.
+
+</Practice>
+
+<Practice task="Your origin serves 2 Gbit/s at peak and the CDN hit ratio is 60%. Marketing expects traffic to double. What happens at the origin, and what do you improve first?">
+
+Today the origin serves 40% of 2 Gbit/s ≈ 0.8 Gbit/s. If traffic doubles at the same hit ratio, the origin serves 1.6 Gbit/s — double the load.
+
+Raising the hit ratio is the cheapest fix. At 90%, doubled traffic means only 0.4 Gbit/s at the origin, half of today's.
+
+How:
+1. Normalise the cache key: drop useless query parameters, sort the rest, ignore cookies that do not affect the response.
+2. Longer TTLs with versioned URLs for static content.
+3. Turn on origin shielding (a mid-tier cache) so edge misses are collapsed into one origin request.
+4. Use `stale-while-revalidate` so expiring objects do not cause bursts of misses.
+
+</Practice>
+
 <Takeaways>
 
 - A CDN serves content from edge PoPs near users, cutting latency and offloading the origin.

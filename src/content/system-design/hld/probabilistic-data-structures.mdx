@@ -111,6 +111,30 @@ Keep a HyperLogLog per page per day (e.g., Redis PFADD with the visitor ID). Eac
 Each element increments one counter per row, and counters are shared between elements through hash collisions, so a counter holds the element's true count plus the counts of everything that collided with it. Collisions can only add. Taking the minimum across rows picks the counter with the least collision noise, but it's still at least the true count.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A web crawler must remember which of 10 billion URLs it has already visited without storing all of them. How does a Bloom filter help, roughly how much memory does it need for a 1% false-positive rate, and what does a false positive mean here?">
+
+A Bloom filter answers 'have I seen this URL?' with 'definitely not' or 'probably yes'. It uses a bit array and k hash functions; adding a URL sets k bits, and checking tests whether all k bits are set.
+
+For a 1% false-positive rate it needs about 9.6 bits per element, so 10B × 9.6 bits ≈ 12 GB — compared with roughly 1 TB to store the URLs themselves (about 100 bytes each).
+
+A false positive means the crawler thinks it has visited a URL it has not, so it skips a page — a small, acceptable loss. A false negative (crawling a page twice) never happens. For the same reason you cannot remove items from a plain Bloom filter (use a counting Bloom filter if you need deletion).
+
+</Practice>
+
+<Practice task="Marketing wants daily unique visitors across 50 pages, and also unique visitors across any combination of pages. Storing every visitor ID per page is too expensive. What do you use?">
+
+HyperLogLog. Each page keeps an HLL sketch of the visitor IDs it saw that day — about 12 KB per sketch with Redis's implementation, with a standard error around 0.8%, no matter whether there are a thousand or a billion visitors.
+
+The key property: HLL sketches can be merged. The unique visitors across any set of pages is the union of their sketches (`PFMERGE` in Redis), computed on demand, without double-counting a visitor who saw several pages.
+
+You cannot list who the visitors were, and the count is approximate — fine for dashboards, not for billing.
+
+</Practice>
+
 <Takeaways>
 
 - Probabilistic structures trade a small, bounded error for fixed, tiny memory.

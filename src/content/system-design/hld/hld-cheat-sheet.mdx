@@ -130,6 +130,24 @@ Requirements confirmed · numbers drive decisions · every functional requiremen
 
 ([Recurring Design Patterns](/system-design/hld/hld-design-patterns))
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="You have 60 seconds left in an interview and the interviewer asks 'What would you monitor in this system?' Give a quick, structured answer you could use for almost any design.">
+
+Use the golden signals per service, plus the business metric:
+
+1. Latency: p50 and p99 of the main endpoints (separately for errors).
+2. Traffic: requests per second, and queue depth or consumer lag for async parts.
+3. Errors: error rate by type (5xx, timeouts, dependency failures).
+4. Saturation: CPU, memory, connection pools, disk, and cache hit ratio.
+5. The business metric that shows users are succeeding (orders per minute, messages delivered).
+
+Alert on SLO burn rate (user-visible symptoms), not on every CPU spike, and trace requests across services to find which hop is slow.
+
+</Practice>
+
 <Takeaways>
 
 - Run every design in the same order: requirements → estimates → API → data model → high-level design → deep dives → wrap-up.

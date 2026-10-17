@@ -137,6 +137,30 @@ Sharing a database couples them through the schema: one team's migration can bre
 It moves cross-cutting networking concerns — mutual TLS, retries, timeouts, circuit breaking, traffic splitting for canaries, and uniform metrics and traces — into sidecar proxies managed by a control plane, so every service gets them consistently without code changes. It's not worth it for a handful of services or a team without platform expertise: it adds latency, resource overhead, and a complex system to operate and debug. Libraries or a simple gateway may suffice.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A 5-person startup asks whether to start with microservices. What do you recommend, and what would make you change your mind later?">
+
+Start with a well-structured monolith (a 'modular monolith'): one deployable unit, with clear module boundaries inside it and a single database with separate schemas per module.
+
+Microservices add network calls, distributed failures, separate deployments, observability and data consistency problems. A 5-person team pays all of that cost and gets little benefit.
+
+Reasons to split later: several teams stepping on each other in one codebase, parts with very different scaling needs (a CPU-heavy video encoder), parts that must be deployed independently and often, or different reliability requirements. Then extract one service at a time along the module boundaries (the strangler fig approach).
+
+</Practice>
+
+<Practice task="The order service needs the customer's name and address, which belong to the customer service. Calling it synchronously on every request makes orders fail whenever the customer service is down. What are your options?">
+
+1. Keep a local copy: the customer service publishes `CustomerUpdated` events, and the order service keeps the few fields it needs in its own database. Orders keep working when the customer service is down; the copy is eventually consistent.
+2. Snapshot at the time of the order: an order should record the address it was shipped to anyway, so copy it into the order when it is created and do not look it up again later.
+3. If a synchronous call is unavoidable, use a timeout, a circuit breaker and a cache of recent responses as a fallback.
+
+Option 2 is also the correct business behaviour: changing a customer's address must not change where an old order was shipped.
+
+</Practice>
+
 <Takeaways>
 
 - Monoliths are simplest; modular monoliths add strong internal boundaries; microservices add independent deployment and scaling at a high operational cost.

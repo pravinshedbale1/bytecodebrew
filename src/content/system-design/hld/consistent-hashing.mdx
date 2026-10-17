@@ -177,6 +177,30 @@ No. It balances the *number of keys*, not their *traffic*. A single hot key (a v
 Options: a coordination service (ZooKeeper/etcd) stores membership and notifies clients of changes; nodes gossip membership among themselves and clients learn it from any node (Cassandra); or a routing proxy holds the ring and clients just call the proxy. During changes, clients may briefly disagree on the ring — systems tolerate this via forwarding, retries, or hinted handoff.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="You cache data on 10 servers using hash(key) % 10. You add an 11th server. Roughly what fraction of keys move, and what fraction would move with consistent hashing?">
+
+With modulo hashing, a key stays only if `hash % 10 == hash % 11`, which is true for about 1 in 11 keys. So roughly 10/11 ≈ 91% of keys move — the cache is effectively emptied and the database is flooded with misses.
+
+With consistent hashing, the new server takes over only the ranges just before its points on the ring, about 1/11 ≈ 9% of keys, all taken from the existing servers; every other key stays put.
+
+With virtual nodes (each server owning many small ranges), that 9% is taken roughly evenly from all 10 servers instead of from one neighbour.
+
+</Practice>
+
+<Practice task="Your ring has 4 physical servers with one point each, and one server receives 45% of the traffic. Why, and how do you fix it?">
+
+With one point per server, the arcs between points are random and can be very uneven, so one server can own almost half the ring. Hot keys can make it worse.
+
+Fix: virtual nodes. Give each server many points (for example 100–200), placed at different hashes. Each server now owns many small arcs, and the total share evens out (the variation shrinks as the number of points grows). It also lets you give a bigger machine more virtual nodes so it takes a proportionally larger share.
+
+If the imbalance comes from a few hot keys rather than the arcs, virtual nodes do not help; replicate or split those keys instead.
+
+</Practice>
+
 <Takeaways>
 
 - hash mod N remaps almost every key when N changes; consistent hashing remaps only ~1/N.

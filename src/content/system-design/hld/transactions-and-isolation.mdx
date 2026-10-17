@@ -161,6 +161,24 @@ Multi-version concurrency control keeps several versions of each row tagged with
 Optimistic when conflicts are rare and retrying is cheap — typical web CRUD, document edits, profile updates. You avoid lock overhead and deadlocks and only pay on actual conflict. Pessimistic when the same rows are contended heavily — flash-sale inventory, seat holds, hot account balances — because optimistic retries would mostly fail and waste work, whereas a short lock serialises access efficiently.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Two requests each read a stock count of 1 and then both sell the last item, leaving the count at −1. Which anomaly is this, and give two ways to prevent it.">
+
+It is a lost update caused by a read-modify-write race: both transactions read 1, both compute 0 (or decide to sell), and both write.
+
+Prevent it:
+1. An atomic conditional update: `UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0`, and check that exactly one row was changed.
+2. Pessimistic locking: `SELECT … FOR UPDATE` before deciding, so the second transaction waits for the first.
+3. Optimistic locking: a version column, and `UPDATE … WHERE id = ? AND version = ?`; retry if no row changed.
+4. Serializable isolation, which detects the conflict and aborts one transaction (be ready to retry).
+
+The atomic conditional update is the simplest and fastest here.
+
+</Practice>
+
 <Takeaways>
 
 - ACID: atomicity handles failures, isolation handles concurrency, durability comes from the WAL.

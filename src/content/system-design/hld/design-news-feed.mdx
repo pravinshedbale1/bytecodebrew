@@ -228,6 +228,33 @@ IDs are 8 bytes versus hundreds of bytes for a post, so caching ~800 entries for
 Don't maintain their precomputed feed while inactive — skip fan-out to users not seen recently and let their cache entry expire. When they return, rebuild the feed on demand by pulling recent posts from their followees (in parallel, perhaps limited to the most relevant or recently active accounts), merge, store in the cache, then resume fan-out on write for them.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A celebrity with 80M followers posts. With pure fan-out on write at 400K feed insertions per second across the cluster, how long until every follower has the post? What does that tell you?">
+
+80M ÷ 400K/s = 200 seconds — over three minutes, and that assumes the whole cluster works only on this one post. In reality it competes with normal traffic, so it is worse, and a few celebrities posting together can back up everything.
+
+That is why the hybrid model exists: do not fan out posts from accounts above a follower threshold (say 100K–1M). Instead, when a user loads their feed, merge their precomputed feed with recent posts pulled from the handful of celebrities they follow. The pull is cheap because each celebrity's recent posts are cached and read by millions of people.
+
+Bonus point: inactive followers do not need fan-out either — build their feed on demand when they return.
+
+</Practice>
+
+<Practice task="Product asks for a ranked feed (most engaging first) instead of reverse chronological. What changes in storage and in the read path?">
+
+The precomputed feed becomes a candidate list, not the final order.
+
+1. Keep fan-out of post IDs into each user's feed cache as before, maybe with more candidates (say 1,500 instead of 800).
+2. On read, fetch the candidates and the features needed for scoring: author affinity, post age, engagement counts, media type. Engagement counts come from a separate counter store updated by a stream job, not from the post rows.
+3. Score them with a ranking service (a model or a weighted formula), take the top page, and cache the ranked page briefly so scrolling is stable.
+4. Pagination by timestamp cursor no longer works on a ranked list; use a 'seen' set or a snapshot ID of the ranked list for the session.
+
+Costs: more read-time CPU and a feature store to maintain. Keep a chronological fallback if the ranker is slow or down.
+
+</Practice>
+
 <Takeaways>
 
 - The heart of the problem is fan-out on write (fast reads, expensive writes) vs fan-out on read (cheap writes, slow reads).

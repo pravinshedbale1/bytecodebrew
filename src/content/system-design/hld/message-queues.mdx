@@ -187,6 +187,31 @@ For task queues where each job should be done once by one worker, with per-messa
 A message that always fails processing — malformed data, or one that triggers a bug. With naive retries it is redelivered forever, blocking or wasting consumers (and in ordered partitions, blocking everything behind it). Handle it by limiting retry attempts, then moving the message to a dead-letter queue with error details, alerting on it, fixing the cause, and replaying it from the DLQ.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Orders for the same customer must be processed in order, but you need 50 consumers working in parallel. How do you set up Kafka?">
+
+Kafka guarantees order only within a partition. Use the customer ID as the message key, so all events for one customer go to the same partition and stay in order.
+
+Create at least 50 partitions (more gives room to grow, since adding partitions later changes which partition a key maps to). A consumer group of 50 consumers then gets one partition each. Each consumer processes its partition sequentially, so each customer's events are handled in order, while different customers are processed in parallel.
+
+Watch for hot keys: one very active customer can make one partition (and one consumer) the bottleneck.
+
+</Practice>
+
+<Practice task="A consumer keeps failing on one malformed message, retrying forever, and the queue behind it grows to millions. How do you handle 'poison' messages?">
+
+1. Retry a limited number of times with backoff, for errors that may be temporary (a timeout, a downstream outage).
+2. After the limit, or straight away for errors that will never succeed (cannot parse, validation failure), move the message to a dead-letter queue (DLQ) with the error reason, and continue with the next message.
+3. Alert on DLQ growth, and provide a tool to inspect messages and replay them once the bug is fixed.
+4. For log-based systems like Kafka, where you cannot skip a message individually, the consumer writes the bad message to a DLQ topic and commits the offset to move on.
+
+This keeps one bad message from blocking all the good ones behind it.
+
+</Practice>
+
 <Takeaways>
 
 - Async messaging decouples services, absorbs spikes, and moves slow work off the request path — at the cost of eventual consistency.

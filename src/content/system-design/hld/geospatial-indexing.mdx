@@ -124,6 +124,33 @@ Both work. Geohash is simpler and fits a database or Redis directly with prefix 
 That's about 250,000 updates per second. Keep current locations in memory — Redis GEO or a custom grid service — sharded by city or cell so each shard handles a manageable slice. Ingest updates through a stateless gateway, update the driver's cell membership only when the cell changes, set TTLs so stale drivers expire, and stream updates asynchronously to Kafka for persistence and analytics rather than writing each to a disk database.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A user searches for restaurants within 2 km. Using geohash prefixes, why is searching only the user's own cell not enough, and how do you fix it?">
+
+A geohash cell is a rectangle. A user near the edge of their cell has close restaurants just across the border in a neighbouring cell, with a completely different prefix. Searching only their own cell would miss them.
+
+Fix:
+1. Choose a precision whose cells are about the size of the search radius (geohash 6 is roughly 1.2 km × 0.6 km).
+2. Search the user's cell plus its 8 neighbours.
+3. Filter the candidates by the actual distance (haversine) and sort by distance.
+
+If too few results come back, step to a coarser precision (bigger cells) and repeat.
+
+</Practice>
+
+<Practice task="Ten thousand delivery couriers update their location every 3 seconds. Would you index them with a quadtree in a database or with geohash cells in Redis? Explain.">
+
+That is about 3,300 updates per second, and only the latest position matters. A disk-based spatial index (an R-tree in PostGIS) has to update its structure on every move, which is costly for constantly moving points.
+
+Geohash or H3 cells in memory (Redis `GEOADD`, or a map from cell to the set of courier IDs) make an update cheap: compute the new cell and move the courier only if the cell changed. Queries read a few neighbouring cells.
+
+A quadtree works well for mostly static points with uneven density (businesses in cities versus deserts). For high-churn moving objects, simple fixed cells in memory win. Keep the history of positions in a separate time-series store if you need it.
+
+</Practice>
+
 <Takeaways>
 
 - Ordinary B-Tree indexes can't search two dimensions efficiently; geo indexes map nearby points to nearby keys.

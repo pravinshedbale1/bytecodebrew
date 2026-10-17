@@ -164,6 +164,21 @@ Scaling writes (millions of score updates — buffer and batch, shard), counting
 While clarifying requirements and estimating, map the problem to its dominant patterns — e.g., "this is read-heavy with fan-out and a celebrity problem" or "this is a contention problem with spikes". Say so explicitly, design the end-to-end path, and then propose deep dives on exactly those patterns. It focuses your time on what's hard and shows the interviewer you recognise the problem's shape.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="A design has four requirements: a celebrity's post reaches 50M followers, profile reads are 100× more common than writes, uploads are up to 2 GB, and 'likes' counts must be cheap to update. Name the pattern you would use for each.">
+
+1. Celebrity fan-out → the fan-out pattern with a hybrid push/pull: push posts of normal users into followers' feeds; pull celebrity posts at read time.
+2. Read-heavy profiles → scaling reads: cache (cache-aside) plus read replicas, with a CDN for public content.
+3. 2 GB uploads → large blobs: pre-signed URLs straight to object storage, multipart and resumable, with metadata in a database.
+4. Like counts → counting and aggregation: increment sharded counters (or buffer increments and flush them in batches), and show approximate counts that are reconciled later.
+
+Naming the pattern and its trade-off quickly keeps the interview moving.
+
+</Practice>
+
 <Takeaways>
 
 - Most design questions combine a handful of recurring problem shapes.

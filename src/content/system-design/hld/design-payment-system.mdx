@@ -217,6 +217,37 @@ A mutable balance column loses history — if it's wrong, you can't tell why —
 Each payout has a deterministic idempotency key (e.g., seller ID + payout period) with a unique constraint, so the job can't create two payouts for the same period. The call to the bank/payout API uses that key as its reference. The payout's state machine (CREATED → SENT → CONFIRMED/FAILED) handles timeouts the same way as pay-ins — resolve unknown outcomes before retrying — and the ledger debits the seller's payable account exactly once on confirmation. Reconciliation with bank statements catches anything that slips through.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="The mobile app times out while calling your 'charge' endpoint and retries. Without care the customer could be charged twice. Describe exactly how you make the charge idempotent across your service and the payment processor.">
+
+1. The client generates an idempotency key per checkout attempt and sends it with every retry.
+2. Your service stores the key with a unique constraint before doing any work: `INSERT payment_attempt(key, status='pending')`. A retry finds the existing row.
+3. If the existing row is complete, return the stored result. If it is pending, either wait or return 'processing' and let the client poll.
+4. Call the processor with the same idempotency key (Stripe, Adyen and others support this), so their retries do not double-charge either.
+5. Record the processor's result on the row in the same transaction that writes the ledger entries.
+
+If your service crashes after the processor charged but before you recorded it, a reconciliation job that compares processor reports with your ledger finds and fixes it.
+
+</Practice>
+
+<Practice task="Finance wants every cent accounted for. Why do payment systems use double-entry ledgers, and what invariant can you check automatically?">
+
+In double-entry bookkeeping every money movement is recorded as at least two entries — a debit and a credit — that add up to zero. Moving 100 from the customer to the merchant writes −100 on one account and +100 on another, never just a balance update.
+
+Benefits: the ledger is append-only (corrections are new reversing entries, so history is never rewritten), every balance can be recomputed from entries, and errors show up as an imbalance.
+
+Automatic checks:
+1. Per transaction, the entries sum to zero.
+2. Each account's stored balance equals the sum of its entries.
+3. Daily reconciliation: your ledger matches the processor's and the bank's settlement reports.
+
+Any mismatch raises an alert for investigation instead of silently drifting.
+
+</Practice>
+
 <Takeaways>
 
 - Payments are a correctness problem: idempotency at every boundary, explicit state machines, and no guessing on timeouts.

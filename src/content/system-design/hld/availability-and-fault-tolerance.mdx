@@ -220,6 +220,32 @@ It tracks recent failures of calls to a dependency. While healthy (closed), call
 RPO is the maximum acceptable data loss measured in time; RTO is the maximum acceptable time to restore service. Example: a database with asynchronous replication to another region that lags ~10 seconds, and automated regional failover taking ~15 minutes, has RPO ≈ 10 s and RTO ≈ 15 min. Synchronous replication can get RPO to zero at the cost of write latency; hot standbys and automation reduce RTO.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A request passes through a load balancer (99.99%), an API service (99.9%) and a database (99.95%), all required. What is the end-to-end availability, and how much downtime per month is that? What would you change first?">
+
+Serial components multiply: 0.9999 × 0.999 × 0.9995 ≈ 0.9984, about 99.84%. A 30-day month has 43,200 minutes, so ~0.16% is about 70 minutes of downtime a month.
+
+The weakest link is the API service at 99.9% (~43 minutes alone). Run several stateless instances behind the load balancer: two independent instances at 99.9% give 1 − 0.001² = 99.9999% for that layer (in theory — shared dependencies reduce it in practice). Then the database (failover replica) becomes the main contributor.
+
+Lesson: overall availability is capped by the components in series, and redundancy turns a weak serial component into a strong parallel one.
+
+</Practice>
+
+<Practice task="One slow downstream service (5-second responses instead of 50 ms) is bringing down your whole API, even though it handles only one feature. What is happening, and which patterns stop it?">
+
+Each request to the slow service holds a thread or connection for 5 s instead of 50 ms, so the shared pool fills up (100× longer holds) and every other endpoint queues behind it — a cascading failure.
+
+1. Timeouts: call it with a short timeout (say 300 ms) so threads are released.
+2. Circuit breaker: after a burst of failures or timeouts, stop calling it for a while and fail fast or return a fallback.
+3. Bulkheads: give that dependency its own small connection or thread pool, so it can exhaust only its own share.
+4. Graceful degradation: hide that one feature (or show cached data) instead of failing the page.
+5. Retries only with backoff and a budget, or they multiply the load on the struggling service.
+
+</Practice>
+
 <Takeaways>
 
 - Availability is measured in nines; each extra nine is ~10× harder. Use SLOs and error budgets to manage reliability explicitly.

@@ -166,6 +166,36 @@ The reaper sees the expired lease and requeues the execution, so another worker 
 Record scheduled_for and actual start time for every execution and track the distribution of scheduling lag (start − scheduled) as a histogram per priority class, alerting on p99 lag exceeding the SLO. Also monitor queue depth, partitions without an active lease owner, execution failure rates and dead-letter growth.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A job must run exactly once at 09:00, but you have three scheduler instances for high availability. How do you stop all three from running it, and what happens if the one that started it crashes halfway?">
+
+Separate 'deciding the job is due' from 'running it', and make claiming atomic.
+
+1. Jobs live in a database table with `nextRunAt`, `status` and `leaseUntil`. Due jobs are claimed with a conditional update (`UPDATE … SET status='running', owner=?, leaseUntil=now()+5min WHERE id=? AND status='scheduled'`), or `SELECT … FOR UPDATE SKIP LOCKED`. Only one instance wins.
+2. The worker renews its lease while it runs (a heartbeat).
+3. If it crashes, the lease expires and another instance can claim the job again.
+
+That gives at-least-once execution, not exactly-once. To make the effect exactly-once, the job itself must be idempotent: pass a run ID (job ID + scheduled time) to downstream systems so a rerun is detected and skipped.
+
+</Practice>
+
+<Practice task="Fifty thousand jobs are all scheduled for midnight (daily reports). What goes wrong, and how do you smooth it out?">
+
+All jobs become due at the same instant: the scheduler's claim queries spike, the worker pool is overwhelmed, and the databases those jobs read are hammered at once (a thundering herd).
+
+Fixes:
+1. Add jitter when scheduling: spread 'daily at midnight' across, say, 00:00–01:00 using a hash of the job ID, unless a job truly needs an exact time.
+2. Put due jobs onto a queue and let a fixed-size worker pool drain it, so concurrency is bounded no matter how many jobs are due.
+3. Use priorities so short or critical jobs are not stuck behind long reports.
+4. Rate-limit jobs per downstream dependency.
+
+Users still get their reports 'around midnight', and the system stays stable.
+
+</Practice>
+
 <Takeaways>
 
 - Store jobs with next_run_at; partitioned schedulers (owned via leases) find due jobs and enqueue executions.

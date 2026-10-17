@@ -110,6 +110,22 @@ Both respect causality: if A happened before B, A's clock value is less than B's
 TrueTime gives every node the current time as an interval with bounded uncertainty, backed by GPS and atomic clocks. A transaction picks a commit timestamp and then waits until that timestamp is definitely in the past everywhere (commit wait, roughly the uncertainty bound) before making the commit visible. Combined with Paxos-replicated shards and two-phase commit across shards, this means if transaction T1 commits before T2 starts in real time, T1's timestamp is smaller — globally.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Two servers record events with their local clocks. Server B's clock is 300 ms behind A's. A user's 'delete post' on B has a timestamp earlier than their 'edit post' on A, even though the delete came later. What goes wrong with last-write-wins, and what can you use instead?">
+
+With last-write-wins by timestamp, the edit (later timestamp) wins over the delete, so a deleted post comes back. Physical clocks drift and NTP corrections can even move them backwards, so timestamps from different machines cannot order events reliably.
+
+Alternatives:
+1. Route all writes for one post through one place (the post's partition leader) and use its sequence numbers.
+2. Logical clocks: Lamport timestamps give an order consistent with causality; vector clocks also detect truly concurrent edits so you can resolve them deliberately.
+3. Hybrid logical clocks combine physical time (readable, close to real time) with a logical counter, so causally later events always get larger timestamps.
+4. Make deletes win (tombstones) as a rule, if that matches the product.
+
+</Practice>
+
 <Takeaways>
 
 - Use monotonic clocks for durations, wall clocks only where small errors are acceptable.

@@ -150,6 +150,33 @@ It's the strongest consistency model that can remain available during network pa
 Choose W=3 and R=1 if writes are rare and you can tolerate write failures when any replica is down — reads then hit just one replica and still overlap with every write. More commonly, W=2 and R=2 offers a balance with tolerance for one failed node on both paths. If availability of writes matters more, use W=2, R=2 with LOCAL_QUORUM in multi-region setups. Always mention the availability trade-off of high W or R.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A user updates their profile name and is immediately redirected to their profile page, which still shows the old name. Which guarantee is missing, and how do you provide it without making every read strongly consistent?">
+
+Read-your-writes (a session guarantee) is missing: the write went to the leader, but the read went to a replica that had not caught up yet.
+
+Ways to provide it:
+1. After a user writes, route that user's reads to the leader for a short period (for example, the next 10 seconds), tracked with a cookie or the session.
+2. Return a version or log position with the write; reads include it, and the replica waits until it has applied that position (or the read goes to the leader).
+3. Update the client's own view optimistically.
+
+Other users' reads can still go to replicas; only the writer needs the stronger guarantee.
+
+</Practice>
+
+<Practice task="In a comment thread, someone sees a reply before the comment it answers. Which consistency model prevents this, and what does it cost compared with linearizability?">
+
+Causal consistency: if one write could have influenced another (the reply was written after reading the comment), everyone sees them in that order. Unrelated writes may still appear in different orders to different people.
+
+To implement it, writes carry their dependencies (for example vector clocks or a 'depends on comment X' reference), and a replica shows a write only after its dependencies are visible.
+
+Cost: much cheaper than linearizability. It needs no global ordering and no coordination on every write, so it stays available during partitions and works well across regions. Linearizability would require every write to be agreed on globally, which adds latency.
+
+</Practice>
+
 <Takeaways>
 
 - A consistency model defines which values a read is allowed to return.

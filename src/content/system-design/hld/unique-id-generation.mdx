@@ -104,6 +104,24 @@ It could reuse a timestamp it already used and, with a reset sequence, produce d
 Have each instance acquire a worker ID lease from a coordination service such as etcd or ZooKeeper at startup (e.g., create the first free key among /workers/0..1023 with a TTL that it renews). If the instance dies, the lease expires and the ID becomes reusable — but only after a safety delay longer than any clock skew, so a recycled ID can't collide with recent IDs from the previous owner. In Kubernetes, StatefulSet ordinals provide stable IDs.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="You need IDs for 100,000 new rows per second across 200 servers. The IDs must be unique, roughly time-ordered, fit in 64 bits, and must not require a call to a central service. Design the bit layout.">
+
+A Snowflake-style ID:
+- 1 bit unused (sign bit, so the ID stays positive),
+- 41 bits of milliseconds since a custom epoch (about 69 years),
+- 10 bits of worker ID (1,024 workers, enough for 200 servers with room to grow),
+- 12 bits of sequence within a millisecond (4,096 IDs per millisecond per worker).
+
+Capacity: 200 workers × 4,096 per ms is far more than 100 per ms (100K/s). IDs sort by time, so they work well as database keys.
+
+Watch out: assign worker IDs uniquely (configuration or a coordination service at startup); if the clock moves backwards, wait or refuse to generate IDs until it catches up; and do not expose them publicly if creation time should stay hidden.
+
+</Practice>
+
 <Takeaways>
 
 - Distributed ID generation must be unique without per-ID coordination; also consider size, sortability and guessability.

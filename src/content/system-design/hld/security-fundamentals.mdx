@@ -124,6 +124,23 @@ Proof Key for Code Exchange protects the OAuth authorization code flow for publi
 Never in plain text or with reversible encryption, and not with fast hashes like SHA-256. Use a slow, memory-hard password-hashing function — Argon2id (preferred), scrypt or bcrypt — with a unique random salt per password and a work factor tuned so hashing takes tens to hundreds of milliseconds. Add rate limiting and MFA to resist online guessing, and check new passwords against known breached-password lists.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Your single-page app stores a long-lived JWT in localStorage. A security review flags it. What are the risks, and what would you do instead?">
+
+Risks: any XSS bug (or a compromised third-party script) can read `localStorage` and steal the token. Because it is long-lived and stateless, the attacker can use it until it expires, and you cannot easily revoke it.
+
+Better:
+1. Keep the session in an `HttpOnly`, `Secure`, `SameSite` cookie, which JavaScript cannot read. Add CSRF protection if `SameSite` alone is not enough.
+2. If you use JWTs, make access tokens short-lived (minutes) and use a refresh token stored in an `HttpOnly` cookie, rotated on use, which can be revoked on the server.
+3. Reduce XSS: a strict Content Security Policy, output encoding, and no inline scripts.
+
+Tokens are never perfectly safe in the browser; the goal is to limit how much a stolen one can do.
+
+</Practice>
+
 <Takeaways>
 
 - Authentication proves identity; authorization checks each action — most API breaches are authorization bugs.

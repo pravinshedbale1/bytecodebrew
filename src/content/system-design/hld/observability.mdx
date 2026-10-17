@@ -105,6 +105,20 @@ The first service creates a trace ID and a root span. When it calls another serv
 A burn-rate alert measures how fast the error budget implied by an SLO is being consumed — e.g., errors at 14.4 times the sustainable rate. It pages only when user-facing reliability is genuinely at risk, scales sensitivity to severity (fast burns page, slow burns create tickets), and ignores brief blips via multiple windows. Threshold alerts on causes like CPU often fire without user impact or miss problems that don't show up in that metric.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Users report that checkout is 'sometimes slow'. Average latency looks fine. Which observability tools do you use, and in what order, to find the cause?">
+
+1. Metrics first: look at the latency percentiles (p95 and p99), not the average — averages hide slow tails. Break them down by endpoint, region and version to see when and where the tail grows.
+2. Distributed tracing: pull traces of slow checkout requests and see which span (service call, database query, external API) takes the time. Compare them with fast traces.
+3. Logs: for the slow span, read the logs with the same trace ID to see the details (query parameters, retries, errors, timeouts).
+
+Typical findings: a dependency's p99 latency, lock contention, a slow query for some customers, or retries that hide failures. Then add an SLO on checkout latency so it is caught automatically next time.
+
+</Practice>
+
 <Takeaways>
 
 - Metrics detect, traces locate, logs explain — link them with trace IDs.

@@ -187,6 +187,22 @@ Likely a downstream bottleneck. More app servers meant more concurrent queries a
 When the component is stateful and hard to distribute (a relational database that needs transactions), when load is predictable and within a single machine's limits, when the team is small and operational simplicity matters, or as a quick fix to buy time. It's also a valid first step: a single large primary with replicas can serve many products for years.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Your web servers store user sessions in memory, so you cannot add servers without users being logged out, and the load balancer needs sticky sessions. How do you make the tier scale horizontally?">
+
+Make the servers stateless by moving session state out of them.
+
+Options:
+1. A shared session store (Redis) keyed by a session ID in a cookie. Any server can handle any request.
+2. Signed tokens (for example JWTs) that carry the session data, so no lookup is needed — but they are hard to revoke before they expire, so keep them short-lived with refresh tokens.
+
+Then remove sticky sessions, put the servers in an auto-scaling group behind the load balancer, and scale on CPU or request rate. Do the same for anything else kept on local disk (uploads go to object storage, caches to a shared cache).
+
+</Practice>
+
 <Takeaways>
 
 - Vertical scaling is simple but capped and creates a single point of failure; horizontal scaling is unbounded but adds complexity.

@@ -173,6 +173,34 @@ Three mechanisms. Hinted handoff: nodes that accepted writes on its behalf forwa
 When you need strong consistency — linearizable reads and writes, conditional updates (compare-and-set) or transactions on a key — rather than always-on writes. A leader per partition, replicated with Raft (as in TiKV or CockroachDB), orders writes for each key range; the trade-off is that writes to a partition stop during leader election and on the minority side of a partition, and writes pay a quorum round trip.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Your store keeps 3 replicas per key with tunable quorums. A product needs reads that always see the latest acknowledged write, but writes must stay available when one replica is down. Pick R and W, and explain what happens when two replicas are down.">
+
+With N = 3, choose W = 2 and R = 2. Then R + W = 4 > 3, so every read quorum overlaps every write quorum and sees the newest acknowledged value (resolved by version or timestamp).
+
+One replica down: both reads and writes still get 2 responses, so everything works.
+
+Two replicas down: neither quorum can be reached, so reads and writes fail (or you accept sloppy quorums and hinted handoff, which keeps writes available but gives up the read-your-latest-write guarantee until the hints are delivered).
+
+If the product could live with stale reads, R = 1, W = 2 would be faster for reads; if writes matter less than reads, W = 3, R = 1 gives fast reads but writes fail with any replica down.
+
+</Practice>
+
+<Practice task="A single key ('trending:today') receives 200K reads per second, far more than the three replicas that own it can serve. How do you fix it without changing the client API?">
+
+This is a hot key, and adding nodes does not help because one key lives on one replica set.
+
+1. Read from all replicas, not only the coordinator's preferred one, if slightly stale reads are fine — that triples capacity.
+2. Add a small in-process cache in each server node (or client library) for keys detected as hot, with a TTL of a second or two. Hot-key detection can use a Count-Min Sketch of recent requests.
+3. For keys that are both hot and written often, split them: store `trending:today#0` … `#9`, write to all copies (or to one and merge), and read from a random copy.
+
+Option 2 is usually enough for read-heavy hot keys and needs no client change.
+
+</Practice>
+
 <Takeaways>
 
 - A Dynamo-style store combines consistent hashing, N-way replication, tunable quorums and LSM storage.

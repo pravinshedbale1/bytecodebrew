@@ -192,6 +192,24 @@ Duplicated data must be updated in many places: if a user's name is embedded in 
 Increasingly yes, but with limits. MongoDB supports multi-document ACID transactions (with performance cost). DynamoDB has transactional APIs across up to 100 items. Cassandra has lightweight transactions (compare-and-set via Paxos) on a single partition. None of these are as general or cheap as relational transactions, so designs still minimise cross-entity atomicity in NoSQL.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. If you mark it "Partly" or "Missed it", it comes back in your review deck.
+
+<Practice task="Pick a database for each and justify it in one sentence: (a) a bank's account balances, (b) a session store with 500K reads/s, (c) IoT sensor readings at 1M writes/s, (d) a social graph queried for friends of friends.">
+
+(a) A relational database (PostgreSQL): ACID transactions, constraints and strong consistency matter more than anything else for money.
+
+(b) A key-value store (Redis): simple get and set by key from memory, with a TTL, at very high throughput.
+
+(c) A wide-column or time-series store (Cassandra, or a time-series database): designed for huge, append-heavy write rates, partitioned by sensor and time.
+
+(d) A graph database (Neo4j), or a relational database with careful indexes if the graph is small: multi-hop traversals are what graph databases are built for.
+
+Saying why in terms of access patterns and guarantees is what the interviewer wants to hear.
+
+</Practice>
+
 <Takeaways>
 
 - Choose a store based on access patterns, consistency needs and scale — not on labels.

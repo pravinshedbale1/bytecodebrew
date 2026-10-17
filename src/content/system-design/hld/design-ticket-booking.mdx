@@ -186,6 +186,34 @@ It decouples arrival rate from processing rate. Millions of users are held in a 
 The confirm step's conditional update fails because the seat no longer carries this user's hold ID, so the booking can't be confirmed. The saga compensates by refunding the payment automatically and informing the user, possibly offering alternative seats. To make this rare, extend or freeze the hold when checkout begins and use a payment timeout shorter than the remaining hold time.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A concert with 50,000 seats goes on sale and 2 million people arrive in the first minute. What fails if they all hit the booking service directly, and what do you put in front of it?">
+
+2M users in a minute is ~33K requests/s, mostly for the same few thousand seats. The seat database would see massive contention, and the site would slow down for everyone, including people who already have seats in their basket.
+
+Put a virtual waiting room in front:
+1. Everyone gets a queue position (a signed token with a timestamp or a randomised order at opening time).
+2. Users are admitted at a rate the booking path can handle (for example 2,000/minute), each with a time-limited session.
+3. Show the queue position and an estimate, and keep the queue state at the edge or in a fast store, not in the booking database.
+
+Inside, seat holds use short reservations with a TTL, so abandoned baskets release seats automatically.
+
+</Practice>
+
+<Practice task="Design the seat hold so that a seat is never sold twice, and abandoned holds release the seat after 10 minutes.">
+
+1. Each seat has a row with `status` (free, held, sold), `holdId` and `holdExpiresAt`.
+2. Hold: a conditional update `UPDATE seats SET status='held', holdId=?, holdExpiresAt=now()+10min WHERE id=? AND (status='free' OR (status='held' AND holdExpiresAt < now()))`. If no row changes, someone else has it. For several seats, do it in one transaction so the user gets all or none.
+3. Payment: charge with an idempotency key, then `UPDATE … SET status='sold' WHERE id=? AND holdId=?`. If the hold expired and someone else took the seat, refund automatically.
+4. Expired holds become free by the condition in step 2; a background job can also clean them up for accurate availability counts.
+
+Redis with `SET NX EX` can front this for speed, but the database row stays the source of truth.
+
+</Practice>
+
 <Takeaways>
 
 - Most of the system is a cached catalogue; the hard part is contention during on-sales.

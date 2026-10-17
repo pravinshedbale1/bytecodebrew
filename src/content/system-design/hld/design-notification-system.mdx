@@ -200,6 +200,38 @@ The message is redelivered (at-least-once), so the worker may send it again. Mit
 In the router, before enqueuing a marketing push, atomically increment a per-user counter in Redis keyed by user and date (INCR with a TTL to the end of the user's local day) and check it against the cap; if exceeded, drop or defer to a digest. Transactional and security categories bypass the cap. Make the cap configurable per category.
 </QA>
 
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Black Friday: marketing schedules a push notification to 120M users, and the push provider accepts about 50K requests per second from you. How long does the campaign take, and how do you keep it from delaying password-reset and payment notifications?">
+
+120M ÷ 50K/s = 2,400 s ≈ 40 minutes at full speed, so the campaign must be spread out anyway.
+
+Keep critical messages fast with separate lanes:
+1. Separate queues (or topics) per priority: transactional (OTP, payment, security) and bulk (marketing). Each has its own workers.
+2. Reserve part of the provider quota for the transactional lane, for example 10K/s, and let bulk use the rest through a token bucket.
+3. Bulk sends are scheduled in batches by time zone and user preference, and they check per-user frequency caps and opt-outs before sending.
+4. Track per-provider error rates; back off on 429s instead of retrying immediately.
+
+Result: an OTP waits behind at most a few transactional messages, not behind 120M marketing pushes.
+
+</Practice>
+
+<Practice task="Users complain they sometimes get the same notification twice. Where can duplicates come from in an at-least-once pipeline, and how do you prevent them?">
+
+Duplicates appear whenever a step retries after the work actually succeeded: a producer retries a publish, a worker crashes after calling the provider but before acknowledging the queue message, or a timeout hides a success.
+
+Fixes:
+1. Give every notification a stable ID at creation (for example a hash of event ID + user + channel).
+2. Before sending, the worker atomically records the ID in a dedup store (Redis `SET NX` with a TTL of a day or two). If it was already there, skip it.
+3. Pass the same ID to providers that support idempotency keys, so their retries do not duplicate either.
+4. Acknowledge the queue message only after the send is recorded.
+
+You cannot get exactly-once delivery to a phone, but at-least-once plus deduplication gets very close.
+
+</Practice>
+
 <Takeaways>
 
 - Accept requests asynchronously, then route through per-priority and per-channel queues.
