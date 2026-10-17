@@ -1,0 +1,15 @@
+name = "bytecodebrew-payments"
+main = "index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "bytecodebrew-53f0c"
+SITE_URL = "https://bytecodebrew.com"
+PUBLIC_URL = "https://bytecodebrew-payments.bytecodebrew.workers.dev"
+# "sandbox" for testing with Cashfree's test credentials; switch to "production" with live keys
+CASHFREE_ENV = "sandbox"
+
+# Secrets (never in this file) — set once with:
+#   npx wrangler@4 secret put CASHFREE_APP_ID
+#   npx wrangler@4 secret put CASHFREE_SECRET_KEY
+#   npx wrangler@4 secret put FIREBASE_SERVICE_ACCOUNT   (the whole service-account JSON)

@@ -18,6 +18,7 @@ const CheatSheetPage = named(() => import('./pages/CheatSheetPage'), 'CheatSheet
 const SolvePage = named(() => import('./pages/SolvePage'), 'SolvePage');
 const ProblemsPage = named(() => import('./pages/ProblemsPage'), 'ProblemsPage');
 const AdminPage = named(() => import('./pages/AdminPage'), 'AdminPage');
+const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
 const page = (el) => <Suspense fallback={null}>{el}</Suspense>;
 
 export function App() {
@@ -34,6 +35,7 @@ export function App() {
         <Route path="solve/:slug" element={page(<SolvePage />)} />
         <Route path="problems" element={page(<ProblemsPage />)} />
         <Route path="admin" element={page(<AdminPage />)} />
+        <Route path="premium" element={page(<PricingPage />)} />
         <Route path=":trackId" element={<TrackPage />} />
         <Route path=":trackId/:courseId" element={<CoursePage />} />
         <Route path=":trackId/:courseId/:lessonId" element={<LessonPage />} />

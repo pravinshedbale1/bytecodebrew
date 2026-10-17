@@ -7,7 +7,8 @@
  * learner's own token (the security rules let each person read only their own).
  *
  * Works in Cloudflare Workers and Node 20+ (both have fetch and WebCrypto).
- * Keep ADMIN_EMAILS in sync with src/config/access.js and firestore.rules.
+ * Keep ADMIN_EMAILS in sync with src/config/access.js and firestore.rules. An entitlement with an
+ * `expiresAt` timestamp in the past no longer counts.
  */
 export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 
@@ -85,7 +86,11 @@ export async function hasPremium(email, token, { projectId, firestoreBase = 'htt
   const url = `${firestoreBase}/v1/projects/${projectId}/databases/(default)/documents/entitlements/${encodeURIComponent(lower)}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   let premium = false;
-  if (res.ok) premium = (await res.json()).fields?.premium?.booleanValue === true;
+  if (res.ok) {
+    const f = (await res.json()).fields ?? {};
+    const expires = f.expiresAt?.timestampValue ? Date.parse(f.expiresAt.timestampValue) : null;
+    premium = f.premium?.booleanValue === true && (expires === null || expires > now);
+  }
   else if (res.status !== 404 && res.status !== 403) throw new AuthError(503, 'Could not check your access right now. Try again shortly.');
   if (premium) premiumCache.set(lower, now);
   else premiumCache.delete(lower);
@@ -97,7 +102,7 @@ export async function requirePremium(authorization, opts) {
   const token = /^Bearer (.+)$/.exec(authorization ?? '')?.[1];
   const claims = await verifyIdToken(token, opts);
   if (!(await hasPremium(claims.email, token, opts))) {
-    throw new AuthError(403, 'LeetCode sync is a premium feature. Email bytecodebrew@gmail.com to request access.');
+    throw new AuthError(403, 'LeetCode sync is a premium feature. Get premium at bytecodebrew.com/premium, or email bytecodebrew@gmail.com.');
   }
   return claims;
 }

@@ -109,11 +109,12 @@ How it works:
 
 ## Free and premium access
 
-Everyone (signed in or not) can read lessons, highlight, mark lessons complete, take lesson quizzes and practice boxes, search and use the cheat sheets. **Premium** features: Problems and solving with tests, mock interviews, the review deck, the dashboard (study plan, LeetCode sync and import), the code playground, the behavioral drill and story bank. Locked features show a notice asking people to email bytecodebrew@gmail.com.
+What is free and what is premium is defined once in `src/config/access.js` (`FREE_FEATURES`, `PREMIUM_FEATURES`, and the `PREMIUM_CONTENT` switches) and shown on `/premium` and in every lock notice.
 
-- `src/config/access.js`: the admin email(s) and the premium synced stores. Keep it in sync with `firestore.rules` and `workers/leetcode/auth.js`.
-- Approval is a Firestore document `entitlements/{email}` (lower case). Only the admin can write them, at **`/admin`** (visible only when signed in as the admin, linked from the account menu). A learner can read only their own, and `src/hooks/useAccess.js` watches it, so access switches on and off live.
-- Enforcement is not only in the UI: the rules refuse writes to premium stores from other accounts, and the LeetCode Worker verifies the Firebase ID token and checks the entitlement before calling LeetCode.
+- **Free:** Beginner and Intermediate lessons, diagrams and the DSA visualisations, quizzes, practice exercises, progress, highlights, search, cheat sheets.
+- **Premium:** Advanced lessons (free users see the outline), the interactive simulators, diagram step-throughs, problems with tests, mock interviews, review deck, dashboard and LeetCode sync, playground, behavioral drill and story bank.
+- **Getting premium:** buy a plan on `/premium` (Cashfree, see [`workers/payments/README.md`](workers/payments/README.md)), or the admin approves an account on `/admin`. Either way an `entitlements/{email}` document turns it on, optionally with an `expiresAt`. `src/hooks/useAccess.js` watches it, so access switches on and off live.
+- **Enforcement:** the Firestore rules refuse premium data writes from other accounts and let only the admin edit plans and entitlements; orders are written only by the payments Worker. The LeetCode and payments Workers verify the Firebase ID token. Lesson content itself is a static site, so its locks are in the interface: a determined person could still read the published JavaScript.
 
 Local development against the emulators (no Firebase project needed; requires Java):
 

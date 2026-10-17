@@ -1,12 +1,10 @@
 /**
- * Who can use the premium features (LeetCode sync and import, solving problems with tests, the code
- * playground, mock interviews, the review deck, study plans, the behavioral drill and story bank).
+ * Free and premium. FREE_FEATURES / PREMIUM_FEATURES are what the site tells people (the /premium page
+ * and every lock notice); PREMIUM_CONTENT switches which lesson content is locked.
  *
- * Everyone, signed in or not, can read lessons, highlight, mark lessons complete, take the lesson
- * quizzes and practice tasks, search and print cheat sheets.
- *
- * Premium access is granted per Google account email by the admin on /admin, which writes
- * entitlements/{email} in Firestore. firestore.rules enforces the same lists: keep them in sync.
+ * Premium access is an entitlements/{email} document in Firestore, written by the admin on /admin or
+ * by the payments Worker after a Cashfree payment (with an optional expiresAt). firestore.rules and
+ * workers/shared/auth.js enforce the same rules: keep them in sync.
  */
 export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
@@ -15,3 +13,30 @@ export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
 export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories'];
 
 export const isAdminEmail = (email) => Boolean(email) && ADMIN_EMAILS.includes(email.toLowerCase());
+
+/** Lesson content locked for free users. */
+export const PREMIUM_CONTENT = {
+  simulators: true,          // the hands-on simulators (hash ring, rate limiters, quorums, …)
+  diagramSteps: true,        // "Step through it" on architecture and sequence diagrams
+  advancedLessons: true,     // lessons whose level is Advanced: free users see the outline only
+  dsaVisualisers: false,     // the array/tree/graph step-throughs in DSA lessons stay free
+};
+
+export const FREE_FEATURES = [
+  'Every Beginner and Intermediate lesson in System Design, DSA and Behavioral',
+  'Diagrams, code examples and the DSA step-by-step visualisations',
+  'Lesson quizzes, practice exercises and progress tracking',
+  'Highlights and notes, synced across your devices',
+  'Search and printable cheat sheets',
+];
+
+export const PREMIUM_FEATURES = [
+  ['All advanced lessons', 'the senior-level case studies (payments, stock exchange, Kafka, key-value store, video streaming…) and advanced patterns'],
+  ['Interactive simulations', 'hash rings, rate limiters, quorums, cache eviction, load balancing, Bloom filters, consumer groups and more — change the inputs and watch what happens'],
+  ['Step-through diagrams', 'walk every architecture and sequence diagram one step at a time, with each step explained'],
+  ['314 problems with tests', 'a LeetCode-style editor with full statements, constraints, hints, hidden tests and performance checks'],
+  ['Mock interviews', 'timed rounds with phases, a self-scoring rubric and an optional AI interviewer'],
+  ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
+  ['Dashboard and LeetCode sync', 'study plan, streaks, interview countdown, and your LeetCode history imported'],
+  ['Code playground, behavioral drill and story bank', ''],
+];

@@ -7,7 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import { dsaLadders } from './build/ladders-plugin.js';
 import { lessonContent } from './build/content-plugin.js';
 import { fetchLeetCodeProfile, ProfileError, CACHE_SECONDS } from './workers/leetcode/leetcode.js';
-import { requirePremium, AuthError } from './workers/leetcode/auth.js';
+import { requirePremium, AuthError } from './workers/shared/auth.js';
 
 const emulator = process.env.VITE_FIREBASE_EMULATOR === '1';
 const authOpts = emulator
@@ -48,11 +48,58 @@ function leetcodeDevApi() {
   };
 }
 
+/**
+ * Dev-only stand-in for the payments Worker (workers/payments) at /api/pay. With the emulators
+ * (npm run dev:emulator) it uses a mock Cashfree with a pretend checkout page, so the whole purchase
+ * flow can be tried without real money. Real Cashfree sandbox testing: set CASHFREE_APP_ID,
+ * CASHFREE_SECRET_KEY and FIREBASE_SERVICE_ACCOUNT in the environment instead.
+ */
+function paymentsDevApi() {
+  return {
+    name: 'payments-dev-api',
+    apply: 'serve',
+    configureServer(server) {
+      let setup;
+      const init = async () => {
+        const { route } = await import('./workers/payments/payments.js');
+        const real = process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY && process.env.FIREBASE_SERVICE_ACCOUNT;
+        if (real) return { route, mock: null, env: { CASHFREE_ENV: 'sandbox', CASHFREE_APP_ID: process.env.CASHFREE_APP_ID, CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY, FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT, FIREBASE_PROJECT_ID: 'bytecodebrew-53f0c' } };
+        if (!emulator) return { route, mock: null, env: null };
+        const { startMockCashfree } = await import('./workers/payments/mockCashfree.js');
+        const mock = await startMockCashfree({ secret: 'mock_secret' });
+        return {
+          route,
+          mock,
+          env: { CASHFREE_ENV: 'sandbox', CASHFREE_BASE: mock.base, CASHFREE_APP_ID: 'mock', CASHFREE_SECRET_KEY: 'mock_secret', FIREBASE_PROJECT_ID: 'demo-bytecodebrew', FIRESTORE_EMULATOR: 'http://127.0.0.1:8080', AUTH_EMULATOR: '1' },
+        };
+      };
+      server.middlewares.use('/api/pay', async (req, res) => {
+        setup ??= init();
+        const { route, mock, env } = await setup;
+        const send = (status, body) => {
+          res.statusCode = status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(body));
+        };
+        if (!env) return send(503, { error: 'Payments in development need the emulators (npm run dev:emulator) or Cashfree sandbox keys in the environment.' });
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        const origin = `http://${req.headers.host}`;
+        const request = new Request(`${origin}/pay${req.url}`, { method: req.method, headers: req.headers, body: req.method === 'POST' ? Buffer.concat(chunks) : undefined });
+        const [status, body] = await route(request, { ...env, SITE_URL: origin, PUBLIC_URL: `${origin}/api` });
+        if (mock && status === 200 && body.paymentSessionId) body.mockCheckoutUrl = mock.checkoutUrl(body.orderId);
+        send(status, body);
+      });
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     dsaLadders('src/content/dsa/patterns'),
     lessonContent('src/content'),
     leetcodeDevApi(),
+    paymentsDevApi(),
     {
       enforce: 'pre',
       ...mdx({

@@ -1,5 +1,5 @@
 import { fetchLeetCodeProfile, ProfileError, USERNAME, CACHE_SECONDS } from './leetcode.js';
-import { requirePremium, AuthError } from './auth.js';
+import { requirePremium, AuthError } from '../shared/auth.js';
 
 /**
  * Cloudflare Worker: GET /leetcode?username=<name>

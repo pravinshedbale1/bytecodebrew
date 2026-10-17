@@ -49,7 +49,11 @@ export function AccountButton() {
           <div className={styles.who}>
             <strong>{user.name}</strong>
             <span>{user.email}</span>
-            {access.status === 'premium' && <span className={styles.premium}><Sparkles size={12} /> Premium access</span>}
+            {access.status === 'premium' && (
+              <span className={styles.premium}>
+                <Sparkles size={12} /> Premium{access.expiresAt ? ` until ${new Date(access.expiresAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+              </span>
+            )}
           </div>
           {syncIssues.length > 0 ? (
             <p className={`${styles.sync} ${styles.syncWarn}`} role="status">
@@ -58,6 +62,9 @@ export function AccountButton() {
           ) : (
             <p className={styles.sync}>Progress, solved problems, reviews, stories and highlights sync to this account.</p>
           )}
+          <Link to="/premium" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
+            <Sparkles size={15} /> {access.status === 'premium' ? (access.isAdmin ? 'Premium page' : 'Extend premium') : 'Get Premium'}
+          </Link>
           {access.isAdmin && (
             <Link to="/admin" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
               <ShieldCheck size={15} /> Admin: premium access

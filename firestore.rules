@@ -4,8 +4,10 @@ rules_version = '2';
 //
 //  users/{uid}/state/{name}   one document per synced store (src/lib/syncedStore.js). Each user reads and
 //                             writes only their own. Premium stores accept writes only from premium accounts.
-//  entitlements/{email}       premium access, one document per approved Google account email (lower case).
-//                             Only the admin can create or remove them; a user may read their own.
+//  entitlements/{email}       premium access, one document per Google account email (lower case), granted
+//                             by the admin or by a payment (with an optional expiresAt). Users read their own.
+//  plans/{planId}             premium plans and prices, public, edited by the admin.
+//  orders/{orderId}           Cashfree payments, written by the payments Worker; buyers read their own.
 //
 // Keep the lists below in sync with src/config/access.js (ADMIN_EMAILS, PREMIUM_STORES).
 service cloud.firestore {
@@ -23,9 +25,17 @@ service cloud.firestore {
       return verifiedEmail() in ['bytecodebrew@gmail.com'];
     }
 
+    function entitlementPath() {
+      return /databases/$(database)/documents/entitlements/$(verifiedEmail());
+    }
+
+    // Premium: the admin, or an entitlement that is switched on and not expired
     function isPremium() {
       return isAdmin()
-        || (verifiedEmail() != '' && exists(/databases/$(database)/documents/entitlements/$(verifiedEmail())));
+        || (verifiedEmail() != ''
+            && exists(entitlementPath())
+            && get(entitlementPath()).data.premium == true
+            && (!('expiresAt' in get(entitlementPath()).data) || get(entitlementPath()).data.expiresAt > request.time));
     }
 
     function isOwner(uid) {
@@ -65,6 +75,26 @@ service cloud.firestore {
         && request.resource.data.premium == true
         && request.resource.data.addedAt == request.time;
       allow delete: if isAdmin();
+    }
+
+    // Plans and prices: public, set by the admin. The payments Worker reads the price from here.
+    match /plans/{planId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && planId.matches('^[a-z0-9-]{1,40}$')
+        && request.resource.data.keys().hasOnly(['name', 'price', 'durationDays', 'active', 'description', 'order', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.price is number && request.resource.data.price >= 1 && request.resource.data.price <= 1000000
+        && request.resource.data.durationDays is int && request.resource.data.durationDays >= 0 && request.resource.data.durationDays <= 3650
+        && request.resource.data.active is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    // Payment orders: written only by the payments Worker (service account); buyers read their own.
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
     }
 
     // Deny everything else.

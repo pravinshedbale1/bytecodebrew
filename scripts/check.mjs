@@ -52,7 +52,7 @@ for (const key of files) if (!extracts[key]?.takeaways) fail(`${key}: no <Takeaw
 
 // ---- links and anchors
 const problemIndex = JSON.parse(readFileSync(join(src, 'data', 'problems', 'index.json'), 'utf8'));
-const PAGES = new Set(['', 'dashboard', 'review', 'mock', 'playground', 'problems', 'highlights']);
+const PAGES = new Set(['', 'dashboard', 'review', 'mock', 'playground', 'problems', 'highlights', 'premium']);
 function checkLink(from, href) {
   const [path, hash] = href.split('#');
   const parts = path.replace(/^\/|\/$/g, '').split('/').filter(Boolean);

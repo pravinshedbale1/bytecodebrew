@@ -9,15 +9,15 @@ import { FlowSteps } from './FlowSteps';
 import { lazySim } from '../sim/lazySim.jsx';
 
 // Each simulator appears in one lesson, so it is loaded only when that lesson is opened
-const HashRingSim = lazySim(() => import('../sim/HashRingSim'), 'HashRingSim');
-const RateLimiterSim = lazySim(() => import('../sim/RateLimiterSim'), 'RateLimiterSim');
-const CacheSim = lazySim(() => import('../sim/CacheSim'), 'CacheSim');
-const QuorumSim = lazySim(() => import('../sim/QuorumSim'), 'QuorumSim');
-const LoadBalancerSim = lazySim(() => import('../sim/LoadBalancerSim'), 'LoadBalancerSim');
-const BloomSim = lazySim(() => import('../sim/BloomSim'), 'BloomSim');
-const PartitionSim = lazySim(() => import('../sim/PartitionSim'), 'PartitionSim');
-const GrowthSim = lazySim(() => import('../sim/GrowthSim'), 'GrowthSim');
-const HeapSim = lazySim(() => import('../sim/HeapSim'), 'HeapSim');
+const HashRingSim = lazySim(() => import('../sim/HashRingSim'), 'HashRingSim', 'Consistent hashing ring', 'Add and remove servers, change the number of virtual nodes, and watch how many keys move compared with modulo hashing.');
+const RateLimiterSim = lazySim(() => import('../sim/RateLimiterSim'), 'RateLimiterSim', 'Rate limiters side by side', 'Send traffic to a fixed window, a sliding window and a token bucket at once, and see the burst at a window boundary get through only one of them.');
+const CacheSim = lazySim(() => import('../sim/CacheSim'), 'CacheSim', 'Cache eviction policies', 'Step through a request sequence and compare what LRU, LFU and FIFO keep and evict, with live hit ratios.');
+const QuorumSim = lazySim(() => import('../sim/QuorumSim'), 'QuorumSim', 'Quorum reads and writes', 'Choose N, R and W, take replicas down, then write and read, and find the settings that return stale data.');
+const LoadBalancerSim = lazySim(() => import('../sim/LoadBalancerSim'), 'LoadBalancerSim', 'Load-balancing algorithms under load', 'Run round robin, random, least outstanding and power of two choices on the same traffic and compare their tail latency.');
+const BloomSim = lazySim(() => import('../sim/BloomSim'), 'BloomSim', 'A Bloom filter, bit by bit', 'Add and check words, see exactly which bits they use, and catch a false positive.');
+const PartitionSim = lazySim(() => import('../sim/PartitionSim'), 'PartitionSim', 'Partitions and a consumer group', 'Add consumers and partitions, see idle consumers, and compare eager and cooperative rebalancing.');
+const GrowthSim = lazySim(() => import('../sim/GrowthSim'), 'GrowthSim', 'How big is n? Which complexity fits?', 'Pick an input size and see how long each complexity class would take, and which one the problem expects.');
+const HeapSim = lazySim(() => import('../sim/HeapSim'), 'HeapSim', 'Min-heap: offer and poll', 'Add and remove values and follow every sift-up and sift-down swap in the tree and the array.');
 import { HashRing } from './HashRing';
 import { Related } from './Related';
 import { Practice } from './Practice';

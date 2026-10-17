@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, Layers, Timer, Code2, ListChecks, Lock } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, Layers, Timer, Code2, ListChecks, Lock, Sparkles } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
@@ -136,6 +136,12 @@ function GlobalNav({ activeTrackId }) {
           {lock}
         </NavLink>
       ))}
+      {!premium && (
+        <NavLink to="/premium" className={({ isActive }) => `${styles.top} ${styles.getPremium} ${isActive ? styles.active : ''}`}>
+          <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" />
+          Get Premium
+        </NavLink>
+      )}
     </nav>
   );
 }

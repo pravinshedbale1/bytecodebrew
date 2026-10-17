@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useLessonLocked } from '../hooks/useAccess';
 import { Link, useParams } from 'react-router';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Lock } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { getTrack, getCourse, getCourseLessons } from '../curriculum';
 import { NotFoundPage } from './NotFoundPage';
@@ -10,6 +11,7 @@ import styles from './CheatSheetPage.module.css';
 
 /** Every lesson's key takeaways for one course on one page, ready to print or save as PDF. */
 export function CheatSheetPage() {
+  const locked = useLessonLocked();
   const { trackId, courseId } = useParams();
   const track = getTrack(trackId);
   const course = getCourse(trackId, courseId);
@@ -51,13 +53,15 @@ export function CheatSheetPage() {
             </h2>
             <div className={styles.lessons}>
               {m.lessons.map((l) => {
-                const html = extracts[l.key]?.takeaways;
+                const html = locked(l) ? null : extracts[l.key]?.takeaways;
                 return (
                   <article key={l.key} className={styles.lesson}>
                     <h3 className={styles.lessonTitle}>
                       <Link to={l.path}>{l.title}</Link>
                     </h3>
-                    {html ? (
+                    {locked(l) ? (
+                      <p className={styles.none}><Lock size={12} aria-hidden="true" /> Advanced lesson — its takeaways are part of <Link to="/premium">Premium</Link>.</p>
+                    ) : html ? (
                       <div className={`${ui.answerHtml} ${styles.body}`} dangerouslySetInnerHTML={{ __html: html }} />
                     ) : (
                       <p className={styles.none}>{l.summary}</p>

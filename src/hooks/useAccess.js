@@ -3,7 +3,7 @@ import { onAuth } from './useAuth';
 import { loadFirebase } from '../lib/firebase';
 import { setPremiumSync } from '../lib/syncedStore';
 import { firebaseEnabled } from '../config/firebase';
-import { isAdminEmail } from '../config/access';
+import { isAdminEmail, PREMIUM_CONTENT } from '../config/access';
 
 /**
  * Access level of the current visitor, shared by the whole app:
@@ -11,10 +11,11 @@ import { isAdminEmail } from '../config/access';
  *   'signed-out' not signed in
  *   'free'       signed in, not approved
  *   'premium'    approved by the admin (or the admin)
- * Approval is a document entitlements/{email} that only the admin can write; the user may read their own.
+ * Access is a document entitlements/{email}, written by the admin or by the payments Worker after a
+ * payment; it may carry an expiresAt. The user may read their own.
  * Firestore rules enforce the same thing for synced data, so this is the UI's view, not the only guard.
  */
-let state = { status: firebaseEnabled ? 'loading' : 'premium', isAdmin: false, email: null };
+let state = { status: firebaseEnabled ? 'loading' : 'premium', isAdmin: false, email: null, expiresAt: null, source: null };
 const listeners = new Set();
 let started = false;
 let stopWatch = null;
@@ -37,11 +38,21 @@ async function watch(user) {
   }
   set({ status: 'loading', isAdmin: false, email });
   const fb = await loadFirebase();
-  stopWatch = fb.fsMod.onSnapshot(
+  let expiryTimer = null;
+  const unsub = fb.fsMod.onSnapshot(
     fb.fsMod.doc(fb.db, 'entitlements', email),
-    (snap) => set({ status: snap.exists() && snap.data().premium === true ? 'premium' : 'free' }),
+    (snap) => {
+      clearTimeout(expiryTimer);
+      const d = snap.exists() ? snap.data() : null;
+      const expiresAt = d?.expiresAt?.toMillis?.() ?? null;
+      const active = d?.premium === true && (expiresAt === null || expiresAt > Date.now());
+      set({ status: active ? 'premium' : 'free', expiresAt: active ? expiresAt : null, source: d?.source ?? (d ? 'admin' : null) });
+      // Switch back to free the moment a time-limited plan runs out (timers cap at ~24 days)
+      if (active && expiresAt) expiryTimer = setTimeout(() => set({ status: 'free', expiresAt: null }), Math.min(expiresAt - Date.now(), 2 ** 31 - 1));
+    },
     () => set({ status: 'free' }),
   );
+  stopWatch = () => { clearTimeout(expiryTimer); unsub(); };
 }
 
 function start() {
@@ -65,3 +76,9 @@ export function useAccess() {
 
 /** True once the visitor has premium access. */
 export const usePremium = () => useAccess().status === 'premium';
+
+/** (lesson) => true when the lesson is locked for this visitor (advanced lessons, unless premium). */
+export function useLessonLocked() {
+  const { status } = useAccess();
+  return (lesson) => PREMIUM_CONTENT.advancedLessons && lesson?.level === 'Advanced' && status !== 'premium' && status !== 'loading';
+}

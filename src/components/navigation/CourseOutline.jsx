@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router';
-import { Check } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
+import { useLessonLocked } from '../../hooks/useAccess';
 import styles from './CourseOutline.module.css';
 
 /** Numbered module → lesson list for one course. Modules with nothing published are collapsed to a single line. */
 export function CourseOutline({ course, lessons, isComplete }) {
+  const locked = useLessonLocked();
   return (
     <nav aria-label={`${course.title} lessons`}>
       {course.modules.map((module, i) => {
@@ -46,6 +48,7 @@ export function CourseOutline({ course, lessons, isComplete }) {
                         {isComplete(lesson.key) && <Check size={10} strokeWidth={3.5} />}
                       </span>
                       {lesson.title}
+                      {locked(lesson) && <Lock size={11} className={styles.lock} aria-label="Premium" />}
                     </NavLink>
                   </li>
                 ) : (

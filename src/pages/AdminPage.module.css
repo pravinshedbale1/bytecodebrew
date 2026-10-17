@@ -67,3 +67,80 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.planForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3) 0 var(--space-4);
+}
+
+.planForm .wide {
+  grid-column: span 2;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.planRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table th {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.status {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+}
+
+.st_paid { background: var(--color-success-soft); color: var(--color-success); }
+.st_review,
+.st_failed { background: var(--color-warn-soft); }
+
+.adminGrid {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 760px) {
+  .planForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planForm .wide {
+    grid-column: auto;
+  }
+}

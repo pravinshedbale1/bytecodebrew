@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Footprints, X } from 'lucide-react';
+import { Footprints, X, Lock } from 'lucide-react';
+import { usePremium } from '../../hooks/useAccess';
+import { PREMIUM_CONTENT } from '../../config/access';
+import { PremiumNotice } from '../access/PremiumGate';
 import { useStepper, VizControls } from './VizStepper';
 import styles from './FlowSteps.module.css';
 
@@ -64,6 +67,9 @@ export function FlowSteps({ steps, title = 'Walk through the flow', children }) 
 
 /** The frame both step-throughs share: title bar with controls, the diagram, and the current step's text. */
 function StepFrame({ title, count, active, setActive, s, box, text, children }) {
+  const premium = usePremium();
+  const locked = PREMIUM_CONTENT.diagramSteps && !premium;
+  const [askedLocked, setAskedLocked] = useState(false);
   return (
     <div className={`${styles.wrap} ${active ? styles.active : ''}`}>
       <div className={styles.bar}>
@@ -76,11 +82,16 @@ function StepFrame({ title, count, active, setActive, s, box, text, children }) 
             </button>
           </span>
         ) : (
-          <button type="button" className={styles.start} onClick={() => setActive(true)}>
-            Step through it ({count} steps)
+          <button type="button" className={styles.start} onClick={() => (locked ? setAskedLocked((v) => !v) : setActive(true))} aria-expanded={locked ? askedLocked : undefined}>
+            {locked && <Lock size={12} aria-hidden="true" />} Step through it ({count} steps)
           </button>
         )}
       </div>
+      {locked && askedLocked && (
+        <div className={styles.lockedNote}>
+          <PremiumNotice compact feature="Step-through diagrams" blurb={`Walk this diagram one step at a time (${count} steps), with the active part lit up and each step explained.`} />
+        </div>
+      )}
       <div ref={box}>{children}</div>
       {active && (
         <p className={styles.text} aria-live="polite">

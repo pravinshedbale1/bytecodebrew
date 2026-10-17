@@ -1,7 +1,10 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { MDXProvider } from '@mdx-js/react';
-import { Clock, AlignLeft } from 'lucide-react';
+import { Clock, AlignLeft, Lock } from 'lucide-react';
+import { useAccess } from '../hooks/useAccess';
+import { PREMIUM_CONTENT } from '../config/access';
+import { PremiumNotice } from '../components/access/PremiumGate';
 import { getTrack, getCourse, getCourseLessons, getLessonContext } from '../curriculum';
 import { getLessonComponent } from '../content/registry';
 import { useProgress } from '../hooks/useProgress';
@@ -38,6 +41,37 @@ function HeadingCollector({ containerRef, onCollect }) {
   return null;
 }
 
+/** Whether a lesson is locked for this visitor (advanced lessons, unless premium). 'loading' while access is unknown. */
+export function useLessonLock(lesson) {
+  const { status } = useAccess();
+  if (!PREMIUM_CONTENT.advancedLessons || lesson?.level !== 'Advanced') return false;
+  if (status === 'loading') return 'loading';
+  return status !== 'premium';
+}
+
+/** What a free visitor sees for an advanced lesson: its outline and the premium card. The lesson itself is not loaded. */
+function LockedLesson({ lessonKey }) {
+  const [outline, setOutline] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    import('virtual:search-index').then((m) => alive && setOutline((m.default ?? m)[lessonKey]?.headings ?? []));
+    return () => { alive = false; };
+  }, [lessonKey]);
+  return (
+    <div className={styles.locked}>
+      {outline?.length > 0 && (
+        <section className={styles.outline} aria-label="What this lesson covers">
+          <p className={styles.outlineHead}><Lock size={14} aria-hidden="true" /> What this advanced lesson covers</p>
+          <ul>
+            {outline.filter((h) => !/^(Further reading|Interview questions|Practice)$/.test(h.text)).slice(0, 18).map((h) => <li key={h.id}>{h.text}</li>)}
+          </ul>
+        </section>
+      )}
+      <PremiumNotice feature="This advanced lesson" blurb="Advanced lessons are the senior-level material: in-depth case studies and patterns with diagrams you can step through, interactive simulations, interview Q&A and practice exercises." />
+    </div>
+  );
+}
+
 export function LessonPage() {
   const { trackId, courseId, lessonId } = useParams();
   const track = getTrack(trackId);
@@ -49,7 +83,8 @@ export function LessonPage() {
   const collect = useCallback((h) => setHeadings(h), []);
 
   const key = ctx?.lesson.key;
-  const Content = key ? getLessonComponent(key) : null;
+  const lock = useLessonLock(ctx?.lesson);
+  const Content = key && !lock ? getLessonComponent(key) : null;
 
   useEffect(() => {
     setHeadings([]);
@@ -94,7 +129,11 @@ export function LessonPage() {
           </div>
         </header>
 
-        {Content ? (
+        {lock === 'loading' ? (
+          <div className={styles.loading}>Checking your access…</div>
+        ) : lock ? (
+          <LockedLesson lessonKey={key} />
+        ) : Content ? (
           <LessonKeyContext.Provider value={key}>
             <div className="prose" ref={articleRef}>
               <MDXProvider components={mdxComponents}>

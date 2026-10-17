@@ -7,6 +7,12 @@
  */
 export const LEETCODE_API = import.meta.env.VITE_LEETCODE_API ?? (import.meta.env.DEV ? '/api/leetcode' : 'https://bytecodebrew-leetcode.bytecodebrew.workers.dev/leetcode');
 
+/**
+ * Premium purchases: the payments Worker (workers/payments). In development the Vite dev server serves
+ * it at /api/pay with a mock Cashfree checkout (no real payment) unless VITE_PAYMENTS_API is set.
+ */
+export const PAYMENTS_API = import.meta.env.VITE_PAYMENTS_API ?? (import.meta.env.DEV ? '/api/pay' : 'https://bytecodebrew-payments.bytecodebrew.workers.dev/pay');
+
 export const JUDGE0_URL = import.meta.env.VITE_JUDGE0_URL ?? 'https://ce.judge0.com';
 export const JUDGE0_JAVA = 91;        // Java (JDK 17.0.6)
 

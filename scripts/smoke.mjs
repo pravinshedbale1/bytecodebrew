@@ -26,20 +26,23 @@ const checks = [
   ['/system-design/hld/caching', 'Check your understanding'],
   ['/dsa/patterns/two-pointers', 'Solve'],
   // Signed out, premium pages show the access notice instead (see src/components/access)
-  ['/problems', 'is a premium feature'],
-  ['/solve/two-sum', 'is a premium feature'],
-  ['/review', 'is a premium feature'],
-  ['/dashboard', 'is a premium feature'],
-  ['/mock', 'is a premium feature'],
-  ['/playground', 'is a premium feature'],
+  ['/problems', 'is part of Premium'],
+  ['/solve/two-sum', 'is part of Premium'],
+  ['/review', 'is part of Premium'],
+  ['/dashboard', 'is part of Premium'],
+  ['/mock', 'is part of Premium'],
+  ['/playground', 'is part of Premium'],
   ['/admin', 'Page not found'],
+  ['/premium', 'Everything in Free, plus'],
+  ['/system-design/hld/design-stock-exchange', 'What this advanced lesson covers'],
   ['/cheatsheet/system-design/lld', 'Low-Level Design'],
   ['/behavioral/question-bank/behavioral-drill', 'Behavioral'],
 ];
 
 for (const [path, text] of checks) {
   const before = problems.length;
-  await page.goto(base + path, { waitUntil: 'networkidle' });
+  // 'load', not 'networkidle': pages that read Firestore keep a connection open
+  await page.goto(base + path, { waitUntil: 'load' });
   try {
     await page.getByText(text, { exact: false }).first().waitFor({ timeout: 10000 });
   } catch {

@@ -5,6 +5,7 @@ import { useAccess } from '../hooks/useAccess';
 import { loadFirebase } from '../lib/firebase';
 import { CONTACT_EMAIL } from '../config/access';
 import { NotFoundPage } from './NotFoundPage';
+import { AdminPlans, AdminOrders } from './admin/AdminPayments';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from './AdminPage.module.css';
@@ -79,7 +80,8 @@ export function AdminPage() {
         <li>Access switches on immediately, on every device they use, the next time the page loads or within seconds if it's open.</li>
         <li>Removing access stops premium features and syncing of premium data; their saved data is kept.</li>
         <li>Free for everyone: lessons, highlights, progress, lesson quizzes and practice, search, cheat sheets.</li>
-        <li>People ask for access at {CONTACT_EMAIL}.</li>
+        <li>People buy premium at /premium; payments grant access automatically for the plan's period. You can still approve accounts by hand here (no expiry).</li>
+        <li>Questions come to {CONTACT_EMAIL}.</li>
       </ul>
     </RailCard>
   );
@@ -88,7 +90,7 @@ export function AdminPage() {
     <PageLayout rail={rail}>
       <header className={page.header}>
         <p className={page.eyebrow}>Admin</p>
-        <h1 className={page.title}>Premium access</h1>
+        <h1 className={page.title}>Premium access and payments</h1>
         <p className={page.lead}>{rows ? `${rows.length} approved account${rows.length === 1 ? '' : 's'}.` : 'Loading…'} You ({me}) always have access.</p>
       </header>
 
@@ -120,7 +122,9 @@ export function AdminPage() {
               <span className={styles.who}>
                 <strong>{r.email}</strong>
                 <span className={styles.muted}>
-                  {r.addedAt?.toDate ? `added ${r.addedAt.toDate().toLocaleDateString()}` : 'just added'}
+                  {r.source === 'cashfree' ? 'paid' : 'approved by admin'}
+                  {r.addedAt?.toDate ? ` · since ${r.addedAt.toDate().toLocaleDateString()}` : ''}
+                  {r.expiresAt?.toDate ? ` · until ${r.expiresAt.toDate().toLocaleDateString()}${r.expiresAt.toDate() < new Date() ? ' (expired)' : ''}` : ' · no expiry'}
                   {r.note ? ` · ${r.note}` : ''}
                 </span>
               </span>
@@ -129,6 +133,11 @@ export function AdminPage() {
           ))}
         </ul>
       </section>
+
+      <div className={styles.adminGrid}>
+        <AdminPlans />
+        <AdminOrders />
+      </div>
     </PageLayout>
   );
 }

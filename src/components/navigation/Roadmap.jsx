@@ -1,6 +1,8 @@
 import { Link } from 'react-router';
 import { Check, Clock } from 'lucide-react';
 import { LevelBadge, Badge } from '../common/Badge';
+import { Lock } from 'lucide-react';
+import { useLessonLocked } from '../../hooks/useAccess';
 import styles from './Roadmap.module.css';
 
 /**
@@ -8,6 +10,7 @@ import styles from './Roadmap.module.css';
  * `lessons` comes from getCourseLessons() and is grouped back into modules here.
  */
 export function Roadmap({ course, lessons, isComplete, nextKey }) {
+  const locked = useLessonLocked();
   return (
     <ol className={styles.modules}>
       {course.modules.map((module, mi) => {
@@ -60,6 +63,7 @@ export function Roadmap({ course, lessons, isComplete, nextKey }) {
                       {lesson.available ? (
                         <>
                           <LevelBadge level={lesson.level} />
+                          {locked(lesson) && <span className={styles.premiumTag}><Lock size={11} aria-hidden="true" /> Premium</span>}
                           <span className={styles.minutes}>
                             <Clock size={13} aria-hidden="true" /> {lesson.minutes}m
                           </span>
