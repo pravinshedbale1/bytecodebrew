@@ -137,6 +137,81 @@ The room can add muting, moderation, message history or rate limits without touc
 - **Mediator vs Observer**: Observer creates dynamic one-way subscriptions; Mediator removes mutual dependencies among a set of components. They combine well — the mediator can be an event publisher components subscribe to.
 - **Chain of Responsibility, Command, Mediator, Observer** all connect senders and receivers in different ways; Mediator's distinctive feature is that **no component talks to another directly**.
 
+## Keeping the mediator small: one handler per message
+
+The classic form puts every rule in one `notify(sender, event)` switch, which is exactly how god mediators grow. A common fix is to make the mediator a small router: each message type is a class, and each rule is a separate handler registered for that type. This is how libraries such as MediatR work, and it is close to Spring's application events.
+
+```java
+// A mediator that routes each message type to its own handler class,
+// so coordination rules stay small instead of piling up in one switch.
+public interface Handler<M> { void handle(M message); }
+
+public final class Mediator {
+    private final Map<Class<?>, List<Handler<?>>> handlers = new ConcurrentHashMap<>();
+
+    public <M> void register(Class<M> type, Handler<M> handler) {
+        handlers.computeIfAbsent(type, t -> new CopyOnWriteArrayList<>()).add(handler);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <M> void send(M message) {
+        for (Handler<?> h : handlers.getOrDefault(message.getClass(), List.of())) {
+            ((Handler<M>) h).handle(message);
+        }
+    }
+}
+
+// Messages are plain records; participants only know the mediator
+public record AlarmArmed(String by) { }
+public record DoorOpened(String door) { }
+
+public final class Lights { boolean on = true; void allOff() { on = false; System.out.println("lights off"); } }
+public final class Locks  { void lockAll() { System.out.println("doors locked"); } }
+public final class Siren  { void sound(String why) { System.out.println("SIREN: " + why); } }
+
+public final class MediatorDemo {
+    public static void main(String[] args) {
+        Mediator hub = new Mediator();
+        Lights lights = new Lights();
+        Locks locks = new Locks();
+        Siren siren = new Siren();
+        boolean[] armed = { false };
+
+        // Each rule is a separate, testable handler
+        hub.register(AlarmArmed.class, m -> { armed[0] = true; locks.lockAll(); lights.allOff(); });
+        hub.register(DoorOpened.class, m -> { if (armed[0]) siren.sound(m.door() + " opened while armed"); });
+
+        hub.send(new DoorOpened("back door"));       // not armed: nothing happens
+        hub.send(new AlarmArmed("keypad"));
+        hub.send(new DoorOpened("front door"));
+    }
+}
+```
+
+Output:
+
+```text
+doors locked
+lights off
+SIREN: front door opened while armed
+```
+
+Devices still never reference each other. Adding a "vacation mode" means registering new handlers, without editing a growing switch statement, and each handler can be unit-tested on its own.
+
+## Mediator vs event bus
+
+An event bus (or message broker) also decouples senders from receivers, but it only routes messages by topic: it contains no rules about *what should happen*. A mediator owns the coordination logic for one context ("when the alarm is armed, lock the doors and switch off the lights"). In practice a mediator is often built on top of a bus — as in the example above — with the rules living in handlers that belong to the mediator's context.
+
+## Testing
+
+- Test each **component** with a fake mediator and assert which messages it sends.
+- Test the **mediator's rules** with fake components and assert which commands they receive.
+- Keep the mediator free of I/O so these tests are fast and deterministic.
+
+<Callout type="interview">
+Typical LLD prompts with a natural mediator: **chat rooms** (users talk through the room), **air-traffic control** (planes ask the tower for runways), **auction houses** (bids go to the auction, which notifies other bidders), **elevator systems** (a dispatcher coordinates hall buttons and cars) and **smart homes**. Interviewers then ask how you keep the mediator from becoming a god object and whether it is thread-safe when many participants send at once.
+</Callout>
+
 ## Interview questions
 
 <QA q="When would you use a Mediator instead of letting objects call each other?">
@@ -147,9 +222,23 @@ When a group of objects interact in complex, many-to-many ways — UI components
 Scope each mediator to one cohesive interaction context (a single dialog or room), keep business rules in domain services or objects with the mediator only routing and coordinating, split it when unrelated concerns accumulate, and consider event-based mediation where handlers for each interaction are separate classes registered with the mediator.
 </QA>
 
+<QA q="Two users send messages to the same chat room at the same moment. How do you keep the mediator thread-safe and the message order consistent?">
+Protect the room's shared state: use a concurrent map for members, and give each room a single ordering point, either a lock around "assign sequence number and fan out" or, better at scale, a single-threaded executor (an actor) per room that processes messages one at a time. Every member then sees messages in the same order, and slow receivers should get messages through their own queues so one slow client cannot block the room.
+</QA>
+
 <Practice task="In a smart home, the alarm, lights, thermostat and door lock call each other directly (arming the alarm locks the doors, switches off the lights and sets the thermostat to eco). Redesign it with a mediator.">
 
 Introduce a `HomeHub` mediator. Devices only report events to it (for example `hub.notify(this, "ALARM_ARMED")`) and expose simple commands. The hub holds the rules: on ALARM_ARMED, lock the doors, switch off the lights and set the thermostat to eco. New scenes (vacation mode) change only the hub — or, to avoid a god mediator, register one rule object per scene with the hub. Devices become reusable and testable on their own.
+
+</Practice>
+
+<Practice task="Design an online auction with a mediator. Bidders place bids, everyone sees the current highest bid, and the auction closes at a deadline. What does the mediator own, and what do bidders know?">
+
+The `Auction` is the mediator. It owns the item, the current highest bid, the bid history, the deadline and the participant list. Bidders know only the auction: they call `auction.placeBid(this, amount)` and receive `onNewHighestBid(...)` and `onClosed(winner)` callbacks.
+
+Rules in the mediator: reject bids after the deadline or not above the current highest bid plus the minimum increment; record valid bids; notify all other bidders of a new highest bid; at the deadline, close and notify the winner and the others.
+
+Thread safety: process bids for one auction sequentially (a lock or a per-auction executor), so two simultaneous bids cannot both win. Bidders never reference each other.
 
 </Practice>
 
@@ -159,6 +248,7 @@ Introduce a `HomeHub` mediator. Devices only report events to it (for example `h
 - Components notify the mediator; it coordinates the reactions.
 - Great for forms, chat rooms, workflows and device coordination.
 - Watch for god mediators; Facade simplifies access, Mediator decouples peers.
+- Keep the mediator a small router with one handler per message type, and test components and rules separately.
 
 </Takeaways>
 

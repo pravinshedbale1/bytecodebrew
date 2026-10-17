@@ -134,6 +134,105 @@ public final class FormatSelectionCommand implements Command {
 - **Iterator** + Memento → save and resume an iteration position.
 - **Prototype** can be a simpler alternative when the object is straightforward and has no external resources: just store a copy.
 
+## Undo and redo together
+
+Real editors need both directions. The caretaker keeps two stacks: an undo stack of states to go back to, and a redo stack of states you undid. Two rules make it correct:
+
+1. Undoing pushes the *current* state onto the redo stack before restoring, so the undo can itself be undone.
+2. Any new edit clears the redo stack, because the "future" it described no longer follows from the present.
+
+```java
+// Originator: owns its state, creates and restores opaque snapshots
+public final class TextBox {
+    private String text = "";
+
+    public void type(String s) { text += s; }
+    public String text() { return text; }
+
+    public static final class Snapshot {                 // opaque to everyone but TextBox
+        private final String text;
+        private Snapshot(String text) { this.text = text; }
+    }
+
+    public Snapshot save() { return new Snapshot(text); }
+    public void restore(Snapshot s) { text = s.text; }
+}
+
+// Caretaker with undo AND redo, bounded to `limit` steps
+public final class UndoHistory {
+    private final Deque<TextBox.Snapshot> undo = new ArrayDeque<>();
+    private final Deque<TextBox.Snapshot> redo = new ArrayDeque<>();
+    private final int limit;
+
+    public UndoHistory(int limit) { this.limit = limit; }
+
+    /** Call before every change. A new change makes the old "future" meaningless, so redo is cleared. */
+    public void beforeChange(TextBox box) {
+        undo.push(box.save());
+        if (undo.size() > limit) undo.removeLast();       // forget the oldest step
+        redo.clear();
+    }
+
+    public boolean undo(TextBox box) {
+        if (undo.isEmpty()) return false;
+        redo.push(box.save());                             // so this undo can itself be undone
+        box.restore(undo.pop());
+        return true;
+    }
+
+    public boolean redo(TextBox box) {
+        if (redo.isEmpty()) return false;
+        undo.push(box.save());
+        box.restore(redo.pop());
+        return true;
+    }
+}
+
+public final class MementoDemo {
+    public static void main(String[] args) {
+        TextBox box = new TextBox();
+        UndoHistory history = new UndoHistory(100);
+
+        for (String word : new String[] { "Hello", " brave", " new", " world" }) {
+            history.beforeChange(box);
+            box.type(word);
+        }
+        history.undo(box);
+        history.undo(box);
+        System.out.println(box.text());                    // Hello brave
+        history.redo(box);
+        System.out.println(box.text());                    // Hello brave new
+
+        history.beforeChange(box);
+        box.type("!");                                     // a new edit clears redo
+        System.out.println(box.text() + " | redo possible: " + history.redo(box));
+    }
+}
+```
+
+Output:
+
+```text
+Hello brave
+Hello brave new
+Hello brave new! | redo possible: false
+```
+
+The history is bounded (`limit`), so memory stays predictable. Note that `UndoHistory` never looks inside a `Snapshot`; it only stores and returns them.
+
+## Persistent mementos: save games and drafts
+
+When mementos are written to disk or sent over the network, new concerns appear:
+
+- **Versioning.** The originator's fields will change between releases. Store a format version in every saved memento and keep code that upgrades old versions on load.
+- **Validation.** A loaded memento is untrusted input. Validate it before restoring, so a corrupted or edited file cannot put the object into an impossible state.
+- **Tampering.** For games, players may edit save files to cheat; sign the saved data (an HMAC) if that matters, or keep authoritative state on the server.
+- **Size.** Compress large snapshots, and for frequent autosaves store a full snapshot occasionally plus small diffs in between.
+
+<Callout type="interview">
+Memento appears in LLD rounds as **undo/redo in a text editor or drawing app**, **checkpoints in a game**, **configuration rollback** (keep previous config versions and restore one) and **restoring a shopping cart** after a failed checkout. Follow-up questions are almost always about memory: how many snapshots, full or incremental, and when to discard them.
+</Callout>
+
 ## Interview questions
 
 <QA q="How does Memento preserve encapsulation?">
@@ -144,9 +243,25 @@ Only the originator creates mementos and reads their contents; the memento's sta
 Inverse operations (each command knows how to reverse itself) are memory-efficient but require careful logic for every command and are hard for complex or non-invertible changes. Mementos are generic and simple — snapshot before, restore after — but cost memory proportional to state size and history length. Many editors combine them: inverse operations for small edits, snapshots for complex ones, with bounded history.
 </QA>
 
+<QA q="Why does making a new edit clear the redo stack?">
+The redo stack holds states that followed the current one before you undid them. Once you make a different edit, the document has branched away from that history: those redo states would restore a version that no longer follows from what is on screen, silently throwing away the new edit. Clearing redo keeps history linear. Tools that keep the abandoned branch (an undo tree, as in some editors) must show the branches explicitly.
+</QA>
+
 <Practice task="A form-builder app wants unlimited undo, but snapshots of large forms are 2 MB each. How do you keep memory under control?">
 
 Combine several techniques: bound the history (say, the last 100 steps); store **incremental** mementos (only the changed field's previous state) instead of whole-form snapshots; use inverse-operation commands for small edits and full snapshots only for large structural changes; and make the form model immutable so each edit creates a new version that shares all untouched parts with the previous one (a persistent data structure).
+
+</Practice>
+
+<Practice task="A drawing app has documents with 10,000 shapes, and users expect 200 steps of undo. A full snapshot per step would use gigabytes. Design undo so it stays fast and small.">
+
+Use commands for most steps and snapshots only as checkpoints:
+1. Each action (move shape, change colour, delete) is a command that records just enough to reverse itself: the shape ID and its old position or colour. That is a few bytes, not a copy of 10,000 shapes.
+2. For actions that are hard to invert (a complex filter applied to many shapes), store a memento of only the affected shapes.
+3. Every 50 steps, store a full checkpoint snapshot in the background; undoing far back restores the nearest checkpoint and replays commands forward, which bounds the worst case.
+4. Bound history to 200 steps and drop the oldest checkpoints and commands together.
+
+Making shapes immutable, with a persistent (structure-sharing) document model, is another option: each step keeps the old document version, which shares nearly all shapes with the new one.
 
 </Practice>
 
@@ -156,6 +271,7 @@ Combine several techniques: bound the history (say, the last 100 steps); store *
 - Originator creates/restores; memento is immutable and opaque; caretaker only stores.
 - Bound history and consider diffs to control memory.
 - Combine with Command for undo/redo.
+- Undo plus redo needs two stacks; a new edit clears redo. Persisted mementos need versioning and validation.
 
 </Takeaways>
 

@@ -110,6 +110,80 @@ Key properties:
 In machine-coding rounds your top-level service class (`ParkingService`, `BookingService`) is effectively a facade: it exposes the use cases (`park`, `book`) and orchestrates repositories, strategies and validators underneath. Saying so — and keeping it thin — shows you understand the pattern's role.
 </Callout>
 
+## Facade over a third-party SDK
+
+One of the most valuable facades wraps a vendor SDK you do not control. The SDK's awkward API, its error codes and its types stay inside one class; the rest of your code uses a small interface with your own types. Switching vendors, or testing without the network, then touches one class.
+
+```java
+// ---- A clumsy third-party SDK we don't control (simplified)
+public final class AcmePayClient {
+    public String createOrder(long amountPaise, String currency) { return "ord_" + amountPaise; }
+    public Map<String, String> capture(String orderId, String cardToken) {
+        if (cardToken.startsWith("bad")) return Map.of("status", "FAILED", "error_code", "CARD_DECLINED");
+        return Map.of("status", "CAPTURED", "payment_id", "pay_" + orderId);
+    }
+}
+
+// ---- Our own types: the rest of the codebase never sees the SDK
+public record Money(long minorUnits, String currency) { }
+
+public sealed interface PaymentResult {
+    record Paid(String paymentId) implements PaymentResult { }
+    record Declined(String reason) implements PaymentResult { }
+}
+
+public interface Payments {                               // what callers depend on (easy to fake in tests)
+    PaymentResult charge(Money amount, String cardToken);
+}
+
+// ---- The facade: one simple call that hides the SDK's two-step flow and its stringly-typed results
+public final class AcmePaymentsFacade implements Payments {
+    private final AcmePayClient client;
+
+    public AcmePaymentsFacade(AcmePayClient client) { this.client = client; }
+
+    @Override public PaymentResult charge(Money amount, String cardToken) {
+        String orderId = client.createOrder(amount.minorUnits(), amount.currency());
+        Map<String, String> response = client.capture(orderId, cardToken);
+        return "CAPTURED".equals(response.get("status"))
+                ? new PaymentResult.Paid(response.get("payment_id"))
+                : new PaymentResult.Declined(response.getOrDefault("error_code", "UNKNOWN"));
+    }
+}
+
+public final class FacadeDemo {
+    public static void main(String[] args) {
+        Payments payments = new AcmePaymentsFacade(new AcmePayClient());
+        System.out.println(payments.charge(new Money(49_900, "INR"), "tok_visa"));
+        System.out.println(payments.charge(new Money(49_900, "INR"), "bad_tok"));
+
+        // In a test, callers use a fake instead of the SDK
+        Payments alwaysDeclines = (amount, token) -> new PaymentResult.Declined("TEST");
+        System.out.println(alwaysDeclines.charge(new Money(100, "INR"), "x"));
+    }
+}
+```
+
+Output:
+
+```text
+Paid[paymentId=pay_ord_49900]
+Declined[reason=CARD_DECLINED]
+Declined[reason=TEST]
+```
+
+In domain-driven design this is called an **anti-corruption layer**: it stops another system's model from leaking into yours. It is also where Facade and [Adapter](/system-design/lld/adapter-pattern) meet: the class is a facade (one simple call hiding a two-step flow) that also adapts the SDK to your `Payments` interface.
+
+## Testing with facades
+
+- Depend on an **interface** (`Payments`) rather than the concrete facade, so callers can be tested with a one-line fake, as in the example.
+- Test the **facade itself** with fake subsystem objects: check the order of calls and that failures trigger the right compensation (releasing inventory when payment fails).
+- Keep the facade free of business rules; then its tests stay short, and the rules are tested where they live.
+
+## What interviewers probe
+
+When your design has a facade (often the top-level service in a machine-coding round), expect questions about **failure handling** (what is compensated if step 4 of 6 fails?), **idempotency** (what if the client retries `placeOrder` after a timeout?) and **transaction boundaries** (which steps must succeed or fail together?). A good answer keeps the facade thin but explicit about these three.
+
 ## Interview questions
 
 <QA q="What's the difference between a Facade and a Mediator?">
@@ -120,9 +194,23 @@ A facade provides a simplified interface to a subsystem for outside clients; the
 Scope each facade to a cohesive set of use cases or a single client type, keep it to orchestration (calling subsystem services in order, handling compensation), push business rules into domain objects and services, and return simple domain types rather than subsystem objects. When it grows, split by use case — for example, CheckoutFacade and ReturnsFacade.
 </QA>
 
+<QA q="Should a facade be an interface or a concrete class?">
+Callers should depend on an interface when the facade hides something you may want to replace or fake — a third-party SDK, a remote service, an expensive subsystem. That makes callers easy to test and lets you swap implementations. For an internal orchestration facade with a single implementation, a concrete class with injected dependencies is fine; you can extract an interface later if a second implementation or heavy testing needs appear.
+</QA>
+
 <Practice task="CheckoutFacade.placeOrder has grown to 400 lines with fraud checks, loyalty points and gift-wrapping logic. What's wrong, and how do you fix it without losing the simple entry point?">
 
 The facade has become a god object: it owns business rules instead of orchestrating. Move each rule into its own domain service (`FraudCheck`, `LoyaltyService`, `GiftWrapService`), or into the domain objects that own the data, and keep the facade to sequencing calls and compensating on failure. Optional follow-ups can react to an `OrderPlaced` event instead (Observer). Callers still call one `placeOrder` method.
+
+</Practice>
+
+<Practice task="Your app stores files on one cloud provider today and may move to another next year. The provider's SDK is used directly in 30 places. Design the change.">
+
+Introduce your own `FileStore` interface with the operations the app really needs: `put(key, bytes, contentType)`, `get(key)`, `delete(key)`, `signedUrl(key, ttl)`. Use your own types and exceptions (`FileNotFound`, `StorageUnavailable`).
+
+Implement it as a facade over today's SDK (`ProviderAFileStore`), hiding multipart uploads, retries, client configuration and the SDK's exception types. Replace the 30 call sites one at a time to use `FileStore`; nothing else should import the SDK (enforce it with an architecture test or a package rule).
+
+Moving providers later means writing `ProviderBFileStore` and switching the wiring, plus a data migration. Tests use an in-memory `FileStore`.
 
 </Practice>
 
@@ -132,6 +220,7 @@ The facade has become a god object: it owns business rules instead of orchestrat
 - It doesn't add functionality and doesn't prevent direct subsystem access.
 - Keep facades thin and use-case focused; return your own types.
 - Service layers, JdbcTemplate, SLF4J and API gateways are facades.
+- Wrap third-party SDKs in a facade with your own interface and types (an anti-corruption layer); it makes testing and switching vendors cheap.
 
 </Takeaways>
 
