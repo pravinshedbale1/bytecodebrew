@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { dsa } from '../../curriculum/tracks/dsa';
 import { useSolved } from '../../hooks/useSolved';
 import { SolvedToggle } from './SolvedToggle';
+import { SolveLink } from '../solve/SolveLink';
 import styles from './ProblemTracker.module.css';
 // { lessonId: [{ num, title, slug, level }] }, parsed from the lessons' practice ladders at build time.
 import ladderData from 'virtual:dsa-ladders';
@@ -34,6 +35,9 @@ export function ProblemTracker() {
 
   return (
     <div className={styles.tracker}>
+      <p className={styles.pageLink}>
+        To solve these here with starter code and tests, open the <Link to="/problems">Problems page</Link>.
+      </p>
       <div className={styles.summary}>
         <div className={styles.big}>
           <span className={styles.bigNum}>{done}</span> / {total} solved
@@ -70,6 +74,7 @@ export function ProblemTracker() {
                       <a href={`https://leetcode.com/problems/${p.slug}/`} target="_blank" rel="noopener noreferrer">
                         {p.num}. {p.title}
                       </a>
+                      <SolveLink slug={p.slug} />
                       <span className={`${styles.level} ${styles[p.level.toLowerCase()]}`}>{p.level}</span>
                     </li>
                   ))}

@@ -1,4 +1,4 @@
-# Bytecode Brew
+# ByteCodeBrew
 
 An in-depth study centre for software engineering interviews (System Design, DSA, and more).
 
@@ -39,7 +39,8 @@ Standard Markdown (including GFM tables) plus these components, available withou
 | --- | --- |
 | `<Callout type="note \| tip \| warning \| interview \| example" title="…">` | Highlighted asides |
 | `<QA q="Question?">answer</QA>` | Collapsible interview question |
-| `<Practice task="Exercise">approach</Practice>` | Design exercise; the suggested approach stays hidden until opened |
+| `<Practice task="Exercise">approach</Practice>` | Design exercise: the reader writes an attempt, compares it with the approach and rates it; "Partly"/"Missed" join the review deck |
+| `<Quiz questions={[{ q, options, answer, why }]} />` | Inline multiple-choice check (the end-of-lesson quick check is automatic, see below) |
 | `<Takeaways>- list</Takeaways>` | Summary box at the end |
 | ```` ```mermaid ```` fences | Diagrams (flowchart, sequence, state…), themed for light/dark |
 | `<HashRing servers={…} keys={…} />` | Consistent-hashing ring diagram |
@@ -69,6 +70,32 @@ Every Java snippet in the DSA track is an excerpt of a runnable file in [`dsa-ja
 
 Every LLD case study has a runnable reference solution in [`lld-java/`](lld-java/README.md), and the lesson's Java snippets are excerpts of it. After changing a lesson's code, update the matching file and run `./lld-java/run-all.sh` (JDK 21+; the schema lesson's SQL also runs if PostgreSQL is installed).
 
+## Active recall and practice
+
+- **Quick checks**: every lesson ends with 3 multiple-choice questions from `src/data/quizzes/<track>/<course>.js` (`{ [lessonId]: [{ q, options, answer, why }] }`). Write options in any order; the loader shuffles them per question with a stable seed. Missed questions join the review deck.
+- **Review** (`/review`): spaced repetition (`src/lib/srs.js`, 1/3/7/16/35/90-day boxes). The deck is derived, not stored (`src/lib/reviewDeck.js`): every `<QA>` of a completed lesson, missed quiz questions, and practice tasks rated Partly/Missed. Up to 20 new cards a day.
+- **Search** (⌘K / Ctrl+K / "/"): lessons, section headings and interview questions. `build/content-plugin.js` extracts headings, `<QA>`, `<Practice>` and `<Takeaways>` from the MDX at build time (`virtual:search-index`, `virtual:lesson-extracts`).
+- **Dashboard** (`/dashboard`): streak and heatmap (`useActivity`), today's plan, weak areas, interview countdown with a weekly plan, daily goals, and LeetCode sync.
+- **LeetCode sync**: browsers can't call LeetCode (no CORS), so it goes through `workers/leetcode` (a Cloudflare Worker; the Vite dev server serves the same code at `/api/leetcode`). One refresh an hour per learner (`src/lib/leetcode.js`) plus an hour-long cache per username and a per-IP limit in the Worker. See [`workers/leetcode/README.md`](workers/leetcode/README.md) to deploy, then set `LEETCODE_API` in `src/config/services.js`.
+- **Full LeetCode import**: LeetCode only lists a user's solved problems to that user, signed in. The dashboard offers a bookmark (or a console script) that runs on leetcode.com in the learner's session, reads `/api/problems/all/` and opens `/dashboard#lc-import=…`; the hash never reaches a server (`src/lib/leetcodeImport.js`).
+- **Solved sources**: each solved problem records how it was solved (`tests` passed here, `leetcode`, or `self`-ticked). Verified solves show a filled checkmark, self-ticked ones an outlined one (`src/hooks/useSolved.js`).
+- **Problems** (`/problems`): every ladder problem with filters by level, status and pattern; the main entry point for solving with tests.
+- **Mock interview** (`/mock`): timed DSA/HLD/LLD/behavioral rounds with phases, a scratchpad and a self-scoring rubric (`src/data/mockInterviews.js`). Optional AI interviewer and feedback use the learner's own Claude API key, kept only in their browser (`src/lib/claude.js`).
+- **Solve with tests** (`/solve/<slug>`): all 314 practice-ladder problems have LeetCode-style starter code, example tests ("Run") and full tests ("Submit"); 134 of them add a generated large input that rejects brute force (time limit scaled to the judge machine's speed); passing marks the problem solved. "Solve" links appear next to ladder problems, in the Problem Tracker and in search, and the DSA mock round embeds the solver. Specs and verified reference solutions live in [`problems/`](problems/README.md).
+- **Code playground** (`/playground`): free-form Java 17 on Judge0's public instance (`src/lib/judge0.js`). Java blocks in DSA lessons get a "Run" button that opens them wrapped into a `Main` class (`src/lib/javaWrap.js`).
+- **Cheat sheets** (`/cheatsheet/<track>/<course>`): every lesson's takeaways on one printable page.
+
+## Checks (run in CI on every push)
+
+| Command | What it checks | Needs |
+| --- | --- | --- |
+| `npm run check` | Every lesson is in the curriculum and has takeaways; internal links and `#section` anchors resolve; `<Related>` ids exist; quizzes are well formed and cover every lesson; problem data matches the ladders | Node |
+| `node scripts/smoke.mjs <url>` | Opens the main pages of a built site (`npx vite preview`) and fails on page or console errors | playwright-core + Chromium (`CHROME_PATH` locally) |
+| `./dsa-java/run-all.sh`, `./lld-java/run-all.sh` | Lesson code, tested against brute force; the schema lesson's SQL | JDK 21+, PostgreSQL optional |
+| `node problems/build.mjs --check` | Every practice problem's reference still produces the committed answers | JDK 17+ |
+
+`.github/workflows/verify.yml` runs all of these; the deploy workflow also runs `npm run check` before building. What would cost money (a dependable code runner, an AI interviewer key, reminders) is listed in [`docs/FUTURE.md`](docs/FUTURE.md).
+
 ## Accounts, sync and highlights (Firebase)
 
 Readers can **highlight text and add notes** in any lesson (select text → pick a colour), and **sign in with Google** to sync everything across devices: lesson progress, solved problems, story bank, drill history and highlights. Signed out, everything still works and is saved in the browser.
@@ -77,7 +104,7 @@ How it works:
 
 - `src/lib/syncedStore.js`: every saved store lives in `localStorage` and, when signed in, in Firestore at `users/{uid}/state/{name}` as `{ json, updatedAt }`. The first sync after sign-in **merges** device and account data; later changes from other devices are applied live.
 - `src/components/highlights/`: highlights use the CSS Custom Highlight API (`CSS.highlights`), so lesson DOM is never modified. Each highlight is stored as its text plus surrounding context (`src/lib/highlights/anchor.js`) and re-located on load.
-- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names. Everything else is denied.
+- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names (`stateNames()`; add new synced stores there and republish the rules). Everything else is denied.
 - Firebase is loaded lazily after the first paint. With an empty `apiKey` in `src/config/firebase.js`, accounts are switched off and the sign-in button is hidden.
 
 Local development against the emulators (no Firebase project needed; requires Java):

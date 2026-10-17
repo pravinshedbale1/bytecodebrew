@@ -112,3 +112,13 @@ Entities → tables · value objects → columns · enums → CHECKed text · co
 | [Food delivery](/system-design/lld/lld-food-delivery) | One-restaurant cart; best coupon; atomic stock reservation; transition table = cancellation policy |
 | [Hotel booking](/system-design/lld/lld-hotel-booking) | Half-open date ranges; per-room TreeMap, check one neighbour; per-night pricing |
 | [Digital wallet](/system-design/lld/lld-digital-wallet) | Double-entry ledger; lock accounts in id order; idempotency keys; refunds are new transactions |
+
+<Takeaways>
+
+- Clarify the requirements first, then entities, a class diagram with interfaces at the variation points, the core flows, and code.
+- Strategy and State solve most machine-coding problems; name the requirement each pattern serves.
+- Guard shared state explicitly: atomic claims, consistent lock ordering, short critical sections.
+- Model money as integers, time with an injected Clock, and illegal states as impossible through value objects and enums.
+- Get a clean core running early, then extend it; a working, well-structured core beats an ambitious half-finished design.
+
+</Takeaways>

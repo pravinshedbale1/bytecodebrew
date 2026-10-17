@@ -1,5 +1,5 @@
-import { useParams } from 'react-router';
-import { Target } from 'lucide-react';
+import { Link, useParams } from 'react-router';
+import { Target, FileText } from 'lucide-react';
 import { getTrack, getCourse, getCourseLessons, courseStats } from '../curriculum';
 import { useProgress } from '../hooks/useProgress';
 import { getNextUp } from '../lib/nextLesson';
@@ -47,6 +47,12 @@ export function CoursePage() {
       )}
       {course.modules.length > 0 && (
         <ModuleProgressCard course={course} lessons={lessons} isComplete={isComplete} />
+      )}
+      {stats.available > 0 && (
+        <RailCard title="Revise fast" icon={<FileText size={14} aria-hidden="true" />}>
+          <p className={styles.railText}>Every lesson’s key takeaways on one printable page.</p>
+          <Link to={`/cheatsheet/${trackId}/${courseId}`} className={styles.railLink}>Open the cheat sheet →</Link>
+        </RailCard>
       )}
     </>
   );

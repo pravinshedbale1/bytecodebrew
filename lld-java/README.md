@@ -1,6 +1,6 @@
 # LLD reference solutions
 
-One self-contained Java file per LLD case study in the Bytecode Brew course
+One self-contained Java file per LLD case study in the ByteCodeBrew course
 (`src/content/system-design/lld/lld-*.mdx`). Each file holds the full design from its
 lesson and a `main` that runs the lesson's scenarios as checks, including multi-threaded race tests.
 

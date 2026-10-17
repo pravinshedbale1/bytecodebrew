@@ -1,4 +1,5 @@
-import { Lightbulb } from 'lucide-react';
+import { Link } from 'react-router';
+import { Lightbulb, Flame } from 'lucide-react';
 import { tracks, trackIsActive, getCourseLessons, courseStats, getCourse } from '../curriculum';
 import { useProgress } from '../hooks/useProgress';
 import { getNextUp } from '../lib/nextLesson';
@@ -7,6 +8,10 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { TrackCard } from '../components/navigation/TrackCard';
 import { NextUpCard } from '../components/navigation/NextUpCard';
 import { ProgressCard, NoteCard } from '../components/rail/RailWidgets';
+import { RailCard } from '../components/layout/PageLayout';
+import { DailyPlan } from '../components/dashboard/DailyPlan';
+import { Welcome } from '../components/navigation/Welcome';
+import { useActivity, streakOf } from '../hooks/useActivity';
 import { site } from '../config/site';
 import styles from './Page.module.css';
 
@@ -23,14 +28,23 @@ export function HomePage() {
   const course = getCourse(trackId, courseId);
   const { next, mode } = getNextUp(getCourseLessons(trackId, courseId), isComplete);
   const overall = overallProgress(isComplete);
+  const streak = streakOf(useActivity());
 
   const rail = (
     <>
+      <RailCard
+        title="Today"
+        icon={<Flame size={14} aria-hidden="true" />}
+        action={<span className={styles.railMeta}>{streak ? `${streak}-day streak` : 'Start a streak'}</span>}
+      >
+        <DailyPlan compact />
+        <Link to="/dashboard" className={styles.railLink}>Open your dashboard →</Link>
+      </RailCard>
       <ProgressCard
         title="Overall progress"
         completed={overall.completed}
         total={overall.total}
-        caption="Across every published lesson. Progress is saved in this browser."
+        caption="Across every published lesson."
       />
       <NoteCard
         title="How to study here"
@@ -55,6 +69,8 @@ export function HomePage() {
           actually ask.
         </p>
       </header>
+
+      <Welcome />
 
       {course && (
         <section className={styles.section}>

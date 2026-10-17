@@ -1,4 +1,4 @@
 export const site = {
-  name: 'Bytecode Brew',
+  name: 'ByteCodeBrew',
   tagline: 'A structured, in-depth study centre for software engineering interviews.',
 };

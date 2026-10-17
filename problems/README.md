@@ -1,0 +1,57 @@
+# Practice problems with tests
+
+Every problem on the DSA practice ladders (314) can be solved on the site, LeetCode style: a starter
+`Solution` (or design class), **Run** on the examples and **Submit** on every test. Passing all tests
+marks the problem solved. The browser sends code to Judge0 (`src/lib/judge0.js`).
+
+```
+problems/
+  specs/<lessonId>.mjs   one file per DSA pattern lesson: problem specs + reference solutions
+  build.mjs              compiles every reference, runs the tests, writes src/data/problems/*.json
+src/lib/judge/
+  support.js             Java added to every submission (input parsing, output formatting, TreeNode, ListNode…)
+  harness.js             builds Main.java from a spec + code + tests; parses results; starter code
+  check.js               compares outputs (exact, any order, or a validator for multi-answer problems)
+  runner.js / problems.js  browser side: run on Judge0, grade, load specs
+```
+
+## A spec
+
+```js
+{
+  slug: 'two-sum', title: 'Two Sum', level: 'Easy',
+  summary: 'In our own words — never copy LeetCode statements.',
+  method: 'twoSum', params: [['int[]', 'nums'], ['int', 'target']], returns: 'int[]',
+  check: 'any-order',                         // optional: 'any-order' | 'any-order-deep' | 'custom:<validator>'
+  tests: [
+    { in: [[2, 7, 11, 15], 9], out: [0, 1] }, // `out` only for official examples: the build cross-checks it
+    { in: [[3, 3], 6] },                      // other tests get their expected output from the reference
+  ],
+  ref: `class Solution { … }`,                 // reference solution, compiled locally, never shipped
+}
+```
+
+- **Design problems** use `design: { cls, ctor, methods }` and LeetCode's operations/arguments tests.
+- **Void methods** set `output` (the argument to print after the call).
+- **Odd signatures** (cycle position, nodes picked by value, isBadVersion, iterators) use `call`: Java with
+  `$0, $1…` as the inputs and `s` as a new Solution, setting `Object r`. `starterParams` gives the
+  method's real parameters when tests carry extra inputs; `uses`/`extends` add provided classes.
+- Supported input types are listed in `CONV` in `harness.js`.
+
+## Performance tests
+
+`problems/perf.mjs` adds a large generated input to problems where brute force would otherwise pass:
+Java code builds the input from a seeded generator (`BCB.ints`, `BCB.str`, `BCB.grid`…), and the answer
+is compared by hash. The limit is max(floor, 10 × the reference's time), scaled by a calibration
+workload timed on both the build machine and the judge (`perfLimitMs` in `harness.js`). Inputs stay
+within LeetCode's constraints and must have a unique answer.
+
+## Build
+
+```bash
+node problems/build.mjs                 # all lessons (JDK 17+; about a minute)
+node problems/build.mjs two-pointers    # one lesson
+```
+
+The build fails if a reference errors or disagrees with an official example. Commit the generated
+`src/data/problems/*.json`; the site build doesn't need Java.

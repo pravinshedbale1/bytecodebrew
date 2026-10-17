@@ -77,7 +77,13 @@ a.card:hover .arrow {
 }
 
 .progress {
-  margin-top: var(--space-3);
+  /* progress and footer sit at the bottom, so they line up across cards in a row */
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+
+.progress + .footer {
+  margin-top: 0;
 }
 
 .footer {

@@ -1,0 +1,56 @@
+name: Verify
+
+# Runs on every push and pull request (all branches). Free on public repositories.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: Content, build and browser smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Content and data checks
+        run: npm run check
+      - run: npm run build
+      - name: Install a browser for the smoke test
+        run: |
+          npm install --no-save playwright-core@1.58.0
+          npx --yes playwright@1.58.0 install --with-deps chromium
+      - name: Smoke test the built site
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173 >/dev/null && break; sleep 1; done
+          node scripts/smoke.mjs http://localhost:4173
+
+  java:
+    name: Lesson code and practice-problem references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: DSA lesson code
+        run: ./dsa-java/run-all.sh
+      - name: LLD lesson code
+        run: ./lld-java/run-all.sh
+      - name: Practice problems (references still produce the committed answers)
+        run: node problems/build.mjs --check

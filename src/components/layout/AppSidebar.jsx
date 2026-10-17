@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, Layers, Timer, Code2, ListChecks } from 'lucide-react';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
 import { useProgress } from '../../hooks/useProgress';
@@ -21,7 +21,7 @@ export function AppSidebar({ open, onClose }) {
   const inCourse = Boolean(course && courseStats(trackId, courseId).available > 0);
 
   return (
-    <aside className={`${styles.sidebar} ${open ? styles.open : ''}`} aria-label="Main navigation">
+    <aside className={`${styles.sidebar} ${open ? styles.open : ''}`} aria-label="Main navigation" data-print="hide">
       <div className={styles.brandRow}>
         <Link to="/" className={styles.brand}>
           <span className={styles.logo} aria-hidden="true">
@@ -61,6 +61,11 @@ function GlobalNav({ activeTrackId }) {
       <NavLink to="/" end className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
         <Home size={18} strokeWidth={1.75} aria-hidden="true" />
         Home
+      </NavLink>
+
+      <NavLink to="/dashboard" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
+        <LayoutDashboard size={18} strokeWidth={1.75} aria-hidden="true" />
+        Dashboard
       </NavLink>
 
       <p className={styles.section}>Learn</p>
@@ -118,9 +123,24 @@ function GlobalNav({ activeTrackId }) {
           </div>
         );
       })}
+
+      <p className={styles.section}>Practise</p>
+      {PRACTICE_LINKS.map(({ to, label, icon: I }) => (
+        <NavLink key={to} to={to} className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
+          <I size={18} strokeWidth={1.75} aria-hidden="true" />
+          {label}
+        </NavLink>
+      ))}
     </nav>
   );
 }
+
+const PRACTICE_LINKS = [
+  { to: '/problems', label: 'Problems', icon: ListChecks },
+  { to: '/review', label: 'Review', icon: Layers },
+  { to: '/mock', label: 'Mock interview', icon: Timer },
+  { to: '/playground', label: 'Code playground', icon: Code2 },
+];
 
 function CourseNav({ trackId, courseId, course }) {
   const { isComplete } = useProgress();

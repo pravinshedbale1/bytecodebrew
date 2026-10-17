@@ -14,7 +14,7 @@ for dir in */; do
   done
 done
 # SQL from the schema-design lesson, if PostgreSQL binaries are available
-if command -v initdb >/dev/null 2>&1 || [ -x /opt/homebrew/opt/postgresql@15/bin/initdb ]; then
+if command -v initdb >/dev/null 2>&1 || [ -x /opt/homebrew/opt/postgresql@15/bin/initdb ] || ls /usr/lib/postgresql/*/bin/initdb >/dev/null 2>&1; then
   ./schema-design/verify.sh | tail -1 || { echo "✗ schema-design FAILED"; failed=1; }
 else
   echo "- schema-design skipped (no PostgreSQL found)"

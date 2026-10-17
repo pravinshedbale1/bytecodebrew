@@ -129,3 +129,13 @@ Decision template: **requirement → options → choice → cost**. ([Framework]
 Requirements confirmed · numbers drive decisions · every functional requirement has a path through the diagram · consistency chosen per data type · no single point of failure · retries are idempotent · hot keys handled · failure walk-through done · observability and security mentioned · trade-offs stated out loud.
 
 ([Recurring Design Patterns](/system-design/hld/hld-design-patterns))
+
+<Takeaways>
+
+- Run every design in the same order: requirements → estimates → API → data model → high-level design → deep dives → wrap-up.
+- Let numbers drive decisions: a day is about 10^5 seconds, 1M requests a day is about 12 QPS, and you always size for peak.
+- Choose storage and consistency per data type; money and locks lean strongly consistent, feeds and counters can be eventual.
+- Scale reads with caches and replicas, writes with sharding and queues; remove single points of failure and make retries idempotent.
+- Finish with failures, hot keys, observability, security and the trade-offs you made, said out loud.
+
+</Takeaways>

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { AppSidebar } from './AppSidebar';
-import { TopBar } from './TopBar';
+import { TopBar, crumbsFor } from './TopBar';
+import { site } from '../../config/site';
+import { SearchDialog } from '../search/SearchDialog';
+import { SignInNudge } from './SignInNudge';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
@@ -12,6 +15,12 @@ export function AppShell() {
     setNavOpen(false);
     if (!hash) window.scrollTo(0, 0);
   }, [pathname, hash]);
+
+  // Each page gets its own tab title (better bookmarks, history and sharing).
+  useEffect(() => {
+    const crumbs = crumbsFor(pathname);
+    document.title = crumbs.length > 1 ? `${crumbs[crumbs.length - 1].label} · ${site.name}` : `${site.name} — Interview preparation, in depth`;
+  }, [pathname]);
 
   return (
     <div className={styles.shell}>
@@ -28,6 +37,8 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      <SearchDialog />
+      <SignInNudge />
     </div>
   );
 }

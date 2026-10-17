@@ -1,4 +1,6 @@
-import { Link } from 'react-router';
+import { useRef } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { Play } from 'lucide-react';
 import { Callout } from './Callout';
 import { Takeaways } from './Takeaways';
 import { QA } from './QA';
@@ -15,15 +17,49 @@ import { QuestionList } from './QuestionList';
 import { StackedBar } from './StackedBar';
 import { SolvedToggle } from './SolvedToggle';
 import { ProblemTracker } from './ProblemTracker';
+import { Quiz } from './Quiz';
 import { problemSlug } from '../../hooks/useSolved';
+import { useLessonKey } from '../lesson/LessonContext';
+import { openInPlayground } from '../../lib/playground';
+import { SolveLink } from '../solve/SolveLink';
 
-/** ```mermaid fences become diagrams; every other <pre> renders normally. */
+/** Plain text of rendered (highlighted) code. */
+function nodeText(node) {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join('');
+  return nodeText(node.props?.children);
+}
+
+/** Only blocks that declare a method or a type can compile; loop templates and fragments can't. */
+const DECLARES = /^\s*(?:(?:public|private|protected|static|final|abstract)\s+)*(?:class|interface|record|enum)\s+\w+|^\s*(?:(?:public|private|protected|static|final|synchronized)\s+)*(?!(?:else|return|new|throw)\b)[\w<>\[\],.? ]+\s+\w+\s*\([^;{}]*\)\s*(?:throws\s+[\w., ]+)?\{/m;
+
+/**
+ * ```mermaid fences become diagrams; every other <pre> renders normally.
+ * Java blocks in DSA lessons get a small "Run" button that opens them in the Code Playground.
+ */
 function Pre({ children, ...rest }) {
   const code = children?.props;
+  const lessonKey = useLessonKey();
+  const navigate = useNavigate();
+  const ref = useRef(null);
   if (code?.className === 'language-mermaid') {
     return <Mermaid chart={String(code.children)} />;
   }
-  return <pre {...rest}>{children}</pre>;
+  const runnable = lessonKey?.startsWith('dsa/') && /\blanguage-java\b/.test(code?.className ?? '') && DECLARES.test(nodeText(code?.children));
+  if (!runnable) return <pre {...rest}>{children}</pre>;
+  const run = () => {
+    openInPlayground(ref.current?.textContent ?? '', lessonKey);
+    navigate('/playground');
+  };
+  return (
+    <div className="code-runnable">
+      <pre {...rest} ref={ref}>{children}</pre>
+      <button type="button" className="code-run" onClick={run} title="Experiment with this snippet in the Code Playground (not judged)">
+        <Play size={12} aria-hidden="true" /> Open in playground
+      </button>
+    </div>
+  );
 }
 
 function Table(props) {
@@ -62,6 +98,7 @@ function Anchor({ href = '', children, ...rest }) {
     <>
       <SolvedToggle slug={slug} title={typeof children === 'string' ? children : undefined} />
       {link}
+      <SolveLink slug={slug} />
     </>
   );
 }
@@ -86,4 +123,5 @@ export const mdxComponents = {
   QuestionList,
   StackedBar,
   ProblemTracker,
+  Quiz,
 };

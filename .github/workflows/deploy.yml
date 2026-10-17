@@ -24,6 +24,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run check        # broken links, quizzes or problem data never reach the live site
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

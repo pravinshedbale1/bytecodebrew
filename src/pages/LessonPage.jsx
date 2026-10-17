@@ -14,6 +14,8 @@ import { LevelBadge } from '../components/common/Badge';
 import { ComingSoon } from '../components/common/ComingSoon';
 import { HighlightLayer } from '../components/highlights/HighlightLayer';
 import { LessonHighlightsCard } from '../components/highlights/LessonHighlightsCard';
+import { LessonKeyContext } from '../components/lesson/LessonContext';
+import { LessonQuiz } from '../components/mdx/Quiz';
 import { NotFoundPage } from './NotFoundPage';
 import styles from './LessonPage.module.css';
 import '../styles/prose.css';
@@ -29,6 +31,9 @@ function HeadingCollector({ containerRef, onCollect }) {
         level: Number(n.tagName[1]),
       })),
     );
+    // Deep links (from search) arrive before the lazy lesson renders, so scroll once it has.
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id) document.getElementById(id)?.scrollIntoView();
   }, [containerRef, onCollect]);
   return null;
 }
@@ -90,7 +95,7 @@ export function LessonPage() {
         </header>
 
         {Content ? (
-          <>
+          <LessonKeyContext.Provider value={key}>
             <div className="prose" ref={articleRef}>
               <MDXProvider components={mdxComponents}>
                 <Suspense fallback={<div className={styles.loading}>Loading lesson…</div>}>
@@ -100,6 +105,7 @@ export function LessonPage() {
               </MDXProvider>
             </div>
             <HighlightLayer rootRef={articleRef} lessonKey={key} />
+            <LessonQuiz lessonKey={key} />
             <LessonFooter
               complete={isComplete(key)}
               onToggleComplete={() => setComplete(key, !isComplete(key))}
@@ -107,7 +113,7 @@ export function LessonPage() {
               next={next}
               coursePath={coursePath}
             />
-          </>
+          </LessonKeyContext.Provider>
         ) : (
           <ComingSoon title="This lesson is planned" backTo={coursePath} backLabel="Back to roadmap">
             It’s part of the roadmap and will be published soon. Meanwhile, continue with the

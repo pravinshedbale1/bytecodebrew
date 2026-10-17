@@ -70,3 +70,49 @@
     display: none;
   }
 }
+
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 10px 0 12px;
+  min-width: 220px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.search:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-muted);
+}
+
+.searchLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.searchKbd {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+@media (max-width: 767px) {
+  .search {
+    min-width: 0;
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .searchLabel,
+  .searchKbd {
+    display: none;
+  }
+}

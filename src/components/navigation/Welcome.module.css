@@ -1,0 +1,95 @@
+.welcome {
+  container-type: inline-size;
+  margin-bottom: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-5) var(--space-6);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-md);
+  font-weight: 640;
+}
+
+.close {
+  border: 0;
+  background: none;
+  color: var(--color-text-subtle);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.close:hover {
+  color: var(--color-text);
+}
+
+.steps {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: grid;
+  /* 4 across, or 2 × 2: never three plus an orphan */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+@container (min-width: 880px) {
+  .steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 460px) {
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.steps li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.steps li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.icon {
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.text {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.link {
+  font-size: var(--text-sm);
+  font-weight: 560;
+  /* every card's link sits on the same line, at the bottom */
+  margin-top: auto;
+  padding-top: var(--space-2);
+  white-space: nowrap;
+}

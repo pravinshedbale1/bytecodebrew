@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'react-router';
+import { logActivity } from '../../hooks/useActivity';
 import { Shuffle, Play, Pause, RotateCcw, Save } from 'lucide-react';
 import { QUESTIONS, THEME_INFO } from '../../data/behavioralQuestions';
 import { createSyncedStore, mergeArrays } from '../../lib/syncedStore';
@@ -36,8 +38,10 @@ function pick(theme, current) {
 
 export function BehavioralDrill() {
   const attempts = useSyncExternalStore(store.subscribe, store.get);
+  const [params] = useSearchParams();
   const [theme, setTheme] = useState('all');
-  const [question, setQuestion] = useState(null);
+  // ?q=<index> opens the drill on a specific question (the dashboard's question of the day)
+  const [question, setQuestion] = useState(() => (params.has('q') ? QUESTIONS[Number(params.get('q'))] ?? null : null));
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const [checked, setChecked] = useState([]);
@@ -57,6 +61,7 @@ export function BehavioralDrill() {
   const toggle = (i) => setChecked((c) => (c.includes(i) ? c.filter((x) => x !== i) : [...c, i]));
   const save = () => {
     saveHistory([{ q: question.text, theme: question.theme, score: checked.length, seconds, at: new Date().toISOString() }, ...attempts].slice(0, 200));
+    logActivity('drill');
     setSaved(true);
   };
 
@@ -65,7 +70,7 @@ export function BehavioralDrill() {
   const avg = attempts.length ? (attempts.reduce((a, x) => a + x.score, 0) / attempts.length).toFixed(1) : null;
 
   return (
-    <div className={styles.drill}>
+    <div className={styles.drill} id="drill">
       <div className={styles.toolbar}>
         <label className={styles.select}>
           <span>Theme</span>

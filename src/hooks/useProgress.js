@@ -1,5 +1,6 @@
 import { useSyncExternalStore, useCallback } from 'react';
 import { createSyncedStore, mergeObjects } from '../lib/syncedStore';
+import { logActivity } from './useActivity';
 
 // Shape: { [lessonKey]: { completedAt: ISOString } , __lastVisited: lessonKey }
 // Synced to the user's account when signed in; on a first merge, this device's values win conflicts.
@@ -16,6 +17,7 @@ export function useProgress() {
   const isComplete = useCallback((key) => Boolean(progress[key]?.completedAt), [progress]);
 
   const setComplete = useCallback((key, done) => {
+    if (done && !store.get()[key]?.completedAt) logActivity('lesson');
     store.set((prev) => {
       const next = { ...prev };
       if (done) next[key] = { completedAt: new Date().toISOString() };
@@ -29,5 +31,7 @@ export function useProgress() {
     store.set((prev) => ({ ...prev, __lastVisited: key }));
   }, []);
 
-  return { isComplete, setComplete, markVisited, lastVisited: progress.__lastVisited ?? null };
+  const completedAt = useCallback((key) => progress[key]?.completedAt ?? null, [progress]);
+
+  return { progress, isComplete, completedAt, setComplete, markVisited, lastVisited: progress.__lastVisited ?? null };
 }

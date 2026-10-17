@@ -3,7 +3,7 @@
 # Needs PostgreSQL 13+ binaries (initdb, pg_ctl, psql) on PATH or under Homebrew.
 set -euo pipefail
 cd "$(dirname "$0")"
-for dir in /opt/homebrew/opt/postgresql@15/bin /opt/homebrew/opt/postgresql@16/bin /usr/lib/postgresql/15/bin; do
+for dir in /opt/homebrew/opt/postgresql@15/bin /opt/homebrew/opt/postgresql@16/bin /usr/lib/postgresql/*/bin; do
   [ -x "$dir/initdb" ] && PATH="$dir:$PATH"
 done
 DATA=$(mktemp -d)

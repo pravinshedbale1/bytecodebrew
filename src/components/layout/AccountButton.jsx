@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { LogIn, LogOut, Highlighter } from 'lucide-react';
+import { LogIn, LogOut, Highlighter, LayoutDashboard } from 'lucide-react';
 import { useAuth, signIn, signOutUser } from '../../hooks/useAuth';
+import { useSyncIssues } from '../../lib/syncedStore';
 import styles from './AccountButton.module.css';
 
 /** Top-bar account control: "Sign in with Google", or the user's avatar with a small menu. */
 export function AccountButton() {
   const { status, user, error } = useAuth();
+  const syncIssues = useSyncIssues();
   const [open, setOpen] = useState(false);
   const box = useRef(null);
 
@@ -36,8 +38,9 @@ export function AccountButton() {
   const initials = (user.name || user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   return (
     <div className={styles.wrap} ref={box}>
-      <button type="button" className={styles.avatar} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu">
+      <button type="button" className={styles.avatar} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={syncIssues.length ? 'Account menu (some data is not syncing)' : 'Account menu'}>
         {user.photo ? <img src={user.photo} alt="" referrerPolicy="no-referrer" /> : initials}
+        {syncIssues.length > 0 && <span className={styles.warnDot} aria-hidden="true" />}
       </button>
       {open && (
         <div className={styles.menu} role="menu">
@@ -45,7 +48,16 @@ export function AccountButton() {
             <strong>{user.name}</strong>
             <span>{user.email}</span>
           </div>
-          <p className={styles.sync}>Progress, solved problems, stories and highlights sync to this account.</p>
+          {syncIssues.length > 0 ? (
+            <p className={`${styles.sync} ${styles.syncWarn}`} role="status">
+              Some data isn't syncing right now ({syncIssues.join(', ')}). It's saved on this device and will sync when the problem clears.
+            </p>
+          ) : (
+            <p className={styles.sync}>Progress, solved problems, reviews, stories and highlights sync to this account.</p>
+          )}
+          <Link to="/dashboard" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
+            <LayoutDashboard size={15} /> Dashboard &amp; profile
+          </Link>
           <Link to="/highlights" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
             <Highlighter size={15} /> My highlights
           </Link>

@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
@@ -16,6 +17,21 @@ import { loadFirebase } from './firebase';
  * never clash with Firestore field-name rules.
  */
 export const SYNCED_NAMES = [];
+// Every store, for "download my data" and "delete my data" (src/lib/accountData.js).
+export const SYNCED_STORES = [];
+
+// Stores whose last sync attempt failed (e.g. Firestore rules not yet allowing them), shown in the account menu.
+let issues = [];
+const issueListeners = new Set();
+function setIssue(name, failed) {
+  const has = issues.includes(name);
+  if (failed === has) return;
+  issues = failed ? [...issues, name] : issues.filter((n) => n !== name);
+  issueListeners.forEach((l) => l());
+}
+export function useSyncIssues() {
+  return useSyncExternalStore((l) => { issueListeners.add(l); return () => issueListeners.delete(l); }, () => issues);
+}
 
 export function createSyncedStore({ name, storageKey, initial, merge }) {
   SYNCED_NAMES.push(name);
@@ -42,7 +58,13 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     const json = JSON.stringify(state);
     if (json === lastRemoteJson) return;
     lastRemoteJson = json;
-    await fb.fsMod.setDoc(docRef, { json, updatedAt: fb.fsMod.serverTimestamp() });
+    try {
+      await fb.fsMod.setDoc(docRef, { json, updatedAt: fb.fsMod.serverTimestamp() });
+      setIssue(name, false);
+    } catch (e) {
+      setIssue(name, true);
+      throw e;
+    }
   }
 
   function schedulePush() {
@@ -59,6 +81,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     docRef = fb.fsMod.doc(fb.db, 'users', uid, 'state', name);
     unsubscribeRemote = fb.fsMod.onSnapshot(docRef, (snap) => {
       if (snap.metadata.hasPendingWrites) return;          // our own write echoing back
+      setIssue(name, false);
       let remote = null;
       if (snap.exists()) {
         try { remote = JSON.parse(snap.data().json); } catch { remote = null; }
@@ -75,11 +98,15 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
         lastRemoteJson = snap.data().json;
         applyLocal(remote);
       }
-    }, () => { /* offline or permission problem: keep working locally */ });
+    }, (e) => {
+      // offline or permission problem: keep working locally, but say so when it's not just being offline
+      if (e?.code !== 'unavailable') setIssue(name, true);
+    });
   }
 
   function disconnect() {
     clearTimeout(pending);
+    setIssue(name, false);
     unsubscribeRemote?.();
     unsubscribeRemote = null;
     uid = null;
@@ -95,7 +122,9 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     }
   });
 
-  return {
+  const api = {
+    name,
+    storageKey,
     get: () => state,
     subscribe(listener) {
       listeners.add(listener);
@@ -106,7 +135,19 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
       applyLocal(typeof next === 'function' ? next(state) : next);
       schedulePush();
     },
+    /** Back to the initial value, here and (when signed in) in the account. */
+    async reset() {
+      clearTimeout(pending);
+      applyLocal(initial);
+      if (uid && docRef) {
+        const fb = await loadFirebase();
+        lastRemoteJson = null;
+        await fb.fsMod.deleteDoc(docRef);
+      }
+    },
   };
+  SYNCED_STORES.push(api);
+  return api;
 }
 
 // ---- merge helpers for the common shapes

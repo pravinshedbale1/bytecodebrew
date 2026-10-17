@@ -1,0 +1,233 @@
+export default [
+  {
+    slug: 'running-sum-of-1d-array', title: 'Running Sum of 1d Array', level: 'Easy',
+    summary: 'Return the running sum: element i of the answer is nums[0] + … + nums[i].',
+    method: 'runningSum', params: [['int[]', 'nums']], returns: 'int[]',
+    tests: [
+      { in: [[1, 2, 3, 4]], out: [1, 3, 6, 10] },
+      { in: [[1, 1, 1, 1, 1]], out: [1, 2, 3, 4, 5] },
+      { in: [[3, 1, 2, 10, 1]], out: [3, 4, 6, 16, 17] },
+      { in: [[-5]] },
+      { in: [[0, -1, 1]] },
+    ],
+    ref: `class Solution {
+    public int[] runningSum(int[] nums) {
+        int[] out = nums.clone();
+        for (int i = 1; i < out.length; i++) out[i] += out[i - 1];
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'range-sum-query-immutable', title: 'Range Sum Query - Immutable', level: 'Easy',
+    summary: 'Build NumArray from an array, then answer many sumRange(left, right) queries (inclusive) quickly. The tests call the class like LeetCode: a list of operations and their arguments.',
+    design: { cls: 'NumArray', ctor: [['int[]', 'nums']], methods: [['int', 'sumRange', [['int', 'left'], ['int', 'right']]]] },
+    tests: [
+      { in: [['NumArray', 'sumRange', 'sumRange', 'sumRange'], [[[-2, 0, 3, -5, 2, -1]], [0, 2], [2, 5], [0, 5]]], out: [null, 1, -1, -3] },
+      { in: [['NumArray', 'sumRange'], [[[7]], [0, 0]]] },
+      { in: [['NumArray', 'sumRange', 'sumRange', 'sumRange'], [[[1, 2, 3, 4]], [1, 1], [0, 3], [3, 3]]] },
+    ],
+    ref: `class NumArray {
+    private final int[] prefix;
+    public NumArray(int[] nums) {
+        prefix = new int[nums.length + 1];
+        for (int i = 0; i < nums.length; i++) prefix[i + 1] = prefix[i] + nums[i];
+    }
+    public int sumRange(int left, int right) { return prefix[right + 1] - prefix[left]; }
+}`,
+  },
+  {
+    slug: 'find-pivot-index', title: 'Find Pivot Index', level: 'Easy',
+    summary: 'Return the leftmost index where the sum of the values strictly to its left equals the sum strictly to its right, or -1.',
+    method: 'pivotIndex', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[1, 7, 3, 6, 5, 6]], out: 3 },
+      { in: [[1, 2, 3]], out: -1 },
+      { in: [[2, 1, -1]], out: 0 },
+      { in: [[0]] },
+      { in: [[-1, -1, 0, 1, 1, 0]] },
+    ],
+    ref: `class Solution {
+    public int pivotIndex(int[] nums) {
+        int total = 0, left = 0;
+        for (int x : nums) total += x;
+        for (int i = 0; i < nums.length; i++) {
+            if (left == total - left - nums[i]) return i;
+            left += nums[i];
+        }
+        return -1;
+    }
+}`,
+  },
+  {
+    slug: 'subarray-sum-equals-k', title: 'Subarray Sum Equals K', level: 'Medium',
+    summary: 'Count the contiguous subarrays whose sum equals k. Values may be negative.',
+    method: 'subarraySum', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[1, 1, 1], 2], out: 2 },
+      { in: [[1, 2, 3], 3], out: 2 },
+      { in: [[1], 0] },
+      { in: [[1, -1, 0], 0] },
+      { in: [[3, 4, 7, 2, -3, 1, 4, 2], 7] },
+    ],
+    ref: `class Solution {
+    public int subarraySum(int[] nums, int k) {
+        Map<Integer, Integer> seen = new HashMap<>();
+        seen.put(0, 1);
+        int sum = 0, count = 0;
+        for (int x : nums) {
+            sum += x;
+            count += seen.getOrDefault(sum - k, 0);
+            seen.merge(sum, 1, Integer::sum);
+        }
+        return count;
+    }
+}`,
+  },
+  {
+    slug: 'subarray-sums-divisible-by-k', title: 'Subarray Sums Divisible by K', level: 'Medium',
+    summary: 'Count the non-empty contiguous subarrays whose sum is divisible by k. Values may be negative.',
+    method: 'subarraysDivByK', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[4, 5, 0, -2, -3, 1], 5], out: 7 },
+      { in: [[5], 9], out: 0 },
+      { in: [[-1, 2, 9], 2] },
+      { in: [[0, 0, 0], 3] },
+      { in: [[-5, 5, 10], 5] },
+    ],
+    ref: `class Solution {
+    public int subarraysDivByK(int[] nums, int k) {
+        int[] count = new int[k];
+        count[0] = 1;
+        int sum = 0, total = 0;
+        for (int x : nums) {
+            sum = Math.floorMod(sum + x, k);
+            total += count[sum]++;
+        }
+        return total;
+    }
+}`,
+  },
+  {
+    slug: 'contiguous-array', title: 'Contiguous Array', level: 'Medium',
+    summary: 'In a binary array, return the length of the longest contiguous subarray with as many 0s as 1s.',
+    method: 'findMaxLength', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[0, 1]], out: 2 },
+      { in: [[0, 1, 0]], out: 2 },
+      { in: [[0, 1, 1, 1, 1, 1, 0, 0, 0]], out: 6 },
+      { in: [[1, 1, 1]] },
+      { in: [[0, 0, 1, 0, 0, 0, 1, 1]] },
+    ],
+    ref: `class Solution {
+    public int findMaxLength(int[] nums) {
+        Map<Integer, Integer> first = new HashMap<>();
+        first.put(0, -1);
+        int sum = 0, best = 0;
+        for (int i = 0; i < nums.length; i++) {
+            sum += nums[i] == 1 ? 1 : -1;
+            Integer at = first.putIfAbsent(sum, i);
+            if (at != null) best = Math.max(best, i - at);
+        }
+        return best;
+    }
+}`,
+  },
+  {
+    slug: 'product-of-array-except-self', title: 'Product of Array Except Self', level: 'Medium',
+    summary: 'Return an array where element i is the product of every other element, without using division, in O(n).',
+    method: 'productExceptSelf', params: [['int[]', 'nums']], returns: 'int[]',
+    tests: [
+      { in: [[1, 2, 3, 4]], out: [24, 12, 8, 6] },
+      { in: [[-1, 1, 0, -3, 3]], out: [0, 0, 9, 0, 0] },
+      { in: [[2, 3]] },
+      { in: [[0, 0, 5]] },
+      { in: [[-2, -3, 4, 1]] },
+    ],
+    ref: `class Solution {
+    public int[] productExceptSelf(int[] nums) {
+        int n = nums.length;
+        int[] out = new int[n];
+        out[0] = 1;
+        for (int i = 1; i < n; i++) out[i] = out[i - 1] * nums[i - 1];
+        int right = 1;
+        for (int i = n - 1; i >= 0; i--) { out[i] *= right; right *= nums[i]; }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'range-sum-query-2d-immutable', title: 'Range Sum Query 2D - Immutable', level: 'Medium',
+    summary: 'Build NumMatrix from a grid, then answer sumRegion(row1, col1, row2, col2) — the sum of a rectangle, corners inclusive — in O(1).',
+    design: { cls: 'NumMatrix', ctor: [['int[][]', 'matrix']], methods: [['int', 'sumRegion', [['int', 'row1'], ['int', 'col1'], ['int', 'row2'], ['int', 'col2']]]] },
+    tests: [
+      { in: [['NumMatrix', 'sumRegion', 'sumRegion', 'sumRegion'], [[[[3, 0, 1, 4, 2], [5, 6, 3, 2, 1], [1, 2, 0, 1, 5], [4, 1, 0, 1, 7], [1, 0, 3, 0, 5]]], [2, 1, 4, 3], [1, 1, 2, 2], [1, 2, 2, 4]]], out: [null, 8, 11, 12] },
+      { in: [['NumMatrix', 'sumRegion'], [[[[-4]]], [0, 0, 0, 0]]] },
+      { in: [['NumMatrix', 'sumRegion', 'sumRegion'], [[[[1, 2], [3, 4]]], [0, 0, 1, 1], [1, 0, 1, 1]]] },
+    ],
+    ref: `class NumMatrix {
+    private final int[][] p;
+    public NumMatrix(int[][] matrix) {
+        int r = matrix.length, c = matrix[0].length;
+        p = new int[r + 1][c + 1];
+        for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) p[i + 1][j + 1] = matrix[i][j] + p[i][j + 1] + p[i + 1][j] - p[i][j];
+    }
+    public int sumRegion(int row1, int col1, int row2, int col2) {
+        return p[row2 + 1][col2 + 1] - p[row1][col2 + 1] - p[row2 + 1][col1] + p[row1][col1];
+    }
+}`,
+  },
+  {
+    slug: 'corporate-flight-bookings', title: 'Corporate Flight Bookings', level: 'Medium',
+    summary: 'Flights are numbered 1..n. Each booking [first, last, seats] reserves seats on every flight from first to last. Return the total seats booked on each flight.',
+    method: 'corpFlightBookings', params: [['int[][]', 'bookings'], ['int', 'n']], returns: 'int[]',
+    tests: [
+      { in: [[[1, 2, 10], [2, 3, 20], [2, 5, 25]], 5], out: [10, 55, 45, 25, 25] },
+      { in: [[[1, 2, 10], [2, 2, 15]], 2], out: [10, 25] },
+      { in: [[[1, 1, 5]], 1] },
+      { in: [[[1, 3, 1], [1, 3, 1]], 4] },
+    ],
+    ref: `class Solution {
+    public int[] corpFlightBookings(int[][] bookings, int n) {
+        int[] diff = new int[n + 1];
+        for (int[] b : bookings) { diff[b[0] - 1] += b[2]; diff[b[1]] -= b[2]; }
+        int[] out = new int[n];
+        int run = 0;
+        for (int i = 0; i < n; i++) { run += diff[i]; out[i] = run; }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'number-of-submatrices-that-sum-to-target', title: 'Number of Submatrices That Sum to Target', level: 'Hard',
+    summary: 'Count the non-empty rectangular submatrices whose values sum to target.',
+    method: 'numSubmatrixSumTarget', params: [['int[][]', 'matrix'], ['int', 'target']], returns: 'int',
+    tests: [
+      { in: [[[0, 1, 0], [1, 1, 1], [0, 1, 0]], 0], out: 4 },
+      { in: [[[1, -1], [-1, 1]], 0], out: 5 },
+      { in: [[[904]], 0], out: 0 },
+      { in: [[[1, 1], [1, 1]], 2] },
+      { in: [[[0, 0, 0]], 0] },
+    ],
+    ref: `class Solution {
+    public int numSubmatrixSumTarget(int[][] matrix, int target) {
+        int r = matrix.length, c = matrix[0].length, total = 0;
+        for (int top = 0; top < r; top++) {
+            int[] col = new int[c];
+            for (int bottom = top; bottom < r; bottom++) {
+                for (int j = 0; j < c; j++) col[j] += matrix[bottom][j];
+                Map<Integer, Integer> seen = new HashMap<>();
+                seen.put(0, 1);
+                int sum = 0;
+                for (int j = 0; j < c; j++) {
+                    sum += col[j];
+                    total += seen.getOrDefault(sum - target, 0);
+                    seen.merge(sum, 1, Integer::sum);
+                }
+            }
+        }
+        return total;
+    }
+}`,
+  },
+];

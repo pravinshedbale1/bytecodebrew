@@ -73,3 +73,17 @@ p {
     scroll-behavior: auto !important;
   }
 }
+
+/* Printing (cheat sheets): just the page content, on white paper. */
+@media print {
+  [data-print='hide'] {
+    display: none !important;
+  }
+  :root {
+    --color-bg: #fff;
+    --color-surface: #fff;
+  }
+  body {
+    background: #fff;
+  }
+}
