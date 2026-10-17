@@ -32,7 +32,7 @@ export default {
   // ---- hashing
   'contains-duplicate': P('n = 100,000, all distinct', 'int[] a0 = BCB.distinct(100000, -1000000000, 1000000000);'),
   'valid-anagram': P('strings of 50,000 letters', `String a0 = BCB.str(50000, "${AZ}"); char[] c = a0.toCharArray(); for (int i = c.length - 1; i > 0; i--) { int j = BCB.R.nextInt(i + 1); char t = c[i]; c[i] = c[j]; c[j] = t; } String a1 = new String(c);`),
-  'first-unique-character-in-a-string': P('a 100,000-character string', 'String a0 = BCB.str(100000, "abcdefghijklmnopqrstuvwxy") + "z";'),
+  'first-unique-character-in-a-string': P('a 100,000-character string', 'String a0 = BCB.str(99999, "abcdefghijklmnopqrstuvwxy") + "z";'),
   'group-anagrams': P('10,000 words', 'String[] a0 = BCB.words(10000, 1, 30, "abc");'),
   'longest-consecutive-sequence': P('n = 100,000', 'int[] a0 = BCB.perm(100000, -50000);'),
   'first-missing-positive': P('n = 100,000', 'int[] a0 = BCB.perm(100000, 1);'),
@@ -45,7 +45,7 @@ export default {
   'longest-repeating-character-replacement': P('a 100,000-character string', 'String a0 = BCB.str(100000, "ABCD"); int a1 = 1000;'),
   'permutation-in-string': P('s2 of 10,000 characters', 'String a0 = BCB.str(1000, "abcde"); String a1 = BCB.str(10000, "abcde");'),
   'find-all-anagrams-in-a-string': P('s of 30,000 characters', 'String a0 = BCB.str(30000, "abc"); String a1 = BCB.str(1000, "abc");'),
-  'minimum-window-substring': P('s of 100,003 characters', 'String base = BCB.str(100000, "abcdefghij"); String a0 = base.substring(0, 50000) + "xyz" + base.substring(50000); String a1 = "zyx";'),
+  'minimum-window-substring': P('s of 100,000 characters', 'String base = BCB.str(99997, "abcdefghij"); String a0 = base.substring(0, 50000) + "xyz" + base.substring(50000); String a1 = "zyx";'),
   'subarrays-with-k-different-integers': P('n = 20,000, k = 10', 'int[] a0 = BCB.ints(20000, 1, 50); int a1 = 10;'),
 
   // ---- prefix sums

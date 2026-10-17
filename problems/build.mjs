@@ -11,6 +11,7 @@
  *   node problems/build.mjs --check    CI: re-run every reference and confirm the committed data still holds
  */
 import { readdirSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mergeLesson } from './text.mjs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFile } from 'node:child_process';
@@ -154,7 +155,11 @@ for (const file of files) {
     console.log(`✓ ${lesson}: ${shipped.length}/${specs.length} problems`);
     continue;
   }
-  writeFileSync(join(outDir, `${lesson}.json`), `[\n${shipped.map((p) => JSON.stringify(p)).join(',\n')}\n]\n`);
+  // statements, constraints and hints (problems/text) ride along; problems/text.mjs checks them
+  const merged = await mergeLesson(lesson, shipped);
+  for (const e of merged.errors) console.log(`✗ ${e}`);
+  failed += merged.errors.length;
+  writeFileSync(join(outDir, `${lesson}.json`), `[\n${merged.problems.map((p) => JSON.stringify(p)).join(',\n')}\n]\n`);
   console.log(`✓ ${lesson}: ${shipped.length}/${specs.length} problems`);
 }
 

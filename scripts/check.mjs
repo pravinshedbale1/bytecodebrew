@@ -115,6 +115,7 @@ for (const f of readdirSync(probDir).filter((f) => f.endsWith('.json') && !['ind
     shipped.add(p.slug);
     if (problemIndex[p.slug] !== f.replace(/\.json$/, '')) fail(`${p.slug}: index.json points to the wrong lesson`);
     if (!p.summary || !p.tests?.length) fail(`${p.slug}: missing summary or tests`);
+    if (!p.statement || !p.constraints?.length || !(p.hints?.length >= 2)) fail(`${p.slug}: missing statement, constraints or hints (add them in problems/text, then run node problems/text.mjs)`);
     for (const t of p.tests) if (t.perf && !t.refMs) fail(`${p.slug}: performance test without reference timing`);
   }
 }

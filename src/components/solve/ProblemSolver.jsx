@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
-  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot,
+  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb,
 } from 'lucide-react';
 import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
@@ -287,7 +287,7 @@ function Description({ spec, slug, examples, names, solved, compact }) {
           LeetCode <ExternalLink size={11} aria-hidden="true" />
         </a>
       </div>
-      <p className={styles.summary}>{spec.summary}</p>
+      {spec.statement ? <Statement text={spec.statement} /> : <p className={styles.summary}>{spec.summary}</p>}
 
       {examples.map((t, i) => (
         <div key={i} className={styles.example}>
@@ -299,18 +299,86 @@ function Description({ spec, slug, examples, names, solved, compact }) {
         </div>
       ))}
 
+      {spec.constraints?.length > 0 && (
+        <div className={styles.block}>
+          <p className={styles.exampleTitle}>Constraints:</p>
+          <ul className={styles.constraints}>
+            {spec.constraints.map((c) => <li key={c}><Inline text={prettyConstraint(c)} /></li>)}
+          </ul>
+        </div>
+      )}
+
+      {spec.hints?.length > 0 && <Hints key={slug} hints={spec.hints} />}
+
       <div className={styles.judging}>
         <p className={styles.exampleTitle}>Judging</p>
         <ul>
           <li>Submit runs {spec.tests.length} tests, including edge cases{spec.tests.some((t) => t.perf) ? ' and a large input that needs an efficient solution' : ''}.</li>
           {(spec.check === 'any-order' || spec.check === 'any-order-deep') && <li>The answer may be in any order.</li>}
           {spec.check?.startsWith('custom:') && <li>Any valid answer is accepted.</li>}
-          <li>For the full statement and constraints, open the problem on LeetCode.</li>
+          <li>The statement and hints here are our own; LeetCode has the original wording.</li>
         </ul>
       </div>
       <p className={styles.mobileNote}>
         Coding is easier on a larger screen. Your code is saved in this browser, so you can pick up where you left off.
       </p>
+    </div>
+  );
+}
+
+const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹', '-': '⁻' };
+const sup = (s) => [...s].map((c) => SUP[c] ?? c).join('');
+
+/** '1 <= nums.length <= 1e5' → '1 ≤ nums.length ≤ 10⁵'; quantities become code. */
+export function prettyConstraint(c) {
+  const parsed = /<=|<|==/.test(c);
+  let t = c
+    .replace(/(\d+)e(\d+)/g, (_, a, b) => (a === '1' ? `10${sup(b)}` : `${a} × 10${sup(b)}`))
+    .replace(/(\d+)\^(-?\d+)/g, (_, a, b) => `${a}${sup(b)}`)
+    .replace(/<=/g, '≤')
+    .replace(/\s\*\s/g, ' × ');
+  if (parsed) t = t.replace(/(?<![\w`])([A-Za-z_]\w*(?:\[[ij0]\])*(?:\.\w+)?(?:\[[ij0]\])*)/g, '`$1`');
+  return t.replace(/`(\w+)\.nodes`/g, 'the number of nodes in `$1`');
+}
+
+/** Text with `code` spans. */
+function Inline({ text }) {
+  return text.split(/(`[^`]+`)/).map((part, i) => (part.startsWith('`') && part.endsWith('`') && part.length > 1
+    ? <code key={i} className={styles.code}>{part.slice(1, -1)}</code>
+    : part));
+}
+
+/** Paragraphs separated by blank lines; lines starting with "- " form a list. */
+function Statement({ text }) {
+  return (
+    <div className={styles.statement}>
+      {text.split(/\n\s*\n/).map((para, i) => {
+        const lines = para.split('\n');
+        if (lines.every((l) => l.startsWith('- '))) {
+          return <ul key={i}>{lines.map((l, k) => <li key={k}><Inline text={l.slice(2)} /></li>)}</ul>;
+        }
+        return <p key={i}><Inline text={lines.join(' ')} /></p>;
+      })}
+    </div>
+  );
+}
+
+/** Hints revealed one at a time, so you take only as much help as you need. */
+function Hints({ hints }) {
+  const [shown, setShown] = useState(0);
+  return (
+    <div className={styles.block}>
+      <p className={styles.exampleTitle}>Hints</p>
+      <ol className={styles.hints}>
+        {hints.slice(0, shown).map((h, i) => (
+          <li key={i}><span className={styles.hintNo}>Hint {i + 1}</span><Inline text={h} /></li>
+        ))}
+      </ol>
+      {shown < hints.length && (
+        <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => setShown((n) => n + 1)}>
+          <Lightbulb size={13} aria-hidden="true" /> {shown === 0 ? 'Show a hint' : `Show hint ${shown + 1} of ${hints.length}`}
+        </button>
+      )}
     </div>
   );
 }
