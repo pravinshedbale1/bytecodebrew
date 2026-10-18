@@ -1,0 +1,58 @@
+.wrap {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.assistants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-2);
+}
+
+.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.assistant {
+  justify-content: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 620;
+  border-left: 3px solid var(--as-color);
+}
+
+.compact .assistant {
+  padding: 6px 4px;
+  gap: 4px;
+}
+
+.as_chatgpt { --as-color: #10a37f; }
+.as_claude { --as-color: #d97757; }
+.as_gemini { --as-color: #4285f4; }
+
+.status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--color-success);
+  line-height: 1.5;
+}
+
+.status svg {
+  flex: none;
+  margin-top: 3px;
+}
+
+.preview {
+  max-height: 360px;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
