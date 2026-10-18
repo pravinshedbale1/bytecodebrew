@@ -23,8 +23,13 @@ const mmss = (s) => `${s < 0 ? '-' : ''}${String(Math.floor(Math.abs(s) / 60)).p
 function MockPageInner() {
   const [params] = useSearchParams();
   const { isSolved } = useSolved();
-  const { mocks, addMock, updateMock, removeMock } = useMocks();
-  const [session, setSession] = useState(() => readJSON(LIVE, null));
+  const { mocks: allMocks, addMock, updateMock, removeMock } = useMocks();
+  // rounds of a type that no longer exists (the old AI-assisted mock) are skipped rather than crashing the page
+  const mocks = allMocks.filter((m) => MOCK_TYPES[m.type]);
+  const [session, setSession] = useState(() => {
+    const saved = readJSON(LIVE, null);
+    return saved && MOCK_TYPES[saved.typeId] ? saved : null;
+  });
   const [typeId, setTypeId] = useState(() => (MOCK_TYPES[params.get('type')] ? params.get('type') : 'dsa'));
   const [viewing, setViewing] = useState(null);
   const [level, setLevel] = useState('Medium');
@@ -98,7 +103,7 @@ function MockPageInner() {
             {Object.entries(MOCK_TYPES).map(([id, t]) => (
               <button key={id} type="button" className={`${styles.type} ${typeId === id ? styles.typeActive : ''}`} onClick={() => setTypeId(id)} aria-pressed={typeId === id}>
                 {(() => { const I = TYPE_ICONS[id] ?? Timer; return <span className={styles.typeIcon} aria-hidden="true"><I size={17} /></span>; })()}
-                {(id === 'machine' || id === 'ai') && <span className={styles.typeNew}>New</span>}
+                {id === 'machine' && <span className={styles.typeNew}>New</span>}
                 <span className={styles.typeMeta}>{t.minutes} min · {t.phases.length} phases</span>
                 <span className={styles.typeTitle}>{t.title}</span>
                 <span className={styles.typeBlurb}>{t.blurb}</span>
@@ -177,7 +182,7 @@ function PhaseGuide({ type, index, used }) {
   );
 }
 
-const TYPE_ICONS = { dsa: Code2, hld: Network, lld: Boxes, behavioral: MessagesSquare, machine: Hammer, ai: Bot };
+const TYPE_ICONS = { dsa: Code2, hld: Network, lld: Boxes, behavioral: MessagesSquare, machine: Hammer };
 
 const PLACEHOLDERS = {
   dsa: 'Clarifications, examples, brute force, the optimal idea, complexity… write what you would say out loud.',
@@ -185,7 +190,6 @@ const PLACEHOLDERS = {
   hld: 'Requirements, estimates, APIs, data model, components, trade-offs… this is your whiteboard.',
   lld: 'Requirements, entities, classes and their responsibilities, the patterns you chose… then the core code.',
   machine: 'Requirements, classes and key decisions. Build in your IDE, then paste the main classes here so the AI review can see them.',
-  ai: 'Your plan, the requests you gave the AI, what it got wrong, the tests you wrote… then paste the final code for the review.',
 };
 
 /** A large scratchpad, with an outline of the round's phases on request. */

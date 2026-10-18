@@ -91,7 +91,7 @@ function deletePlan() {
   if (window.confirm('Delete your Runway plan? Your completed lessons and solved problems stay as they are.')) setRunway(null);
 }
 
-const MOCK_NAMES = { dsa: 'DSA', hld: 'system design', lld: 'LLD', behavioral: 'behavioral', machine: 'machine coding', ai: 'AI-assisted coding' };
+const MOCK_NAMES = { dsa: 'DSA', hld: 'system design', lld: 'LLD', behavioral: 'behavioral', machine: 'machine coding' };
 
 const DURATIONS = [[7, '1 week'], [14, '2 weeks'], [30, '1 month'], [60, '2 months'], [90, '3 months']];
 

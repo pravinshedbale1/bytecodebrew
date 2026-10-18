@@ -451,3 +451,46 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+/* ---- AI round banner */
+
+.aiBanner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.aiBanner:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.aiBanner > svg {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.aiBanner > span:nth-child(2) {
+  flex: 1 1 320px;
+  display: grid;
+  gap: 2px;
+}
+
+.aiBanner > span:nth-child(2) span {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.aiBannerGo {
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}

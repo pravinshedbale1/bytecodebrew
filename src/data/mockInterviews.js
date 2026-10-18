@@ -155,23 +155,6 @@ const MACHINE_BRIEFS = [
   { lesson: 'lld-hotel-booking', title: 'Hotel booking', brief: 'Rooms of different types; search availability for a date range; book and cancel.', extension: 'Add a cancellation policy: free until 48 hours before, then a 50% fee.' },
 ];
 
-/**
- * AI-assisted coding tasks (Meta, Google pilot, Microsoft, Canva, Razorpay style): one problem in stages,
- * done with an AI assistant. Scored on understanding, verification, code quality and communication.
- */
-const AI_TASKS = [
-  { title: 'In-memory rate limiter', brief: 'Build a rate limiter used by an API gateway.', stages: ['Implement a fixed-window limiter: allow(userId) returns true or false', 'Write tests, including the window boundary and many users', 'Switch to a sliding window without breaking the tests, and explain the trade-off'] },
-  { title: 'LRU cache with expiry', brief: 'Build a cache for a slow service.', stages: ['Implement get/put with LRU eviction in O(1)', 'Add a per-key time-to-live', 'Find and fix the bug the AI is likely to introduce in eviction, with a test that proves it'] },
-  { title: 'Log analyser', brief: 'You are given server log lines (timestamp, level, service, message).', stages: ['Parse the lines and count errors per service', 'Return the top 3 noisiest services in any time range', 'Make it handle a 2 GB file without loading it all into memory'] },
-  { title: 'Leaderboard service', brief: 'A game needs a live leaderboard.', stages: ['Support addScore(player, points) and top(k)', 'Add rank(player) and keep every operation fast', 'Add a test suite and discuss what changes at a million players'] },
-  { title: 'Bank account ledger', brief: 'Model accounts and transfers.', stages: ['Implement deposit, withdraw and transfer with balance checks', 'Make transfers safe when called from many threads at once', 'Add idempotency keys so retries never double-charge'] },
-  { title: 'Autocomplete', brief: 'Suggest search completions as the user types.', stages: ['Return the top 5 completions for a prefix by popularity', 'Update popularity as searches happen', 'Handle typos in the first character, and test it'] },
-  { title: 'Fix the order service', brief: 'Imagine an existing order-pricing function written quickly by someone else (have the AI generate it, with discounts, tax and coupons).', stages: ['Read it and explain what it does, without running it', 'Write tests that expose at least two bugs, then fix them', 'Refactor it so a new coupon type can be added without touching the core'] },
-  { title: 'Bug hunt: inventory service (Amazon OA style)', brief: 'Have the AI generate a small inventory service (add stock, reserve, release, report) and then plant three bugs in it without telling you where. Treat it as a repository you have never seen.', stages: ['Find the files that matter and explain the flow; let the AI help you navigate, not fix', 'Write tests that fail because of each bug, then fix the bugs yourself', 'Think about the hidden tests: add tests for boundaries, invalid input and repeated calls'] },
-  { title: 'Bug hunt: booking API (Amazon OA style)', brief: 'Have the AI generate a small hotel-booking module with date ranges and cancellations, with two subtle bugs (an off-by-one in date overlap and a state bug in cancellation).', stages: ['Read the code and predict where date logic can go wrong', 'Write failing tests that prove both bugs, then fix them', 'Make cancellation safe to call twice (idempotent) and test it'] },
-  { title: 'File deduplication', brief: 'A folder contains millions of files; find the duplicates.', stages: ['Group files by identical content', 'Make it fast: size first, then hashes, then a byte compare', 'Explain how you checked the AI\'s code was correct'] },
-];
-
 MOCK_TYPES.machine = {
   title: 'Machine coding',
   blurb: 'Build a runnable system in 90 minutes, then handle a surprise requirement. The Flipkart and Swiggy round.',
@@ -204,32 +187,6 @@ MOCK_TYPES.machine = {
       extension: b.extension,
       ...(l?.available ? { afterLink: { path: l.path, label: `Compare with: ${l.title}` } } : {}),
     };
-  },
-};
-
-MOCK_TYPES.ai = {
-  title: 'AI-assisted coding',
-  blurb: 'One problem in three stages with an AI assistant, scored on judgement and checking its work. The Amazon and Meta round.',
-  minutes: 60,
-  phases: [
-    { name: 'Understand', min: 5, guide: ['Restate the task and ask clarifying questions', 'Decide what you will ask the AI for, and what you will write yourself', 'Plan how you will check the result'] },
-    { name: 'Build with AI', min: 20, guide: ['Give the AI small, precise requests with the context it needs', 'Read every line it returns before using it', 'Say out loud what you accept, change or reject, and why'] },
-    { name: 'Verify', min: 15, guide: ['Write tests, including edge cases the AI did not think of', 'Run them; fix failures yourself or with targeted prompts', 'Check complexity and anything unsafe (concurrency, input handling)'] },
-    { name: 'Extend', min: 15, guide: ['Do the last stage of the task', 'Keep the tests passing as you change the code', 'Watch for the AI quietly changing behaviour you rely on'] },
-    { name: 'Explain', min: 5, guide: ['Walk through the final design and its trade-offs', 'Say where the AI helped and where it was wrong', 'Name what you would do next with more time'] },
-  ],
-  rubric: [
-    'Understood the problem before asking the AI for code',
-    'Broke the work into small, well-specified requests',
-    'Read and understood all the code that was kept',
-    'Caught at least one mistake in the AI\'s output',
-    'Wrote tests that check behaviour and edge cases',
-    'Final code is correct, readable and efficient',
-    'Explained decisions clearly throughout',
-  ],
-  pick() {
-    const t = random(AI_TASKS);
-    return { title: t.title, detail: 'AI-assisted · use your own AI chat or IDE assistant', summary: t.brief, stages: t.stages };
   },
 };
 

@@ -39,10 +39,10 @@ export const LEVELS = [
 ];
 
 const PROBLEM_MINUTES = { Easy: 20, Medium: 35, Hard: 50 };
-const MOCK_MINUTES = { dsa: 45, hld: 45, lld: 45, behavioral: 30, machine: 90, ai: 60 };
-const MOCK_LABEL = { dsa: 'DSA coding mock', hld: 'System design mock', lld: 'Low-level design mock', behavioral: 'Behavioral mock', machine: 'Machine coding mock', ai: 'AI-assisted coding mock' };
+const MOCK_MINUTES = { dsa: 45, hld: 45, lld: 45, behavioral: 30, machine: 90 };
+const MOCK_LABEL = { dsa: 'DSA coding mock', hld: 'System design mock', lld: 'Low-level design mock', behavioral: 'Behavioral mock', machine: 'Machine coding mock' };
 // which track a mock counts towards (and is coloured as)
-const MOCK_TRACK = { dsa: 'dsa', hld: 'hld', lld: 'lld', behavioral: 'behavioral', machine: 'lld', ai: 'dsa' };
+const MOCK_TRACK = { dsa: 'dsa', hld: 'hld', lld: 'lld', behavioral: 'behavioral', machine: 'lld' };
 const mockTask = (type, company) => ({
   kind: 'mock', track: MOCK_TRACK[type], title: company ? `${MOCK_LABEL[type]} (${company.name} style)` : MOCK_LABEL[type],
   minutes: MOCK_MINUTES[type], path: `/mock?type=${type}`,
@@ -204,6 +204,15 @@ export function generatePlan(settings, catalogue, progress, keep = {}) {
   // A company plan starts by reading how that company interviews.
   if (company && learnDays.length) {
     fixed(learnDays[0].date, { kind: 'guide', track: 'all', title: `How ${company.name} interviews`, sub: company.styleLabel, minutes: 10, path: `/companies/${company.id}` });
+  }
+  // AI-assisted debugging round: it can't be mocked here, so study the guide early and practise it with an LLM
+  // (a planted-bug session from the guide's prompts) mid-plan and again near the end.
+  if (company?.aiRound && learnDays.length) {
+    const at = (f) => learnDays[Math.min(learnDays.length - 1, Math.floor(learnDays.length * f))].date;
+    const guide = '/companies/ai-assisted-round';
+    fixed(at(0.15), { kind: 'guide', track: 'dsa', title: 'Learn the AI-assisted debugging round', sub: `${company.name} · playbook and what is scored`, minutes: 30, path: guide });
+    fixed(at(0.5), { kind: 'guide', track: 'dsa', title: 'AI debugging practice: planted-bug session with an LLM', sub: 'Prompt 2 in the guide · 60 min, timed', minutes: 60, path: `${guide}#prompts` });
+    if (learnDays.length >= 8) fixed(at(0.8), { kind: 'guide', track: 'dsa', title: 'AI debugging practice: a second planted-bug session, then review it', sub: 'Prompts 2 and 5 in the guide', minutes: 60, path: `${guide}#prompts` });
   }
 
   // Final stretch: a mock a day, review, the revision sheet and story rehearsal.

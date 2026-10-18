@@ -124,7 +124,7 @@ Amazon list look broadly right?"), without copying lists, frequencies or ranking
 
 ### New practice formats (needed by several companies)
 
-1. **AI-assisted coding mock**: a small multi-file starter project with a bug, a feature to add and a performance issue; the learner works with their own AI (or the built-in Claude interviewer) and is scored on the Meta/Google criteria (understanding, verification, code quality, communication). Reuses the mock timer, rubric and the "Review with ChatGPT / Claude / Gemini" buttons.
+1. **AI-assisted debugging round**: not a mock, because the real round needs the company's codebase and built-in assistant. Instead a guide page (`/companies/ai-assisted-round`: who runs it, what is scored, a 60-minute playbook, how to practise, references) with ready-made LLM prompts, including a planted-bug practice session where the LLM plays the restricted assistant. Runway schedules the guide and two practice sessions for companies with this round.
 2. **Machine coding mock**: a 90-minute build (we already have the LLD case studies as problems) with a requirements brief, an extension request at the 60-minute mark, and a rubric (runs, extensible, patterns, tests).
 3. **Code reading / bug squash**: an unfamiliar codebase with failing tests to fix, scored on time to root cause.
 4. **API integration** (Stripe-style): call a mock HTTP API, parse JSON, handle errors and pagination. Lower priority.

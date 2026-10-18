@@ -12,7 +12,6 @@ const FOCUS = {
   hld: 'requirements and scope, estimates, API and data model, the high-level design, depth and judgement in the deep dives (trade-offs, scaling, consistency, failure handling), and how clearly I drove the conversation',
   lld: 'requirements, the entities and their relationships, class design and responsibilities, sensible use of design patterns, extensibility, concurrency and error handling in the core code, and clarity',
   machine: 'whether the design runs end to end, separation of models, services and storage, use of interfaces and patterns where behaviour varies, input validation and edge cases, how cleanly the new requirement fitted in, and readability',
-  ai: 'how well I understood the problem before using the AI, how I split the work into precise requests, whether I read and verified the AI\'s code, the tests I wrote, the correctness and quality of the final code, and how clearly I explained my decisions',
   behavioral: 'structure (STAR), how specific and measurable each story is, ownership and what I personally did, judgement and self-reflection, and how well each answer fits the question asked',
 };
 

@@ -25,7 +25,7 @@ export const STYLES = {
     label: 'Practical code',
     summary: 'Build or extend a small class or service, debug unfamiliar code, call APIs. Less LeetCode, more real code.',
     mix: { dsa: 30, hld: 20, lld: 35, behavioral: 15 },
-    mocks: ['machine', 'ai', 'hld', 'behavioral'],
+    mocks: ['machine', 'hld', 'behavioral'],
     focus: ['hashing', 'design-data-structures', 'intervals', 'graph-traversal', 'heap-patterns', 'sorting-and-selection'],
     practise: ['Code that keeps working as requirements are added', 'Reading and debugging code you did not write', 'Clean classes and tests', 'Working with an AI assistant and checking its output'],
   },
@@ -66,8 +66,9 @@ export const STYLES = {
 const B = (id) => `/behavioral/companies/${id}`;
 
 /**
- * ai: 'expected' | 'allowed' (some rounds) | 'pilot' | 'forbidden' | 'unknown'; the first three add an
- * AI-assisted mock to the plan. aiNote: what the AI-assisted round looks like, with how sure we are.
+ * ai: 'expected' | 'allowed' (some rounds) | 'pilot' | 'forbidden' | 'unknown'; the first three mean an
+ * AI-assisted debugging round, which Runway prepares with the guide at /companies/ai-assisted-round.
+ * aiNote: what that round looks like, with how sure we are.
  * focus / mix / mocks: optional overrides of the style's.
  */
 export const COMPANIES = [
@@ -230,12 +231,6 @@ export const AI_LABEL = {
 
 export const getCompany = (id) => COMPANIES.find((c) => c.id === id) ?? null;
 
-/** Companies with AI-assisted rounds get an AI-assisted mock second in the rotation, so even short plans include one. */
-function withAiMock(mocks, ai) {
-  if (!['expected', 'allowed', 'pilot'].includes(ai) || mocks.includes('ai')) return mocks;
-  return [mocks[0], 'ai', ...mocks.slice(1)];
-}
-
 /** A company with its style's defaults filled in. */
 export function companyPlan(id) {
   const c = getCompany(id);
@@ -246,7 +241,9 @@ export function companyPlan(id) {
     styleLabel: s.label,
     summary: s.summary,
     mix: c.mix ?? s.mix,
-    mocks: withAiMock(c.mocks ?? s.mocks, c.ai),
+    mocks: c.mocks ?? s.mocks,
+    // has an AI-assisted debugging round: plans add the guide and the LLM practice instead of a mock
+    aiRound: ['expected', 'allowed', 'pilot'].includes(c.ai),
     focus: c.focus ?? s.focus,
     practise: s.practise,
     rounds: c.rounds?.length ? c.rounds : null,

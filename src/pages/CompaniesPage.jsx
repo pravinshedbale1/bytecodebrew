@@ -28,6 +28,15 @@ export function CompaniesPage() {
         </p>
       </header>
 
+      <Link to="/companies/ai-assisted-round" className={styles.aiBanner}>
+        <Bot size={20} aria-hidden="true" />
+        <span>
+          <strong>New in 2026: the AI-assisted debugging round</strong>
+          <span>Amazon, Meta, Google and others now hand you a codebase and an AI assistant. How it works and how to practise.</span>
+        </span>
+        <span className={styles.aiBannerGo}>Read the guide →</span>
+      </Link>
+
       <div className={styles.toolbar}>
         <label className={styles.search}>
           <Search size={15} aria-hidden="true" />
@@ -113,7 +122,12 @@ export function CompanyPage() {
             <section className={styles.block}>
               <h2 className={styles.h3}><Bot size={16} aria-hidden="true" className={styles.h3Icon} /> AI in the interview</h2>
               <p className={styles.aiText}>{c.aiNote}</p>
-              {mocks.includes('ai') && <p className={styles.aiText}>Practise it with the <Link to="/mock?type=ai">AI-assisted coding mock</Link>.</p>}
+              {c.aiRound && (
+                <p className={styles.aiText}>
+                  How to prepare: <Link to="/companies/ai-assisted-round">the AI-assisted debugging round guide</Link>, with a playbook
+                  and ready-made LLM prompts for practice sessions.
+                </p>
+              )}
             </section>
           )}
 
