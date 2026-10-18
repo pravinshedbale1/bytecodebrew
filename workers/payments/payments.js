@@ -1,22 +1,24 @@
 import { verifyIdToken, AuthError } from '../shared/auth.js';
 import { firestore } from '../shared/firestore.js';
-import { createOrder, getOrder, verifyWebhook, CashfreeError } from './cashfree.js';
+import { createOrder, getOrder, verifyWebhook, verifyPaymentSignature, keyMode, RazorpayError } from './razorpay.js';
 
 /**
- * Premium purchases through Cashfree.
+ * Premium purchases through Razorpay (Standard Checkout: a pop-up on our page).
  *
- *   POST /pay/order    { planId, phone }   signed in → { orderId, paymentSessionId, mode }
- *   POST /pay/verify   { orderId }         signed in → { status, expiresAt? }   (called when the buyer returns)
- *   POST /pay/webhook                      from Cashfree, signature-checked
+ *   POST /pay/order    { planId }                         signed in → what Razorpay Checkout needs
+ *   POST /pay/verify   { orderId, paymentId?, signature? } signed in → { status, expiresAt? }
+ *                                                         (called from Checkout's success handler)
+ *   POST /pay/webhook                                     from Razorpay (order.paid, payment.captured), signature-checked
  *
- * The price always comes from plans/{planId} in Firestore (set by the admin), never from the client.
+ * The price always comes from plans/{planId} in Firestore (set by the admin), never from the client, and
+ * a payment only counts when Razorpay itself reports the order as paid for the full amount.
  * A paid order is applied exactly once: it is claimed with an optimistic-concurrency update, and the
  * entitlement records the orders it has applied, so a webhook and a "verify" racing each other, or a
  * retry after a crash, never extend premium twice.
  *
- * env: FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT (JSON), CASHFREE_APP_ID, CASHFREE_SECRET_KEY,
- *      CASHFREE_ENV ('sandbox' | 'production'), SITE_URL, PUBLIC_URL
- *      (tests and local development: CASHFREE_BASE, FIRESTORE_EMULATOR, AUTH_EMULATOR)
+ * env: FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT (JSON), RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
+ *      RAZORPAY_WEBHOOK_SECRET, SITE_URL
+ *      (tests and local development: RAZORPAY_BASE, FIRESTORE_EMULATOR, AUTH_EMULATOR)
  */
 
 const DAY = 86_400_000;
@@ -47,17 +49,12 @@ async function signedIn(request, env) {
   }
 }
 
-const cleanPhone = (raw) => {
-  const digits = String(raw ?? '').replace(/[\s-]/g, '').replace(/^(\+?91)(?=\d{10}$)/, '');
-  return /^[6-9]\d{9}$/.test(digits) ? digits : null;
-};
+const ORDER_ID = /^bcb_[a-z0-9_]{5,60}$/;
 
-/** Create a Cashfree order for an active plan. */
+/** Create a Razorpay order for an active plan; returns what Razorpay Checkout needs to open. */
 export async function startOrder(request, env) {
   const user = await signedIn(request, env);
-  const { planId, phone } = await request.json().catch(() => ({}));
-  const mobile = cleanPhone(phone);
-  if (!mobile) throw new HttpError(400, 'Enter a valid 10-digit Indian mobile number (Cashfree needs it for the payment).');
+  const { planId } = await request.json().catch(() => ({}));
   if (typeof planId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(planId)) throw new HttpError(400, 'Unknown plan.');
 
   const store = db(env);
@@ -75,39 +72,38 @@ export async function startOrder(request, env) {
     amount,
     currency: 'INR',
     status: 'created',
+    gateway: 'razorpay',
     createdAt: new Date(),
   });
 
-  let cf;
+  let rp;
   try {
-    cf = await createOrder(env, {
-      order_id: orderId,
-      order_amount: amount,
-      order_currency: 'INR',
-      customer_details: {
-        customer_id: user.sub.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 50),
-        customer_email: user.email,
-        customer_phone: mobile,
-        ...(user.name ? { customer_name: String(user.name).slice(0, 100) } : {}),
-      },
-      order_meta: {
-        return_url: `${env.SITE_URL}/premium?order_id={order_id}`,
-        // Cashfree can only call a public https address; locally the buyer's return confirms the payment
-        ...(String(env.PUBLIC_URL).startsWith('https://') || env.CASHFREE_BASE ? { notify_url: `${env.PUBLIC_URL}/pay/webhook` } : {}),
-      },
-      order_note: `ByteCodeBrew ${plan.name}`.slice(0, 200),
+    rp = await createOrder(env, {
+      amount: Math.round(amount * 100),          // paise
+      currency: 'INR',
+      receipt: orderId,
+      notes: { orderId, planId, email: user.email.toLowerCase() },
     });
   } catch (e) {
     await store.update(`orders/${orderId}`, { status: 'failed', error: String(e.message).slice(0, 200) });
-    if (e instanceof CashfreeError) throw new HttpError(502, 'The payment service could not start the payment. Please try again.');
+    if (e instanceof RazorpayError) throw new HttpError(502, 'The payment service could not start the payment. Please try again.');
     throw e;
   }
-  await store.update(`orders/${orderId}`, { cfOrderId: String(cf.cf_order_id ?? '') });
-  return { orderId, paymentSessionId: cf.payment_session_id, mode: env.CASHFREE_ENV === 'production' ? 'production' : 'sandbox' };
+  await store.update(`orders/${orderId}`, { razorpayOrderId: rp.id });
+  return {
+    orderId,
+    keyId: env.RAZORPAY_KEY_ID,
+    razorpayOrderId: rp.id,
+    amount: rp.amount,
+    currency: rp.currency,
+    description: `${plan.name}`.slice(0, 250),
+    prefill: { email: user.email, ...(user.name ? { name: String(user.name).slice(0, 100) } : {}) },
+    mode: keyMode(env.RAZORPAY_KEY_ID),
+  };
 }
 
 /**
- * Apply a paid order: confirm with Cashfree, claim the order, extend (or create) the entitlement.
+ * Apply a paid order: confirm with Razorpay, claim the order, extend (or create) the entitlement.
  * Safe to call any number of times, concurrently, for the same order.
  */
 export async function fulfil(env, orderId) {
@@ -117,15 +113,12 @@ export async function fulfil(env, orderId) {
   const order = read.data;
   if (order.status === 'paid') return { status: 'paid', expiresAt: order.expiresAt ?? null };
 
-  const cf = await getOrder(env, orderId);
-  if (cf.order_status !== 'PAID') {
-    if (['EXPIRED', 'TERMINATED'].includes(cf.order_status) && order.status === 'created') {
-      await store.update(`orders/${orderId}`, { status: cf.order_status.toLowerCase() });
-    }
-    return { status: cf.order_status.toLowerCase() };
-  }
-  if (Number(cf.order_amount) !== Number(order.amount) || (cf.order_currency ?? 'INR') !== order.currency) {
-    await store.update(`orders/${orderId}`, { status: 'review', error: `Paid amount ${cf.order_amount} ${cf.order_currency} does not match the order` });
+  if (!order.razorpayOrderId) return { status: order.status };
+  const rp = await getOrder(env, order.razorpayOrderId);
+  // 'created' = not paid yet, 'attempted' = a payment was tried but hasn't succeeded (yet), 'paid' = captured
+  if (rp.status !== 'paid') return { status: rp.status === 'attempted' ? 'pending' : 'created' };
+  if (Number(rp.amount_paid) !== Math.round(Number(order.amount) * 100) || (rp.currency ?? 'INR') !== order.currency || rp.receipt !== orderId) {
+    await store.update(`orders/${orderId}`, { status: 'review', error: `Paid ${rp.amount_paid} paise ${rp.currency} for receipt ${rp.receipt} does not match the order` });
     throw new HttpError(409, 'The payment does not match the order. We will review it and contact you.');
   }
 
@@ -150,36 +143,50 @@ export async function fulfil(env, orderId) {
       premium: true,
       note: `${order.planName} (paid)`,
       addedAt: ent?.addedAt ?? new Date(),
-      addedBy: 'cashfree',
-      source: 'cashfree',
+      addedBy: 'razorpay',
+      source: 'razorpay',
       plan: order.planId,
       orderIds: [...applied, orderId].slice(-50),
       ...(expiresAt ? { expiresAt } : {}),
     });
   }
-  await store.update(`orders/${orderId}`, { status: 'paid', paidAt: new Date(), cfPaymentStatus: 'PAID', ...(expiresAt ? { expiresAt } : {}) });
+  await store.update(`orders/${orderId}`, { status: 'paid', paidAt: new Date(), ...(expiresAt ? { expiresAt } : {}) });
   return { status: 'paid', expiresAt };
 }
 
-/** The buyer is back from the payment page: check and apply their order. */
+/**
+ * Checkout's success handler: check and apply the buyer's order. The signature (when sent) must be
+ * valid, but premium is only granted after Razorpay itself confirms the order is paid.
+ */
 export async function verify(request, env) {
   const user = await signedIn(request, env);
-  const { orderId } = await request.json().catch(() => ({}));
-  if (typeof orderId !== 'string' || !/^bcb_[a-z0-9_]{5,60}$/.test(orderId)) throw new HttpError(400, 'Unknown order.');
+  const { orderId, paymentId, signature } = await request.json().catch(() => ({}));
+  if (typeof orderId !== 'string' || !ORDER_ID.test(orderId)) throw new HttpError(400, 'Unknown order.');
   const order = await db(env).get(`orders/${orderId}`);
   if (!order || order.uid !== user.sub) throw new HttpError(404, 'Unknown order.');
+  if (signature && !(await verifyPaymentSignature({ orderId: order.razorpayOrderId, paymentId, signature }, env.RAZORPAY_KEY_SECRET))) {
+    throw new HttpError(400, 'The payment confirmation could not be verified.');
+  }
   return fulfil(env, orderId);
 }
 
-/** Cashfree's server-to-server notification. Only the order ID is trusted; the status is re-read from Cashfree. */
+/**
+ * Razorpay's server-to-server notification (subscribe to order.paid and payment.captured).
+ * Only the order is taken from it; the status is always re-read from Razorpay.
+ */
 export async function webhook(request, env) {
   const raw = await request.text();
-  const ok = await verifyWebhook(raw, request.headers.get('x-webhook-timestamp'), request.headers.get('x-webhook-signature'), env.CASHFREE_SECRET_KEY);
-  if (!ok) throw new HttpError(401, 'Bad signature');
+  if (!(await verifyWebhook(raw, request.headers.get('x-razorpay-signature'), env.RAZORPAY_WEBHOOK_SECRET))) throw new HttpError(401, 'Bad signature');
   const body = JSON.parse(raw);
-  const orderId = body?.data?.order?.order_id;
-  if (typeof orderId !== 'string' || !orderId.startsWith('bcb_')) return { ignored: true };
-  if (!/PAYMENT_SUCCESS/.test(body.type ?? '')) return { ignored: true, type: body.type };
+  if (!['order.paid', 'payment.captured'].includes(body.event)) return { ignored: true, event: body.event };
+  let orderId = body.payload?.order?.entity?.receipt;
+  if (!orderId) {
+    // payment.captured carries Razorpay's order id; our order id is that order's receipt
+    const rpOrderId = body.payload?.payment?.entity?.order_id;
+    if (!rpOrderId) return { ignored: true };
+    orderId = (await getOrder(env, rpOrderId)).receipt;
+  }
+  if (typeof orderId !== 'string' || !ORDER_ID.test(orderId)) return { ignored: true };
   return fulfil(env, orderId);
 }
 

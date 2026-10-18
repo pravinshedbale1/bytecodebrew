@@ -14,23 +14,24 @@ const inr = (n) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigi
 export const planLength = (days) => (!days ? 'Lifetime access' : days % 365 === 0 ? `${days / 365} year${days === 365 ? '' : 's'}` : days % 30 === 0 ? `${days / 30} month${days === 30 ? '' : 's'}` : `${days} days`);
 const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
 
-/** After Cashfree sends the buyer back: confirm the order and show the result. */
-function ReturnBanner({ orderId }) {
-  const [state, setState] = useState({ status: 'checking' });
+/** After Razorpay Checkout succeeds: confirm the order and show the result. */
+function ReturnBanner({ orderId, paymentId, signature, cancelled }) {
+  const [state, setState] = useState({ status: cancelled ? 'created' : 'checking' });
   useEffect(() => {
+    if (cancelled) return undefined;      // the checkout was cancelled: nothing to confirm
     let alive = true;
     let tries = 0;
-    const check = () => verifyOrder(orderId)
+    const check = () => verifyOrder(orderId, { paymentId, signature })
       .then((r) => {
         if (!alive) return;
-        // Cashfree can take a few seconds to mark a payment as paid
-        if (['active', 'processing'].includes(r.status) && tries++ < 6) { setTimeout(check, 2500); setState({ status: 'checking' }); return; }
+        // a payment can take a few seconds to be captured, or another request may be applying it right now
+        if (['created', 'pending', 'processing'].includes(r.status) && (paymentId || r.status !== 'created') && tries++ < 8) { setTimeout(check, 2500); setState({ status: 'checking' }); return; }
         setState(r);
       })
       .catch((e) => alive && setState({ status: 'error', message: e.message }));
     check();
     return () => { alive = false; };
-  }, [orderId]);
+  }, [orderId, paymentId, signature, cancelled]);
 
   if (state.status === 'checking') return <div className={`${styles.banner} ${styles.info}`}><Loader2 size={18} className={styles.spin} /> Confirming your payment…</div>;
   if (state.status === 'paid') {
@@ -42,9 +43,8 @@ function ReturnBanner({ orderId }) {
     );
   }
   const text = state.status === 'error' ? state.message
-    : state.status === 'active' ? 'The payment was not completed. You have not been charged; you can try again below.'
-      : state.status === 'expired' || state.status === 'terminated' ? 'This payment session expired without a payment. You can start again below.'
-        : `We could not confirm this payment yet (${state.status}). If money left your account, premium will be applied automatically within a few minutes — or email ${CONTACT_EMAIL} with order ${orderId}.`;
+    : state.status === 'created' ? 'The payment was not completed. You have not been charged; you can try again below.'
+      : `We could not confirm this payment yet. If money left your account, premium will be applied automatically within a few minutes, or email ${CONTACT_EMAIL} with order ${orderId}.`;
   return <div className={`${styles.banner} ${styles.warn}`}><CircleAlert size={20} /><span>{text}</span></div>;
 }
 
@@ -74,10 +74,11 @@ function PlanCard({ plan, best, saving, onChoose, access }) {
   );
 }
 
-/** The checkout step: a dialog with the order summary and the mobile number Cashfree needs. */
+/** The checkout step: a dialog with the order summary; payment happens in Razorpay's pop-up. */
 function CheckoutDialog({ plan, access, onClose }) {
   const ref = useRef(null);
-  const [phone, setPhone] = useState('');
+  // true while Razorpay's pop-up is open: our dialog is closed for it, but the purchase isn't abandoned
+  const handoff = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -92,15 +93,19 @@ function CheckoutDialog({ plan, access, onClose }) {
     setBusy(true);
     setError(null);
     try {
-      await startCheckout(plan.id, phone);
+      // close our dialog first: a modal <dialog> would sit on top of Razorpay's pop-up
+      await startCheckout(plan.id, { beforeOpen: () => { handoff.current = true; ref.current?.close(); } });
     } catch (err) {
-      setError(err.message);
+      // cancelled in the pop-up, or the order could not be started: back to the dialog with the reason
+      setError(err.message || 'The payment could not be started.');
       setBusy(false);
+      handoff.current = false;
+      if (!ref.current?.open) ref.current?.showModal();
     }
   };
 
   return (
-    <dialog ref={ref} className={styles.dialog} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()} aria-labelledby="checkout-title">
+    <dialog ref={ref} className={styles.dialog} onClose={() => { if (!handoff.current) onClose(); }} onClick={(e) => e.target === ref.current && onClose()} aria-labelledby="checkout-title">
       {plan && (
         <form onSubmit={pay} className={styles.dialogBody}>
           <div className={styles.dialogHead}>
@@ -115,16 +120,11 @@ function CheckoutDialog({ plan, access, onClose }) {
             <p className={styles.summaryPrice}>{inr(plan.price)}</p>
           </div>
           <p className={styles.account}>Premium will be added to <strong>{access.email}</strong>{access.status === 'premium' && access.expiresAt ? `, extending your access from ${fmtDate(access.expiresAt)}` : ''}.</p>
-          <label className={styles.field}>
-            <span className={ui.label}>Mobile number</span>
-            <input className={ui.input} type="tel" inputMode="numeric" autoComplete="tel" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required autoFocus />
-            <span className={styles.hintText}>Cashfree needs it to process the payment and send your receipt.</span>
-          </label>
           {error && <p className={ui.error} role="alert">{error}</p>}
           <button type="submit" className={`${ui.btn} ${ui.primary} ${styles.payBtn}`} disabled={busy}>
             {busy ? <Loader2 size={16} className={styles.spin} /> : <Lock size={15} />} {busy ? 'Opening secure checkout…' : `Pay ${inr(plan.price)}`}
           </button>
-          <p className={styles.secure}><ShieldCheck size={14} aria-hidden="true" /> You'll complete the payment on Cashfree's secure page: UPI, cards, net banking or wallets.</p>
+          <p className={styles.secure}><ShieldCheck size={14} aria-hidden="true" /> Pay securely with Razorpay: UPI, cards, net banking or wallets. Razorpay sends your receipt.</p>
           <p className={styles.hintText}>By paying you agree to the <Link to="/terms" target="_blank">Terms</Link> and the <Link to="/refund-policy" target="_blank">Refund Policy</Link>. Access is delivered instantly online.</p>
         </form>
       )}
@@ -136,7 +136,7 @@ const FAQ = [
   ['Does it renew automatically?', 'No. Every plan is a one-time payment for its period. Buying again later extends your access from the current end date.'],
   ['When does premium start?', 'Immediately after the payment succeeds, on every device where you sign in with the same Google account.'],
   ['What happens when it ends?', 'Premium content locks again. Your progress, highlights, notes and solved problems are kept.'],
-  ['How do I pay?', 'Through Cashfree Payments: UPI, debit and credit cards, net banking and wallets.'],
+  ['How do I pay?', 'Through Razorpay: UPI, debit and credit cards, net banking and wallets, in a secure pop-up without leaving the page.'],
   ['Can I get a refund?', <>Yes: a full refund within 7 days of purchase, and always if you were charged but Premium didn't activate. Email {CONTACT_EMAIL} with your order number. Details in the <Link to="/refund-policy">Refund & Cancellation Policy</Link>.</>],
 ];
 
@@ -170,7 +170,7 @@ export function PricingPage() {
           </p>
         </header>
 
-        {orderId && access.status !== 'loading' && access.status !== 'signed-out' && <ReturnBanner orderId={orderId} />}
+        {orderId && access.status !== 'loading' && access.status !== 'signed-out' && <ReturnBanner orderId={orderId} paymentId={params.get('payment_id')} signature={params.get('signature')} cancelled={params.has('cancelled')} />}
         {access.status === 'premium' && !orderId && (
           <div className={`${styles.banner} ${styles.ok}`}>
             <Sparkles size={18} />
@@ -189,7 +189,7 @@ export function PricingPage() {
             </div>
           )}
           <ul className={styles.trust} aria-label="About payment">
-            <li><ShieldCheck size={15} aria-hidden="true" /> Secure payment by Cashfree</li>
+            <li><ShieldCheck size={15} aria-hidden="true" /> Secure payment by Razorpay</li>
             <li><CreditCard size={15} aria-hidden="true" /> UPI, cards, net banking, wallets</li>
             <li><RefreshCcw size={15} aria-hidden="true" /> One-time payment, no auto-renewal</li>
             <li><Zap size={15} aria-hidden="true" /> Instant access on all your devices</li>
@@ -223,7 +223,7 @@ export function PricingPage() {
             </details>
           ))}
         </div>
-        <p className={styles.fine}>Payments are processed by Cashfree Payments. Prices are in Indian rupees and include applicable taxes. Sold by ByteCodeBrew Solutions. <Link to="/terms">Terms</Link> · <Link to="/refund-policy">Refunds</Link> · <Link to="/contact">Contact</Link></p>
+        <p className={styles.fine}>Payments are processed by Razorpay. Prices are in Indian rupees and include applicable taxes. Sold by ByteCodeBrew Solutions. <Link to="/terms">Terms</Link> · <Link to="/refund-policy">Refunds</Link> · <Link to="/contact">Contact</Link></p>
       </div>
       <CheckoutDialog plan={chosen} access={access} onClose={() => setChosen(null)} />
     </PageLayout>

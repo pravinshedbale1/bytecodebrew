@@ -2,7 +2,7 @@ import { route } from './payments.js';
 
 /**
  * Cloudflare Worker for premium purchases (see payments.js). The browser calls /pay/order and
- * /pay/verify with the user's Firebase ID token; Cashfree calls /pay/webhook.
+ * /pay/verify with the user's Firebase ID token; Razorpay calls /pay/webhook.
  */
 const ALLOWED_ORIGINS = [
   'https://bytecodebrew.com',
@@ -25,7 +25,7 @@ export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') ?? '';
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-    // Browsers may only call from the site; Cashfree's webhook has no Origin header
+    // Browsers may only call from the site; Razorpay's webhook has no Origin header
     if (origin && !ALLOWED_ORIGINS.includes(origin)) return new Response('{"error":"Origin not allowed"}', { status: 403 });
     const [status, body] = await route(request, env);
     return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors(origin) } });

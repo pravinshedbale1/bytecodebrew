@@ -113,7 +113,7 @@ What is free and what is premium is defined once in `src/config/access.js` (`FRE
 
 - **Free:** Beginner and Intermediate lessons, diagrams and the DSA visualisations, quizzes, practice exercises, progress, highlights, search, cheat sheets.
 - **Premium:** Advanced lessons (free users see the outline), the interactive simulators, diagram step-throughs, problems with tests, mock interviews, review deck, dashboard and LeetCode sync, playground, behavioral drill and story bank.
-- **Getting premium:** buy a plan on `/premium` (Cashfree, see [`workers/payments/README.md`](workers/payments/README.md)), or the admin approves an account on `/admin`. Either way an `entitlements/{email}` document turns it on, optionally with an `expiresAt`. `src/hooks/useAccess.js` watches it, so access switches on and off live.
+- **Getting premium:** buy a plan on `/premium` (Razorpay, see [`workers/payments/README.md`](workers/payments/README.md)), or the admin approves an account on `/admin`. Either way an `entitlements/{email}` document turns it on, optionally with an `expiresAt`. `src/hooks/useAccess.js` watches it, so access switches on and off live.
 - **Enforcement:** the Firestore rules refuse premium data writes from other accounts and let only the admin edit plans and entitlements; orders are written only by the payments Worker. The LeetCode and payments Workers verify the Firebase ID token. Lesson content itself is a static site, so its locks are in the interface: a determined person could still read the published JavaScript.
 
 Local development against the emulators (no Firebase project needed; requires Java):

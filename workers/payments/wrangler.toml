@@ -6,10 +6,10 @@ compatibility_date = "2026-10-01"
 FIREBASE_PROJECT_ID = "bytecodebrew-53f0c"
 SITE_URL = "https://bytecodebrew.com"
 PUBLIC_URL = "https://bytecodebrew-payments.bytecodebrew.workers.dev"
-# "production" = real payments (keys are the production App ID and Secret). Use "sandbox" with test keys to test.
-CASHFREE_ENV = "production"
+# Razorpay test or live mode follows the key: rzp_test_… moves no real money, rzp_live_… does.
 
 # Secrets (never in this file) — set once with:
-#   npx wrangler@4 secret put CASHFREE_APP_ID
-#   npx wrangler@4 secret put CASHFREE_SECRET_KEY
-#   npx wrangler@4 secret put FIREBASE_SERVICE_ACCOUNT   (the whole service-account JSON)
+#   npx wrangler@4 secret put RAZORPAY_KEY_ID
+#   npx wrangler@4 secret put RAZORPAY_KEY_SECRET
+#   npx wrangler@4 secret put RAZORPAY_WEBHOOK_SECRET
+#   npx wrangler@4 secret put FIREBASE_SERVICE_ACCOUNT   (the whole service-account JSON; already set)

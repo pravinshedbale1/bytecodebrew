@@ -9,7 +9,7 @@ export const LEETCODE_API = import.meta.env.VITE_LEETCODE_API ?? (import.meta.en
 
 /**
  * Premium purchases: the payments Worker (workers/payments). In development the Vite dev server serves
- * it at /api/pay with a mock Cashfree checkout (no real payment) unless VITE_PAYMENTS_API is set.
+ * it at /api/pay with a mock Razorpay checkout (no real payment) unless VITE_PAYMENTS_API is set.
  */
 export const PAYMENTS_API = import.meta.env.VITE_PAYMENTS_API ?? (import.meta.env.DEV ? '/api/pay' : 'https://bytecodebrew-payments.bytecodebrew.workers.dev/pay');
 

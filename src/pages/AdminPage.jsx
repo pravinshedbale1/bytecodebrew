@@ -122,7 +122,7 @@ export function AdminPage() {
               <span className={styles.who}>
                 <strong>{r.email}</strong>
                 <span className={styles.muted}>
-                  {r.source === 'cashfree' ? 'paid' : 'approved by admin'}
+                  {['razorpay', 'cashfree'].includes(r.source) ? 'paid' : 'approved by admin'}
                   {r.addedAt?.toDate ? ` · since ${r.addedAt.toDate().toLocaleDateString()}` : ''}
                   {r.expiresAt?.toDate ? ` · until ${r.expiresAt.toDate().toLocaleDateString()}${r.expiresAt.toDate() < new Date() ? ' (expired)' : ''}` : ' · no expiry'}
                   {r.note ? ` · ${r.note}` : ''}

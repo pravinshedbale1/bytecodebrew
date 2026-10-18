@@ -3,7 +3,7 @@
  * and every lock notice); PREMIUM_CONTENT switches which lesson content is locked.
  *
  * Premium access is an entitlements/{email} document in Firestore, written by the admin on /admin or
- * by the payments Worker after a Cashfree payment (with an optional expiresAt). firestore.rules and
+ * by the payments Worker after a Razorpay payment (with an optional expiresAt). firestore.rules and
  * workers/shared/auth.js enforce the same rules: keep them in sync.
  */
 export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];

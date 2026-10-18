@@ -6,7 +6,7 @@ import page from './Page.module.css';
 import styles from './PolicyPages.module.css';
 
 /**
- * Contact and policy pages (also what Cashfree's website review looks for). Keep the business details in
+ * Contact and policy pages (also what the payment gateway's website review looks for). Keep the business details in
  * BUSINESS so every page says the same thing.
  */
 export const BUSINESS = {
@@ -14,7 +14,7 @@ export const BUSINESS = {
   kind: 'a sole proprietorship based in India',
   site: 'https://bytecodebrew.com',
   email: CONTACT_EMAIL,
-  updated: '17 October 2026',
+  updated: '18 October 2026',
   refundDays: 7,
 };
 
@@ -64,7 +64,7 @@ export function ContactPage() {
       <h2>For a payment question</h2>
       <p>
         Please include the email address of your Google account and the order number (it starts with <code>bcb_</code> and is
-        shown on the confirmation screen and in Cashfree's payment receipt). That lets us find the payment quickly.
+        shown on the confirmation screen), or the payment ID from Razorpay's email receipt (it starts with <code>pay_</code>). That lets us find the payment quickly.
       </p>
     </Policy>
   );
@@ -88,7 +88,7 @@ export function TermsPage() {
       <ul>
         <li>Prices are shown in Indian rupees (INR) and include applicable taxes.</li>
         <li>Each plan is a <strong>one-time payment</strong> for the period shown (for example 3 months or 1 year). Plans do not renew automatically and you are never charged again unless you choose to buy again.</li>
-        <li>Payments are processed by Cashfree Payments India Pvt. Ltd. We do not see or store your card, UPI or bank details.</li>
+        <li>Payments are processed by Razorpay Software Pvt. Ltd. We do not see or store your card, UPI or bank details.</li>
         <li>Premium is activated automatically once the payment succeeds. Buying again while Premium is active extends it from the current end date.</li>
         <li>We may change prices or the plans on sale; changes never affect a period you have already paid for.</li>
         <li>Refunds are covered by our <Link to="/refund-policy">Refund & Cancellation Policy</Link>.</li>
@@ -106,7 +106,7 @@ export function TermsPage() {
       </p>
       <h2>6. Third-party services</h2>
       <p>
-        Some features use services we don't control: Google (sign-in and data storage), Cashfree (payments), a code-execution service for
+        Some features use services we don't control: Google (sign-in and data storage), Razorpay (payments), a code-execution service for
         running your solutions, LeetCode (if you choose to sync your public profile) and AI assistants such as ChatGPT, Claude or Gemini if you choose to send them your mock interview. Their own terms apply when you use them.
       </p>
       <h2>7. No guarantee of outcome</h2>
@@ -135,7 +135,7 @@ export function PrivacyPage() {
         <li><strong>Your Google account basics</strong> when you sign in: name, email address and profile picture. Used to show who is signed in, sync your progress and attach Premium to your account.</li>
         <li><strong>Your study data</strong>: lessons completed, quiz answers, solved problems and saved code, highlights and notes, review cards, mock interviews and similar. Stored in your browser and, when you are signed in, in your account (Google Firebase) so it syncs across devices.</li>
         <li><strong>Payment records</strong> when you buy Premium: your email, the plan, amount, order number, status and dates. We use them to activate Premium and handle support.</li>
-        <li><strong>Phone number</strong> entered at checkout. It is sent to Cashfree, which requires it to process the payment; we don't keep it in our records.</li>
+        <li><strong>Phone number</strong> entered in the payment window. It goes to Razorpay, which uses it to process the payment and send your receipt; we don't receive or keep it.</li>
       </ul>
       <p>We do not use advertising or analytics trackers, and we never sell or rent your data.</p>
       <h2>What stays only in your browser</h2>
@@ -145,7 +145,7 @@ export function PrivacyPage() {
       <h2>Who else processes it</h2>
       <ul>
         <li><strong>Google Firebase</strong>: sign-in and storage of your account data.</li>
-        <li><strong>Cashfree Payments</strong>: payment processing. Card, UPI and bank details go directly to Cashfree; we never see them.</li>
+        <li><strong>Razorpay</strong>: payment processing. Card, UPI and bank details go directly to Razorpay; we never see them.</li>
         <li><strong>Cloudflare</strong>: hosts the small servers that create payment orders and sync LeetCode profiles.</li>
         <li><strong>A code-execution service</strong>: the code you choose to run is sent to it to compile and run, without your name or email.</li>
         <li><strong>LeetCode</strong>: only if you enter a LeetCode username to sync your public profile.</li>
@@ -185,8 +185,8 @@ export function RefundPage() {
       </ul>
       <h2>How to ask for a refund</h2>
       <p>
-        Email <Mailto /> from (or mentioning) the Google account you used to buy, with the order number (it starts with <code>bcb_</code>).
-        We reply within 2 working days. Approved refunds are sent to the original payment method through Cashfree and usually reach you
+        Email <Mailto /> from (or mentioning) the Google account you used to buy, with the order number (it starts with <code>bcb_</code>) or Razorpay's payment ID (it starts with <code>pay_</code>).
+        We reply within 2 working days. Approved refunds are sent to the original payment method through Razorpay and usually reach you
         within <strong>5–7 working days</strong>, depending on your bank.
       </p>
     </Policy>

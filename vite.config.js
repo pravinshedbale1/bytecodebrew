@@ -50,9 +50,9 @@ function leetcodeDevApi() {
 
 /**
  * Dev-only stand-in for the payments Worker (workers/payments) at /api/pay. With the emulators
- * (npm run dev:emulator) it uses a mock Cashfree with a pretend checkout page, so the whole purchase
- * flow can be tried without real money. Real Cashfree sandbox testing: set CASHFREE_APP_ID,
- * CASHFREE_SECRET_KEY and FIREBASE_SERVICE_ACCOUNT in the environment instead.
+ * (npm run dev:emulator) it uses a mock Razorpay with a pretend checkout page, so the whole purchase
+ * flow can be tried without real money. Real Razorpay test mode: put rzp_test_ keys in
+ * workers/payments/.dev.vars and run RAZORPAY_TEST=1 npm run dev:emulator.
  */
 function paymentsDevApi() {
   return {
@@ -62,7 +62,7 @@ function paymentsDevApi() {
       let setup;
       const init = async () => {
         const { route } = await import('./workers/payments/payments.js');
-        // workers/payments/.dev.vars (git-ignored) holds the Cashfree test keys
+        // workers/payments/.dev.vars (git-ignored) can hold Razorpay TEST keys for local testing
         const vars = {};
         try {
           const { readFileSync } = await import('node:fs');
@@ -71,20 +71,22 @@ function paymentsDevApi() {
             if (m) vars[m[1]] = m[2];
           }
         } catch { /* no local keys */ }
-        const keys = { CASHFREE_APP_ID: process.env.CASHFREE_APP_ID ?? vars.CASHFREE_APP_ID, CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY ?? vars.CASHFREE_SECRET_KEY };
-        // Real Cashfree sandbox + local Firestore emulator: CASHFREE_SANDBOX=1 npm run dev:emulator
-        if (emulator && process.env.CASHFREE_SANDBOX === '1' && keys.CASHFREE_APP_ID) {
-          return { route, mock: null, env: { CASHFREE_ENV: 'sandbox', ...keys, FIREBASE_PROJECT_ID: 'demo-bytecodebrew', FIRESTORE_EMULATOR: 'http://127.0.0.1:8080', AUTH_EMULATOR: '1' } };
+        const pick = (k) => process.env[k] ?? vars[k];
+        const keys = { RAZORPAY_KEY_ID: pick('RAZORPAY_KEY_ID'), RAZORPAY_KEY_SECRET: pick('RAZORPAY_KEY_SECRET'), RAZORPAY_WEBHOOK_SECRET: pick('RAZORPAY_WEBHOOK_SECRET') ?? 'unused-locally' };
+        const local = { FIREBASE_PROJECT_ID: 'demo-bytecodebrew', FIRESTORE_EMULATOR: 'http://127.0.0.1:8080', AUTH_EMULATOR: '1' };
+        // Real Razorpay test mode + local Firestore emulator: RAZORPAY_TEST=1 npm run dev:emulator
+        if (emulator && process.env.RAZORPAY_TEST === '1' && keys.RAZORPAY_KEY_ID) {
+          if (!keys.RAZORPAY_KEY_ID.startsWith('rzp_test_')) throw new Error('Local development only uses Razorpay TEST keys (rzp_test_…).');
+          return { route, mock: null, env: { ...keys, ...local } };
         }
-        const real = process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY && process.env.FIREBASE_SERVICE_ACCOUNT;
-        if (real) return { route, mock: null, env: { CASHFREE_ENV: 'sandbox', CASHFREE_APP_ID: process.env.CASHFREE_APP_ID, CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY, FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT, FIREBASE_PROJECT_ID: 'bytecodebrew-53f0c' } };
         if (!emulator) return { route, mock: null, env: null };
-        const { startMockCashfree } = await import('./workers/payments/mockCashfree.js');
-        const mock = await startMockCashfree({ secret: 'mock_secret' });
+        const { startMockRazorpay } = await import('./workers/payments/mockRazorpay.js');
+        const mockKeys = { keyId: 'rzp_test_mock', keySecret: 'mock_secret', webhookSecret: 'mock_whsec' };
+        const mock = await startMockRazorpay(mockKeys);
         return {
           route,
           mock,
-          env: { CASHFREE_ENV: 'sandbox', CASHFREE_BASE: mock.base, CASHFREE_APP_ID: 'mock', CASHFREE_SECRET_KEY: 'mock_secret', FIREBASE_PROJECT_ID: 'demo-bytecodebrew', FIRESTORE_EMULATOR: 'http://127.0.0.1:8080', AUTH_EMULATOR: '1' },
+          env: { RAZORPAY_BASE: mock.base, RAZORPAY_KEY_ID: mockKeys.keyId, RAZORPAY_KEY_SECRET: mockKeys.keySecret, RAZORPAY_WEBHOOK_SECRET: mockKeys.webhookSecret, ...local },
         };
       };
       server.middlewares.use('/api/pay', async (req, res) => {
@@ -95,13 +97,15 @@ function paymentsDevApi() {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify(body));
         };
-        if (!env) return send(503, { error: 'Payments in development need the emulators (npm run dev:emulator) or Cashfree sandbox keys in the environment.' });
+        if (!env) return send(503, { error: 'Payments in development need the emulators (npm run dev:emulator).' });
         const chunks = [];
         for await (const c of req) chunks.push(c);
         const origin = `http://${req.headers.host}`;
         const request = new Request(`${origin}/pay${req.url}`, { method: req.method, headers: req.headers, body: req.method === 'POST' ? Buffer.concat(chunks) : undefined });
-        const [status, body] = await route(request, { ...env, SITE_URL: origin, PUBLIC_URL: `${origin}/api` });
-        if (mock && status === 200 && body.paymentSessionId) body.mockCheckoutUrl = mock.checkoutUrl(body.orderId);
+        const [status, body] = await route(request, { ...env, SITE_URL: origin });
+        if (mock && status === 200 && body.razorpayOrderId) {
+          body.mockCheckoutUrl = mock.checkoutUrl(body.razorpayOrderId, `${origin}/api/pay/webhook`, `${origin}/premium?order_id=${body.orderId}`);
+        }
         send(status, body);
       });
     },
