@@ -1,68 +1,9 @@
 import ladderData from 'virtual:dsa-ladders';
-import { tracks, getCourseLessons, getCourse } from '../curriculum';
+import { getCourseLessons, getCourse } from '../curriculum';
 import { dsa } from '../curriculum/tracks/dsa';
 import { QUESTIONS } from '../data/behavioralQuestions';
 import { getNextUp } from './nextLesson';
-import { today, addDays, daysBetween, daySeed, dayKey } from './dates';
-
-/** Every readable lesson in roadmap order, optionally limited to some tracks. */
-export function readableLessons(focusTracks = []) {
-  const chosen = focusTracks.length ? tracks.filter((t) => focusTracks.includes(t.id)) : tracks;
-  return chosen.flatMap((t) =>
-    t.courses.flatMap((c) =>
-      getCourseLessons(t.id, c.id)
-        .filter((l) => l.available)
-        .map((l) => ({ ...l, trackId: t.id, trackTitle: t.title, courseTitle: c.shortTitle ?? c.title })),
-    ),
-  );
-}
-
-/**
- * Interview countdown: how many lessons are left in the chosen tracks, how many days remain,
- * the pace needed (keeping the last 3 days free for revision and mocks) and a week-by-week plan.
- */
-export function countdownPlan({ interviewDate, focusTracks = [] }, isComplete, completedAt) {
-  if (!interviewDate) return null;
-  const now = today();
-  const daysLeft = daysBetween(now, interviewDate);
-  const lessons = readableLessons(focusTracks);
-  // Interleave tracks so each week mixes DSA, design and behavioral rather than finishing one first.
-  const remainingByTrack = new Map();
-  for (const l of lessons) {
-    if (isComplete(l.key)) continue;
-    if (!remainingByTrack.has(l.trackId)) remainingByTrack.set(l.trackId, []);
-    remainingByTrack.get(l.trackId).push(l);
-  }
-  const queues = [...remainingByTrack.values()];
-  const remaining = [];
-  while (queues.some((q) => q.length)) for (const q of queues) if (q.length) remaining.push(q.shift());
-
-  const studyDays = Math.max(1, daysLeft - 3);
-  const perDay = remaining.length / studyDays;
-  const weeks = [];
-  const perWeek = Math.max(1, Math.ceil(perDay * 7));
-  for (let i = 0; i < remaining.length && weeks.length < 52; i += perWeek) {
-    weeks.push({ start: addDays(now, weeks.length * 7), lessons: remaining.slice(i, i + perWeek) });
-  }
-
-  // Pace: lessons completed in the last 7 days vs. what a week needs.
-  const weekAgo = addDays(now, -7);
-  const doneThisWeek = lessons.filter((l) => {
-    const at = completedAt(l.key);
-    return at && dayKey(new Date(at)) > weekAgo;
-  }).length;
-
-  return {
-    daysLeft,
-    total: lessons.length,
-    remaining: remaining.length,
-    perDay,
-    perWeek,
-    weeks,
-    doneThisWeek,
-    onTrack: daysLeft <= 0 || remaining.length === 0 || doneThisWeek >= Math.min(perWeek, remaining.length),
-  };
-}
+import { daySeed } from './dates';
 
 /** The next unsolved ladder problems, following the DSA pattern order. */
 export function nextProblems(isSolved, n = 2) {
@@ -87,9 +28,8 @@ export function questionOfTheDay() {
   return { ...QUESTIONS[index], index };
 }
 
-/** Where to continue reading: the course last visited (or the interview plan's next lesson). */
-export function nextLessonToRead({ lastVisited, isComplete, plan }) {
-  if (plan?.weeks[0]?.lessons[0]) return plan.weeks[0].lessons[0];
+/** Where to continue reading: the next lesson in the course last visited. */
+export function nextLessonToRead({ lastVisited, isComplete }) {
   const [trackId, courseId] = (lastVisited ?? 'system-design/hld').split('/');
   if (!getCourse(trackId, courseId)) return null;
   return getNextUp(getCourseLessons(trackId, courseId), isComplete).next;

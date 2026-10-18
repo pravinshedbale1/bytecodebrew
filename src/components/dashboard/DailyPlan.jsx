@@ -6,13 +6,13 @@ import { useActivity } from '../../hooks/useActivity';
 import { useMocks } from '../../hooks/useLearning';
 import { useProfile, goalsOf } from '../../hooks/useProfile';
 import { useDeck } from '../../lib/reviewDeck';
-import { countdownPlan, nextLessonToRead, nextProblems, questionOfTheDay } from '../../lib/studyPlan';
+import { nextLessonToRead, nextProblems, questionOfTheDay } from '../../lib/studyPlan';
 import { today, dayKey } from '../../lib/dates';
 import styles from './Dashboard.module.css';
 
 /** Today's study plan: one lesson, the due reviews, a couple of problems and a behavioral question. */
 export function DailyPlan({ compact = false }) {
-  const { isComplete, completedAt, lastVisited } = useProgress();
+  const { isComplete, lastVisited } = useProgress();
   const { isSolved } = useSolved();
   const activity = useActivity();
   const profile = useProfile();
@@ -20,10 +20,9 @@ export function DailyPlan({ compact = false }) {
   const { mocks } = useMocks();
   const done = activity[today()] ?? {};
 
-  const plan = countdownPlan(profile, isComplete, completedAt);
-  const goals = goalsOf(profile, plan);
+  const goals = goalsOf(profile);
   const answeredToday = (done.drill ?? 0) > 0 || mocks.some((m) => m.type === 'behavioral' && dayKey(new Date(m.at)) === today());
-  const lesson = nextLessonToRead({ lastVisited, isComplete, plan });
+  const lesson = nextLessonToRead({ lastVisited, isComplete });
   const problems = nextProblems(isSolved, goals.problems);
   const question = questionOfTheDay();
   const reviewsDone = done.review ?? 0;
@@ -37,7 +36,6 @@ export function DailyPlan({ compact = false }) {
       detail: (
         <>
           {lesson ? <Link to={lesson.path}>{lesson.title}</Link> : 'Every lesson is complete'}
-          {goals.lessonsFromPlan && <span className={styles.planNote}> · pace for your interview date</span>}
         </>
       ),
     },

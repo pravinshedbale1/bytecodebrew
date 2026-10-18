@@ -18,6 +18,7 @@ const CheatSheetPage = named(() => import('./pages/CheatSheetPage'), 'CheatSheet
 const SolvePage = named(() => import('./pages/SolvePage'), 'SolvePage');
 const ProblemsPage = named(() => import('./pages/ProblemsPage'), 'ProblemsPage');
 const AdminPage = named(() => import('./pages/AdminPage'), 'AdminPage');
+const RunwayPage = named(() => import('./pages/RunwayPage'), 'RunwayPage');
 const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
 const policy = (name) => named(() => import('./pages/PolicyPages'), name);
 const ContactPage = policy('ContactPage');
@@ -41,6 +42,7 @@ export function App() {
         <Route path="solve/:slug" element={page(<SolvePage />)} />
         <Route path="problems" element={page(<ProblemsPage />)} />
         <Route path="admin" element={page(<AdminPage />)} />
+        <Route path="runway" element={page(<RunwayPage />)} />
         <Route path="premium" element={page(<PricingPage />)} />
         <Route path="contact" element={page(<ContactPage />)} />
         <Route path="terms" element={page(<TermsPage />)} />

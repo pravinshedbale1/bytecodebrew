@@ -37,14 +37,6 @@
   font-size: 0.95rem;
 }
 
-.good {
-  color: var(--color-success);
-}
-
-.behind {
-  color: var(--color-warn);
-}
-
 .linkButton {
   border: 0;
   background: none;
@@ -395,74 +387,6 @@
 
 /* ---- countdown */
 
-.cdControls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  align-items: flex-start;
-}
-
-.dateInput {
-  width: auto;
-}
-
-.cdPlan {
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
-}
-
-.weeks {
-  list-style: none;
-  margin: var(--space-4) 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-4);
-}
-
-.weekHead {
-  font-weight: 620;
-  font-size: 0.95rem;
-}
-
-.weekHead span {
-  font-weight: 450;
-  color: var(--color-text-subtle);
-  font-size: var(--text-sm);
-  margin-left: var(--space-2);
-}
-
-.weekLessons {
-  list-style: none;
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 4px var(--space-5);
-  font-size: var(--text-sm);
-}
-
-.weekLessons li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.weekLessons a {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.weekLessons span {
-  flex-shrink: 0;
-  color: var(--color-text-subtle);
-  font-size: var(--text-xs);
-}
-
-/* ---- LeetCode full import */
-
 .lcImport {
   margin-top: var(--space-6);
   padding-top: var(--space-5);
@@ -510,6 +434,70 @@
   overflow: auto;
 }
 
-.planNote {
+
+/* ---- Runway banner */
+
+.runway {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--color-accent) 12%, transparent) 0%, transparent 60%),
+    var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.runway:hover {
+  border-color: var(--color-accent);
+}
+
+.runwayIcon {
+  color: var(--color-accent);
+}
+
+.runwayDays {
+  display: grid;
+  justify-items: center;
+  min-width: 72px;
+  line-height: 1;
+}
+
+.runwayDays strong {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-accent);
+}
+
+.runwayDays span {
+  margin-top: 4px;
+  font-size: var(--text-xs);
   color: var(--color-text-subtle);
+}
+
+.runwayBody {
+  flex: 1 1 260px;
+  display: grid;
+  gap: 2px;
+}
+
+.runwayBody strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.runwayBody span {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.runwayDone {
+  color: var(--color-success);
 }

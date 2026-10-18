@@ -4,8 +4,7 @@ import { createSyncedStore } from '../lib/syncedStore';
 /**
  * Learner settings and the LeetCode snapshot.
  * Shape: {
- *   interviewDate: 'YYYY-MM-DD' | null,
- *   focusTracks: [trackId] (empty = all),
+ *   interviewDate: 'YYYY-MM-DD' | null (old dashboard countdown; Runway now owns the date),
  *   goals: { lessons, problems, reviews },
  *   leetcode: { username, syncedAt: ms, data: {...} } | null
  * }
@@ -36,15 +35,7 @@ export function updateProfile(patch) {
   store.set((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 }
 
-/**
- * Daily goals. With an interview date set, the lesson goal follows the plan's pace (lessonsFromPlan: true)
- * so the dashboard never shows two different numbers.
- */
-export function goalsOf(profile, plan = null) {
-  const goals = { ...DEFAULT_GOALS, ...(profile.goals ?? {}), lessonsFromPlan: false };
-  if (plan && plan.daysLeft > 0 && plan.remaining > 0) {
-    goals.lessons = Math.max(1, Math.ceil(plan.perDay));
-    goals.lessonsFromPlan = true;
-  }
-  return goals;
+/** Daily goals, with defaults for anything not set. */
+export function goalsOf(profile) {
+  return { ...DEFAULT_GOALS, ...(profile.goals ?? {}) };
 }

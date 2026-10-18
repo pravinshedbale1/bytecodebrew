@@ -10,7 +10,7 @@ export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
 
 /** Synced stores that only premium accounts may write to (see firestore.rules → premiumNames). */
-export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories'];
+export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway'];
 
 export const isAdminEmail = (email) => Boolean(email) && ADMIN_EMAILS.includes(email.toLowerCase());
 
@@ -37,6 +37,7 @@ export const PREMIUM_FEATURES = [
   ['314 problems with tests', 'a LeetCode-style editor with full statements, constraints, hints, hidden tests and performance checks'],
   ['Mock interviews', 'timed rounds with phases, a self-scoring rubric and an optional AI interviewer'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
-  ['Dashboard and LeetCode sync', 'study plan, streaks, interview countdown, and your LeetCode history imported'],
+  ['Runway: your day-by-day interview plan', 'tell it your days and hours a day; it plans lessons, problems, mocks and revision, shows what to do today and keeps you on pace'],
+  ['Dashboard and LeetCode sync', 'streaks, weak areas, activity and your LeetCode history imported'],
   ['Code playground, behavioral drill and story bank', ''],
 ];

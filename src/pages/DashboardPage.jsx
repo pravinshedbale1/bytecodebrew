@@ -8,7 +8,7 @@ import { DailyPlan } from '../components/dashboard/DailyPlan';
 import { Heatmap } from '../components/dashboard/Heatmap';
 import { LeetCodeCard } from '../components/dashboard/LeetCodeCard';
 import { LeetCodeImport } from '../components/dashboard/LeetCodeImport';
-import { Countdown } from '../components/dashboard/Countdown';
+import { RunwayCard } from '../components/dashboard/RunwayCard';
 import { WeakAreas } from '../components/dashboard/WeakAreas';
 import { useActivity, streakOf, longestStreak, dayTotal } from '../hooks/useActivity';
 import { useProgress } from '../hooks/useProgress';
@@ -18,7 +18,6 @@ import { useProfile, updateProfile, goalsOf } from '../hooks/useProfile';
 import { useAuth, signIn } from '../hooks/useAuth';
 import { useDeck } from '../lib/reviewDeck';
 import { overallProgress } from '../lib/progressStats';
-import { countdownPlan } from '../lib/studyPlan';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from '../components/dashboard/Dashboard.module.css';
@@ -31,7 +30,7 @@ const SOURCES = [
 
 function DashboardInner() {
   const activity = useActivity();
-  const { isComplete, completedAt } = useProgress();
+  const { isComplete } = useProgress();
   const { solved } = useSolved();
   const quizResults = useQuizResults();
   const { mocks } = useMocks();
@@ -85,7 +84,7 @@ function DashboardInner() {
         )}
       </RailCard>
       <RailCard title="Daily goals" icon={<Target size={14} aria-hidden="true" />}>
-        <GoalsForm goals={goalsOf(profile, countdownPlan(profile, isComplete, completedAt))} />
+        <GoalsForm goals={goalsOf(profile)} />
       </RailCard>
       <YourDataCard />
       <RailCard title="Mock interviews" icon={<Timer size={14} aria-hidden="true" />}>
@@ -130,6 +129,8 @@ function DashboardInner() {
         </div>
       </section>
 
+      <RunwayCard />
+
       <div className={styles.columns}>
         <section className={ui.panel}>
           <h2 className={ui.panelTitle}>Today</h2>
@@ -170,11 +171,6 @@ function DashboardInner() {
         <LeetCodeImport />
       </section>
 
-      <section className={ui.panel}>
-        <h2 className={ui.panelTitle}>Interview countdown</h2>
-        <p className={ui.panelLead}>Set the date and we’ll work out the pace and a reading plan for every week until then.</p>
-        <Countdown />
-      </section>
     </PageLayout>
   );
 }
@@ -188,16 +184,12 @@ function GoalsForm({ goals }) {
   const set = (id, v) => updateProfile((p) => ({ goals: { ...(p.goals ?? {}), [id]: Math.max(1, Math.min(Number(v) || 1, 200)) } }));
   return (
     <div className={styles.goals}>
-      {fields.map((f) => {
-        const fromPlan = f.id === 'lessons' && goals.lessonsFromPlan;
-        return (
-          <label key={f.id} className={styles.goal}>
-            <span>{f.label}</span>
-            <input type="number" min={1} max={f.max} className={ui.input} value={goals[f.id]} disabled={fromPlan} onChange={(e) => set(f.id, e.target.value)} />
-          </label>
-        );
-      })}
-      {goals.lessonsFromPlan && <p className={ui.help} style={{ marginTop: 0 }}>Lessons a day follows your interview countdown. Clear the date to set it yourself.</p>}
+      {fields.map((f) => (
+        <label key={f.id} className={styles.goal}>
+          <span>{f.label}</span>
+          <input type="number" min={1} max={f.max} className={ui.input} value={goals[f.id]} onChange={(e) => set(f.id, e.target.value)} />
+        </label>
+      ))}
     </div>
   );
 }
@@ -234,7 +226,7 @@ export function DashboardPage() {
     <PremiumPage
       eyebrow="Dashboard"
       title="Your study dashboard"
-      lead="Today's plan, your streak, an interview countdown, weak areas and LeetCode sync."
+      lead="Today's plan, your streak, your Runway, weak areas and LeetCode sync."
       feature="The dashboard"
       rail={<YourDataCard />}
     >

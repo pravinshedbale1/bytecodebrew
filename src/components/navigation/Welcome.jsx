@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Code2, Layers, LayoutDashboard, X } from 'lucide-react';
+import { BookOpen, Code2, Layers, PlaneTakeoff, X } from 'lucide-react';
 import { readJSON, writeJSON } from '../../lib/storage';
 import styles from './Welcome.module.css';
 
@@ -10,7 +10,7 @@ const STEPS = [
   { icon: BookOpen, title: 'Learn', text: 'Follow a track in order. Each lesson ends with a quick check, then mark it complete.', to: '/system-design', link: 'Start learning' },
   { icon: Code2, title: 'Practise', text: 'Solve the DSA problems here with tests, and run timed mock interviews.', to: '/problems', link: 'Open Problems' },
   { icon: Layers, title: 'Remember', text: 'Completed lessons feed your review deck. A few cards a day keep it fresh for the interview.', to: '/review', link: 'How review works' },
-  { icon: LayoutDashboard, title: 'Track', text: 'Your dashboard has today\'s plan, your streak and an interview countdown.', to: '/dashboard', link: 'Open dashboard' },
+  { icon: PlaneTakeoff, title: 'Plan', text: 'Tell Runway how many days you have and your hours a day: it builds a day-by-day plan to interview day.', to: '/runway', link: 'Open Runway' },
 ];
 
 /** A one-time "how this site works" card for first visits; dismissing it is remembered in this browser. */
