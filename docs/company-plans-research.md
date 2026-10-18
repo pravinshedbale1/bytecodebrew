@@ -1,5 +1,8 @@
 # Company-specific Runway plans: research (October 2026)
 
+Sections 1–4 cover the 13 companies researched first; section 5 extends this to the 50 best-paying
+companies in India.
+
 Research for adding company plans to Runway. Covers how the main companies' loops look in 2025–2026,
 the new AI-assisted and practical rounds, how to build a company question bank without breaking anyone's
 terms, and what to build.
@@ -126,6 +129,113 @@ Amazon list look broadly right?"), without copying lists, frequencies or ranking
 3. Atlassian, Uber, Stripe, Swiggy, Razorpay, Walmart, Goldman Sachs.
 4. Learner-submitted interview reports.
 
+## 5. The top 50 best-paying companies in India
+
+### How the list was built
+
+- **Pay data:** Levels.fyi's India software-engineer leaderboards (median total yearly compensation:
+  base + stock + bonus, submissions from the last two years, checked 18 October 2026), at entry,
+  senior and staff level and across all levels. Figures are in USD as Levels.fyi shows them.
+- **Kept:** companies with real engineering hiring in India (Bengaluru, Hyderabad, Pune, Gurugram,
+  Noida, Mumbai, Chennai). Remote-only or tiny employers that appear on the all-levels board (p0,
+  Kredivo, Mrsool, Toptal and similar) are left out because learners can't target them.
+- **Added:** high payers the boards under-sample: quant/HFT firms and the top Indian product companies
+  (few Levels.fyi submissions, but known top-of-market pay).
+- Crowdsourced pay is directional, not exact, and differs a lot by level.
+
+### Six interview styles
+
+The 50 companies map onto six styles. A company plan starts from its style's template, and company
+specifics are layered on top.
+
+| Style | What the loop tests | Runway mix (DSA / HLD / LLD / behavioral) | Mocks to schedule |
+|---|---|---|---|
+| **A. Big Tech classic** | 2–4 DSA rounds (mediums to hards), system design from mid-level, a behavioral/values round | 55 / 20 / 5 / 20 | DSA timed, HLD, behavioral |
+| **B. Practical code** | Build or extend a small class or service, debug unfamiliar code, call APIs; LLD-flavoured; less LeetCode | 30 / 20 / 35 / 15 | Machine coding, bug squash, AI-assisted |
+| **C. Systems & infra** | DSA plus OS and concurrency (mutex, semaphore, threads), language internals, distributed storage and data systems | 45 / 25 / 15 / 15 (+ CS fundamentals) | DSA, HLD focused on storage and streaming |
+| **D. Indian product (machine coding)** | 90–120 min machine coding of a runnable, extensible system, then review → DSA → HLD (SDE-2+) → hiring manager | 35 / 15 / 35 / 15 | Machine coding ×2, DSA, HLD |
+| **E. Quant / HFT** | Hard online test (DSA + probability + CS MCQs), then C++/OS/networking depth, low-latency design, puzzles | 60 / 10 / 10 / 5 (+ CS fundamentals and probability 15) | Hard DSA timed |
+| **F. Banks and enterprise fintech** | HackerRank test, 2–3 technical rounds (DSA mediums, SQL, OS, OOP, projects), HR; AI forbidden | 50 / 15 / 15 / 20 | DSA, project deep-dive |
+
+**AI-assisted rounds** are a modifier on top of any style. Confirmed or reported for Meta, Google (pilot),
+Microsoft (some teams), Amazon (online assessment), Rippling (AI help allowed in the practical round)
+and Razorpay (agentic round). Plans for these add one AI-assisted mock and the "working with AI"
+practice.
+
+### The list
+
+Pay columns are Levels.fyi India medians where the company appears on that board (— = not on it).
+"Research" says how much of the interview format is backed by sources: **sourced** = 2025–26 reports
+found; **style** = assigned from the company type, to verify while curating.
+
+| # | Company | Style | Senior | Staff | Entry | Interview notes | Research |
+|---|---|---|---|---|---|---|---|
+| 1 | Broadcom (incl. VMware) | C | $216k | $213k | $74k | Systems-heavy; C/C++, OS, virtualisation and storage | style |
+| 2 | LinkedIn | A | $197k | $268k | $67k | Microsoft-family loop: DSA, system design, "host manager"/behavioral | style |
+| 3 | Databricks | C + B | $183k | — | $75k | Coding, design of data lakes/query engines/streaming, debugging; 45–90 min rounds | sourced |
+| 4 | Stripe | B | $167k | — | $63k | Coding, bug squash, API integration, system design, manager | sourced |
+| 5 | Rubrik | C | $167k | — | $69k | DSA plus concurrency (mutex/semaphore) | sourced |
+| 6 | Rippling | B | $129k | $231k | $48k | Practical coding that keeps getting extended (AI help allowed); LLD on grouping/aggregation; graphs | sourced |
+| 7 | Uber | A | $135k | $230k | — | CodeSignal OA (4 problems, 70–90 min), DSA, LLD, HLD, collaboration | sourced |
+| 8 | Atlassian | B | $115k | $210k | $44k | Karat screen, coding, code design, system design, values, manager | sourced |
+| 9 | Coinbase | A + B | $118k | $196k | $45k | Practical coding and system design; crypto domain | style |
+| 10 | Google | A | $141k | $157k | — | No-IDE coding, ≥1 in-person round, G&L with design discussion; Gemini code-comprehension pilot | sourced |
+| 11 | Amazon | A | $135k | — | — | OA + work simulation; LPs in every round; Bar Raiser; LLD for SDE-1/2; AI forbidden live | sourced |
+| 12 | Meta | A | $128k | — | — | Speed (2 mediums/45 min); one AI-enabled coding round; product/system design | sourced |
+| 13 | Apple | A | $115k | $179k | — | Team-run loops; domain depth; coding plus team-specific design | style |
+| 14 | Airbnb | A + B | $135k | — | — | Clean, working code; core-values round | style |
+| 15 | DocuSign | A | $158k | — | $54k | DSA, system design, behavioral | style |
+| 16 | MongoDB | C | $126k | — | — | Distributed databases, storage engines, DSA | style |
+| 17 | Confluent | C | $116k | — | $49k | Kafka/streaming internals, distributed systems | style |
+| 18 | Salesforce | A | — | $172k | — | DSA, system design, values (Trust) | style |
+| 19 | Microsoft | A | — | $150k | — | 4–5 rounds, coding + design + behavioral; AI-assisted round on some teams | sourced |
+| 20 | Nutanix | C | — | $157k | — | Systems and storage depth | style |
+| 21 | Expedia Group | A | — | $152k | — | DSA, system design, behavioral | style |
+| 22 | JPMorgan Chase | F | — | $149k | — | HackerRank, DSA mediums, SQL, OOP, behavioral | style |
+| 23 | Nvidia | C | — | $136k | — | C/C++, systems, GPU/driver or platform depth by team | style |
+| 24 | Qualcomm | C | — | $128k | — | C/C++, OS, embedded and systems depth | style |
+| 25 | Intuit | A | — | $126k | — | Sometimes a take-home/craft demo; DSA, design | style |
+| 26 | Walmart Global Tech | A | — | $125k | — | 2 mediums, system design, hiring manager; US-level bar | sourced |
+| 27 | Cohesity | C | — | — | $44k | Storage and distributed systems | style |
+| 28 | Booking.com | A | — | — | — | Practical coding, system design, behavioral | style |
+| 29 | Adobe | A | — | — | — | DSA, CS fundamentals, design | style |
+| 30 | Oracle (OCI) | A + C | — | — | — | OA, DSA, project deep-dive, behavioral; OS/SQL/networking for freshers | sourced |
+| 31 | CrowdStrike | C | — | — | — | Security and systems depth | style |
+| 32 | Postman | B | — | — | — | Product engineering; practical coding | style |
+| 33 | Roku | C | — | — | $82k | Embedded/streaming systems | style |
+| 34 | Visa | F | — | — | — | DSA, system design, behavioral | style |
+| 35 | Goldman Sachs | F | — | — | — | Aptitude/HackerRank, 2 technical, HR; AI forbidden | sourced |
+| 36 | Tower Research Capital | E | — | — | — | HackerRank 90–135 min (DSA + OS/networks/DBMS MCQs), phone screens, 4–6 round "super day" | sourced |
+| 37 | Graviton Research Capital | E | — | — | — | Coding test, quant/software interviews (campus-heavy) | style |
+| 38 | Quadeye | E | — | — | — | Coding test, shortlist, 3 interviews | sourced |
+| 39 | D. E. Shaw | E | — | — | — | Online test (3 mediums + maths/probability + CS MCQs), technical rounds (SQL, DBMS, OS, design), HR | sourced |
+| 40 | Millennium | E | — | — | $73k | Hard DSA, C++/Python depth | style |
+| 41 | Flipkart | D | — | — | — | OA (2 DSA), machine coding + review, LLD/HLD, hiring manager | sourced |
+| 42 | PhonePe | D | — | — | — | Machine coding/LLD first (90 min or 24 h take-home + review), DSA, HLD, hiring manager | sourced |
+| 43 | Razorpay | D | — | — | — | HackerRank, machine coding, HLD, agentic coding (reported), behavioral | sourced |
+| 44 | Swiggy | D | — | — | — | Machine coding/LLD 90–120 min, DSA, HLD, HM | sourced |
+| 45 | Zomato (Eternal) | D | — | — | — | Machine coding/LLD, DSA, HLD | style |
+| 46 | Meesho | D | — | — | — | SDE-2: DSA + 120-min machine coding; SDE-3: design-first, little DSA | sourced |
+| 47 | CRED | D | — | — | — | Machine coding, design, culture | style |
+| 48 | Groww | D | — | — | — | Machine coding (90 min), LLD, DSA | style (2021 data) |
+| 49 | Zepto | D | — | — | — | DSA, LLD with schema design, hiring manager | sourced |
+| 50 | JioHotstar | D + C | $113k | — | — | Scale and streaming design; DSA; LLD | style |
+
+Next in line if any drop out: Bloomberg, Squarepoint Capital, Glean, Sprinklr, Media.net, ServiceNow,
+Zerodha, Cisco, Morgan Stanley, Twilio.
+
+### What this changes in the build
+
+1. **Style templates first.** Build the six templates (mix, mock types, problem-pattern weights,
+   behavioral content). With them, all 50 companies have a sensible plan on day one.
+2. **Company overrides** for the well-sourced ones: round list, AI policy, specific mocks, curated
+   problems, behavioral lesson. Start with the 21 marked **sourced**.
+3. **New content needed by style:** machine coding mocks (style D, 10 companies), practical/bug-squash
+   (B, 6), CS fundamentals and concurrency (C, E, F: 20 companies; the site has no OS, networking,
+   DBMS or concurrency track yet), probability/puzzles (E, 5).
+4. **Company picker** in Runway shows the style and the "last checked" date; companies marked style-only
+   say "based on companies like this one" until curated.
+
 ---
 
 ## Sources
@@ -135,6 +245,9 @@ Official or press-confirmed:
 - Meta: [404 Media: Meta is going to let job candidates use AI during coding tests](https://www.404media.co/meta-is-going-to-let-job-candidates-use-ai-during-coding-tests/); [Business Today](https://www.businesstoday.in/amp/technology/news/story/meta-to-test-job-applicants-with-ai-assisted-coding-interviews-amid-ai-expansion-plans-487200-2025-07-31)
 - Google: [Gemini in coding rounds pilot (summary of Business Insider)](https://www.shopifreaks.com/google-pilots-new-software-engineering-interview-process-that-lets-candidates-use-ai-assistant-gemini-during-coding-rounds/); [Exponent: Google AI coding interview](https://www.tryexponent.com/blog/google-ai-coding-interview)
 - LeetCode: [Terms of Service](https://leetcode.com/terms)
+
+Pay data (Levels.fyi, India, checked 18 October 2026):
+- [Leaderboard: senior](https://www.levels.fyi/leaderboard/Software-Engineer/Senior-Engineer/country/India/), [staff](https://www.levels.fyi/leaderboard/Software-Engineer/Staff-Engineer/country/India/), [entry](https://www.levels.fyi/leaderboard/Software-Engineer/Entry-Level-Engineer/country/India/), [all levels](https://www.levels.fyi/leaderboard/Software-Engineer/All-Levels/country/India/); [India software engineer pay](https://www.levels.fyi/t/software-engineer/locations/india)
 
 Reported (prep sites and candidate reports):
 - Meta AI round: [PracHub](https://prachub.com/resources/meta-ai-coding-interview), [Copilot Interview](https://copilotinterview.com/blog/meta-ai-enabled-coding-interview), [TechScreen](https://techscreen.app/articles/ai-enabled-coding-interview-guide-2026), [Medium](https://medium.com/@fahimulhaq/meta-just-transformed-their-coding-interviews-with-ai-heres-what-developers-must-know-363b50dceda4)
@@ -147,4 +260,8 @@ Reported (prep sites and candidate reports):
 - Flipkart: [LeetCode Discuss, Jan 2026](https://leetcode.com/discuss/post/8455829/flipkart-sde-2-interview-experience-jan-o8ngx/), [TechPrep](https://www.techprep.app/blog/flipkart-interview-process)
 - Razorpay / Swiggy: [TechPrep Razorpay](https://www.techprep.app/blog/razorpay-interview-process), [Glassdoor Razorpay](https://www.glassdoor.com/Interview/Razorpay-Interview-E1146550-RVW104471826.htm), [TechPrep Swiggy](https://www.techprep.app/companies/swiggy)
 - Walmart Global Tech: [ClavePrep](https://claveprep.com/blog/walmart-global-tech-india-interview-preparation-2026)
+- Quant: [TechPrep: Tower Research](https://www.techprep.app/blog/tower-research-interview-process), [IIT Kanpur placement notes](https://spo.iitk.ac.in/insights/2024-intern-talin-gupta-tower-research-capital), [LeetCode Discuss: D. E. Shaw MTS Jan 2025](https://leetcode.com/discuss/post/6754544/de-shaw-interview-experience-member-tech-0oa7/)
+- Infra: [Codemia: Databricks](https://codemia.io/guides/databricks-software-engineer), [Taro: Rubrik Bangalore 2025](https://www.jointaro.com/interviews/companies/rubrik/work-experiences/software-development-engineer-sde-bangalore-rural-january-16-2025-5-3c642bae/), [LeetCode Discuss: Oracle OCI 2025](https://leetcode.com/discuss/interview-experience/6651621)
+- Rippling: [Glassdoor](https://static.glassdoor.co.in/Interview/Rippling-Interview-E2521509-RVW103921306.htm), [Roundz](https://roundz.substack.com/p/interview-experience-154-rippling-sde)
+- Indian product: [LeetCode Discuss: PhonePe SDE-2](https://leetcode.com/discuss/post/8547106/phonepe-sde-2-backend-interview-experien-vcqt/), [TechPrep: PhonePe](https://www.techprep.app/blog/phonepe-interview-process), [Glassdoor: Meesho SDE-3](https://static.glassdoor.co.in/Interview/Meesho-Software-Development-Engineer-SDE-3-Interview-Questions-EI_IE1503776.0,6_KO7,42.htm), [GeeksforGeeks: Zepto SDE-2](https://geeksforgeeks.org/zepto-interview-experience-for-sde-2-fte)
 - AI policies overview: [PracHub guide](https://prachub.com/resources/ai-coding-interview-guide), [DevsUnite](https://devsunite.com/blog/can-you-use-ai-in-a-coding-interview-the-2026-rules)
