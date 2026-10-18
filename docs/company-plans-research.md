@@ -1,5 +1,8 @@
 # Company-specific Runway plans: research (October 2026)
 
+> **Correction, 18 October 2026:** the first version said Amazon does not allow AI. Amazon's own newsroom
+> confirms an AI-assisted SDE assessment; Stripe, Coinbase and Atlassian AI-assisted rounds were also added.
+
 Sections 1–4 cover the 13 companies researched first; section 5 extends this to the 50 best-paying
 companies in India.
 
@@ -24,13 +27,17 @@ Since mid-2025 the industry has split three ways.
 | **AI expected** | Canva **[confirmed]** | Since June 2025 backend, ML and frontend candidates are *expected* to use Copilot, Cursor or Claude in the technical interview. Problems are open-ended (example given: a system for aircraft take-offs and landings at a busy airport), and interviewers judge how well you direct, check and fix the AI's work. |
 | **AI-enabled round alongside classic rounds** | Meta **[confirmed pilot, details reported]** | Announced to staff in July 2025. One of the two onsite coding rounds can be "AI-enabled": about 60 minutes in CoderPad with an AI chat built in. Reports describe one multi-stage problem in a multi-file codebase (fix a bug, add a feature, then optimise), scored on problem-solving, code quality, verification and communication, not on prompting. The other coding round stays AI-free. |
 | | Google **[confirmed pilot]** | Pilot from H2 2026, junior to mid-level, selected US teams: a "code comprehension" round where you *read, debug and optimise* an existing codebase with Gemini. Googleyness & Leadership also gains a technical design conversation about your past work. Standard coding rounds stay AI-free, and since 2025 many loops include at least one in-person round to counter cheating. |
-| | Amazon **[mixed]** | Live loop rounds prohibit generative AI unless explicitly allowed, and breaking that can disqualify you **[confirmed, 2025 guidance]**. The online assessment is reported to include a task done with an AI assistant **[reported]**. Some 2026 loops reportedly include a Leadership Principles question about when you did or didn't use AI tools, and AWS AI, Alexa and Ads teams a "GenAI fluency" discussion **[reported]**. |
-| | Microsoft **[reported]** | Several 2026 candidate reports (Bellevue, Bengaluru AI Foundry) mention an "AI-assisted coding" or "AI coding agent" round next to the DSA and design rounds. It depends on the team. |
+| | Amazon **[confirmed, details reported]** | Amazon has rebuilt its SDE technical assessment so candidates "work with an interactive AI assistant on a real coding platform", to reflect how its engineers use Amazon Q, Cline and Kiro **[confirmed, Amazon newsroom]**. Candidates describe one algorithm problem (about 40 minutes) then about 60 minutes fixing bugs in an existing repository with a built-in assistant that finds files and explains code but won't write the fix; hidden tests decide the score, and passing the visible ones isn't enough. Rolled out unevenly in 2026: some SDE-1, new-grad, intern and SDE-2 candidates still get the classic two-problem test **[reported]**. Live loop rounds: AI only if explicitly allowed (2025 guidance). Some loops ask a Leadership Principles question about your AI use, and AWS AI, Alexa and Ads teams a "GenAI fluency" discussion **[reported]**. |
+| | Stripe **[reported]** | Since spring 2026 one coding round runs on HackerRank with an AI assistant (Gemini and Claude models reported); interviewers probe how much and why you used it. |
+| | Coinbase **[reported, few reports]** | Onsite on an existing service with an AI assistant in the IDE: bug fix, design question, timeout diagnosis from logs, code review; screen sharing required. |
+| | Atlassian **[reported]** | A 2026 live interview with AI-enabled work on a code repository (not the online screen). |
+| | Microsoft **[reported]** | Default: no AI unless the round allows it. Several 2026 candidate reports (Bellevue, Bengaluru AI Foundry, CoreAI and Copilot-related orgs) mention an AI-assisted coding round next to the DSA and design rounds, with Copilot, Claude or ChatGPT; candidates were told not to paste the whole question into the assistant. |
+| | DoorDash, Instacart, Shopify, Figma **[reported]** | Outside our top 50 but part of the same shift: DoorDash "AI Code Craft" onsite in your own IDE, Instacart's CodeSignal assessment with Claude in the editor, Shopify AI pair programming, Figma reported pilot. |
 | | Razorpay **[reported, single source]** | A May 2026 report lists an "agentic coding round" after machine coding and HLD. |
 | **AI forbidden** | Goldman Sachs; Anthropic by default; Cursor's first round **[reported]** | Classic rounds; covert AI use is treated as cheating. |
 
-What this means for learners: **classic DSA is still in almost every loop**, but candidates for Meta,
-Google (pilot), Canva, Microsoft and some Indian product companies now also need to practise:
+What this means for learners: **classic DSA is still in almost every loop**, but candidates for Amazon,
+Meta, Google (pilot), Microsoft, Stripe, Coinbase, Atlassian and some Indian product companies now also need to practise:
 
 1. **Reading and debugging an unfamiliar codebase** (Google code comprehension, Stripe bug squash, Meta's AI round).
 2. **Directing an AI assistant and checking its output**: splitting the task, prompting, spotting wrong or insecure code, writing tests, explaining trade-offs out loud.
@@ -44,7 +51,7 @@ Data as reported in 2025–2026 (mostly SDE-1 to SDE-3 / L3–L5). "Plan emphasi
 |---|---|---|---|
 | **Google** | Phone screen → 3–4 coding (≥1 often in person) → Googleyness & Leadership; system design from L5 | No IDE/autocomplete in classic rounds; deep follow-ups; hiring committee. AI code-comprehension pilot (H2 2026). | DSA 60% (graphs, trees, DP, intervals, heaps), HLD 15% (L5+), behavioral 15%, code reading/debugging 10% |
 | **Meta** | Screen (2 problems in ~45 min) → 2 coding (1 may be AI-enabled) → product/system design (E5+) → behavioral | Speed: two mediums per 45 min. AI-enabled round. | DSA 55% at speed, AI-assisted multi-file practice 15%, design 15%, behavioral 15% |
-| **Amazon** | OA (coding + work simulation + work style) → 4–5 round loop with a Bar Raiser | Leadership Principles in **every** round; OOD/LLD common for SDE-1/2; AI forbidden in live rounds. | DSA 40%, LLD 20%, behavioral/LPs 30% (2 stories per principle), HLD 10% (SDE-2+) |
+| **Amazon** | OA (algorithm problem + AI-assisted repository bug-fixing, or the classic two problems; work simulation; work style) → 4–5 round loop with a Bar Raiser | Leadership Principles in **every** round; OOD/LLD common for SDE-1/2; AI in live rounds only if allowed. | DSA 40%, LLD 20%, behavioral/LPs 30% (2 stories per principle), HLD 10% (SDE-2+) |
 | **Microsoft** | Screen → 4–5 rounds: coding, design, behavioral, sometimes "AA" (as appropriate) final | Team-dependent; AI-assisted round reported in 2026. | DSA 50%, LLD/HLD 25%, behavioral 15%, AI-assisted 10% |
 | **Atlassian** | Karat screen (redo allowed) → coding → code design → system design → values → manager | "Code design" is a practical build (e.g. popularity tracker, router class); values interview is explicit. | DSA 35%, LLD/code design 25%, HLD 20%, values/behavioral 20% |
 | **Uber** | CodeSignal OA (4 problems, 70–90 min) → DSA → LLD → system design → collaboration | Recruiter shapes the loop towards backend/frontend/systems; scale metrics valued. | DSA 45% (fast OA practice), LLD 20%, HLD 20%, behavioral 15% |
@@ -157,9 +164,9 @@ specifics are layered on top.
 | **E. Quant / HFT** | Hard online test (DSA + probability + CS MCQs), then C++/OS/networking depth, low-latency design, puzzles | 60 / 10 / 10 / 5 (+ CS fundamentals and probability 15) | Hard DSA timed |
 | **F. Banks and enterprise fintech** | HackerRank test, 2–3 technical rounds (DSA mediums, SQL, OS, OOP, projects), HR; AI forbidden | 50 / 15 / 15 / 20 | DSA, project deep-dive |
 
-**AI-assisted rounds** are a modifier on top of any style. Confirmed or reported for Meta, Google (pilot),
-Microsoft (some teams), Amazon (online assessment), Rippling (AI help allowed in the practical round)
-and Razorpay (agentic round). Plans for these add one AI-assisted mock and the "working with AI"
+**AI-assisted rounds** are a modifier on top of any style. Confirmed for Amazon (online assessment),
+Meta and Google (pilot); reported for Microsoft (some orgs), Stripe, Coinbase, Atlassian, Rippling (AI help
+allowed in the practical round) and Razorpay (agentic round). Plans for these add one AI-assisted mock and the "working with AI"
 practice.
 
 ### The list
@@ -173,14 +180,14 @@ found; **style** = assigned from the company type, to verify while curating.
 | 1 | Broadcom (incl. VMware) | C | $216k | $213k | $74k | Systems-heavy; C/C++, OS, virtualisation and storage | style |
 | 2 | LinkedIn | A | $197k | $268k | $67k | Microsoft-family loop: DSA, system design, "host manager"/behavioral | style |
 | 3 | Databricks | C + B | $183k | — | $75k | Coding, design of data lakes/query engines/streaming, debugging; 45–90 min rounds | sourced |
-| 4 | Stripe | B | $167k | — | $63k | Coding, bug squash, API integration, system design, manager | sourced |
+| 4 | Stripe | B | $167k | — | $63k | Coding (one round AI-assisted on HackerRank since spring 2026), bug squash, API integration, system design, manager | sourced |
 | 5 | Rubrik | C | $167k | — | $69k | DSA plus concurrency (mutex/semaphore) | sourced |
 | 6 | Rippling | B | $129k | $231k | $48k | Practical coding that keeps getting extended (AI help allowed); LLD on grouping/aggregation; graphs | sourced |
 | 7 | Uber | A | $135k | $230k | — | CodeSignal OA (4 problems, 70–90 min), DSA, LLD, HLD, collaboration | sourced |
-| 8 | Atlassian | B | $115k | $210k | $44k | Karat screen, coding, code design, system design, values, manager | sourced |
-| 9 | Coinbase | A + B | $118k | $196k | $45k | Practical coding and system design; crypto domain | style |
+| 8 | Atlassian | B | $115k | $210k | $44k | Karat screen, coding, code design, system design, values, manager; an AI-enabled repository interview reported in 2026 | sourced |
+| 9 | Coinbase | B | $118k | $196k | $45k | Onsite on an existing service with an AI assistant (bug fix, design, log diagnosis, code review), system design | sourced (thin) |
 | 10 | Google | A | $141k | $157k | — | No-IDE coding, ≥1 in-person round, G&L with design discussion; Gemini code-comprehension pilot | sourced |
-| 11 | Amazon | A | $135k | — | — | OA + work simulation; LPs in every round; Bar Raiser; LLD for SDE-1/2; AI forbidden live | sourced |
+| 11 | Amazon | A | $135k | — | — | OA with an AI-assisted repository task (or classic two problems) + work simulation; LPs in every round; Bar Raiser; LLD for SDE-1/2 | sourced |
 | 12 | Meta | A | $128k | — | — | Speed (2 mediums/45 min); one AI-enabled coding round; product/system design | sourced |
 | 13 | Apple | A | $115k | $179k | — | Team-run loops; domain depth; coding plus team-specific design | style |
 | 14 | Airbnb | A + B | $135k | — | — | Clean, working code; core-values round | style |
@@ -241,6 +248,7 @@ Zerodha, Cisco, Morgan Stanley, Twilio.
 ## Sources
 
 Official or press-confirmed:
+- Amazon: [How 3 AI innovations are creating a better experience for candidates in Amazon's hiring process](https://www.aboutamazon.com/news/workplace/artificial-intelligence-resume-jobs-hiring-amazon)
 - Canva: [Yes, you can use AI in our interviews. In fact, we insist](https://canva.dev/blog/engineering/yes-you-can-use-ai-in-our-interviews); [The Register](https://www.theregister.com/2025/06/11/canva_coding_assistant_job_interviews/)
 - Meta: [404 Media: Meta is going to let job candidates use AI during coding tests](https://www.404media.co/meta-is-going-to-let-job-candidates-use-ai-during-coding-tests/); [Business Today](https://www.businesstoday.in/amp/technology/news/story/meta-to-test-job-applicants-with-ai-assisted-coding-interviews-amid-ai-expansion-plans-487200-2025-07-31)
 - Google: [Gemini in coding rounds pilot (summary of Business Insider)](https://www.shopifreaks.com/google-pilots-new-software-engineering-interview-process-that-lets-candidates-use-ai-assistant-gemini-during-coding-rounds/); [Exponent: Google AI coding interview](https://www.tryexponent.com/blog/google-ai-coding-interview)
@@ -264,4 +272,5 @@ Reported (prep sites and candidate reports):
 - Infra: [Codemia: Databricks](https://codemia.io/guides/databricks-software-engineer), [Taro: Rubrik Bangalore 2025](https://www.jointaro.com/interviews/companies/rubrik/work-experiences/software-development-engineer-sde-bangalore-rural-january-16-2025-5-3c642bae/), [LeetCode Discuss: Oracle OCI 2025](https://leetcode.com/discuss/interview-experience/6651621)
 - Rippling: [Glassdoor](https://static.glassdoor.co.in/Interview/Rippling-Interview-E2521509-RVW103921306.htm), [Roundz](https://roundz.substack.com/p/interview-experience-154-rippling-sde)
 - Indian product: [LeetCode Discuss: PhonePe SDE-2](https://leetcode.com/discuss/post/8547106/phonepe-sde-2-backend-interview-experien-vcqt/), [TechPrep: PhonePe](https://www.techprep.app/blog/phonepe-interview-process), [Glassdoor: Meesho SDE-3](https://static.glassdoor.co.in/Interview/Meesho-Software-Development-Engineer-SDE-3-Interview-Questions-EI_IE1503776.0,6_KO7,42.htm), [GeeksforGeeks: Zepto SDE-2](https://geeksforgeeks.org/zepto-interview-experience-for-sde-2-fte)
+- AI-assisted rounds across companies (2026): [PracHub: AI-assisted coding assessments, Aug 2026](https://prachub.com/resources/ai-assisted-coding-assessments-in-2027-companies-platforms-rules-and-scoring), [PracHub: Amazon AI-assisted OA, Aug 2026](https://prachub.com/resources/amazon-ai-assisted-coding-oa-guide-2026-repository-bugs-ai-prompts-and-hidden-tests), [DEV: Eight companies, eight different AI coding interviews](https://dev.to/max_nyriev/eight-companies-eight-different-ai-coding-interviews-k60), [Hello Interview: Amazon L4](https://www.hellointerview.com/guides/amazon/l4), [Coditioning: Amazon](https://www.coditioning.com/blog/207/amazon-swe-ai-assisted-coding), [PracHub: Microsoft AI-assisted](https://prachub.com/resources/microsoft-ai-assisted-coding-interview-guide-2026-tools-rules-and-scoring), [1point3acres: Stripe AI-assisted round](https://www.1point3acres.com/interview/problems/company/stripe/ai-assisted-coding-round)
 - AI policies overview: [PracHub guide](https://prachub.com/resources/ai-coding-interview-guide), [DevsUnite](https://devsunite.com/blog/can-you-use-ai-in-a-coding-interview-the-2026-rules)

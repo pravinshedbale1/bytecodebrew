@@ -109,6 +109,14 @@ export function CompanyPage() {
             </section>
           )}
 
+          {c.aiNote && (
+            <section className={styles.block}>
+              <h2 className={styles.h3}><Bot size={16} aria-hidden="true" className={styles.h3Icon} /> AI in the interview</h2>
+              <p className={styles.aiText}>{c.aiNote}</p>
+              {mocks.includes('ai') && <p className={styles.aiText}>Practise it with the <Link to="/mock?type=ai">AI-assisted coding mock</Link>.</p>}
+            </section>
+          )}
+
           <section className={styles.block}>
             <h2 className={styles.h3}>The rounds</h2>
             {c.rounds ? (

@@ -67,25 +67,28 @@ const B = (id) => `/behavioral/companies/${id}`;
 
 /**
  * ai: 'expected' | 'allowed' (some rounds) | 'pilot' | 'forbidden' | 'unknown'; the first three add an
- * AI-assisted mock to the plan.
+ * AI-assisted mock to the plan. aiNote: what the AI-assisted round looks like, with how sure we are.
  * focus / mix / mocks: optional overrides of the style's.
  */
 export const COMPANIES = [
   // Big Tech
   { id: 'google', name: 'Google', group: 'Big Tech', style: 'bigtech', sourced: true, ai: 'pilot',
     rounds: ['Phone screen: one coding problem', '3–4 coding rounds, at least one often in person', 'Googleyness & Leadership, now with a technical discussion of your past work', 'System design from L5'],
-    notes: 'No IDE or autocomplete in classic rounds, and deep follow-ups. A pilot from late 2026 adds a "code comprehension" round: read, debug and optimise existing code with Gemini (junior to mid-level, selected US teams).',
+    notes: 'No IDE or autocomplete in classic rounds, and deep follow-ups.',
+    aiNote: 'Classic coding rounds are AI-free. A pilot announced in May 2026 (second half of 2026, junior to mid-level, selected US teams) adds a "code comprehension" round: read, debug and optimise an existing codebase with Gemini, graded on AI fluency (prompting, checking output, debugging). No wider rollout reported yet.',
     focus: ['graph-traversal', 'shortest-paths', 'topological-sort', 'dp-linear', 'dp-strings', 'intervals', 'heap-patterns', 'tree-dfs', 'binary-search-on-answer', 'tries'],
     behavioral: B('google') },
   { id: 'meta', name: 'Meta', group: 'Big Tech', style: 'bigtech', sourced: true, ai: 'allowed',
     rounds: ['Screen: two problems in about 45 minutes', 'Two coding rounds; one can be AI-enabled (about 60 minutes with an AI assistant)', 'Product or system design (E5+)', 'Behavioral'],
-    notes: 'Speed matters: two mediums per 45 minutes, explained clearly. The AI-enabled round is one multi-stage problem in a multi-file codebase (fix, extend, optimise), scored on problem solving, code quality and verification.',
+    notes: 'Speed matters: two mediums per 45 minutes, explained clearly.',
+    aiNote: 'Since October 2025 one onsite coding round can be AI-enabled: about 60 minutes in CoderPad with a built-in AI chat, on one multi-stage problem in a multi-file codebase (fix, extend, optimise). Using the AI is optional; you are scored on problem solving, code quality, verification and communication. The other coding round stays AI-free.',
     mix: { dsa: 60, hld: 15, lld: 5, behavioral: 20 },
     focus: ['hashing', 'two-pointers', 'sliding-window', 'intervals', 'binary-search', 'tree-dfs', 'tree-bfs', 'graph-traversal', 'heap-patterns', 'stack-patterns', 'prefix-sums'],
     behavioral: B('meta') },
-  { id: 'amazon', name: 'Amazon', group: 'Big Tech', style: 'bigtech', sourced: true, ai: 'forbidden',
-    rounds: ['Online assessment: two coding problems, a work simulation and a work-style survey', '4–5 round loop, one with a Bar Raiser', 'Leadership Principles questions in every round', 'LLD/object-oriented design for SDE-1/2; system design for SDE-2+'],
-    notes: 'Prepare two stories for each Leadership Principle. Generative AI is not allowed in live rounds unless the interviewer says so. Some 2026 loops reportedly ask when you did or didn\'t use AI tools at work.',
+  { id: 'amazon', name: 'Amazon', group: 'Big Tech', style: 'bigtech', sourced: true, ai: 'allowed',
+    aiNote: 'Amazon has rebuilt its SDE online assessment around an AI assistant on a real coding platform (confirmed by Amazon). Candidates report one algorithm problem (about 40 minutes) then fixing bugs in an existing repository (about 60 minutes) with a built-in assistant that finds files and explains code but won\'t write the fix; hidden tests decide the score. Some candidates still get the classic two-problem test. In live rounds, use AI only if the interviewer explicitly allows it.',
+    rounds: ['Online assessment: an algorithm problem plus an AI-assisted repository task (bug fixing with a built-in assistant), or the classic two coding problems; then a work simulation and work-style survey', '4–5 round loop, one with a Bar Raiser', 'Leadership Principles questions in every round, including how you use AI tools at work', 'LLD/object-oriented design for SDE-1/2; system design for SDE-2+'],
+    notes: 'Prepare two stories for each Leadership Principle, and practise debugging an unfamiliar codebase with an AI assistant for the online assessment.',
     mix: { dsa: 40, hld: 10, lld: 20, behavioral: 30 },
     focus: ['hashing', 'tree-dfs', 'tree-bfs', 'graph-traversal', 'heap-patterns', 'design-data-structures', 'intervals', 'sliding-window', 'topological-sort'],
     mocks: ['dsa', 'behavioral', 'lld', 'hld'],
@@ -93,6 +96,7 @@ export const COMPANIES = [
   { id: 'microsoft', name: 'Microsoft', group: 'Big Tech', style: 'bigtech', sourced: true, ai: 'allowed',
     rounds: ['Recruiter and online/phone screen', '4–5 rounds: coding, design (LLD or HLD) and behavioral', 'Some 2026 teams add an AI-assisted coding round'],
     notes: 'Loops vary a lot by team. Expect a mix of DSA and design in the same day, and a growth-mindset behavioral thread.',
+    aiNote: 'The default is no AI unless the round explicitly allows it. Some 2026 loops, mostly in AI and Copilot-related orgs, include an AI-assisted coding round (Copilot, Claude or ChatGPT reported); candidates were told not to paste the whole question into the assistant.',
     mix: { dsa: 55, hld: 15, lld: 15, behavioral: 15 },
     focus: ['two-pointers', 'linked-list-manipulation', 'tree-dfs', 'tree-bfs', 'graph-traversal', 'dp-linear', 'hashing', 'stack-patterns', 'design-data-structures'],
     behavioral: B('microsoft') },
@@ -123,12 +127,14 @@ export const COMPANIES = [
   { id: 'rubrik', name: 'Rubrik', group: 'Infra & SaaS', style: 'systems', sourced: true, ai: 'unknown',
     rounds: ['Recruiter screen', 'Coding screen including concurrency (mutex, semaphore)', 'Onsite: DSA, system design, behavioral'],
     notes: 'Concurrency questions appear early; be ready to write thread-safe code.' },
-  { id: 'atlassian', name: 'Atlassian', group: 'Infra & SaaS', style: 'practical', sourced: true, ai: 'unknown',
+  { id: 'atlassian', name: 'Atlassian', group: 'Infra & SaaS', style: 'practical', sourced: true, ai: 'allowed',
+    aiNote: 'Candidates report a 2026 live interview with AI-enabled work on a code repository. The Karat screen and other rounds follow the usual no-AI rules unless you are told otherwise.',
     rounds: ['Karat technical screen (a redo is usually allowed)', 'Coding', 'Code design: a practical build such as a popularity tracker or a router class', 'System design (e.g. Jira notifications, collaborative editing)', 'Values interview', 'Manager'],
     notes: 'The values interview is explicit and scored, so learn Atlassian\'s five values.', behavioral: B('more-companies') },
   { id: 'rippling', name: 'Rippling', group: 'Infra & SaaS', style: 'practical', sourced: true, ai: 'allowed',
     rounds: ['Practical coding: complete a class, then handle one added requirement after another (AI help reported as allowed)', 'LLD screen, e.g. group and aggregate records by any key with filters', 'DSA (graphs, maps), system design, behavioral'],
-    notes: 'Write code that extends cleanly; each follow-up builds on your first answer. Reported pass rates are low.' },
+    notes: 'Write code that extends cleanly; each follow-up builds on your first answer. Reported pass rates are low.',
+    aiNote: 'A 2025–26 report says AI help was allowed in the practical coding round. Confirm with your recruiter.' },
   { id: 'oracle', name: 'Oracle (OCI)', group: 'Infra & SaaS', style: 'bigtech', sourced: true, ai: 'unknown',
     rounds: ['Online coding assessment', 'Technical rounds: DSA, a project deep-dive, behavioral', 'Freshers: OS, SQL and networking questions too'],
     notes: 'OCI backend roles lean on DSA and your past projects.' },
@@ -158,10 +164,14 @@ export const COMPANIES = [
   { id: 'roku', name: 'Roku', group: 'Global consumer', style: 'systems', ai: 'unknown', rounds: [], notes: 'Streaming and embedded systems; top entry-level pay on Levels.fyi India.' },
 
   // Fintech and banks
-  { id: 'stripe', name: 'Stripe', group: 'Fintech & banks', style: 'practical', sourced: true, ai: 'unknown',
-    rounds: ['Coding phone screen', 'Coding (practical)', 'Bug squash: find and fix failing tests in an unfamiliar codebase', 'Integration: call an HTTP API and parse JSON', 'System design', 'Manager'],
+  { id: 'stripe', name: 'Stripe', group: 'Fintech & banks', style: 'practical', sourced: true, ai: 'allowed',
+    aiNote: 'Candidates report that since spring 2026 one coding round runs on HackerRank with an AI assistant (Gemini and Claude models reported). Interviewers ask how much you used it and why; being able to explain every choice matters more than how much you used it.',
+    rounds: ['Coding phone screen', 'Coding (practical); one round may be AI-assisted on HackerRank', 'Bug squash: find and fix failing tests in an unfamiliar codebase', 'Integration: call an HTTP API and parse JSON', 'System design', 'Manager'],
     notes: 'Very little LeetCode; real code, debugging and APIs instead.', behavioral: B('more-companies') },
-  { id: 'coinbase', name: 'Coinbase', group: 'Fintech & banks', style: 'practical', ai: 'unknown', rounds: [], notes: 'Practical coding and system design; crypto and payments domain.' },
+  { id: 'coinbase', name: 'Coinbase', group: 'Fintech & banks', style: 'practical', sourced: true, ai: 'allowed',
+    aiNote: 'Reported (few reports): the onsite works on an existing service with an AI assistant in the IDE that sees the task and open files: fix a bug, answer a design question, diagnose a timeout from logs and review code. Screen sharing is required.',
+    rounds: ['Coding screen', 'Onsite on an existing service with an AI assistant: bug fix, design question, timeout diagnosis from logs, code review', 'System design', 'Behavioral'],
+    notes: 'Practical, real-code rounds; crypto and payments domain.' },
   { id: 'visa', name: 'Visa', group: 'Fintech & banks', style: 'bank', ai: 'unknown', rounds: [], notes: 'DSA, system design and behavioral; payments domain.' },
   { id: 'jpmorgan', name: 'JPMorgan Chase', group: 'Fintech & banks', style: 'bank', ai: 'forbidden', rounds: [], notes: 'HackerRank test, DSA mediums, SQL, OOP and behavioral.', behavioral: B('global-companies-in-india') },
   { id: 'goldman', name: 'Goldman Sachs', group: 'Fintech & banks', style: 'bank', sourced: true, ai: 'forbidden',
@@ -191,6 +201,7 @@ export const COMPANIES = [
   { id: 'razorpay', name: 'Razorpay', group: 'Indian product', style: 'machine', sourced: true, ai: 'allowed',
     rounds: ['HackerRank test', 'Machine coding (60–90 minutes, working code)', 'HLD', 'Agentic/AI coding round (reported 2026)', 'Behavioral'],
     notes: 'Working code over polish. Payments domain: idempotency, ledgers and retries.',
+    aiNote: 'A May 2026 candidate report lists an "agentic coding" round after machine coding and HLD (single report).',
     mix: { dsa: 25, hld: 25, lld: 35, behavioral: 15 }, behavioral: B('indian-product-companies') },
   { id: 'swiggy', name: 'Swiggy', group: 'Indian product', style: 'machine', sourced: true, ai: 'unknown',
     rounds: ['Machine coding/LLD: 90–120 minutes, runnable code (e.g. parking lot, expense sharing)', 'DSA', 'HLD', 'Hiring manager'],
@@ -211,10 +222,10 @@ export const GROUPS = ['Big Tech', 'Infra & SaaS', 'Global consumer', 'Fintech &
 
 export const AI_LABEL = {
   expected: 'AI tools expected',
-  allowed: 'AI allowed in some rounds',
+  allowed: 'Has an AI-assisted round',
   pilot: 'AI-assisted round in pilot',
   forbidden: 'No AI tools',
-  unknown: 'Assume no AI tools',
+  unknown: 'No AI round reported',
 };
 
 export const getCompany = (id) => COMPANIES.find((c) => c.id === id) ?? null;
