@@ -17,6 +17,28 @@
   margin: 0 auto;
 }
 
+.capped {
+  max-width: var(--content-width);
+}
+
+@media (min-width: 1600px) {
+  .capped {
+    max-width: calc(var(--content-width) + 120px);
+  }
+}
+
+@media (min-width: 1880px) {
+  .capped {
+    max-width: calc(var(--content-width) + 220px);
+  }
+}
+
+@media (min-width: 2300px) {
+  .capped {
+    max-width: calc(var(--content-width) + 360px);
+  }
+}
+
 .rail {
   border-left: 1px solid var(--color-border);
   background: var(--color-sidebar);

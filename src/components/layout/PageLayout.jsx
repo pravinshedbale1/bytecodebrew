@@ -2,13 +2,14 @@ import styles from './PageLayout.module.css';
 
 /**
  * Main column + optional right rail that together fill the space beside the
- * sidebar. `contentWidth` caps line length for long-form reading only.
+ * sidebar. `contentWidth` caps line length for long-form reading; on wide screens the cap grows a
+ * little so the column doesn't sit in a sea of empty space.
  */
 export function PageLayout({ children, rail, contentWidth }) {
   return (
     <div className={`${styles.layout} ${rail ? styles.withRail : ''}`}>
       <div className={styles.main}>
-        <div className={styles.inner} style={contentWidth ? { maxWidth: contentWidth } : undefined}>
+        <div className={`${styles.inner} ${contentWidth ? styles.capped : ''}`} style={contentWidth ? { '--content-width': contentWidth } : undefined}>
           {children}
         </div>
       </div>

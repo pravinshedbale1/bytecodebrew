@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import ladderData from 'virtual:dsa-ladders';
 import {
   PlaneTakeoff, Check, ChevronDown, ChevronUp, ArrowUp, ArrowDown, CalendarDays, Trash2, Plus, MoreHorizontal,
-  ExternalLink, Settings2, RotateCcw, AlertTriangle, Coffee, Building2, Sparkles,
+  ExternalLink, Settings2, AlertTriangle, Coffee, Building2, Sparkles,
 } from 'lucide-react';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -63,13 +63,13 @@ function RunwayInner() {
   if (!plan || editing) {
     return (
       <PageLayout>
-        <header className={page.header}>
-          <p className={page.eyebrow}><PlaneTakeoff size={13} aria-hidden="true" /> Runway</p>
-          <h1 className={page.title}>{plan ? 'Edit your runway' : 'Plan your runway to interview day'}</h1>
+        <header className={styles.setupHeader}>
+          <p className={page.eyebrow}>Runway</p>
+          <h1 className={page.title}>{plan ? 'Edit your plan' : 'Plan your runway to interview day'}</h1>
           <p className={page.lead}>
             {plan
-              ? 'Change the dates, hours or focus. The plan is rebuilt from today; what you have completed and the tasks you added are kept.'
-              : 'How many days do you have, and how much time a day? You get a personal day-by-day plan of lessons, problems, mocks and revision, and every day shows exactly what to do.'}
+              ? 'Change the dates, hours or focus. The plan is rebuilt from today, keeping everything you have completed and the tasks you added.'
+              : 'Answer four questions and get a personal day-by-day plan of lessons, problems, mock interviews and revision that fits the time you have.'}
           </p>
         </header>
         <Setup plan={plan} onDone={() => setEditing(false)} onCancel={plan ? () => setEditing(false) : null} />
@@ -79,7 +79,39 @@ function RunwayInner() {
   return <PlanView plan={plan} onEdit={() => setEditing(true)} />;
 }
 
+/** Delete the plan after confirming. Lesson progress and solved problems are not touched. */
+function deletePlan() {
+  if (window.confirm('Delete your Runway plan? Your completed lessons and solved problems stay as they are.')) setRunway(null);
+}
+
+const DURATIONS = [[7, '1 week'], [14, '2 weeks'], [30, '1 month'], [60, '2 months'], [90, '3 months']];
+
 // ---------------------------------------------------------------- setup
+
+function Field({ step, title, help, children }) {
+  return (
+    <section className={styles.field}>
+      <div className={styles.fieldHead}>
+        <p className={styles.fieldStep}>Step {step}</p>
+        <h2 className={styles.fieldTitle}>{title}</h2>
+        {help && <p className={styles.fieldHelp}>{help}</p>}
+      </div>
+      <div className={styles.fieldBody}>{children}</div>
+    </section>
+  );
+}
+
+function Option({ on, onClick, title, hint }) {
+  return (
+    <button type="button" className={`${styles.option} ${on ? styles.optionOn : ''}`} onClick={onClick} aria-pressed={on}>
+      <span className={styles.radio} aria-hidden="true" />
+      <span className={styles.optionText}>
+        <strong>{title}</strong>
+        <span>{hint}</span>
+      </span>
+    </button>
+  );
+}
 
 function Setup({ plan, onDone, onCancel }) {
   const catalogue = useCatalogue();
@@ -95,126 +127,126 @@ function Setup({ plan, onDone, onCancel }) {
   const [level, setLevel] = useState(prev?.level ?? 'some');
   const days = daysBetween(today, end);
   const preset = PRESETS.find((p) => TRACKS.every((t) => p.mix[t.id] === mix[t.id]))?.id ?? 'custom';
+  const mixTotal = TRACKS.reduce((s, t) => s + mix[t.id], 0) || 1;
+  const pct = (id) => Math.round((mix[id] / mixTotal) * 100);
   const settings = { start: today, end, hours, restDays, mix, level, company: null };
   const valid = days >= 1 && days <= 365 && TRACKS.some((t) => mix[t.id] > 0) && (hours.weekday > 0 || hours.weekend > 0) && restDays.length < 7;
   const preview = useMemo(() => (valid ? generatePlan(settings, catalogue, progress, keepOnRebuild(plan)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [valid, end, hours, restDays, mix, level, catalogue, progress]);
   const stats = preview && planStats(preview, progress, today);
+  const weekly = [1, 2, 3, 4, 5, 6, 0].reduce((s, d) => s + (restDays.includes(d) ? 0 : d === 0 || d === 6 ? hours.weekend : hours.weekday), 0);
 
   const setDays = (n) => setEnd(addDays(today, Math.max(1, Math.min(365, Math.round(n) || 1))));
   const setHour = (k, v) => setHours((h) => ({ ...h, [k]: Math.max(0, Math.min(14, Number(v))) }));
   const toggleRest = (d) => setRestDays((r) => (r.includes(d) ? r.filter((x) => x !== d) : [...r, d]));
   const create = () => {
     setRunway(preview);
-    // the old dashboard countdown would pace lessons differently; Runway owns the interview date now
+    // the old dashboard countdown paced lessons differently; Runway owns the interview date now
     if (profile.interviewDate) updateProfile({ interviewDate: null });
     onDone();
   };
 
   return (
     <div className={styles.setup}>
-      <div className={styles.setupForm}>
-        <section className={styles.q}>
-          <h2 className={styles.qTitle}><span>1</span> When is your interview?</h2>
-          <div className={styles.daysRow}>
-            <label className={styles.daysField}>
-              <input type="number" className={`${ui.input} ${styles.daysInput}`} min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} aria-label="Days until the interview" />
-              <span>days from today</span>
-            </label>
+      <div className={styles.form}>
+        <Field step={1} title="Interview date" help="Count the days you have, or pick the date. The interview day itself is kept light.">
+          <div className={styles.dateRow}>
+            <div className={styles.daysBox}>
+              <input type="number" className={styles.daysInput} min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} aria-label="Days until the interview" />
+              <span>days</span>
+            </div>
             <span className={styles.or}>or</span>
             <input type="date" className={`${ui.input} ${styles.dateInput}`} min={addDays(today, 1)} value={end} onChange={(e) => e.target.value && setEnd(e.target.value)} aria-label="Interview date" />
           </div>
-          <div className={ui.chips}>
-            {[7, 14, 30, 45, 60, 90].map((n) => (
-              <button key={n} type="button" className={ui.chip} aria-pressed={days === n} onClick={() => setDays(n)}>{n < 30 ? `${n / 7} week${n > 7 ? 's' : ''}` : n === 30 ? '1 month' : n === 45 ? '6 weeks' : `${n / 30} months`}</button>
+          <div className={styles.segmented} role="group" aria-label="Quick durations">
+            {DURATIONS.map(([n, label]) => (
+              <button key={n} type="button" aria-pressed={days === n} onClick={() => setDays(n)}>{label}</button>
             ))}
           </div>
-        </section>
+        </Field>
 
-        <section className={styles.q}>
-          <h2 className={styles.qTitle}><span>2</span> How much time a day?</h2>
+        <Field step={2} title="Time you can give" help="Be realistic: a plan you can keep beats an ambitious one you abandon.">
           <div className={styles.hours}>
             {[['weekday', 'Weekdays'], ['weekend', 'Weekends']].map(([k, label]) => (
               <label key={k} className={styles.hourField}>
-                <span className={ui.label}>{label}</span>
-                <span className={styles.hourValue}>{hours[k]} h</span>
-                <input type="range" className={styles.range} style={{ '--pct': `${hours[k] * 10}%` }} min={0} max={10} step={0.5} value={hours[k]} onChange={(e) => setHour(k, e.target.value)} />
+                <span className={styles.hourHead}><span>{label}</span><strong>{hours[k]} h a day</strong></span>
+                <input type="range" className={styles.range} style={{ '--pct': `${hours[k] * 10}%`, '--tc': 'var(--color-accent)' }} min={0} max={10} step={0.5} value={hours[k]} onChange={(e) => setHour(k, e.target.value)} />
               </label>
             ))}
           </div>
-          <span className={ui.label}>Days off</span>
-          <div className={ui.chips} role="group" aria-label="Days off">
-            {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-              <button key={d} type="button" className={ui.chip} aria-pressed={restDays.includes(d)} onClick={() => toggleRest(d)}>{WEEKDAYS[d]}</button>
+          <div className={styles.restRow}>
+            <span className={styles.subLabel}>Days off <span className={styles.subHint}>(tap to skip)</span></span>
+            <div className={styles.weekdays} role="group" aria-label="Days off">
+              {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                <button key={d} type="button" aria-pressed={restDays.includes(d)} onClick={() => toggleRest(d)} title={restDays.includes(d) ? `${WEEKDAYS[d]}: day off` : `${WEEKDAYS[d]}: study day`}>{WEEKDAYS[d].slice(0, 2)}</button>
+              ))}
+            </div>
+            <span className={styles.weekly}>{hm(Math.round(weekly * 60))} a week</span>
+          </div>
+        </Field>
+
+        <Field step={3} title="Focus" help="Weight the tracks to match your rounds. Set a track to 0% to leave it out.">
+          <div className={styles.options}>
+            {PRESETS.map((p) => (
+              <Option key={p.id} on={preset === p.id} onClick={() => setMix(p.mix)} title={p.label} hint={p.hint} />
             ))}
           </div>
-        </section>
-
-        <section className={styles.q}>
-          <h2 className={styles.qTitle}><span>3</span> What do your rounds look like?</h2>
-          <div className={styles.presets}>
-            {PRESETS.map((p) => (
-              <button key={p.id} type="button" className={`${styles.preset} ${preset === p.id ? styles.presetOn : ''}`} onClick={() => setMix(p.mix)} aria-pressed={preset === p.id}>
-                <strong>{p.label}</strong>
-                <span>{p.hint}</span>
-              </button>
-            ))}
+          <div className={styles.mixBar} aria-hidden="true">
+            {TRACKS.filter((t) => mix[t.id] > 0).map((t) => <span key={t.id} className={styles[`t_${t.id}`]} style={{ flex: mix[t.id] }} />)}
           </div>
           <div className={styles.mix}>
             {TRACKS.map((t) => (
-              <label key={t.id} className={styles.mixRow}>
-                <span className={`${styles.dot} ${styles[`t_${t.id}`]}`} aria-hidden="true" />
-                <span className={styles.mixLabel}>{t.label}</span>
+              <label key={t.id} className={`${styles.mixRow} ${styles[`t_${t.id}`]}`}>
+                <span className={styles.mixName}><span className={styles.dot} aria-hidden="true" /> {t.label}</span>
                 <input type="range" className={styles.range} style={{ '--pct': `${mix[t.id]}%` }} min={0} max={100} step={5} value={mix[t.id]} onChange={(e) => setMix((m) => ({ ...m, [t.id]: Number(e.target.value) }))} aria-label={`${t.label} weight`} />
-                <span className={styles.mixPct}>{Math.round((mix[t.id] / (TRACKS.reduce((s, x) => s + mix[x.id], 0) || 1)) * 100)}%</span>
+                <span className={styles.mixPct}>{pct(t.id)}%</span>
               </label>
             ))}
           </div>
-          <p className={ui.help}>Drag a track to 0 to leave it out.</p>
-          <div className={styles.company}>
-            <Building2 size={16} aria-hidden="true" />
-            <span><strong>Company-specific plans</strong> are coming soon: problems and rounds for the company you're interviewing with.</span>
-          </div>
-        </section>
+          <p className={styles.company}><Building2 size={15} aria-hidden="true" /> Company-specific plans are coming soon.</p>
+        </Field>
 
-        <section className={styles.q}>
-          <h2 className={styles.qTitle}><span>4</span> Where are you starting from?</h2>
-          <div className={styles.levels}>
+        <Field step={4} title="Starting point" help="Lessons and problems you have already completed are always left out.">
+          <div className={styles.options}>
             {LEVELS.map((l) => (
-              <button key={l.id} type="button" className={`${styles.preset} ${level === l.id ? styles.presetOn : ''}`} onClick={() => setLevel(l.id)} aria-pressed={level === l.id}>
-                <strong>{l.label}</strong>
-                <span>{l.hint}</span>
-              </button>
+              <Option key={l.id} on={level === l.id} onClick={() => setLevel(l.id)} title={l.label} hint={l.hint} />
             ))}
           </div>
-        </section>
+        </Field>
       </div>
 
-      <aside className={styles.summary}>
-        <p className={styles.summaryKicker}>Your runway</p>
+      <aside className={styles.summary} aria-live="polite">
+        <p className={styles.summaryKicker}>Plan summary</p>
         {stats ? (
           <>
-            <p className={styles.summaryBig}>{days} <span>day{days === 1 ? '' : 's'}</span></p>
-            <p className={styles.summaryDate}>Interview on {fmtDay(end, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            <ul className={styles.summaryList}>
-              <li><strong>{stats.studyDays}</strong> study days · <strong>{hm(stats.minutesTotal)}</strong> planned</li>
-              <li><strong>{stats.lessons}</strong> lessons</li>
-              <li><strong>{stats.problems}</strong> problems</li>
-              <li><strong>{stats.mocks}</strong> mock interviews</li>
-              <li>Daily review, a revision sheet and a light interview day</li>
-            </ul>
+            <div className={styles.summaryTop}>
+              <p className={styles.summaryBig}>{days}<span> day{days === 1 ? '' : 's'}</span></p>
+              <p className={styles.summaryDate}>{fmtDay(end, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            </div>
+            <div className={styles.mixBar} aria-hidden="true">
+              {TRACKS.filter((t) => mix[t.id] > 0).map((t) => <span key={t.id} className={styles[`t_${t.id}`]} style={{ flex: mix[t.id] }} />)}
+            </div>
+            <dl className={styles.summaryStats}>
+              <div><dt>Study days</dt><dd>{stats.studyDays}</dd></div>
+              <div><dt>Planned time</dt><dd>{hm(stats.minutesTotal)}</dd></div>
+              <div><dt>Lessons</dt><dd>{stats.lessons}</dd></div>
+              <div><dt>Problems</dt><dd>{stats.problems}</dd></div>
+              <div><dt>Mock interviews</dt><dd>{stats.mocks}</dd></div>
+              <div><dt>Daily review</dt><dd>Included</dd></div>
+            </dl>
             {preview.extras.length > 0 && (
-              <p className={styles.summaryNote}>More than fits: the most important material is planned first, and the rest is listed under <em>Spare time</em> if you get ahead.</p>
+              <p className={styles.summaryNote}>The most important material is planned first. What doesn't fit is kept under <em>Spare time</em> for days you get ahead.</p>
             )}
           </>
         ) : (
-          <p className={ui.help}>Pick at least one day, some hours and one track.</p>
+          <p className={styles.summaryNote}>Choose at least one day, some study time and one track to see your plan.</p>
         )}
         <button type="button" className={`${ui.btn} ${ui.primary} ${styles.create}`} onClick={create} disabled={!valid}>
-          <PlaneTakeoff size={16} /> {plan ? 'Rebuild my plan' : 'Create my plan'}
+          {plan ? 'Rebuild my plan' : 'Create my plan'}
         </button>
-        {onCancel && <button type="button" className={`${ui.btn} ${ui.ghost} ${styles.create}`} onClick={onCancel}>Cancel</button>}
+        {onCancel && <button type="button" className={`${ui.btn} ${styles.create}`} onClick={onCancel}>Cancel</button>}
+        {plan && <button type="button" className={styles.deleteLink} onClick={deletePlan}><Trash2 size={13} /> Delete plan</button>}
       </aside>
     </div>
   );
@@ -255,7 +287,7 @@ function PlanView({ plan, onEdit }) {
           </div>
           <div className={styles.heroActions}>
             <button type="button" className={`${ui.btn} ${ui.small}`} onClick={onEdit}><Settings2 size={13} /> Edit plan</button>
-            <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => { if (window.confirm('Delete this plan? Your lesson progress and solved problems are not affected.')) setRunway(null); }}><RotateCcw size={13} /> Start over</button>
+            <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={deletePlan}><Trash2 size={13} /> Delete plan</button>
           </div>
         </div>
       </section>
