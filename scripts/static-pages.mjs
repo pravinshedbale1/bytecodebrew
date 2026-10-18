@@ -3,7 +3,7 @@
 // real file (dist/terms.html is served at /terms with a 200) so they return 200 too.
 import { copyFileSync } from 'node:fs';
 
-const PAGES = ['runway', 'premium', 'contact', 'terms', 'privacy', 'refund-policy', 'delivery-policy', 'problems', 'mock', 'dashboard', 'review', 'playground', 'highlights'];
+const PAGES = ['runway', 'companies', 'premium', 'contact', 'terms', 'privacy', 'refund-policy', 'delivery-policy', 'problems', 'mock', 'dashboard', 'review', 'playground', 'highlights'];
 for (const p of PAGES) copyFileSync('dist/index.html', `dist/${p}.html`);
 copyFileSync('dist/index.html', 'dist/404.html');
 console.log(`✓ ${PAGES.length} static pages + 404.html`);

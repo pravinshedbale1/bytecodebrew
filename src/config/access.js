@@ -28,6 +28,7 @@ export const FREE_FEATURES = [
   'Lesson quizzes, practice exercises and progress tracking',
   'Highlights and notes, synced across your devices',
   'Search and printable cheat sheets',
+  'Interview guides for the 50 best-paying companies in India',
 ];
 
 export const PREMIUM_FEATURES = [
@@ -35,9 +36,9 @@ export const PREMIUM_FEATURES = [
   ['Interactive simulations', 'hash rings, rate limiters, quorums, cache eviction, load balancing, Bloom filters, consumer groups and more — change the inputs and watch what happens'],
   ['Step-through diagrams', 'walk every architecture and sequence diagram one step at a time, with each step explained'],
   ['314 problems with tests', 'a LeetCode-style editor with full statements, constraints, hints, hidden tests and performance checks'],
-  ['Mock interviews', 'timed rounds with phases, a self-scoring rubric and an optional AI interviewer'],
+  ['Mock interviews', 'timed DSA, system design, LLD, behavioral, machine-coding and AI-assisted coding rounds, with a rubric and one-click AI review'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
-  ['Runway: your day-by-day interview plan', 'tell it your days and hours a day; it plans lessons, problems, mocks and revision, shows what to do today and keeps you on pace'],
+  ['Runway: your day-by-day interview plan', 'tell it your days, hours a day and target company; it plans lessons, problems, mocks and revision in that company\'s interview style, shows what to do today and keeps you on pace'],
   ['Dashboard and LeetCode sync', 'streaks, weak areas, activity and your LeetCode history imported'],
   ['Code playground, behavioral drill and story bank', ''],
 ];

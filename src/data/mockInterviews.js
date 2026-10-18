@@ -136,6 +136,101 @@ export const MOCK_TYPES = {
   },
 };
 
+/**
+ * Machine-coding briefs (Flipkart, Swiggy, PhonePe, Razorpay style): build a runnable, in-memory system with a
+ * driver program, then handle a new requirement at the end. Each links to the LLD case study to compare with.
+ */
+const MACHINE_BRIEFS = [
+  { lesson: 'lld-splitwise', title: 'Expense sharing app', brief: 'Users add expenses split equally, by exact amounts or by percentage. Show each user\'s balances and who owes whom.', extension: 'Add "simplify debts": settle the group with the fewest payments.' },
+  { lesson: 'lld-parking-lot', title: 'Parking lot', brief: 'Multiple floors and spot sizes; park and unpark vehicles, issue tickets and charge by duration.', extension: 'Add EV spots with a charging fee and a different pricing rule for them.' },
+  { lesson: 'lld-food-delivery', title: 'Food ordering', brief: 'Restaurants with menus and capacity; customers order; assign each order to a restaurant that can serve it.', extension: 'Add a pluggable restaurant-selection strategy: lowest price or highest rating.' },
+  { lesson: 'lld-movie-ticket-booking', title: 'Movie ticket booking', brief: 'Cinemas, screens and shows; list available seats, hold seats for a user and confirm the booking.', extension: 'Two users try to book the same seat at once: make sure only one succeeds.' },
+  { lesson: 'lld-digital-wallet', title: 'Digital wallet', brief: 'Create wallets, add money, transfer between users and show statements.', extension: 'Make transfers idempotent: retrying a request with the same id must not move money twice.' },
+  { lesson: 'lld-cab-booking', title: 'Cab booking', brief: 'Riders request rides; match the nearest available driver; track trip states and fares.', extension: 'Add surge pricing when requests in an area outnumber free drivers.' },
+  { lesson: 'lld-rate-limiter', title: 'Rate limiter library', brief: 'Limit requests per user with a configurable algorithm (fixed window, sliding window or token bucket).', extension: 'Support different limits per API endpoint and per user tier.' },
+  { lesson: 'lld-kv-store', title: 'Key-value store with transactions', brief: 'GET, SET, DELETE, plus BEGIN, COMMIT and ROLLBACK, with nested transactions.', extension: 'Add expiry (TTL) for keys.' },
+  { lesson: 'lld-job-scheduler', title: 'Job scheduler', brief: 'Schedule one-off and recurring jobs, run them on a worker pool and record results.', extension: 'Add retries with back-off and a maximum number of attempts.' },
+  { lesson: 'lld-snake-and-ladder', title: 'Snake and ladder', brief: 'A configurable board, snakes, ladders and any number of players taking turns until someone wins.', extension: 'Add a rule: three sixes in a row sends the player back to the start.' },
+  { lesson: 'lld-library-management', title: 'Library management', brief: 'Members borrow and return books, with limits per member and due dates.', extension: 'Add reservations: a waiting list for books that are out, with notifications.' },
+  { lesson: 'lld-hotel-booking', title: 'Hotel booking', brief: 'Rooms of different types; search availability for a date range; book and cancel.', extension: 'Add a cancellation policy: free until 48 hours before, then a 50% fee.' },
+];
+
+/**
+ * AI-assisted coding tasks (Meta, Google pilot, Microsoft, Canva, Razorpay style): one problem in stages,
+ * done with an AI assistant. Scored on understanding, verification, code quality and communication.
+ */
+const AI_TASKS = [
+  { title: 'In-memory rate limiter', brief: 'Build a rate limiter used by an API gateway.', stages: ['Implement a fixed-window limiter: allow(userId) returns true or false', 'Write tests, including the window boundary and many users', 'Switch to a sliding window without breaking the tests, and explain the trade-off'] },
+  { title: 'LRU cache with expiry', brief: 'Build a cache for a slow service.', stages: ['Implement get/put with LRU eviction in O(1)', 'Add a per-key time-to-live', 'Find and fix the bug the AI is likely to introduce in eviction, with a test that proves it'] },
+  { title: 'Log analyser', brief: 'You are given server log lines (timestamp, level, service, message).', stages: ['Parse the lines and count errors per service', 'Return the top 3 noisiest services in any time range', 'Make it handle a 2 GB file without loading it all into memory'] },
+  { title: 'Leaderboard service', brief: 'A game needs a live leaderboard.', stages: ['Support addScore(player, points) and top(k)', 'Add rank(player) and keep every operation fast', 'Add a test suite and discuss what changes at a million players'] },
+  { title: 'Bank account ledger', brief: 'Model accounts and transfers.', stages: ['Implement deposit, withdraw and transfer with balance checks', 'Make transfers safe when called from many threads at once', 'Add idempotency keys so retries never double-charge'] },
+  { title: 'Autocomplete', brief: 'Suggest search completions as the user types.', stages: ['Return the top 5 completions for a prefix by popularity', 'Update popularity as searches happen', 'Handle typos in the first character, and test it'] },
+  { title: 'Fix the order service', brief: 'Imagine an existing order-pricing function written quickly by someone else (have the AI generate it, with discounts, tax and coupons).', stages: ['Read it and explain what it does, without running it', 'Write tests that expose at least two bugs, then fix them', 'Refactor it so a new coupon type can be added without touching the core'] },
+  { title: 'File deduplication', brief: 'A folder contains millions of files; find the duplicates.', stages: ['Group files by identical content', 'Make it fast: size first, then hashes, then a byte compare', 'Explain how you checked the AI\'s code was correct'] },
+];
+
+MOCK_TYPES.machine = {
+  title: 'Machine coding',
+  blurb: 'Build a runnable, extensible system in 90 minutes, then handle a new requirement. The Flipkart, Swiggy and PhonePe round.',
+  minutes: 90,
+  phases: [
+    { name: 'Requirements', min: 10, guide: ['Read the brief and list the must-have features', 'Ask what is out of scope; agree on in-memory storage', 'Decide the commands your driver program will demo'] },
+    { name: 'Design', min: 15, guide: ['Sketch entities, services and repositories', 'Use interfaces where behaviour will vary (pricing, strategies)', 'Keep it small: no framework, no database'] },
+    { name: 'Build', min: 45, guide: ['Get one flow working end to end first, then add the rest', 'Validate inputs and handle errors with clear messages', 'Keep classes small; commit to names that read well'] },
+    { name: 'New requirement', min: 15, guide: ['Add the extension (shown at the end of the brief)', 'Change as few existing classes as possible', 'Say which part of your design made it easy or hard'] },
+    { name: 'Demo & review', min: 5, guide: ['Run the driver program through the main scenarios', 'Point out what you would test and improve next', 'Explain one design trade-off you made'] },
+  ],
+  rubric: [
+    'Clarified requirements and agreed the scope',
+    'The code runs, with a driver program that demos the flows',
+    'Clear separation of models, services and storage',
+    'Used interfaces or patterns where behaviour varies',
+    'Handled invalid input and edge cases',
+    'Added the new requirement without rewriting the design',
+    'Code is readable: names, small methods, no duplication',
+  ],
+  pick() {
+    const lessons = Object.fromEntries(getCourseLessons('system-design', 'lld').map((l) => [l.id, l]));
+    const b = random(MACHINE_BRIEFS);
+    const l = lessons[b.lesson];
+    return {
+      title: b.title,
+      detail: 'Machine coding · 90 min',
+      summary: b.brief,
+      // revealed when the "New requirement" phase starts, as in a real round
+      extension: b.extension,
+      ...(l?.available ? { afterLink: { path: l.path, label: `Compare with: ${l.title}` } } : {}),
+    };
+  },
+};
+
+MOCK_TYPES.ai = {
+  title: 'AI-assisted coding',
+  blurb: 'One problem in three stages, with an AI assistant at your side. Scored on judgement and verification, not prompting. The Meta, Google-pilot and Canva round.',
+  minutes: 60,
+  phases: [
+    { name: 'Understand', min: 5, guide: ['Restate the task and ask clarifying questions', 'Decide what you will ask the AI for, and what you will write yourself', 'Plan how you will check the result'] },
+    { name: 'Build with AI', min: 20, guide: ['Give the AI small, precise requests with the context it needs', 'Read every line it returns before using it', 'Say out loud what you accept, change or reject, and why'] },
+    { name: 'Verify', min: 15, guide: ['Write tests, including edge cases the AI did not think of', 'Run them; fix failures yourself or with targeted prompts', 'Check complexity and anything unsafe (concurrency, input handling)'] },
+    { name: 'Extend', min: 15, guide: ['Do the last stage of the task', 'Keep the tests passing as you change the code', 'Watch for the AI quietly changing behaviour you rely on'] },
+    { name: 'Explain', min: 5, guide: ['Walk through the final design and its trade-offs', 'Say where the AI helped and where it was wrong', 'Name what you would do next with more time'] },
+  ],
+  rubric: [
+    'Understood the problem before asking the AI for code',
+    'Broke the work into small, well-specified requests',
+    'Read and understood all the code that was kept',
+    'Caught at least one mistake in the AI\'s output',
+    'Wrote tests that check behaviour and edge cases',
+    'Final code is correct, readable and efficient',
+    'Explained decisions clearly throughout',
+  ],
+  pick() {
+    const t = random(AI_TASKS);
+    return { title: t.title, detail: 'AI-assisted · use your own AI chat or IDE assistant', summary: t.brief, stages: t.stages };
+  },
+};
+
 export const SIGNALS = [
   { id: 'strong-no', label: 'Strong no' },
   { id: 'lean-no', label: 'Lean no' },

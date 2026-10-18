@@ -10,12 +10,14 @@
  *   restDays: [0-6] (0 = Sunday),
  *   mix: { dsa, hld, lld, behavioral } (relative weights, 0 = leave out),
  *   level: 'new' | 'some' | 'strong',
- *   company: null (company-specific plans come later),
+ *   company: company id from data/companies.js, or null for a general plan,
  * }
  * Plan: { settings, createdAt, days: [{ date, phase, tasks: [task] }], extras: [task], done: { [taskId]: true } }
  * Task: { id, kind, track, title, minutes, path?, href?, ref?, sub? }
- *   kind: lesson | problem | mock | review | revise | warmup | custom
+ *   kind: lesson | problem | mock | review | revise | warmup | guide | custom
  */
+
+import { companyPlan } from '../data/companies.js';
 
 export const TRACKS = [
   { id: 'dsa', label: 'DSA', color: 'dsa' },
@@ -37,8 +39,14 @@ export const LEVELS = [
 ];
 
 const PROBLEM_MINUTES = { Easy: 20, Medium: 35, Hard: 50 };
-const MOCK_MINUTES = { dsa: 45, hld: 45, lld: 45, behavioral: 30 };
-const MOCK_LABEL = { dsa: 'DSA coding mock', hld: 'System design mock', lld: 'Low-level design mock', behavioral: 'Behavioral mock' };
+const MOCK_MINUTES = { dsa: 45, hld: 45, lld: 45, behavioral: 30, machine: 90, ai: 60 };
+const MOCK_LABEL = { dsa: 'DSA coding mock', hld: 'System design mock', lld: 'Low-level design mock', behavioral: 'Behavioral mock', machine: 'Machine coding mock', ai: 'AI-assisted coding mock' };
+// which track a mock counts towards (and is coloured as)
+const MOCK_TRACK = { dsa: 'dsa', hld: 'hld', lld: 'lld', behavioral: 'behavioral', machine: 'lld', ai: 'dsa' };
+const mockTask = (type, company) => ({
+  kind: 'mock', track: MOCK_TRACK[type], title: company ? `${MOCK_LABEL[type]} (${company.name} style)` : MOCK_LABEL[type],
+  minutes: MOCK_MINUTES[type], path: `/mock?type=${type}`,
+});
 const REVIEW_MINUTES = 15;
 
 // ---- dates (local, YYYY-MM-DD) ----
@@ -63,13 +71,24 @@ export function buildQueues(catalogue, settings, progress) {
   const { isComplete = () => false, isSolved = () => false } = progress;
   const strong = settings.level === 'strong';
   const fresh = settings.level === 'new';
+  const company = settings.company ? companyPlan(settings.company) : null;
+  const focus = company?.focus ?? [];
   const queues = { dsa: [], hld: [], lld: [], behavioral: [] };
+  // DSA pattern lessons and their problems are collected per pattern, so a company's focus patterns can go first
+  const patternBlocks = [];
+  let patternsAt = null;   // where the patterns course sits in the DSA queue
 
   for (const l of catalogue.lessons) {
     const track = l.trackId === 'system-design' ? (l.courseId === 'lld' ? 'lld' : 'hld') : l.trackId;
     if (!queues[track]) continue;
-    // Company-specific lessons wait for company plans; revision courses go in the final stretch instead.
-    if (l.courseId === 'companies' || /revision$/.test(l.courseId)) continue;
+    // Company lessons are only planned for the chosen company; revision courses go in the final stretch instead.
+    if (/revision$/.test(l.courseId)) continue;
+    if (l.courseId === 'companies') {
+      if (company?.behavioral === l.path && !isComplete(l.key)) {
+        queues.behavioral.unshift({ id: `lesson:${l.key}`, kind: 'lesson', track, ref: l.key, title: l.title, sub: `${company.name} · behavioral`, minutes: Math.max(5, l.minutes ?? 15), path: l.path, priority: 1 });
+      }
+      continue;
+    }
     if (strong && l.level === 'Beginner') continue;
     const done = isComplete(l.key);
     if (!done) {
@@ -82,15 +101,26 @@ export function buildQueues(catalogue, settings, progress) {
       queues[track].push({ id: `lesson:${l.key}`, kind: 'lesson', track, ref: l.key, title: l.title, sub: strong ? `Skim · ${l.moduleTitle}` : l.moduleTitle, minutes, path: l.path, priority });
     }
     // Pattern lessons are followed by their problem ladder.
-    const ladder = l.trackId === 'dsa' && l.courseId === 'patterns' ? catalogue.ladders[l.key.split('/')[2]] ?? [] : [];
+    const pattern = l.trackId === 'dsa' && l.courseId === 'patterns' ? l.key.split('/')[2] : null;
+    const ladder = pattern ? catalogue.ladders[pattern] ?? [] : [];
+    if (pattern) {
+      // the lesson itself was just pushed onto queues.dsa: move it into this pattern's block
+      const block = { pattern, items: queues.dsa.at(-1)?.ref === l.key ? [queues.dsa.pop()] : [] };
+      patternsAt ??= queues.dsa.length;
+      const inFocus = focus.includes(pattern);
+      if (company && block.items[0]) block.items[0].priority = inFocus ? 1 : Math.max(2, block.items[0].priority);
+      patternBlocks.push(block);
+    }
+    const inFocus = pattern && focus.includes(pattern);
     let n = 0;
     for (const p of ladder) {
       if (strong && p.level === 'Easy') continue;
       n += 1;
       if (isSolved(p.slug)) continue;
-      let priority = n <= 2 ? 1 : n <= 4 ? 2 : 3;
+      // a company's focus patterns get more problems planned; other patterns fewer
+      let priority = !company ? (n <= 2 ? 1 : n <= 4 ? 2 : 3) : inFocus ? (n <= 4 ? 1 : n <= 6 ? 2 : 3) : (n <= 2 ? 2 : 3);
       if (p.level === 'Hard') priority = Math.min(3, priority + 1);
-      queues.dsa.push({
+      patternBlocks.at(-1).items.push({
         id: `problem:${p.slug}`, kind: 'problem', track: 'dsa', ref: p.slug, title: p.title, sub: `${p.level} · ${l.title}`,
         minutes: PROBLEM_MINUTES[p.level] ?? 35,
         ...(catalogue.solvable(p.slug) ? { path: `/solve/${p.slug}` } : { href: `https://leetcode.com/problems/${p.slug}/` }),
@@ -98,6 +128,11 @@ export function buildQueues(catalogue, settings, progress) {
       });
     }
   }
+  // focus patterns first (in the company's order), then the rest in curriculum order
+  const rank = (b) => (focus.includes(b.pattern) ? focus.indexOf(b.pattern) : focus.length);
+  const ordered = company ? [...patternBlocks].sort((a, b) => rank(a) - rank(b)) : patternBlocks;
+  // the blocks go back where the patterns course is, between the foundations and the playbook
+  queues.dsa.splice(patternsAt ?? queues.dsa.length, 0, ...ordered.flatMap((b) => b.items));
   return queues;
 }
 
@@ -146,7 +181,11 @@ export function generatePlan(settings, catalogue, progress, keep = {}) {
   const weights = Object.fromEntries(tracks.map((t) => [t, settings.mix[t]]));
   const totalW = tracks.reduce((s, t) => s + weights[t], 0) || 1;
   const learnDays = days.filter((d) => d.phase === 'learn');
-  const mockTracks = tracks.filter((t) => t !== 'behavioral' || tracks.length === 1);
+  const company = settings.company ? companyPlan(settings.company) : null;
+  // mocks rotate through the company's round types, or the chosen tracks for a general plan
+  const mockTypes = company
+    ? company.mocks.filter((m) => tracks.includes(MOCK_TRACK[m]))
+    : tracks.filter((t) => t !== 'behavioral' || tracks.length === 1);
   const out = days.map((d) => ({ date: d.date, phase: d.phase, budget: d.budget, tasks: [] }));
   const byDate = Object.fromEntries(out.map((d) => [d.date, d]));
   let seq = 0;
@@ -158,21 +197,23 @@ export function generatePlan(settings, catalogue, progress, keep = {}) {
   // Daily review from the third study day; a mock every 6th study day from the second week.
   learnDays.forEach((d, i) => {
     if (i >= 2 && learnDays.length >= 5) fixed(d.date, { kind: 'review', track: 'all', title: 'Review cards due today', minutes: REVIEW_MINUTES, path: '/review' });
-    if (i >= 6 && (i + 1) % 6 === 0 && mockTracks.length) {
-      const t = mockTracks[Math.floor(i / 6) % mockTracks.length];
-      fixed(d.date, { kind: 'mock', track: t, title: MOCK_LABEL[t], minutes: MOCK_MINUTES[t], path: `/mock?type=${t}` });
+    if (i >= 6 && (i + 1) % 6 === 0 && mockTypes.length) {
+      fixed(d.date, mockTask(mockTypes[(Math.floor(i / 6) - 1) % mockTypes.length], company));
     }
   });
+  // A company plan starts by reading how that company interviews.
+  if (company && learnDays.length) {
+    fixed(learnDays[0].date, { kind: 'guide', track: 'all', title: `How ${company.name} interviews`, sub: company.styleLabel, minutes: 10, path: `/companies/${company.id}` });
+  }
 
   // Final stretch: a mock a day, review, the revision sheet and story rehearsal.
   const finals = out.filter((d) => d.phase === 'final');
   finals.forEach((d, i) => {
-    const t = mockTracks.length ? mockTracks[i % mockTracks.length] : 'behavioral';
-    fixed(d.date, { kind: 'mock', track: t, title: MOCK_LABEL[t], minutes: MOCK_MINUTES[t], path: `/mock?type=${t}` });
+    fixed(d.date, mockTask(mockTypes.length ? mockTypes[i % mockTypes.length] : 'behavioral', company));
     fixed(d.date, { kind: 'review', track: 'all', title: 'Review cards due today', minutes: 20, path: '/review' });
     if (i === 0) fixed(d.date, { kind: 'revise', track: 'all', title: 'Make your last-minute revision sheet from your highlights', minutes: 25, path: '/highlights' });
     if (tracks.includes('behavioral') && i === finals.length - 1) fixed(d.date, { kind: 'revise', track: 'behavioral', title: 'Rehearse your top 5 stories out loud', minutes: 30, path: '/behavioral/foundations/story-bank' });
-    if (tracks.includes('behavioral') && i !== finals.length - 1 && finals.length > 1) fixed(d.date, { kind: 'mock', track: 'behavioral', title: MOCK_LABEL.behavioral, minutes: MOCK_MINUTES.behavioral, path: '/mock?type=behavioral' });
+    if (tracks.includes('behavioral') && i !== finals.length - 1 && finals.length > 1 && mockTypes[i % mockTypes.length] !== 'behavioral') fixed(d.date, mockTask('behavioral', company));
   });
 
   // Minutes left for new material in the main stretch, split by the mix; spare minutes flow to tracks that need them.
@@ -228,11 +269,12 @@ export function generatePlan(settings, catalogue, progress, keep = {}) {
     tasks: [
       { id: `warmup:${settings.end}:1`, kind: 'warmup', track: 'all', title: 'Warm up: one easy problem you have solved before', minutes: 15, path: '/problems' },
       { id: `warmup:${settings.end}:2`, kind: 'revise', track: 'all', title: 'Skim your revision sheet, then stop studying', minutes: 15, path: '/highlights' },
+      ...(company ? [{ id: `warmup:${settings.end}:3`, kind: 'guide', track: 'all', title: `Re-read ${company.name}'s rounds so nothing surprises you`, minutes: 5, path: `/companies/${company.id}` }] : []),
     ],
   });
 
   // Mocks and reviews first in each day reads oddly: put new material first, then practice, then review.
-  const order = { lesson: 0, problem: 1, custom: 2, mock: 3, revise: 4, review: 5, warmup: 0 };
+  const order = { guide: 0, lesson: 0, problem: 1, custom: 2, mock: 3, revise: 4, review: 5, warmup: 0 };
   for (const d of out) d.tasks.sort((a, b) => (order[a.kind] ?? 2) - (order[b.kind] ?? 2));
 
   return {

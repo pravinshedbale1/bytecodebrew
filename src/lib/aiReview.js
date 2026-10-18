@@ -11,6 +11,8 @@ const FOCUS = {
   dsa: 'problem understanding and clarifying questions, the brute force and the path to the optimal approach, correctness of the code (find real bugs and missed edge cases), code quality, time and space complexity, and how clearly I communicated',
   hld: 'requirements and scope, estimates, API and data model, the high-level design, depth and judgement in the deep dives (trade-offs, scaling, consistency, failure handling), and how clearly I drove the conversation',
   lld: 'requirements, the entities and their relationships, class design and responsibilities, sensible use of design patterns, extensibility, concurrency and error handling in the core code, and clarity',
+  machine: 'whether the design runs end to end, separation of models, services and storage, use of interfaces and patterns where behaviour varies, input validation and edge cases, how cleanly the new requirement fitted in, and readability',
+  ai: 'how well I understood the problem before using the AI, how I split the work into precise requests, whether I read and verified the AI\'s code, the tests I wrote, the correctness and quality of the final code, and how clearly I explained my decisions',
   behavioral: 'structure (STAR), how specific and measurable each story is, ownership and what I personally did, judgement and self-reflection, and how well each answer fits the question asked',
 };
 
@@ -24,6 +26,8 @@ export function buildReviewPrompt(type, typeId, mock) {
   lines.push(`${prompt.title}${prompt.href ? ` (${prompt.href})` : ''}`);
   if (prompt.summary) lines.push(prompt.summary);
   if (prompt.questions) prompt.questions.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
+  if (prompt.stages) prompt.stages.forEach((q, i) => lines.push(`Stage ${i + 1}: ${q}`));
+  if (prompt.extension) lines.push(`New requirement given during the round: ${prompt.extension}`);
   lines.push('');
   lines.push('## The round');
   lines.push(`${type.minutes}-minute ${type.title} round. I used ${mmss(seconds)}.`);
@@ -57,9 +61,10 @@ export function buildReviewPrompt(type, typeId, mock) {
   lines.push('2. **What went well**: up to 3 specific points.');
   lines.push(`3. **Gaps**: judge ${FOCUS[typeId] ?? 'each part of the round'}. Be specific and actionable.`);
   if (code?.trim()) lines.push('4. **Code review**: is it correct? Point out bugs and missed edge cases, and the optimal time and space complexity. Describe a better approach if there is one, without rewriting all the code unless I ask.');
-  if (typeId === 'hld' || typeId === 'lld') lines.push('4. **What a strong answer would add**: the key components, trade-offs or classes I missed.');
-  lines.push(`${code?.trim() || typeId === 'hld' || typeId === 'lld' ? '5' : '4'}. **Where my self-assessment is off**: only the items you disagree with.`);
-  lines.push(`${code?.trim() || typeId === 'hld' || typeId === 'lld' ? '6' : '5'}. **Practise next**: the 3 most valuable things to work on before my next interview.`);
+  if (['hld', 'lld', 'machine'].includes(typeId)) lines.push('4. **What a strong answer would add**: the key components, trade-offs or classes I missed.');
+  const n = code?.trim() || ['hld', 'lld', 'machine'].includes(typeId) ? 5 : 4;
+  lines.push(`${n}. **Where my self-assessment is off**: only the items you disagree with.`);
+  lines.push(`${n + 1}. **Practise next**: the 3 most valuable things to work on before my next interview.`);
   lines.push('');
   lines.push('Use short headings and bullet points.');
   return lines.join('\n');

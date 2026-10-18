@@ -175,6 +175,15 @@ function PhaseGuide({ type, index, used }) {
   );
 }
 
+const PLACEHOLDERS = {
+  dsa: 'Clarifications, examples, brute force, the optimal idea, complexity… write what you would say out loud.',
+  behavioral: 'Bullet your STAR points for each answer: situation, task, what you did, the result.',
+  hld: 'Requirements, estimates, APIs, data model, components, trade-offs… this is your whiteboard.',
+  lld: 'Requirements, entities, classes and their responsibilities, the patterns you chose… then the core code.',
+  machine: 'Requirements, classes and key decisions. Build in your IDE, then paste the main classes here so the AI review can see them.',
+  ai: 'Your plan, the requests you gave the AI, what it got wrong, the tests you wrote… then paste the final code for the review.',
+};
+
 /** A large scratchpad, with an outline of the round's phases on request. */
 function Scratchpad({ type, value, onChange, tall = false }) {
   const outline = () => {
@@ -194,11 +203,7 @@ function Scratchpad({ type, value, onChange, tall = false }) {
         className={styles.padText}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={type === MOCK_TYPES.dsa
-          ? 'Clarifications, examples, brute force, the optimal idea, complexity… write what you would say out loud.'
-          : type === MOCK_TYPES.behavioral
-            ? 'Bullet your STAR points for each answer: situation, task, what you did, the result.'
-            : 'Requirements, estimates, APIs, data model, components, trade-offs… this is your whiteboard.'}
+        placeholder={PLACEHOLDERS[Object.keys(MOCK_TYPES).find((k) => MOCK_TYPES[k] === type)] ?? PLACEHOLDERS.hld}
         spellCheck
       />
     </div>
@@ -333,6 +338,25 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
                       </li>
                     ))}
                   </ol>
+                ) : session.prompt.summary ? (
+                  <div className={styles.taskBrief}>
+                    <p className={styles.taskSummary}>{session.prompt.summary}</p>
+                    {session.prompt.stages && (
+                      <ol className={styles.questionCards}>
+                        {session.prompt.stages.map((q, i) => (
+                          <li key={q}><span className={styles.qNo}>{i + 1}</span>{q}</li>
+                        ))}
+                      </ol>
+                    )}
+                    {session.prompt.extension && (
+                      type.phases.findIndex((p) => p.name === 'New requirement') <= index ? (
+                        <p className={styles.extension}><strong>New requirement:</strong> {session.prompt.extension}</p>
+                      ) : (
+                        <p className={styles.extensionLater}>A new requirement arrives in the “New requirement” phase.</p>
+                      )
+                    )}
+                    {session.prompt.afterLink && <p className={styles.boardBrief}>When you're done, compare with <Link to={session.prompt.afterLink.path} target="_blank">{session.prompt.afterLink.label.replace(/^Compare with: /, '')}</Link>.</p>}
+                  </div>
                 ) : (
                   <p className={styles.boardBrief}>
                     Drive the round like a real interview: agree the requirements, size it, then design and go deep where it matters.

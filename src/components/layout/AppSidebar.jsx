@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Layers, Timer, Code2, ListChecks, Lock, Sparkles } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Building2, Layers, Timer, Code2, ListChecks, Lock, Sparkles } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
@@ -76,6 +76,12 @@ function GlobalNav({ activeTrackId }) {
         <PlaneTakeoff size={18} strokeWidth={1.75} aria-hidden="true" />
         Runway
         {premium ? <span className={styles.newBadge}>New</span> : lock}
+      </NavLink>
+
+      <NavLink to="/companies" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
+        <Building2 size={18} strokeWidth={1.75} aria-hidden="true" />
+        Companies
+        <span className={styles.newBadge}>New</span>
       </NavLink>
 
       <p className={styles.section}>Learn</p>

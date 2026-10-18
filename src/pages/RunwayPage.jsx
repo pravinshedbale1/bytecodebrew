@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import ladderData from 'virtual:dsa-ladders';
 import {
   PlaneTakeoff, Check, ChevronDown, ChevronUp, ArrowUp, ArrowDown, CalendarDays, Trash2, Plus, MoreHorizontal,
@@ -13,6 +13,7 @@ import { useProgress } from '../hooks/useProgress';
 import { useSolved } from '../hooks/useSolved';
 import { useProfile, updateProfile } from '../hooks/useProfile';
 import { useRunway, setRunway } from '../hooks/useRunway';
+import { COMPANIES, GROUPS, AI_LABEL, companyPlan } from '../data/companies';
 import {
   TRACKS, PRESETS, LEVELS, generatePlan, planStats, isTaskDone, toggleDone, moveTask, removeTask, addCustomTask,
   reorderTask, respread, keepOnRebuild, addDays, daysBetween, budgetFor,
@@ -59,8 +60,14 @@ export function RunwayPage() {
 
 function RunwayInner() {
   const plan = useRunway();
+  // /runway?company=google (from a company page) opens the setup with that company chosen
+  const [params] = useSearchParams();
+  const wanted = companyPlan(params.get('company')) ? params.get('company') : null;
   const [editing, setEditing] = useState(false);
-  if (!plan || editing) {
+  // the plan can arrive from the account after the first render, so the company link is tracked separately
+  const [wantedHandled, setWantedHandled] = useState(false);
+  const close = () => { setEditing(false); setWantedHandled(true); };
+  if (!plan || editing || (wanted && !wantedHandled)) {
     return (
       <PageLayout>
         <header className={styles.setupHeader}>
@@ -72,7 +79,7 @@ function RunwayInner() {
               : 'Answer four questions and get a personal day-by-day plan of lessons, problems, mock interviews and revision that fits the time you have.'}
           </p>
         </header>
-        <Setup plan={plan} onDone={() => setEditing(false)} onCancel={plan ? () => setEditing(false) : null} />
+        <Setup key={wanted ?? 'plan'} plan={plan} wanted={wanted && !wantedHandled ? wanted : null} onDone={close} onCancel={plan ? close : null} />
       </PageLayout>
     );
   }
@@ -83,6 +90,8 @@ function RunwayInner() {
 function deletePlan() {
   if (window.confirm('Delete your Runway plan? Your completed lessons and solved problems stay as they are.')) setRunway(null);
 }
+
+const MOCK_NAMES = { dsa: 'DSA', hld: 'system design', lld: 'LLD', behavioral: 'behavioral', machine: 'machine coding', ai: 'AI-assisted coding' };
 
 const DURATIONS = [[7, '1 week'], [14, '2 weeks'], [30, '1 month'], [60, '2 months'], [90, '3 months']];
 
@@ -113,7 +122,7 @@ function Option({ on, onClick, title, hint }) {
   );
 }
 
-function Setup({ plan, onDone, onCancel }) {
+function Setup({ plan, wanted, onDone, onCancel }) {
   const catalogue = useCatalogue();
   const progress = useProgressFns();
   const profile = useProfile();
@@ -123,17 +132,23 @@ function Setup({ plan, onDone, onCancel }) {
   const [end, setEnd] = useState(initialEnd);
   const [hours, setHours] = useState(prev?.hours ?? { weekday: 2, weekend: 4 });
   const [restDays, setRestDays] = useState(prev?.restDays ?? []);
-  const [mix, setMix] = useState(prev?.mix ?? PRESETS[1].mix);
+  const [company, setCompany] = useState(wanted ?? prev?.company ?? null);
+  const [mix, setMix] = useState(() => (wanted ? companyPlan(wanted).mix : prev?.mix ?? PRESETS[1].mix));
+  const cp = company ? companyPlan(company) : null;
+  const pickCompany = (id) => {
+    setCompany(id || null);
+    if (id) setMix(companyPlan(id).mix);
+  };
   const [level, setLevel] = useState(prev?.level ?? 'some');
   const days = daysBetween(today, end);
   const preset = PRESETS.find((p) => TRACKS.every((t) => p.mix[t.id] === mix[t.id]))?.id ?? 'custom';
   const mixTotal = TRACKS.reduce((s, t) => s + mix[t.id], 0) || 1;
   const pct = (id) => Math.round((mix[id] / mixTotal) * 100);
-  const settings = { start: today, end, hours, restDays, mix, level, company: null };
+  const settings = { start: today, end, hours, restDays, mix, level, company };
   const valid = days >= 1 && days <= 365 && TRACKS.some((t) => mix[t.id] > 0) && (hours.weekday > 0 || hours.weekend > 0) && restDays.length < 7;
   const preview = useMemo(() => (valid ? generatePlan(settings, catalogue, progress, keepOnRebuild(plan)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [valid, end, hours, restDays, mix, level, catalogue, progress]);
+    [valid, end, hours, restDays, mix, level, company, catalogue, progress]);
   const stats = preview && planStats(preview, progress, today);
   const weekly = [1, 2, 3, 4, 5, 6, 0].reduce((s, d) => s + (restDays.includes(d) ? 0 : d === 0 || d === 6 ? hours.weekend : hours.weekday), 0);
 
@@ -186,12 +201,34 @@ function Setup({ plan, onDone, onCancel }) {
           </div>
         </Field>
 
-        <Field step={3} title="Focus" help="Weight the tracks to match your rounds. Set a track to 0% to leave it out.">
-          <div className={styles.options}>
-            {PRESETS.map((p) => (
-              <Option key={p.id} on={preset === p.id} onClick={() => setMix(p.mix)} title={p.label} hint={p.hint} />
-            ))}
-          </div>
+        <Field step={3} title="Focus" help="Pick your target company for a plan shaped like its interview, or a general mix. Every weight stays adjustable.">
+          <label className={styles.companyField}>
+            <span className={styles.subLabel}>Target company</span>
+            <select className={ui.select} value={company ?? ''} onChange={(e) => pickCompany(e.target.value)}>
+              <option value="">No specific company</option>
+              {GROUPS.map((g) => (
+                <optgroup key={g} label={g}>
+                  {COMPANIES.filter((c) => c.group === g).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          {cp ? (
+            <div className={styles.companyCard}>
+              <p className={styles.companyHead}><Building2 size={15} aria-hidden="true" /> <strong>{cp.name}</strong> · {cp.styleLabel} · {AI_LABEL[cp.ai]}</p>
+              <p className={styles.companyText}>{cp.rounds ? cp.rounds.slice(0, 3).join(' · ') : cp.summary}</p>
+              <p className={styles.companyText}>
+                The plan puts {cp.name}'s focus patterns first and schedules {[...new Set(cp.mocks)].map((m) => MOCK_NAMES[m]).join(', ')} mocks.{' '}
+                <Link to={`/companies/${cp.id}`} target="_blank">How {cp.name} interviews</Link>
+              </p>
+            </div>
+          ) : (
+            <div className={styles.options}>
+              {PRESETS.map((p) => (
+                <Option key={p.id} on={preset === p.id} onClick={() => setMix(p.mix)} title={p.label} hint={p.hint} />
+              ))}
+            </div>
+          )}
           <div className={styles.mixBar} aria-hidden="true">
             {TRACKS.filter((t) => mix[t.id] > 0).map((t) => <span key={t.id} className={styles[`t_${t.id}`]} style={{ flex: mix[t.id] }} />)}
           </div>
@@ -204,7 +241,6 @@ function Setup({ plan, onDone, onCancel }) {
               </label>
             ))}
           </div>
-          <p className={styles.company}><Building2 size={15} aria-hidden="true" /> Company-specific plans are coming soon.</p>
         </Field>
 
         <Field step={4} title="Starting point" help="Lessons and problems you have already completed are always left out.">
@@ -272,6 +308,9 @@ function PlanView({ plan, onEdit }) {
           <p className={styles.heroBig}>
             {over ? 'Done' : stats.daysLeft === 0 ? 'Today' : <>{stats.daysLeft}<span> day{stats.daysLeft === 1 ? '' : 's'} to go</span></>}
           </p>
+          {plan.settings.company && companyPlan(plan.settings.company) && (
+            <Link to={`/companies/${plan.settings.company}`} className={styles.heroCompany}><Building2 size={14} aria-hidden="true" /> {companyPlan(plan.settings.company).name} plan</Link>
+          )}
           <p className={styles.heroDate}>
             {over ? 'Your interview date has passed. Good luck, and set up a new runway for the next one.' : `Interview on ${fmtDay(plan.settings.end, { weekday: 'long', day: 'numeric', month: 'long' })}`}
           </p>
@@ -414,7 +453,7 @@ function TaskRow({ plan, day, task, first, last, progress, update }) {
   );
 }
 
-const kindLabel = (t) => ({ lesson: 'Lesson', problem: 'Problem', mock: 'Mock interview', review: 'Review', revise: 'Revise', warmup: 'Warm-up', custom: 'Your task' }[t.kind] ?? t.kind);
+const kindLabel = (t) => ({ lesson: 'Lesson', problem: 'Problem', mock: 'Mock interview', review: 'Review', revise: 'Revise', warmup: 'Warm-up', guide: 'Company guide', custom: 'Your task' }[t.kind] ?? t.kind);
 
 function AddTask({ onAdd, onCancel }) {
   const [title, setTitle] = useState('');
