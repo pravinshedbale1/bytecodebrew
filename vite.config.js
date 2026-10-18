@@ -76,7 +76,8 @@ function paymentsDevApi() {
         const local = { FIREBASE_PROJECT_ID: 'demo-bytecodebrew', FIRESTORE_EMULATOR: 'http://127.0.0.1:8080', AUTH_EMULATOR: '1' };
         // Real Razorpay test mode + local Firestore emulator: RAZORPAY_TEST=1 npm run dev:emulator
         if (emulator && process.env.RAZORPAY_TEST === '1' && keys.RAZORPAY_KEY_ID) {
-          if (!keys.RAZORPAY_KEY_ID.startsWith('rzp_test_')) throw new Error('Local development only uses Razorpay TEST keys (rzp_test_…).');
+          // live keys move real money: only with an explicit RAZORPAY_LIVE_TEST=1 (a deliberate ₹1 check)
+          if (!keys.RAZORPAY_KEY_ID.startsWith('rzp_test_') && process.env.RAZORPAY_LIVE_TEST !== '1') throw new Error('Local development only uses Razorpay TEST keys (rzp_test_…).');
           return { route, mock: null, env: { ...keys, ...local } };
         }
         if (!emulator) return { route, mock: null, env: null };

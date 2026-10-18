@@ -187,7 +187,14 @@ export async function webhook(request, env) {
     orderId = (await getOrder(env, rpOrderId)).receipt;
   }
   if (typeof orderId !== 'string' || !ORDER_ID.test(orderId)) return { ignored: true };
-  return fulfil(env, orderId);
+  try {
+    return await fulfil(env, orderId);
+  } catch (e) {
+    // An order we don't have (e.g. made in a local test against the live keys): acknowledge it, or Razorpay
+    // keeps retrying and eventually disables the webhook.
+    if (e instanceof HttpError && e.status === 404) return { ignored: true, reason: 'unknown order' };
+    throw e;
+  }
 }
 
 /** Route a request under /pay/*. Returns [status, body]. */
