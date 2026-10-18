@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  font-size: 0.95rem;
+  font-size: var(--text-ui);
 }
 
 .ok { color: var(--color-success); }
@@ -30,8 +30,8 @@
   align-items: center;
   gap: 6px;
   padding: 7px 12px;
-  border-radius: 8px;
-  font-size: 0.88rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
   border: 1px solid var(--color-accent);
@@ -60,18 +60,18 @@
 .form label {
   display: grid;
   gap: 4px;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
 .form input,
 .form textarea {
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--text-ui);
   color: var(--color-text);
   background: var(--color-bg);
   border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   resize: vertical;
 }
@@ -89,7 +89,7 @@
 }
 
 .form legend {
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
   margin-bottom: 6px;
 }
@@ -102,11 +102,11 @@
 
 .chip {
   padding: 5px 10px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -124,7 +124,7 @@
 
 .grid {
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   width: max-content;
   min-width: 100%;
 }
@@ -179,6 +179,8 @@
 .empty,
 .note {
   margin: var(--space-3) 0 0;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+.rowActions button[aria-label^='Delete']:hover { color: var(--color-danger); }

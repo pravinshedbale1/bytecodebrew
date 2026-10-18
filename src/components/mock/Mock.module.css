@@ -2,15 +2,15 @@
 
 .types {
   display: grid;
-  /* four rounds: 4 across or 2 × 2, never three plus an orphan */
+  /* six rounds: 3 × 2 or 2 × 3, never an orphan */
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   margin: var(--space-4) 0;
 }
 
-@media (min-width: 1360px) {
+@media (min-width: 1200px) {
   .types {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -24,6 +24,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  position: relative;
   text-align: left;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
@@ -39,6 +40,36 @@
 .typeActive {
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
+}
+
+.typeIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.typeActive .typeIcon {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.typeNew {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .typeTitle {
@@ -68,7 +99,7 @@
 .phases span {
   min-width: 0;
   padding: 6px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
   white-space: nowrap;
@@ -219,7 +250,7 @@
 .notes {
   min-height: 320px;
   font-family: var(--font-mono);
-  font-size: 0.86rem;
+  font-size: var(--text-sm);
 }
 
 /* ---- AI interviewer */
@@ -263,7 +294,7 @@
   max-width: 92%;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  font-size: 0.93rem;
+  font-size: var(--text-ui);
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -349,7 +380,7 @@
   padding: 0;
   display: grid;
   gap: 4px;
-  font-size: 0.95rem;
+  font-size: var(--text-ui);
 }
 
 .met::before {
@@ -371,7 +402,7 @@
 .notesView {
   white-space: pre-wrap;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   background: var(--color-code-bg);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
@@ -379,7 +410,7 @@
 }
 
 .feedback {
-  font-size: 0.95rem;
+  font-size: var(--text-ui);
   line-height: 1.6;
 }
 
@@ -467,7 +498,7 @@
   font-weight: 500;
   color: var(--color-text-subtle);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   padding: 0 8px;
 }
 
@@ -500,7 +531,7 @@
   padding: 0;
   display: grid;
   gap: 4px;
-  font-size: 0.95rem;
+  font-size: var(--text-ui);
   max-width: 420px;
 }
 
@@ -697,7 +728,7 @@
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-surface-muted);
   font-size: var(--text-xs);
   font-weight: 700;
@@ -761,7 +792,7 @@
   background: var(--color-surface-muted);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.86rem;
+  font-size: var(--text-sm);
   line-height: 1.65;
 }
 

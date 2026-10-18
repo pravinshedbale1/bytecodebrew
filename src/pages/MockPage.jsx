@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, SkipForward, Undo2, Check, Bot, NotebookPen, Compass, ListTree } from 'lucide-react';
+import { Play, Pause, Square, Shuffle, ExternalLink, History, Trash2, Sparkles, SkipForward, Undo2, Check, Bot, NotebookPen, Compass, ListTree, Code2, Network, Boxes, MessagesSquare, Hammer, Timer } from 'lucide-react';
 import { AiReview } from '../components/mock/AiReview';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
@@ -97,6 +97,8 @@ function MockPageInner() {
           <div className={styles.types}>
             {Object.entries(MOCK_TYPES).map(([id, t]) => (
               <button key={id} type="button" className={`${styles.type} ${typeId === id ? styles.typeActive : ''}`} onClick={() => setTypeId(id)} aria-pressed={typeId === id}>
+                {(() => { const I = TYPE_ICONS[id] ?? Timer; return <span className={styles.typeIcon} aria-hidden="true"><I size={17} /></span>; })()}
+                {(id === 'machine' || id === 'ai') && <span className={styles.typeNew}>New</span>}
                 <span className={styles.typeMeta}>{t.minutes} min · {t.phases.length} phases</span>
                 <span className={styles.typeTitle}>{t.title}</span>
                 <span className={styles.typeBlurb}>{t.blurb}</span>
@@ -174,6 +176,8 @@ function PhaseGuide({ type, index, used }) {
     </div>
   );
 }
+
+const TYPE_ICONS = { dsa: Code2, hld: Network, lld: Boxes, behavioral: MessagesSquare, machine: Hammer, ai: Bot };
 
 const PLACEHOLDERS = {
   dsa: 'Clarifications, examples, brute force, the optimal idea, complexity… write what you would say out loud.',
@@ -482,7 +486,7 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
 
       <div className={`${ui.row} ${styles.scoreActions}`}>
         <button type="button" className={`${ui.btn} ${ui.primary}`} onClick={onClose}>Start another mock</button>
-        <button type="button" className={`${ui.btn} ${ui.ghost}`} onClick={() => { if (window.confirm('Delete this mock?')) onDelete(); }}><Trash2 size={14} /> Delete</button>
+        <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.danger}`} onClick={() => { if (window.confirm('Delete this mock?')) onDelete(); }}><Trash2 size={14} /> Delete</button>
       </div>
     </section>
   );

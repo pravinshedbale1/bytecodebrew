@@ -206,7 +206,7 @@ function YourDataCard() {
         <button type="button" className={`${ui.btn} ${ui.small}`} onClick={exportData}><Download size={13} /> Download</button>
         <button
           type="button"
-          className={`${ui.btn} ${ui.ghost} ${ui.small}`}
+          className={`${ui.btn} ${ui.ghost} ${ui.small} ${ui.danger}`}
           onClick={async () => {
             const ok = window.prompt('This erases your progress, solved problems, reviews, quiz results, mocks, stories and highlights' + (status === 'signed-in' ? ' here and in your account' : '') + '. Type DELETE to confirm.');
             if (ok !== 'DELETE') return;

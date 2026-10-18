@@ -128,7 +128,7 @@ export function AdminPage() {
                   {r.note ? ` · ${r.note}` : ''}
                 </span>
               </span>
-              <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => remove(r)}><Trash2 size={13} /> Remove</button>
+              <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small} ${ui.danger}`} onClick={() => remove(r)}><Trash2 size={13} /> Remove</button>
             </li>
           ))}
         </ul>

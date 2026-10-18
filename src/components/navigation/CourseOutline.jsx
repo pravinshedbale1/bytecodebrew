@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { NavLink, useLocation } from 'react-router';
 import { Check, Lock } from 'lucide-react';
 import { useLessonLocked } from '../../hooks/useAccess';
 import styles from './CourseOutline.module.css';
@@ -6,8 +7,22 @@ import styles from './CourseOutline.module.css';
 /** Numbered module → lesson list for one course. Modules with nothing published are collapsed to a single line. */
 export function CourseOutline({ course, lessons, isComplete }) {
   const locked = useLessonLocked();
+  const ref = useRef(null);
+  const { pathname } = useLocation();
+
+  // Keep the current lesson in view in the scrolling sidebar (lesson 19 of 56 shouldn't be off-screen).
+  useEffect(() => {
+    const current = ref.current?.querySelector('[aria-current="page"]');
+    if (!current) return;
+    let box = current.parentElement;
+    while (box && !(box.scrollHeight > box.clientHeight && /(auto|scroll)/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+    if (!box) return;
+    const top = current.getBoundingClientRect().top - box.getBoundingClientRect().top;
+    if (top < 80 || top > box.clientHeight - 80) box.scrollTop += top - box.clientHeight / 3;
+  }, [pathname]);
+
   return (
-    <nav aria-label={`${course.title} lessons`}>
+    <nav aria-label={`${course.title} lessons`} ref={ref}>
       {course.modules.map((module, i) => {
         const items = lessons.filter((l) => l.moduleId === module.id);
         const ready = items.filter((l) => l.available);

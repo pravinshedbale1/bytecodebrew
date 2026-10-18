@@ -3,7 +3,7 @@ import { getTrack, courseStats, getCourseLessons } from '../curriculum';
 import { useProgress } from '../hooks/useProgress';
 import { PageLayout } from '../components/layout/PageLayout';
 import { CourseCard } from '../components/navigation/CourseCard';
-import { ProgressCard } from '../components/rail/RailWidgets';
+import { TrackProgressCard } from '../components/rail/RailWidgets';
 import { ComingSoon } from '../components/common/ComingSoon';
 import { NotFoundPage } from './NotFoundPage';
 import styles from './Page.module.css';
@@ -24,20 +24,16 @@ export function TrackPage() {
   });
 
   const active = courses.filter((c) => c.stats.available > 0);
-  const rail = active.length
-    ? active.map(({ course, stats, completed }) => (
-        <ProgressCard
-          key={course.id}
-          title={course.title}
-          completed={completed}
-          total={stats.available}
-        />
-      ))
-    : null;
+  const rail = active.length ? (
+    <TrackProgressCard
+      courses={active.map(({ course, stats, completed }) => ({ id: course.id, title: course.title, path: `/${track.id}/${course.id}`, completed, total: stats.available }))}
+    />
+  ) : null;
 
   return (
     <PageLayout rail={rail}>
       <header className={styles.header}>
+        <p className={styles.eyebrow}>Track · {track.courses.length} course{track.courses.length === 1 ? '' : 's'}</p>
         <h1 className={styles.title}>{track.title}</h1>
         <p className={styles.lead}>{track.description}</p>
       </header>

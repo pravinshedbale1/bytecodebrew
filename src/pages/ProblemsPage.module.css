@@ -1,23 +1,126 @@
 .filters {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.filterTop {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: var(--space-3);
 }
 
 .search {
-  width: 220px;
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+}
+
+.search:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-ui);
+  outline: none;
 }
 
 .pattern {
+  flex: 0 1 260px;
   width: auto;
-  max-width: 240px;
+  height: 40px;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+}
+
+/* a label and its control wrap together */
+.filterGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.filterLabel {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.segmented button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.segmented button:hover {
+  color: var(--color-text);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
 }
 
 .count {
-  margin: var(--space-3) 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
+}
+
+.clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clear:hover {
+  text-decoration: underline;
 }
 
 .group {
@@ -147,7 +250,7 @@
   width: 14px;
   height: 14px;
   margin-top: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   border: 1.5px solid var(--color-success);
 }
 
@@ -165,3 +268,12 @@
   }
 }
 .markSelf { background: transparent; }
+
+/* phones: label above its control, so the buttons stay on one line */
+@media (max-width: 480px) {
+  .filterGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}

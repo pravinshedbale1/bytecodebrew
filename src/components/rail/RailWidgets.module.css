@@ -1,5 +1,5 @@
 .big {
-  font-size: 2rem;
+  font-size: var(--text-2xl);
   font-weight: 680;
   line-height: 1;
   margin-bottom: var(--space-3);
@@ -7,7 +7,7 @@
 }
 
 .unit {
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: var(--color-text-subtle);
   margin-left: 2px;
 }
@@ -108,7 +108,7 @@
 
 .miniTrack {
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-surface-muted);
   overflow: hidden;
 }
@@ -130,4 +130,37 @@
 
 .notes li + li {
   margin-top: var(--space-2);
+}
+
+/* ---- track progress: one row per course */
+
+.courses {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.courses li {
+  display: grid;
+  gap: 5px;
+}
+
+.courseRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.courseRow:hover .courseName {
+  color: var(--color-accent);
+}
+
+.courseName {
+  line-height: 1.35;
 }

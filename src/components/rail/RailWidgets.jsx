@@ -18,6 +18,35 @@ export function ProgressCard({ title = 'Your progress', completed, total, captio
   );
 }
 
+/** A whole track's progress: the overall percentage, then one row per course. */
+export function TrackProgressCard({ courses }) {
+  const done = courses.reduce((s, c) => s + c.completed, 0);
+  const total = courses.reduce((s, c) => s + c.total, 0);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <RailCard title="Track progress" icon={<BarChart3 size={14} aria-hidden="true" />}>
+      <p className={styles.big}>
+        {pct}
+        <span className={styles.unit}>%</span>
+      </p>
+      <ProgressBar value={done} max={total} label="Track progress" />
+      <ul className={styles.courses}>
+        {courses.map((c) => (
+          <li key={c.id}>
+            <Link to={c.path} className={styles.courseRow}>
+              <span className={styles.courseName}>{c.title}</span>
+              <span className={styles.moduleCount}>{c.completed}/{c.total}</span>
+            </Link>
+            <span className={styles.miniTrack}>
+              <span className={styles.miniFill} style={{ width: `${c.total ? (c.completed / c.total) * 100 : 0}%` }} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </RailCard>
+  );
+}
+
 /** Compact "what to read next" link for the rail. */
 export function UpNextCard({ lesson, label = 'Up next' }) {
   if (!lesson) return null;

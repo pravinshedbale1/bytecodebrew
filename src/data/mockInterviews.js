@@ -18,7 +18,7 @@ function caseStudies(courseId, moduleIds) {
 export const MOCK_TYPES = {
   dsa: {
     title: 'DSA coding',
-    blurb: 'One problem from the practice ladders (medium, hard or either), 45 minutes, thinking out loud.',
+    blurb: 'One ladder problem, 45 minutes, thinking out loud, judged by real tests.',
     minutes: 45,
     phases: [
       { name: 'Clarify & examples', min: 5, guide: ['Restate the problem in your own words', 'Ask about input size, duplicates, negatives, empty input', 'Agree on one or two examples, including an edge case'] },
@@ -58,7 +58,7 @@ export const MOCK_TYPES = {
   },
   hld: {
     title: 'System design (HLD)',
-    blurb: 'Design a real system end to end: requirements, estimates, API, architecture, deep dives.',
+    blurb: 'Design a real system end to end: requirements, estimates, API, architecture and deep dives.',
     minutes: 45,
     phases: [
       { name: 'Requirements', min: 5, guide: ['List the core features (3–5) and confirm what\'s out of scope', 'Ask about scale, read/write ratio, latency and consistency needs', 'Write the agreed requirements down'] },
@@ -174,7 +174,7 @@ const AI_TASKS = [
 
 MOCK_TYPES.machine = {
   title: 'Machine coding',
-  blurb: 'Build a runnable, extensible system in 90 minutes, then handle a new requirement. The Flipkart, Swiggy and PhonePe round.',
+  blurb: 'Build a runnable system in 90 minutes, then handle a surprise requirement. The Flipkart and Swiggy round.',
   minutes: 90,
   phases: [
     { name: 'Requirements', min: 10, guide: ['Read the brief and list the must-have features', 'Ask what is out of scope; agree on in-memory storage', 'Decide the commands your driver program will demo'] },
@@ -209,7 +209,7 @@ MOCK_TYPES.machine = {
 
 MOCK_TYPES.ai = {
   title: 'AI-assisted coding',
-  blurb: 'One problem in three stages, with an AI assistant at your side. Scored on judgement and verification, not prompting. The Meta, Google-pilot and Canva round.',
+  blurb: 'One problem in three stages with an AI assistant, scored on judgement and checking its work. The Amazon and Meta round.',
   minutes: 60,
   phases: [
     { name: 'Understand', min: 5, guide: ['Restate the task and ask clarifying questions', 'Decide what you will ask the AI for, and what you will write yourself', 'Plan how you will check the result'] },

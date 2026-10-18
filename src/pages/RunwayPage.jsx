@@ -326,7 +326,7 @@ function PlanView({ plan, onEdit }) {
           </div>
           <div className={styles.heroActions}>
             <button type="button" className={`${ui.btn} ${ui.small}`} onClick={onEdit}><Settings2 size={13} /> Edit plan</button>
-            <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={deletePlan}><Trash2 size={13} /> Delete plan</button>
+            <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small} ${ui.danger}`} onClick={deletePlan}><Trash2 size={13} /> Delete plan</button>
           </div>
         </div>
       </section>

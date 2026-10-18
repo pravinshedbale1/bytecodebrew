@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { ExternalLink, Info, Download } from 'lucide-react';
+import { ExternalLink, Info, Download, Search, BarChart3 } from 'lucide-react';
 import ladderData from 'virtual:dsa-ladders';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
@@ -57,7 +57,7 @@ function ProblemsPageInner() {
 
   const rail = (
     <>
-      <RailCard title="Your progress">
+      <RailCard title="Your progress" icon={<BarChart3 size={14} aria-hidden="true" />}>
         <p className={styles.big}>{done.length}<span> / {all.length}</span></p>
         <ul className={styles.levels}>
           {LEVELS.map((lv) => {
@@ -92,23 +92,41 @@ function ProblemsPageInner() {
       </header>
 
       <div className={styles.filters}>
-        <input className={`${ui.input} ${styles.search}`} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter by name…" aria-label="Filter problems by name" />
-        <div className={ui.chips} role="group" aria-label="Difficulty">
-          {['all', ...LEVELS].map((lv) => (
-            <button key={lv} type="button" className={ui.chip} aria-pressed={level === lv} onClick={() => setLevel(lv)}>{lv === 'all' ? 'Any level' : lv}</button>
-          ))}
+        <div className={styles.filterTop}>
+          <label className={styles.search}>
+            <Search size={15} aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search problems" aria-label="Search problems by name" />
+          </label>
+          <select className={`${ui.select} ${styles.pattern}`} value={pattern} onChange={(e) => setPattern(e.target.value)} aria-label="Pattern">
+            <option value="all">Every pattern</option>
+            {groups.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+          </select>
         </div>
-        <div className={ui.chips} role="group" aria-label="Status">
-          {[['all', 'All'], ['unsolved', 'Unsolved'], ['solved', 'Solved']].map(([id, label]) => (
-            <button key={id} type="button" className={ui.chip} aria-pressed={status === id} onClick={() => setStatus(id)}>{label}</button>
-          ))}
+        <div className={styles.filterRow}>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel} id="f-level">Difficulty</span>
+            <div className={styles.segmented} role="group" aria-labelledby="f-level">
+              {['all', ...LEVELS].map((lv) => (
+                <button key={lv} type="button" aria-pressed={level === lv} onClick={() => setLevel(lv)}>{lv === 'all' ? 'Any' : lv}</button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel} id="f-status">Status</span>
+            <div className={styles.segmented} role="group" aria-labelledby="f-status">
+              {[['all', 'All'], ['unsolved', 'Unsolved'], ['solved', 'Solved']].map(([id, label]) => (
+                <button key={id} type="button" aria-pressed={status === id} onClick={() => setStatus(id)}>{label}</button>
+              ))}
+            </div>
+          </div>
         </div>
-        <select className={`${ui.select} ${styles.pattern}`} value={pattern} onChange={(e) => setPattern(e.target.value)} aria-label="Pattern">
-          <option value="all">Every pattern</option>
-          {groups.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
-        </select>
       </div>
-      <p className={styles.count}>{count} problem{count === 1 ? '' : 's'}</p>
+      <p className={styles.count}>
+        {count} problem{count === 1 ? '' : 's'}
+        {(query || level !== 'all' || status !== 'all' || pattern !== 'all') && (
+          <button type="button" className={styles.clear} onClick={() => { setQuery(''); setLevel('all'); setStatus('all'); setPattern('all'); }}>Clear filters</button>
+        )}
+      </p>
 
       {shown.map((g) => (
         <section key={g.id} className={styles.group}>

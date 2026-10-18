@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Download, Trash2, StickyNote, Sparkles } from 'lucide-react';
+import { Download, Trash2, StickyNote, Sparkles, Highlighter } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { useHighlights, removeHighlight } from '../hooks/useHighlights';
 import { useAuth, signIn } from '../hooks/useAuth';
@@ -63,25 +63,36 @@ export function HighlightsPage() {
         </p>
       </header>
 
-      <div className={styles.bar}>
-        <span className={styles.status}>
-          {status === 'signed-in' && 'Synced to your account across devices.'}
-          {status === 'signed-out' && (<>Saved on this device only. <button type="button" className={styles.link} onClick={signIn}>Sign in with Google</button> to sync across devices.</>)}
-          {(status === 'disabled' || status === 'loading') && 'Saved on this device.'}
-        </span>
-        {total > 0 && (
-          <button type="button" className={styles.export} onClick={exportJson}>
-            <Download size={14} /> Export
-          </button>
-        )}
-      </div>
+      {(total > 0 || status === 'signed-out') && (
+        <div className={styles.bar}>
+          <span className={styles.status}>
+            {status === 'signed-in' && 'Synced to your account across devices.'}
+            {status === 'signed-out' && (<>Saved on this device only. <button type="button" className={styles.link} onClick={signIn}>Sign in with Google</button> to sync across devices.</>)}
+            {(status === 'disabled' || status === 'loading') && 'Saved on this device.'}
+          </span>
+          {total > 0 && (
+            <button type="button" className={styles.export} onClick={exportJson}>
+              <Download size={14} /> Export
+            </button>
+          )}
+        </div>
+      )}
 
       {!highlightsSupported && (
         <p className={styles.warn}>Your browser doesn't support text highlighting yet. Update to a recent Chrome, Edge, Safari or Firefox.</p>
       )}
 
       {groups.length === 0 && (
-        <p className={styles.empty}>No highlights yet. Open any lesson, select a sentence, and pick a colour.</p>
+        <section className={styles.emptyCard}>
+          <span className={styles.emptyIcon} aria-hidden="true"><Highlighter size={22} /></span>
+          <h2 className={styles.emptyTitle}>Your highlights will collect here</h2>
+          <ol className={styles.emptySteps}>
+            <li><span>1</span>Open any lesson and select a sentence worth remembering.</li>
+            <li><span>2</span>Pick a colour, and add a note in your own words if you like.</li>
+            <li><span>3</span>Before the interview, turn them into a revision sheet with ChatGPT, Claude or Gemini.</li>
+          </ol>
+          <Link to="/system-design/hld" className={styles.emptyCta}>Open a lesson</Link>
+        </section>
       )}
 
       {groups.length > 0 && (
