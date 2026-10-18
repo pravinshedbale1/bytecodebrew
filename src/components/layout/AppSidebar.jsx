@@ -81,7 +81,7 @@ function GlobalNav({ activeTrackId }) {
       <NavLink to="/companies" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
         <Building2 size={18} strokeWidth={1.75} aria-hidden="true" />
         Companies
-        <span className={styles.newBadge}>New</span>
+        {premium ? <span className={styles.newBadge}>New</span> : lock}
       </NavLink>
 
       <p className={styles.section}>Learn</p>

@@ -28,7 +28,6 @@ export const FREE_FEATURES = [
   'Lesson quizzes, practice exercises and progress tracking',
   'Highlights and notes, synced across your devices',
   'Search and printable cheat sheets',
-  'Interview guides for the 50 best-paying companies in India',
 ];
 
 export const PREMIUM_FEATURES = [
@@ -39,6 +38,7 @@ export const PREMIUM_FEATURES = [
   ['Mock interviews', 'timed DSA, system design, LLD, behavioral and machine-coding rounds, with a rubric and one-click AI review'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
   ['Runway: your day-by-day interview plan', 'tell it your days, hours a day and target company; it plans lessons, problems, mocks and revision in that company\'s interview style, shows what to do today and keeps you on pace'],
+  ['Company interview guides', 'how the 50 best-paying companies in India interview: rounds, AI rules, what to practise, plus the AI-assisted debugging round guide with ready-made LLM prompts'],
   ['Dashboard and LeetCode sync', 'streaks, weak areas, activity and your LeetCode history imported'],
   ['Code playground, behavioral drill and story bank', ''],
 ];

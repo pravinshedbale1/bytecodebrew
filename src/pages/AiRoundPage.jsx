@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Bot, Check, X, Info, ExternalLink, Wand2, Clock } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { SendToAi } from '../components/ai/SendToAi';
 import { AI_ROUND_COMPANIES, SCORED, PLAYBOOK, DO_DONT, MISTAKES, PRACTICE, PROMPTS, REFERENCES } from '../data/aiRound';
 import page from './Page.module.css';
@@ -10,8 +11,21 @@ import styles from './AiRoundPage.module.css';
 const LANGUAGES = ['Java', 'Python', 'C++', 'JavaScript', 'Go'];
 const fill = (prompt, language, company) => prompt.replaceAll('{LANGUAGE}', language).replaceAll('{COMPANY}', company);
 
-/** /companies/ai-assisted-round: the AI-assisted debugging round, how to do it and how to practise it. */
+/** /companies/ai-assisted-round (Premium): the AI-assisted debugging round, how to do it and how to practise it. */
 export function AiRoundPage() {
+  return (
+    <PremiumPage
+      eyebrow="Companies · Interview guide"
+      title="The AI-assisted debugging round"
+      lead="Amazon, Meta, Google and others now hand you an unfamiliar codebase and an AI assistant. How the round works, what is scored, a playbook and ready-made LLM prompts to practise it."
+      feature="The AI-assisted round guide"
+    >
+      <AiRoundGuide />
+    </PremiumPage>
+  );
+}
+
+function AiRoundGuide() {
   const [language, setLanguage] = useState('Java');
   const [company, setCompany] = useState('Amazon');
   return (

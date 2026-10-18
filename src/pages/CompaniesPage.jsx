@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Building2, Search, PlaneTakeoff, Timer, MessageSquare, Bot, Check, Info } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
+import { PremiumPage } from '../components/access/PremiumPage';
 import { NotFoundPage } from './NotFoundPage';
 import { getCourseLessons } from '../curriculum';
 import { COMPANIES, GROUPS, STYLES, AI_LABEL, CHECKED, companyPlan } from '../data/companies';
@@ -12,8 +13,18 @@ import styles from './CompaniesPage.module.css';
 
 const checkedOn = parseDay(CHECKED).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-/** /companies: how the 50 best-paying companies in India interview, grouped and searchable. */
+const LIST_LEAD = 'The rounds, the AI rules and what to practise for the 50 best-paying companies for software engineers in India, and a Runway plan shaped like each one.';
+
+/** /companies (Premium): how the 50 best-paying companies in India interview, grouped and searchable. */
 export function CompaniesPage() {
+  return (
+    <PremiumPage eyebrow="Companies" title="How top companies interview" lead={LIST_LEAD} feature="Company interview guides">
+      <CompaniesList />
+    </PremiumPage>
+  );
+}
+
+function CompaniesList() {
   const [group, setGroup] = useState('all');
   const [q, setQ] = useState('');
   const shown = COMPANIES.filter((c) => (group === 'all' || c.group === group) && c.name.toLowerCase().includes(q.trim().toLowerCase()));
@@ -22,10 +33,7 @@ export function CompaniesPage() {
       <header className={page.header}>
         <p className={page.eyebrow}>Companies</p>
         <h1 className={page.title}>How top companies interview</h1>
-        <p className={page.lead}>
-          The rounds, the AI rules and what to practise for the 50 best-paying companies for software engineers in India,
-          and a Runway plan shaped like each one.
-        </p>
+        <p className={page.lead}>{LIST_LEAD}</p>
       </header>
 
       <Link to="/companies/ai-assisted-round" className={styles.aiBanner}>
@@ -89,12 +97,20 @@ export function CompaniesPage() {
   );
 }
 
-/** /companies/:companyId: one company's rounds, what to practise and a plan. */
+/** /companies/:companyId (Premium): one company's rounds, what to practise and a plan. */
 export function CompanyPage() {
   const { companyId } = useParams();
   const c = companyPlan(companyId);
-  const patterns = useMemo(() => Object.fromEntries(getCourseLessons('dsa', 'patterns').map((l) => [l.id, l])), []);
   if (!c) return <NotFoundPage />;
+  return (
+    <PremiumPage eyebrow={`Companies · ${c.group}`} title={`How ${c.name} interviews`} lead={c.summary} feature={`The ${c.name} interview guide`}>
+      <CompanyDetail c={c} />
+    </PremiumPage>
+  );
+}
+
+function CompanyDetail({ c }) {
+  const patterns = useMemo(() => Object.fromEntries(getCourseLessons('dsa', 'patterns').map((l) => [l.id, l])), []);
   const mocks = [...new Set(c.mocks)];
   return (
     <PageLayout contentWidth="900px">
