@@ -6,6 +6,17 @@ import ui from '../../components/common/ui.module.css';
 import styles from '../AdminPage.module.css';
 
 const day = (ms) => (ms ? new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const HOUR = 3_600_000;
+
+/** "within the hour", "5 h ago", "yesterday", or a date. Firebase refreshes a session about hourly, so nothing finer. */
+function lastActive(ms, now) {
+  if (!ms) return '—';
+  const ago = now - ms;
+  if (ago < HOUR) return 'Within the hour';
+  if (ago < 24 * HOUR) return `${Math.floor(ago / HOUR)} h ago`;
+  if (ago < 48 * HOUR) return 'Yesterday';
+  return day(ms);
+}
 
 /** Open or pause new purchases, with the message people see on /premium while paused. */
 export function AdminSales({ me }) {
@@ -87,7 +98,7 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
     setBusy(true);
     setError(null);
     try {
-      setData(await listRegisteredUsers());
+      setData({ ...(await listRegisteredUsers()), at: Date.now() });
     } catch (err) {
       setError(`Could not load registered users: ${err.message}`);
     } finally {
@@ -96,10 +107,13 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
   };
   useEffect(() => { load(); }, []);
 
-  const users = (data?.users ?? []).map((u) => ({ ...u, status: statusOf(u.email, entitlements, adminEmail) }));
+  const now = data?.at ?? Date.now();
+  const users = (data?.users ?? []).map((u) => ({ ...u, status: statusOf(u.email, entitlements, adminEmail), recent: Boolean(u.lastActiveAt) && now - u.lastActiveAt < HOUR }));
   const premiumCount = users.filter((u) => u.status.cls === 'chipOn').length;
+  const activeCount = users.filter((u) => u.recent).length;
   const q = filter.trim().toLowerCase();
-  const shown = users.filter((u) => (show === 'all' || (show === 'free' ? u.status.cls !== 'chipOn' : u.status.cls === 'chipOn'))
+  const matchesShow = (u) => (show === 'all' ? true : show === 'active' ? u.recent : show === 'free' ? u.status.cls !== 'chipOn' : u.status.cls === 'chipOn');
+  const shown = users.filter((u) => matchesShow(u)
     && (!q || (u.email ?? '').toLowerCase().includes(q) || (u.name ?? '').toLowerCase().includes(q)));
 
   return (
@@ -108,12 +122,13 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
         <div>
           <h2 className={ui.panelTitle}>Registered users</h2>
           <p className={styles.muted}>
-            {data ? `${users.length} signed up · ${premiumCount} with Premium · ${users.length - premiumCount} free${data.truncated ? ' (first 20,000 shown)' : ''}` : busy ? 'Loading…' : ''}
+            {data ? `${users.length} signed up · ${activeCount} active in the last hour · ${premiumCount} with Premium · ${users.length - premiumCount} free${data.truncated ? ' (first 20,000 shown)' : ''}` : busy ? 'Loading…' : ''}
           </p>
         </div>
         <div className={styles.userTools}>
           <select className={ui.input} value={show} onChange={(e) => setShow(e.target.value)} aria-label="Show">
             <option value="all">Everyone</option>
+            <option value="active">Active in the last hour</option>
             <option value="premium">Premium</option>
             <option value="free">Free</option>
           </select>
@@ -127,7 +142,7 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Joined</th><th>Last sign-in</th><th>Access</th><th aria-label="Actions" /></tr>
+              <tr><th>Name</th><th>Email</th><th>Joined</th><th title="When their session was last refreshed: about hourly while they have the site open">Last active</th><th>Access</th><th aria-label="Actions" /></tr>
             </thead>
             <tbody>
               {shown.map((u) => (
@@ -140,7 +155,9 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
                   </td>
                   <td>{u.email ?? <span className={styles.muted}>—</span>}{u.disabled ? <span className={styles.muted}> (disabled)</span> : ''}</td>
                   <td>{day(u.createdAt)}</td>
-                  <td>{day(u.lastLoginAt)}</td>
+                  <td title={u.lastActiveAt ? `Last active ${new Date(u.lastActiveAt).toLocaleString()} · last sign-in ${new Date(u.lastLoginAt).toLocaleString()}` : undefined}>
+                    {u.recent && <span className={styles.dot} aria-hidden="true" />}{lastActive(u.lastActiveAt, now)}
+                  </td>
                   <td><span className={`${styles.chip} ${styles[u.status.cls]}`}>{u.status.label}</span></td>
                   <td>
                     {u.email && u.status.cls !== 'chipOn' && (

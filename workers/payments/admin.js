@@ -5,13 +5,16 @@ import { accessToken } from '../shared/firestore.js';
  *
  * listUsers: every account that has ever signed in, from Firebase Authentication (the Identity
  * Toolkit API the Admin SDK's listUsers uses), so the admin sees registered people whether or not
- * they bought anything. Needs the service account (firebase-adminsdk has the Firebase Auth admin role).
+ * they bought anything. `lastActiveAt` is when the account's session token was last refreshed: the
+ * site refreshes it about hourly while open, so it means "active within roughly the last hour".
+ * Needs the service account (firebase-adminsdk has the Firebase Auth admin role).
  */
 const SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 const PAGE = 1000;
 const MAX_PAGES = 20;          // 20,000 accounts is plenty for one response
 
 const ms = (v) => (v ? Number(v) || null : null);
+const iso = (v) => (v ? Date.parse(v) || null : null);
 
 export async function listUsers(env) {
   const emulator = Boolean(env.AUTH_EMULATOR);
@@ -35,6 +38,7 @@ export async function listUsers(env) {
         providers: (u.providerUserInfo ?? []).map((p) => p.providerId),
         createdAt: ms(u.createdAt),
         lastLoginAt: ms(u.lastLoginAt),
+        lastActiveAt: Math.max(iso(u.lastRefreshAt) ?? 0, ms(u.lastLoginAt) ?? 0) || null,
       });
     }
     pageToken = body.nextPageToken;
