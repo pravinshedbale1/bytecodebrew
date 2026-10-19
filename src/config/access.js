@@ -10,7 +10,7 @@ export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
 
 /** Synced stores that only premium accounts may write to (see firestore.rules → premiumNames). */
-export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway'];
+export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach'];
 
 export const isAdminEmail = (email) => Boolean(email) && ADMIN_EMAILS.includes(email.toLowerCase());
 
@@ -36,6 +36,7 @@ export const PREMIUM_FEATURES = [
   ['Step-through diagrams', 'walk every architecture and sequence diagram one step at a time, with each step explained'],
   ['314 problems with tests', 'a LeetCode-style editor in Java, C++, Python or JavaScript, with full statements, constraints, hints, hidden tests, performance checks and your submissions saved to your account'],
   ['Mock interviews', 'timed DSA, system design, LLD, behavioral and machine-coding rounds, with a rubric and one-click AI review'],
+  ['Daily Coach', 'a 20-minute session every day built from your own skill map: recognition drills on unseen problems, re-solves from memory just before you forget, and a stretch problem where you are weakest'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
   ['Runway: your day-by-day interview plan', 'tell it your days, hours a day and target company; it plans lessons, problems, mocks and revision in that company\'s interview style, shows what to do today and keeps you on pace'],
   ['Company interview guides', 'how the 50 best-paying companies in India interview: rounds, AI rules, what to practise, plus the AI-assisted debugging round guide with ready-made LLM prompts'],

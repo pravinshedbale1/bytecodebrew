@@ -7,7 +7,7 @@ import { dayKey, addDays, today } from '../lib/dates';
  * Shape: { 'YYYY-MM-DD': { lesson: n, quiz: n, review: n, practice: n, problem: n, mock: n } }
  * Merge: per day and kind keep the larger count, so two devices never lose a day.
  */
-export const KINDS = ['lesson', 'quiz', 'review', 'practice', 'problem', 'mock', 'drill'];
+export const KINDS = ['lesson', 'quiz', 'review', 'practice', 'problem', 'mock', 'drill', 'coach'];
 
 const store = createSyncedStore({
   name: 'activity',

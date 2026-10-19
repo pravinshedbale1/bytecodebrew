@@ -40,7 +40,7 @@ export function exportData() {
  * premiumNames in firestore.rules. Deleted by name so nothing survives just because the store that
  * owns it (e.g. the story bank, which lives in a lesson component) wasn't loaded in this session.
  */
-export const STATE_DOCS = ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reviews', 'mocks', 'profile', 'drills', 'stories', 'runway'];
+export const STATE_DOCS = ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach'];
 
 /** Erase progress, solves, reviews, notes… here and in the signed-in account; keeps only the theme. */
 export async function deleteAllData() {

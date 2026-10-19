@@ -9,6 +9,7 @@ import { Heatmap } from '../components/dashboard/Heatmap';
 import { LeetCodeCard } from '../components/dashboard/LeetCodeCard';
 import { LeetCodeImport } from '../components/dashboard/LeetCodeImport';
 import { RunwayCard } from '../components/dashboard/RunwayCard';
+import { CoachCard } from '../components/dashboard/CoachCard';
 import { WeakAreas } from '../components/dashboard/WeakAreas';
 import { useActivity, streakOf, longestStreak, dayTotal } from '../hooks/useActivity';
 import { useProgress } from '../hooks/useProgress';
@@ -128,6 +129,8 @@ function DashboardInner() {
           </div>
         </div>
       </section>
+
+      <CoachCard />
 
       <RunwayCard />
 

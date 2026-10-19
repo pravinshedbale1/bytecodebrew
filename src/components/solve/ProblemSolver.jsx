@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import {
   Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
-  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb,
+  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb, Repeat, Mountain, Sunrise,
 } from 'lucide-react';
 import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
@@ -13,6 +13,8 @@ import { LANGS, LANG_IDS, langOf } from '../../lib/judge/langs';
 import { preferredLang, setPreferredLang, readDraft, writeDraft } from '../../lib/judge/drafts';
 import { useSubmissions, readLocalSubs } from '../../lib/submissions';
 import { markSolved, useSolved } from '../../hooks/useSolved';
+import { recordSubmission, recordResolve, resolveStatus, noteHint } from '../../lib/coach/store';
+import { RESOLVE_MINUTES } from '../../lib/coach/model';
 import ui from '../common/ui.module.css';
 import styles from './ProblemSolver.module.css';
 
@@ -68,6 +70,13 @@ export function ProblemSolver({ slug, compact = false }) {
   langRef.current = lang;
   const [subs, addSub] = useSubmissions(slug);
   const { isSolved } = useSolved();
+  // Daily Coach: ?coach=resolve is a timed re-solve from memory, ?coach=stretch today's stretch problem
+  const [params] = useSearchParams();
+  const coachMode = compact ? null : params.get('coach');
+  const resolve = useResolve(slug, coachMode === 'resolve');
+  const resolving = resolve.active;
+  const resolvingRef = useRef(resolving);
+  resolvingRef.current = resolving;
 
   // the mock round has less room, so it keeps its own divider positions
   const where = compact ? 'mock' : 'solve';
@@ -86,7 +95,7 @@ export function ProblemSolver({ slug, compact = false }) {
       if (!alive) return;
       setSpec(p);
       if (!p) return;
-      setCode(initialCode(p, slug, langRef.current));
+      setCode(resolvingRef.current ? langOf(langRef.current).starter(p) : initialCode(p, slug, langRef.current));
       setCases(p.tests.slice(0, exampleCount(p)).map((t) => ({ in: [...t.in], out: t.out, original: [...t.in] })));
       setCaseIdx(0);
     });
@@ -94,15 +103,15 @@ export function ProblemSolver({ slug, compact = false }) {
   }, [slug]);
 
   useEffect(() => {
-    if (!spec) return undefined;
+    if (!spec || resolving) return undefined;     // a re-solve never overwrites the saved draft
     const t = setTimeout(() => writeDraft(slug, lang, code), 400);
     return () => clearTimeout(t);
-  }, [code, slug, spec, lang]);
+  }, [code, slug, spec, lang, resolving]);
 
   // On a new device the account's submissions arrive after the problem opens: if the editor still
   // holds untouched starter code, pick up the latest submission in this language.
   useEffect(() => {
-    if (!spec || code !== langOf(lang).starter(spec)) return;
+    if (!spec || resolvingRef.current || code !== langOf(lang).starter(spec)) return;
     const latest = subs.find((s) => s.lang === lang)?.code;
     if (latest && latest !== code) setCode(latest);
     // only when the submissions change
@@ -116,10 +125,10 @@ export function ProblemSolver({ slug, compact = false }) {
 
   const switchLang = (next, nextCode) => {
     if (next === lang && nextCode === undefined) return;
-    writeDraft(slug, lang, code);
+    if (!resolving) writeDraft(slug, lang, code);
     setPreferredLang(next);
     setLang(next);
-    setCode(nextCode ?? initialCode(spec, slug, next));
+    setCode(nextCode ?? (resolving ? langOf(next).starter(spec) : initialCode(spec, slug, next)));
     setResult(null);
     setError(null);
   };
@@ -148,7 +157,13 @@ export function ProblemSolver({ slug, compact = false }) {
       const firstFail = r.tests.findIndex((t) => t.pass === false);
       setResultIdx(firstFail >= 0 ? firstFail : 0);
       if (mode === 'submit') {
-        if (r.status === 'accepted') markSolved(slug);
+        const accepted = r.status === 'accepted';
+        if (resolving) {
+          if (accepted) resolve.finish(true);
+        } else {
+          recordSubmission(slug, { accepted, firstTry: !subs.some((x) => x.status !== 'accepted') });
+        }
+        if (accepted) markSolved(slug);
         addSub({
           at: Date.now(),
           lang: runLang,
@@ -202,7 +217,12 @@ export function ProblemSolver({ slug, compact = false }) {
         </div>
         <div className={styles.panelBody}>
           {leftTab === 'description' ? (
-            <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} lang={lang} />
+            <>
+              {coachMode && <CoachBanner mode={coachMode} resolve={resolve} />}
+              <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} lang={lang} hideHints={resolving} />
+            </>
+          ) : resolving ? (
+            <p className={styles.empty}>Your earlier submissions are hidden until this re-solve ends.</p>
           ) : (
             <Submissions subs={subs} onLoad={(s) => { switchLang(s.lang, s.code); setLeftTab('description'); }} />
           )}
@@ -315,7 +335,7 @@ const LANG_NOTES = {
   javascript: 'JavaScript: PriorityQueue, MinPriorityQueue, MaxPriorityQueue and Queue (datastructures-js) are available.',
 };
 
-function Description({ spec, slug, examples, names, solved, compact, lang }) {
+function Description({ spec, slug, examples, names, solved, compact, lang, hideHints = false }) {
   const l = langOf(lang);
   const hasPerf = spec.tests.some((t) => t.perf);
   const testCount = l.perf ? spec.tests.length : spec.tests.filter((t) => !t.perf).length;
@@ -351,7 +371,9 @@ function Description({ spec, slug, examples, names, solved, compact, lang }) {
         </div>
       )}
 
-      {spec.hints?.length > 0 && <Hints key={slug} hints={spec.hints} />}
+      {spec.hints?.length > 0 && (hideHints
+        ? <p className={styles.hint}><Lightbulb size={14} aria-hidden="true" /> Hints are hidden during a re-solve from memory.</p>
+        : <Hints key={slug} hints={spec.hints} onReveal={() => noteHint(slug)} />)}
 
       <div className={styles.judging}>
         <p className={styles.exampleTitle}>Judging</p>
@@ -394,7 +416,7 @@ function Inline({ text }) {
 }
 
 /** Paragraphs separated by blank lines; lines starting with "- " form a list. */
-function Statement({ text }) {
+export function Statement({ text }) {
   return (
     <div className={styles.statement}>
       {text.split(/\n\s*\n/).map((para, i) => {
@@ -409,7 +431,7 @@ function Statement({ text }) {
 }
 
 /** Hints revealed one at a time, so you take only as much help as you need. */
-function Hints({ hints }) {
+function Hints({ hints, onReveal }) {
   const [shown, setShown] = useState(0);
   return (
     <div className={styles.block}>
@@ -420,7 +442,7 @@ function Hints({ hints }) {
         ))}
       </ol>
       {shown < hints.length && (
-        <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => setShown((n) => n + 1)}>
+        <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => { setShown((n) => n + 1); onReveal?.(); }}>
           <Lightbulb size={13} aria-hidden="true" /> {shown === 0 ? 'Show a hint' : `Show hint ${shown + 1} of ${hints.length}`}
         </button>
       )}
@@ -563,4 +585,78 @@ function CaseView({ test, names }) {
       {test.expected !== undefined && <Field name="Expected">{test.expected}</Field>}
     </>
   );
+}
+
+/**
+ * A re-solve from memory (Daily Coach): a RESOLVE_MINUTES timer that survives a reload of the tab;
+ * an accepted submission in time passes, running out of time or giving up fails. A problem already
+ * re-solved today opens finished.
+ */
+function useResolve(slug, enabled) {
+  const key = `bcb:resolve:${slug}`;
+  const [startedAt] = useState(() => {
+    if (!enabled) return null;
+    try {
+      const saved = Number(sessionStorage.getItem(key));
+      if (saved) return saved;
+      sessionStorage.setItem(key, String(Date.now()));
+    } catch { /* storage unavailable: the timer starts now */ }
+    return Date.now();
+  });
+  const [done, setDone] = useState(() => (enabled ? resolveStatus(slug).result : null));
+  const [now, setNow] = useState(() => Date.now());
+  const active = enabled && !done;
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [active]);
+
+  const finish = useCallback((pass) => {
+    if (!enabled || done) return;
+    recordResolve(slug, pass);
+    setDone({ pass });
+    try { sessionStorage.removeItem(key); } catch { /* ignore */ }
+  }, [enabled, done, slug, key]);
+
+  const left = startedAt ? startedAt + RESOLVE_MINUTES * 60000 - now : 0;
+  useEffect(() => { if (active && left <= 0) finish(false); }, [active, left, finish]);
+  return { enabled, active, left, done, finish };
+}
+
+const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+function CoachBanner({ mode, resolve }) {
+  const back = <Link to="/today" className={styles.coachBack}><Sunrise size={13} aria-hidden="true" /> Back to Today</Link>;
+  if (mode === 'resolve' && resolve.enabled) {
+    if (resolve.active) {
+      return (
+        <div className={`${styles.coachBanner} ${resolve.left < 120000 ? styles.coachLow : ''}`} role="status">
+          <Repeat size={16} aria-hidden="true" />
+          <span><strong>Re-solve from memory · {mmss(resolve.left)} left.</strong> Submit a passing solution before time runs out. Hints and your earlier submissions are hidden until you finish.</span>
+          <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => { if (window.confirm('End this re-solve as not recalled? It will come back in 2 days.')) resolve.finish(false); }}>I can’t recall it</button>
+        </div>
+      );
+    }
+    return (
+      <div className={`${styles.coachBanner} ${resolve.done?.pass ? styles.coachOk : ''}`} role="status">
+        <Repeat size={16} aria-hidden="true" />
+        <span>{resolve.done?.pass
+          ? <><strong>Passed from memory.</strong> It comes back later, further apart each time.</>
+          : <><strong>Not this time.</strong> It comes back in 2 days. Your earlier solution is in the Submissions tab.</>}</span>
+        {back}
+      </div>
+    );
+  }
+  if (mode === 'stretch') {
+    return (
+      <div className={styles.coachBanner} role="note">
+        <Mountain size={16} aria-hidden="true" />
+        <span><strong>Today’s stretch problem:</strong> one step harder, in your weakest pattern. Take your time; it counts whenever you solve it today.</span>
+        {back}
+      </div>
+    );
+  }
+  return null;
 }
