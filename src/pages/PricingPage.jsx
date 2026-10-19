@@ -5,6 +5,7 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { useAccess } from '../hooks/useAccess';
 import { signIn } from '../hooks/useAuth';
 import { listPlans, startCheckout, verifyOrder } from '../lib/payments';
+import { useSales, DEFAULT_PAUSE_MESSAGE } from '../lib/sales';
 import { FREE_FEATURES, PREMIUM_FEATURES, CONTACT_EMAIL } from '../config/access';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
@@ -51,7 +52,7 @@ function ReturnBanner({ orderId, paymentId, signature, cancelled }) {
 /** Price per 30 days, for comparing plans (lifetime plans are not compared). */
 const perMonth = (p) => (p.durationDays > 0 ? (p.price / p.durationDays) * 30 : null);
 
-function PlanCard({ plan, best, saving, onChoose, access }) {
+function PlanCard({ plan, best, saving, onChoose, access, paused }) {
   const monthly = perMonth(plan);
   const signedOut = access.status === 'signed-out';
   return (
@@ -67,8 +68,10 @@ function PlanCard({ plan, best, saving, onChoose, access }) {
         {saving > 0 && <span className={styles.save}>Save {saving}%</span>}
       </p>
       {plan.description && <p className={styles.planDesc}>{plan.description}</p>}
-      <button type="button" className={`${ui.btn} ${best ? ui.primary : styles.secondaryBtn} ${styles.cta}`} onClick={() => (signedOut ? signIn() : onChoose(plan))}>
-        {signedOut ? <><LogIn size={15} /> Sign in to buy</> : access.status === 'premium' ? 'Extend my premium' : `Choose ${planLength(plan.durationDays).toLowerCase()}`}
+      <button type="button" className={`${ui.btn} ${best ? ui.primary : styles.secondaryBtn} ${styles.cta}`} onClick={() => (signedOut ? signIn() : onChoose(plan))} disabled={paused}>
+        {paused ? 'Not available right now'
+          : signedOut ? <><LogIn size={15} /> Sign in to buy</>
+            : access.status === 'premium' ? 'Extend my premium' : `Choose ${planLength(plan.durationDays).toLowerCase()}`}
       </button>
     </div>
   );
@@ -147,6 +150,8 @@ export function PricingPage() {
   const orderId = params.get('order_id');
   const [plans, setPlans] = useState(null);
   const [chosen, setChosen] = useState(null);
+  const sales = useSales();
+  const paused = !sales.loading && !sales.open;
 
   useEffect(() => {
     listPlans().then(setPlans).catch(() => setPlans([]));
@@ -178,6 +183,13 @@ export function PricingPage() {
           </div>
         )}
 
+        {paused && (
+          <div className={`${styles.banner} ${styles.warn}`} role="status">
+            <CircleAlert size={20} />
+            <span><strong>Subscriptions paused.</strong> {sales.message || DEFAULT_PAUSE_MESSAGE} Questions: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</span>
+          </div>
+        )}
+
         <section id="plans" aria-label="Plans">
           {plans === null && <p className={styles.muted}>Loading plans…</p>}
           {plans?.length === 0 && (
@@ -185,7 +197,7 @@ export function PricingPage() {
           )}
           {plans?.length > 0 && (
             <div className={styles.plans} style={{ '--cols': Math.min(plans.length, 3) }}>
-              {plans.map((p) => <PlanCard key={p.id} plan={p} best={best?.id === p.id} saving={savingOf(p)} onChoose={setChosen} access={access} />)}
+              {plans.map((p) => <PlanCard key={p.id} plan={p} best={best?.id === p.id} saving={savingOf(p)} onChoose={setChosen} access={access} paused={paused} />)}
             </div>
           )}
           <ul className={styles.trust} aria-label="About payment">
@@ -225,7 +237,7 @@ export function PricingPage() {
         </div>
         <p className={styles.fine}>Payments are processed by Razorpay. Prices are in Indian rupees and include applicable taxes. Sold by ByteCodeBrew Solutions. <Link to="/terms">Terms</Link> · <Link to="/refund-policy">Refunds</Link> · <Link to="/contact">Contact</Link></p>
       </div>
-      <CheckoutDialog plan={chosen} access={access} onClose={() => setChosen(null)} />
+      <CheckoutDialog plan={paused ? null : chosen} access={access} onClose={() => setChosen(null)} />
     </PageLayout>
   );
 }

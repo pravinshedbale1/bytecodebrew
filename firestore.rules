@@ -9,6 +9,7 @@ rules_version = '2';
 //  entitlements/{email}       premium access, one document per Google account email (lower case), granted
 //                             by the admin or by a payment (with an optional expiresAt). Users read their own.
 //  plans/{planId}             premium plans and prices, public, edited by the admin.
+//  settings/sales             { open, message }: the admin pauses new purchases; public so /premium can say so.
 //  orders/{orderId}           Cashfree payments, written by the payments Worker; buyers read their own.
 //
 // Keep the lists below in sync with src/config/access.js (ADMIN_EMAILS, PREMIUM_STORES).
@@ -96,6 +97,16 @@ service cloud.firestore {
         && request.resource.data.active is bool
         && request.resource.data.updatedAt == request.time;
       allow delete: if isAdmin();
+    }
+
+    // Sales switch: anyone may read it (the /premium page explains a pause); only the admin sets it.
+    match /settings/{name} {
+      allow read: if true;
+      allow create, update: if isAdmin() && name == 'sales'
+        && request.resource.data.keys().hasOnly(['open', 'message', 'updatedAt', 'updatedBy'])
+        && request.resource.data.open is bool
+        && request.resource.data.message is string && request.resource.data.message.size() <= 300
+        && request.resource.data.updatedAt == request.time;
     }
 
     // Payment orders: written only by the payments Worker (service account); buyers read their own.

@@ -90,3 +90,6 @@ export async function startCheckout(planId, { beforeOpen } = {}) {
 /** After checkout: confirm the payment and apply premium (idempotent). */
 export const verifyOrder = (orderId, { paymentId, signature } = {}) =>
   call('verify', { orderId, ...(paymentId && signature ? { paymentId, signature } : {}) });
+
+/** Admin only: every account that has signed in (from Firebase Authentication, via the payments Worker). */
+export const listRegisteredUsers = () => call('admin/users', {});

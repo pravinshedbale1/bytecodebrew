@@ -23,14 +23,19 @@ function pemToDer(pem) {
   return Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
 }
 
-let cached = { token: null, until: 0 };
+const cached = new Map();   // scope -> { token, until }
 
-/** An OAuth access token for the service account (signed JWT exchanged at Google), cached until shortly before it expires. */
-async function accessToken(sa, now = Date.now()) {
-  if (cached.token && now < cached.until) return cached.token;
+/**
+ * An OAuth access token for the service account (signed JWT exchanged at Google), cached per scope
+ * until shortly before it expires. Firestore uses the datastore scope; other Google APIs (Firebase
+ * Auth's user list) pass their own.
+ */
+export async function accessToken(sa, scope = SCOPE, now = Date.now()) {
+  const hit = cached.get(scope);
+  if (hit && now < hit.until) return hit.token;
   const iat = Math.floor(now / 1000);
   const header = b64urlText(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const claims = b64urlText(JSON.stringify({ iss: sa.client_email, scope: SCOPE, aud: TOKEN_URL, iat, exp: iat + 3600 }));
+  const claims = b64urlText(JSON.stringify({ iss: sa.client_email, scope, aud: TOKEN_URL, iat, exp: iat + 3600 }));
   const key = await crypto.subtle.importKey('pkcs8', pemToDer(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${header}.${claims}`));
   const res = await fetch(TOKEN_URL, {
@@ -40,7 +45,7 @@ async function accessToken(sa, now = Date.now()) {
   });
   if (!res.ok) throw new Error(`Service account login failed (${res.status})`);
   const { access_token: token, expires_in: ttl } = await res.json();
-  cached = { token, until: now + (ttl - 120) * 1000 };
+  cached.set(scope, { token, until: now + (ttl - 120) * 1000 });
   return token;
 }
 

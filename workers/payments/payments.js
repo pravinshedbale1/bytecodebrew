@@ -1,6 +1,7 @@
-import { verifyIdToken, AuthError } from '../shared/auth.js';
+import { verifyIdToken, AuthError, ADMIN_EMAILS } from '../shared/auth.js';
 import { firestore } from '../shared/firestore.js';
 import { createOrder, getOrder, verifyWebhook, verifyPaymentSignature, keyMode, RazorpayError } from './razorpay.js';
+import { listUsers } from './admin.js';
 
 /**
  * Premium purchases through Razorpay (Standard Checkout: a pop-up on our page).
@@ -9,6 +10,10 @@ import { createOrder, getOrder, verifyWebhook, verifyPaymentSignature, keyMode, 
  *   POST /pay/verify   { orderId, paymentId?, signature? } signed in → { status, expiresAt? }
  *                                                         (called from Checkout's success handler)
  *   POST /pay/webhook                                     from Razorpay (order.paid, payment.captured), signature-checked
+ *   POST /pay/admin/users                                 the admin → every registered account (admin.js)
+ *
+ * The admin can pause new purchases (settings/sales { open: false, message } in Firestore, set on /admin):
+ * /pay/order then refuses with that message. Orders already started can still be completed and verified.
  *
  * The price always comes from plans/{planId} in Firestore (set by the admin), never from the client, and
  * a payment only counts when Razorpay itself reports the order as paid for the full amount.
@@ -49,7 +54,14 @@ async function signedIn(request, env) {
   }
 }
 
+async function admin(request, env) {
+  const user = await signedIn(request, env);
+  if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) throw new HttpError(403, 'Only the admin can do this.');
+  return user;
+}
+
 const ORDER_ID = /^bcb_[a-z0-9_]{5,60}$/;
+export const SALES_PAUSED = 'New subscriptions are temporarily paused. If you already have Premium, nothing changes for you. Please check back soon.';
 
 /** Create a Razorpay order for an active plan; returns what Razorpay Checkout needs to open. */
 export async function startOrder(request, env) {
@@ -58,6 +70,8 @@ export async function startOrder(request, env) {
   if (typeof planId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(planId)) throw new HttpError(400, 'Unknown plan.');
 
   const store = db(env);
+  const sales = await store.get('settings/sales');
+  if (sales?.open === false) throw new HttpError(403, sales.message?.trim() || SALES_PAUSED);
   const plan = await store.get(`plans/${planId}`);
   if (!plan || plan.active !== true || !(plan.price >= 1)) throw new HttpError(400, 'This plan is not available.');
 
@@ -205,6 +219,7 @@ export async function route(request, env) {
     if (pathname.endsWith('/pay/order')) return [200, await startOrder(request, env)];
     if (pathname.endsWith('/pay/verify')) return [200, await verify(request, env)];
     if (pathname.endsWith('/pay/webhook')) return [200, await webhook(request, env)];
+    if (pathname.endsWith('/pay/admin/users')) { await admin(request, env); return [200, await listUsers(env)]; }
     throw new HttpError(404, 'Not found');
   } catch (e) {
     if (e instanceof HttpError) return [e.status, { error: e.message }];

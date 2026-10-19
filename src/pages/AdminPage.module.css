@@ -144,3 +144,110 @@
     grid-column: auto;
   }
 }
+
+/* ---- new-subscriptions switch */
+.salesMessage {
+  display: grid;
+  gap: 4px;
+  margin: var(--space-3) 0;
+}
+
+.salesMessage textarea {
+  resize: vertical;
+  font: inherit;
+}
+
+.salesActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.chipOn {
+  color: var(--color-success, #1f7a4d);
+  background: color-mix(in srgb, var(--color-success, #1f7a4d) 12%, transparent);
+}
+
+.chipOff {
+  color: var(--color-danger, #b42318);
+  background: color-mix(in srgb, var(--color-danger, #b42318) 12%, transparent);
+}
+
+.chipNeutral {
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* ---- registered users */
+.userTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.userTools select {
+  width: auto;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  text-align: left;
+  font-weight: 650;
+  color: var(--color-text-subtle);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.table td:nth-child(3),
+.table td:nth-child(4) {
+  white-space: nowrap;
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.person img,
+.initial {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.initial {
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+}

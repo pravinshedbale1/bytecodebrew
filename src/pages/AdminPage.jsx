@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { useAccess } from '../hooks/useAccess';
@@ -6,13 +6,17 @@ import { loadFirebase } from '../lib/firebase';
 import { CONTACT_EMAIL } from '../config/access';
 import { NotFoundPage } from './NotFoundPage';
 import { AdminPlans, AdminOrders } from './admin/AdminPayments';
+import { AdminSales, AdminUsers } from './admin/AdminAccounts';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from './AdminPage.module.css';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** /admin — approve or remove premium access by Google account email. Only the admin can see it. */
+/**
+ * /admin — registered users, premium access by Google account email, the new-subscriptions switch,
+ * plans and payments. Only the admin can see it.
+ */
 export function AdminPage() {
   const { status, isAdmin, email: me } = useAccess();
   const [rows, setRows] = useState(null);
@@ -21,6 +25,7 @@ export function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('');
+  const formRef = useRef(null);
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -90,11 +95,13 @@ export function AdminPage() {
     <PageLayout rail={rail}>
       <header className={page.header}>
         <p className={page.eyebrow}>Admin</p>
-        <h1 className={page.title}>Premium access and payments</h1>
+        <h1 className={page.title}>Users, access and payments</h1>
         <p className={page.lead}>{rows ? `${rows.length} approved account${rows.length === 1 ? '' : 's'}.` : 'Loading…'} You ({me}) always have access.</p>
       </header>
 
-      <form className={`${ui.panel} ${styles.form}`} onSubmit={add}>
+      <AdminSales me={me} />
+
+      <form ref={formRef} className={`${ui.panel} ${styles.form}`} onSubmit={add}>
         <h2 className={ui.panelTitle}>Approve an account</h2>
         <div className={styles.fields}>
           <label>
@@ -133,6 +140,12 @@ export function AdminPage() {
           ))}
         </ul>
       </section>
+
+      <AdminUsers
+        entitlements={rows}
+        adminEmail={me}
+        onApprove={(e) => { setEmail(e); formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); formRef.current?.querySelector('input[type=email]')?.focus({ preventScroll: true }); }}
+      />
 
       <div className={styles.adminGrid}>
         <AdminPlans />
