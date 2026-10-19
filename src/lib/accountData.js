@@ -1,9 +1,11 @@
 import { SYNCED_STORES } from './syncedStore';
 import { loadFirebase } from './firebase';
+import { deleteRemoteSubmissions } from './submissions';
 
 /**
  * "Download my data" and "Delete my data": everything ByteCodeBrew keeps about a learner lives in
- * the synced stores (browser + account) and a few browser-only keys prefixed "bcb:".
+ * the synced stores (browser + account), the per-problem submissions (browser keys bcb:subs:<slug> +
+ * users/{uid}/submissions) and a few browser-only keys prefixed "bcb:".
  */
 const PREFIX = 'bcb:';
 // Never exported: secrets stay in the browser that holds them.
@@ -46,7 +48,10 @@ export async function deleteAllData() {
   const fb = await loadFirebase();
   const uid = fb?.auth.currentUser?.uid;
   if (uid) {
-    await Promise.all(STATE_DOCS.map((name) => fb.fsMod.deleteDoc(fb.fsMod.doc(fb.db, 'users', uid, 'state', name))));
+    await Promise.all([
+      ...STATE_DOCS.map((name) => fb.fsMod.deleteDoc(fb.fsMod.doc(fb.db, 'users', uid, 'state', name))),
+      deleteRemoteSubmissions(fb, uid),
+    ]);
   }
   for (const k of browserKeys()) if (k !== 'bcb:theme') {
     try { localStorage.removeItem(k); } catch { /* ignore */ }

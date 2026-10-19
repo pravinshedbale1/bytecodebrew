@@ -4,6 +4,8 @@ rules_version = '2';
 //
 //  users/{uid}/state/{name}   one document per synced store (src/lib/syncedStore.js). Each user reads and
 //                             writes only their own. Premium stores accept writes only from premium accounts.
+//  users/{uid}/submissions/{slug}  code submissions on one practice problem (src/lib/submissions.js), same
+//                             { json, updatedAt } shape; solving with tests is premium, so writes are too.
 //  entitlements/{email}       premium access, one document per Google account email (lower case), granted
 //                             by the admin or by a payment (with an optional expiresAt). Users read their own.
 //  plans/{planId}             premium plans and prices, public, edited by the admin.
@@ -65,6 +67,11 @@ service cloud.firestore {
       allow write: if isOwner(uid) && validState()
         && (name in freeNames() || (name in premiumNames() && isPremium()));
       allow delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/submissions/{slug} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && slug.size() <= 120 && validState() && isPremium();
     }
 
     match /entitlements/{email} {

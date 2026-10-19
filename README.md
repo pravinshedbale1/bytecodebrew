@@ -104,7 +104,7 @@ How it works:
 
 - `src/lib/syncedStore.js`: every saved store lives in `localStorage` and, when signed in, in Firestore at `users/{uid}/state/{name}` as `{ json, updatedAt }`. The first sync after sign-in **merges** device and account data; later changes from other devices are applied live.
 - `src/components/highlights/`: highlights use the CSS Custom Highlight API (`CSS.highlights`), so lesson DOM is never modified. Each highlight is stored as its text plus surrounding context (`src/lib/highlights/anchor.js`) and re-located on load.
-- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names (`freeNames()` / `premiumNames()`; add new synced stores there and republish the rules). Premium stores accept writes only from premium accounts. Everything else is denied.
+- `firestore.rules`: each user can read and write only their own `users/{uid}/state/*` documents, with a size limit and a fixed list of document names (`freeNames()` / `premiumNames()`; add new synced stores there and republish the rules). Premium stores accept writes only from premium accounts. Code submissions live in `users/{uid}/submissions/{slug}` (one document per problem, same shape; writes need premium, like solving). Everything else is denied.
 - Firebase is loaded lazily after the first paint. With an empty `apiKey` in `src/config/firebase.js`, accounts are switched off and the sign-in button is hidden.
 
 ## Free and premium access

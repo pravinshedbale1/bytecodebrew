@@ -12,11 +12,14 @@ import { useSolved } from '../hooks/useSolved';
 import { getApiKey } from '../lib/claude';
 import { MiniMarkdown } from '../lib/miniMarkdown';
 import { readJSON, writeJSON } from '../lib/storage';
+import { currentDraft } from '../lib/judge/drafts';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from '../components/mock/Mock.module.css';
 
 const LIVE = 'bcb:mock-live';
+/** A judged round's code for the saved mock, with its language (older mocks have none: Java). */
+const codeOf = (draft) => ({ code: draft?.code ?? null, ...(draft?.code ? { codeLang: draft.label } : {}) });
 const mmss = (s) => `${s < 0 ? '-' : ''}${String(Math.floor(Math.abs(s) / 60)).padStart(2, '0')}:${String(Math.abs(s) % 60).padStart(2, '0')}`;
 
 /** Timed mock interviews with phases, a scratchpad, an optional AI interviewer and a self-scoring rubric. */
@@ -257,7 +260,7 @@ function LiveMock({ session: raw, setSession, onSave, onDiscard, isSolved }) {
     phases: phaseTimes(type.phases, session),
     notes: session.notes,
     chat: session.chat.filter((m) => !m.hidden).slice(-40),
-    code: judged ? readJSON(`bcb:code:${session.prompt.slug}`, null) : null,
+    ...codeOf(judged ? currentDraft(session.prompt.slug) : null),
     rubric: session.rubric,
     signal: session.signal,
   });
@@ -425,7 +428,7 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
     setError(null);
     let acc = '';
     try {
-      const text = await requestFeedback({ type, prompt: mock.prompt, chat: mock.chat ?? [], notes: mock.notes ?? '', code: mock.code ?? '', rubric: mock.rubric ?? {}, signal: mock.signal, seconds: mock.seconds, onText: (t) => { acc += t; setFb(acc); } });
+      const text = await requestFeedback({ type, prompt: mock.prompt, chat: mock.chat ?? [], notes: mock.notes ?? '', code: mock.code ?? '', codeLang: mock.codeLang ?? 'Java', rubric: mock.rubric ?? {}, signal: mock.signal, seconds: mock.seconds, onText: (t) => { acc += t; setFb(acc); } });
       if (text) onFeedback(text);
     } catch (e) {
       setError(e.message);
@@ -462,7 +465,7 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
 
       {mock.code && (
         <>
-          <h3 className={styles.subhead}>Your code</h3>
+          <h3 className={styles.subhead}>Your code{mock.codeLang ? ` (${mock.codeLang})` : ''}</h3>
           <pre className={styles.notesView}>{mock.code}</pre>
         </>
       )}

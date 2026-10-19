@@ -160,6 +160,17 @@
   background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
+.langSelect {
+  border: 0;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.langSelect:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .actions {
   margin-left: auto;
   display: flex;
@@ -322,7 +333,7 @@
 .subRow {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 0.8fr 0.5fr 1.3fr;
+  grid-template-columns: minmax(0, 1.4fr) 0.8fr 0.8fr 0.5fr 1.3fr;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-2);

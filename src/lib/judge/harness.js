@@ -174,10 +174,11 @@ ${tests.some((t) => t.perf) ? '        System.out.println("\\u0001BCBC|" + BCB.c
 }
 
 /**
- * Splits program output into per-test results and the learner's own prints.
+ * Splits program output into per-test results and the learner's own prints (any language: they all
+ * print the same tags). `lineOffset` maps an error's line in the combined file to the learner's code.
  * Returns { results: [{ got } | { error } | undefined], stdout }.
  */
-export function parseOutput(stdout, count) {
+export function parseOutput(stdout, count, lineOffset = LINE_OFFSET) {
   const results = new Array(count).fill(undefined);
   const own = [];
   let calibrationMs = null;
@@ -200,7 +201,7 @@ export function parseOutput(stdout, count) {
     const i = Number(m[1]);
     if (m[2].startsWith('!')) {
       const [, msg, ln] = /^!(.*)@L(-?\d+)$/.exec(m[2]) ?? [null, m[2].slice(1), '-1'];
-      const line = Number(ln) - LINE_OFFSET;
+      const line = Number(ln) - lineOffset;
       results[i] = { error: line > 0 ? `${msg} (line ${line})` : msg };
     } else {
       results[i] = { got: m[2] };

@@ -16,10 +16,10 @@ let lastRun = 0;
 export const runWait = () => Math.max(0, lastRun + MIN_GAP_MS - Date.now());
 
 /**
- * Compile and run a Java program (class Main) on Judge0.
- * Returns { status, ok, stdout, stderr, compile, time, memory }.
+ * Compile and run a program on Judge0 (`languageId` from its /languages list).
+ * Returns { status, ok, stdout, stderr, compile, message, time, memory }.
  */
-export async function runJava(source, stdin = '') {
+export async function runCode(source, { languageId, compilerOptions, stdin = '' }) {
   const wait = runWait();
   if (wait > 0) throw new Error(`Give the runner ${Math.ceil(wait / 1000)} more second${wait > 1000 ? 's' : ''}.`);
   lastRun = Date.now();
@@ -29,9 +29,10 @@ export async function runJava(source, stdin = '') {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        language_id: JUDGE0_JAVA,
+        language_id: languageId,
         source_code: toB64(source),
         stdin: toB64(stdin),
+        ...(compilerOptions ? { compiler_options: compilerOptions } : {}),
         cpu_time_limit: 5,
         memory_limit: 256000,
       }),
@@ -53,3 +54,6 @@ export async function runJava(source, stdin = '') {
     memory: r.memory,
   };
 }
+
+/** Compile and run a Java program (class Main) on Judge0. */
+export const runJava = (source, stdin = '') => runCode(source, { languageId: JUDGE0_JAVA, stdin });

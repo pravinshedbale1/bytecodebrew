@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, indentUnit } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
@@ -39,16 +39,28 @@ const theme = EditorView.theme({
   '.cm-panels input, .cm-panels button': { fontSize: '12px' },
 });
 
+// Java ships with the editor; the other grammars load the first time they're picked.
+const MODES = {
+  cpp: () => import('@codemirror/lang-cpp').then((m) => m.cpp()),
+  python: () => import('@codemirror/lang-python').then((m) => m.python()),
+  javascript: () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
+};
+const NAMES = { java: 'Java', cpp: 'C++', python: 'Python', javascript: 'JavaScript' };
+
 /**
- * Java editor (CodeMirror 6): syntax highlighting, bracket matching and auto-closing, folding,
- * undo history, search (Ctrl/⌘ F), four-space indent with Tab, and Ctrl/⌘ Enter to run.
- * Controlled: `value` replaces the document when it differs (e.g. Reset).
+ * Code editor (CodeMirror 6) for Java, C++, Python or JavaScript: syntax highlighting, bracket
+ * matching and auto-closing, folding, undo history, search (Ctrl/⌘ F), four-space indent with Tab,
+ * and Ctrl/⌘ Enter to run. Controlled: `value` replaces the document when it differs (e.g. Reset),
+ * and `language` switches the highlighting in place.
  */
-export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)', label = 'Java source code' }) {
+export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)', language = 'java', label }) {
   const host = useRef(null);
   const view = useRef(null);
+  const langSlot = useRef(new Compartment());
+  const labelSlot = useRef(new Compartment());
   const handlers = useRef({ onChange, onRun });
   handlers.current = { onChange, onRun };
+  const ariaLabel = label ?? `${NAMES[language] ?? 'Java'} source code`;
 
   useEffect(() => {
     const v = new EditorView({
@@ -73,7 +85,7 @@ export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)'
           highlightActiveLine(),
           highlightSelectionMatches(),
           syntaxHighlighting(highlight),
-          java(),
+          langSlot.current.of(language === 'java' || !MODES[language] ? java() : []),
           theme,
           keymap.of([
             { key: 'Mod-Enter', preventDefault: true, run: () => { handlers.current.onRun?.(); return true; } },
@@ -84,7 +96,8 @@ export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)'
             ...foldKeymap,
             indentWithTab,
           ]),
-          EditorView.contentAttributes.of({ 'aria-label': label, spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
+          labelSlot.current.of(EditorView.contentAttributes.of({ 'aria-label': ariaLabel })),
+          EditorView.contentAttributes.of({ spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) handlers.current.onChange(u.state.doc.toString());
           }),
@@ -103,6 +116,18 @@ export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)'
       v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value } });
     }
   }, [value]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: labelSlot.current.reconfigure(EditorView.contentAttributes.of({ 'aria-label': ariaLabel })) });
+  }, [ariaLabel]);
+
+  useEffect(() => {
+    let alive = true;
+    const apply = (ext) => { if (alive) view.current?.dispatch({ effects: langSlot.current.reconfigure(ext) }); };
+    if (MODES[language]) MODES[language]().then(apply, () => apply([]));
+    else apply(java());
+    return () => { alive = false; };
+  }, [language]);
 
   return <div className={styles.editor} style={{ height }} ref={host} />;
 }

@@ -1,10 +1,12 @@
-import { buildProgram, parseOutput, cleanCompileOutput, perfLimitMs } from './harness';
+import { parseOutput, perfLimitMs } from './harness';
 import meta from '../../data/problems/meta.json';
 import { accept, parseJson } from './check';
-import { runJava } from '../judge0';
+import { runCode } from '../judge0';
+import { langOf } from './langs';
 
 /**
- * Runs a learner's code against some of a problem's tests on Judge0 and grades each one.
+ * Runs a learner's code (in `langId`: java, cpp, python or javascript) against some of a problem's
+ * tests on Judge0 and grades each one. Languages without performance support skip the perf test.
  * Returns {
  *   status: 'accepted' | 'wrong' | 'slow' | 'compile' | 'error' | 'ran',
  *   compile?: string, message?: string, stdout: string, time, memory,
@@ -13,15 +15,16 @@ import { runJava } from '../judge0';
  * A test without `out` is a learner's own case: it is run, not graded (pass: null), and a run made
  * only of such cases ends as 'ran'.
  */
-export async function runTests(spec, code, tests) {
-  const source = buildProgram(spec, code, tests);
-  const r = await runJava(source, '');
+export async function runTests(spec, code, tests, langId) {
+  const lang = langOf(langId);
+  if (!lang.perf) tests = tests.filter((t) => !t.perf);
+  const { source, lineOffset, userLines } = lang.build(spec, code, tests);
+  const r = await runCode(source, { languageId: lang.judge0, compilerOptions: lang.compilerOptions });
 
-  if (r.compile && !r.ok && /Compilation Error/i.test(r.status)) {
-    return { status: 'compile', compile: cleanCompileOutput(r.compile), stdout: '', tests: [] };
-  }
+  const compile = lang.compileError(r, { lineOffset, userLines });
+  if (compile != null) return { status: 'compile', compile, stdout: '', tests: [] };
 
-  const { results, stdout, calibrationMs } = parseOutput(r.stdout, tests.length);
+  const { results, stdout, calibrationMs } = parseOutput(r.stdout, tests.length, lineOffset);
   const fallback = /Time Limit/i.test(r.status) ? 'Time limit exceeded' : r.status === 'Accepted' ? 'No result' : r.status;
   const graded = tests.map((t, i) => {
     const res = results[i];
@@ -48,10 +51,16 @@ export async function runTests(spec, code, tests) {
       : allPass ? (graded2.length ? 'accepted' : 'ran')
       : graded2.some((g) => !g.pass && !g.slow) ? 'wrong'
       : 'slow',
-    message: r.stderr ? r.stderr.split('\n').slice(0, 6).join('\n') : null,
+    // Java's stderr is the learner's own prints (keep the start); Python and Node end with the traceback
+    message: r.stderr ? stderrLines(lang.cleanStderr(r.stderr, { lineOffset, userLines }), lang.id === 'java').join('\n') : null,
     stdout,
     time: r.time,
     memory: r.memory,
     tests: graded,
   };
+}
+
+function stderrLines(text, head) {
+  const lines = text.trimEnd().split('\n');
+  return head ? lines.slice(0, 6) : lines.slice(-8);
 }

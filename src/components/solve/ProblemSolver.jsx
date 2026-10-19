@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
@@ -8,16 +8,18 @@ import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
 import { useSplit } from './useSplit';
 import { loadProblem, exampleCount } from '../../lib/judge/problems';
-import { starterCode } from '../../lib/judge/harness';
 import { runTests } from '../../lib/judge/runner';
+import { LANGS, LANG_IDS, langOf } from '../../lib/judge/langs';
+import { preferredLang, setPreferredLang, readDraft, writeDraft } from '../../lib/judge/drafts';
+import { useSubmissions, readLocalSubs } from '../../lib/submissions';
 import { markSolved, useSolved } from '../../hooks/useSolved';
-import { readJSON, writeJSON } from '../../lib/storage';
 import ui from '../common/ui.module.css';
 import styles from './ProblemSolver.module.css';
 
-const codeKey = (slug) => `bcb:code:${slug}`;
-const subsKey = (slug) => `bcb:subs:${slug}`;
-const MAX_SUBS = 20;
+/** What the editor opens with: the draft, else the latest submission in that language, else the starter. */
+function initialCode(spec, slug, lang) {
+  return readDraft(slug, lang) ?? readLocalSubs(slug).find((s) => s.lang === lang)?.code ?? langOf(lang).starter(spec);
+}
 
 /** Names for each test input, for display. */
 function inputNames(spec) {
@@ -47,7 +49,8 @@ const validJson = (s) => {
  * A LeetCode-style workspace for one practice problem: the description and your submissions on the
  * left; the editor, editable test cases and results on the right, with draggable dividers.
  * "Run" runs the cases in the Testcase tab (your own included); "Submit" runs every test, and
- * passing them all marks the problem solved. Code and submissions are kept in this browser.
+ * passing them all marks the problem solved. Code is written in Java, C++, Python or JavaScript;
+ * drafts are kept in this browser, submissions also in the account (src/lib/submissions.js).
  */
 export function ProblemSolver({ slug, compact = false }) {
   const [spec, setSpec] = useState(undefined);
@@ -60,7 +63,10 @@ export function ProblemSolver({ slug, compact = false }) {
   const [resultIdx, setResultIdx] = useState(0);
   const [leftTab, setLeftTab] = useState('description');
   const [bottomTab, setBottomTab] = useState('testcase');
-  const [subs, setSubs] = useState([]);
+  const [lang, setLang] = useState(preferredLang);
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const [subs, addSub] = useSubmissions(slug);
   const { isSolved } = useSolved();
 
   // the mock round has less room, so it keeps its own divider positions
@@ -80,24 +86,43 @@ export function ProblemSolver({ slug, compact = false }) {
       if (!alive) return;
       setSpec(p);
       if (!p) return;
-      setCode(readJSON(codeKey(slug), null) ?? starterCode(p));
+      setCode(initialCode(p, slug, langRef.current));
       setCases(p.tests.slice(0, exampleCount(p)).map((t) => ({ in: [...t.in], out: t.out, original: [...t.in] })));
       setCaseIdx(0);
-      setSubs(readJSON(subsKey(slug), []));
     });
     return () => { alive = false; };
   }, [slug]);
 
   useEffect(() => {
     if (!spec) return undefined;
-    const t = setTimeout(() => writeJSON(codeKey(slug), code), 400);
+    const t = setTimeout(() => writeDraft(slug, lang, code), 400);
     return () => clearTimeout(t);
-  }, [code, slug, spec]);
+  }, [code, slug, spec, lang]);
+
+  // On a new device the account's submissions arrive after the problem opens: if the editor still
+  // holds untouched starter code, pick up the latest submission in this language.
+  useEffect(() => {
+    if (!spec || code !== langOf(lang).starter(spec)) return;
+    const latest = subs.find((s) => s.lang === lang)?.code;
+    if (latest && latest !== code) setCode(latest);
+    // only when the submissions change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subs]);
 
   if (spec === undefined) return <p className={styles.loading}>Loading the problem…</p>;
   if (spec === null) return <p className={styles.loading}>This problem has no built-in tests yet.</p>;
 
   const names = inputNames(spec);
+
+  const switchLang = (next, nextCode) => {
+    if (next === lang && nextCode === undefined) return;
+    writeDraft(slug, lang, code);
+    setPreferredLang(next);
+    setLang(next);
+    setCode(nextCode ?? initialCode(spec, slug, next));
+    setResult(null);
+    setError(null);
+  };
 
   const run = async (mode) => {
     if (busy) return;
@@ -113,27 +138,26 @@ export function ProblemSolver({ slug, compact = false }) {
       }
       tests = cases.map((c) => (c.out !== undefined && c.in.every((v, k) => v === c.original?.[k]) ? { in: c.in, out: c.out } : { in: c.in }));
     }
+    const runLang = lang;
     setBusy(mode);
     setError(null);
     setBottomTab('result');
     try {
-      const r = await runTests(spec, code, tests);
+      const r = await runTests(spec, code, tests, runLang);
       setResult({ ...r, mode });
       const firstFail = r.tests.findIndex((t) => t.pass === false);
       setResultIdx(firstFail >= 0 ? firstFail : 0);
       if (mode === 'submit') {
         if (r.status === 'accepted') markSolved(slug);
-        const entry = {
+        addSub({
           at: Date.now(),
+          lang: runLang,
           status: r.status,
           passed: r.tests.filter((t) => t.pass).length,
           total: r.tests.length,
           time: r.time ?? null,
           code,
-        };
-        const next = [entry, ...subs].slice(0, MAX_SUBS);
-        setSubs(next);
-        writeJSON(subsKey(slug), next);
+        });
       }
     } catch (e) {
       setError(e.message);
@@ -144,7 +168,7 @@ export function ProblemSolver({ slug, compact = false }) {
 
   const reset = () => {
     if (window.confirm('Replace your code with the starter code?')) {
-      setCode(starterCode(spec));
+      setCode(langOf(lang).starter(spec));
       setResult(null);
     }
   };
@@ -178,9 +202,9 @@ export function ProblemSolver({ slug, compact = false }) {
         </div>
         <div className={styles.panelBody}>
           {leftTab === 'description' ? (
-            <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} />
+            <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} lang={lang} />
           ) : (
-            <Submissions subs={subs} onLoad={(c) => { setCode(c); setLeftTab('description'); }} />
+            <Submissions subs={subs} onLoad={(s) => { switchLang(s.lang, s.code); setLeftTab('description'); }} />
           )}
         </div>
       </section>
@@ -192,7 +216,16 @@ export function ProblemSolver({ slug, compact = false }) {
         <section className={`${styles.panel} ${styles.editorPanel}`}>
           <div className={styles.panelHead}>
             <span className={styles.headLabel}><Code2 size={14} aria-hidden="true" /> Code</span>
-            <span className={styles.lang}>Java 17</span>
+            <select
+              className={`${styles.lang} ${styles.langSelect}`}
+              value={lang}
+              onChange={(e) => switchLang(e.target.value)}
+              disabled={Boolean(busy)}
+              aria-label="Language"
+              title={LANGS[lang].version}
+            >
+              {LANG_IDS.map((id) => <option key={id} value={id}>{LANGS[id].label}</option>)}
+            </select>
             <div className={styles.actions}>
               <button type="button" className={styles.iconBtn} onClick={reset} title="Reset to starter code" aria-label="Reset to starter code">
                 <RotateCcw size={14} />
@@ -206,7 +239,7 @@ export function ProblemSolver({ slug, compact = false }) {
             </div>
           </div>
           <div className={styles.editorBody}>
-            <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} height="100%" />
+            <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} height="100%" language={lang} />
           </div>
         </section>
 
@@ -275,7 +308,17 @@ function TabButton({ active, onClick, icon: Icon, children }) {
   );
 }
 
-function Description({ spec, slug, examples, names, solved, compact }) {
+/** What each language provides beyond the language itself, as on LeetCode. */
+const LANG_NOTES = {
+  cpp: 'C++: every standard header is included, with using namespace std.',
+  python: 'Python: typing, collections, heapq, bisect, functools, itertools and math are imported.',
+  javascript: 'JavaScript: PriorityQueue, MinPriorityQueue, MaxPriorityQueue and Queue (datastructures-js) are available.',
+};
+
+function Description({ spec, slug, examples, names, solved, compact, lang }) {
+  const l = langOf(lang);
+  const hasPerf = spec.tests.some((t) => t.perf);
+  const testCount = l.perf ? spec.tests.length : spec.tests.filter((t) => !t.perf).length;
   return (
     <div className={styles.description}>
       <h1 className={styles.title}>{spec.title}</h1>
@@ -313,14 +356,16 @@ function Description({ spec, slug, examples, names, solved, compact }) {
       <div className={styles.judging}>
         <p className={styles.exampleTitle}>Judging</p>
         <ul>
-          <li>Submit runs {spec.tests.length} tests, including edge cases{spec.tests.some((t) => t.perf) ? ' and a large input that needs an efficient solution' : ''}.</li>
+          <li>Submit runs {testCount} tests, including edge cases{hasPerf && l.perf ? ' and a large input that needs an efficient solution' : ''}.</li>
+          {hasPerf && !l.perf && <li>The large-input timing test runs in Java only for now; in {l.label}, Submit checks every correctness test.</li>}
+          {LANG_NOTES[lang] && <li>{LANG_NOTES[lang]}</li>}
           {(spec.check === 'any-order' || spec.check === 'any-order-deep') && <li>The answer may be in any order.</li>}
           {spec.check?.startsWith('custom:') && <li>Any valid answer is accepted.</li>}
           <li>The statement and hints here are our own; LeetCode has the original wording.</li>
         </ul>
       </div>
       <p className={styles.mobileNote}>
-        Coding is easier on a larger screen. Your code is saved in this browser, so you can pick up where you left off.
+        Coding is easier on a larger screen. Your code is saved in this browser, and your submissions in your account when you are signed in.
       </p>
     </div>
   );
@@ -394,6 +439,7 @@ function Submissions({ subs, onLoad }) {
           <li key={s.at}>
             <button type="button" className={styles.subRow} onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
               <span className={`${styles.subStatus} ${styles[st.cls]}`}>{st.label}</span>
+              <span className={styles.subMeta}>{langOf(s.lang).label}</span>
               <span className={styles.subMeta}>{s.status === 'compile' ? '—' : `${s.passed}/${s.total} tests`}</span>
               <span className={styles.subMeta}>{s.time ? `${s.time}s` : ''}</span>
               <span className={styles.subMeta}>{new Date(s.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>
@@ -401,7 +447,7 @@ function Submissions({ subs, onLoad }) {
             {open === i && (
               <div className={styles.subCode}>
                 <pre>{s.code}</pre>
-                <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => { if (window.confirm('Replace the code in the editor with this submission?')) onLoad(s.code); }}>
+                <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => { if (window.confirm('Replace the code in the editor with this submission?')) onLoad(s); }}>
                   Load into editor
                 </button>
               </div>

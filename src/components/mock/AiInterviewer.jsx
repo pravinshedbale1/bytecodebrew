@@ -168,7 +168,7 @@ export function AiInterviewer({ type, prompt, chat, setChat, getContext }) {
 }
 
 /** Written feedback on the whole session (transcript, notes and the self-assessment). */
-export async function requestFeedback({ type, prompt, chat, notes, code = '', rubric, signal: hireSignal, seconds, onText }) {
+export async function requestFeedback({ type, prompt, chat, notes, code = '', codeLang = 'Java', rubric, signal: hireSignal, seconds, onText }) {
   const transcript = chat
     .filter((m) => !m.hidden)
     .map((m) => `${m.role === 'assistant' ? 'Interviewer' : 'Candidate'}: ${m.content}`)
@@ -180,7 +180,7 @@ Time used: ${mmss(seconds)} of ${type.minutes}:00
 
 Candidate's notes / scratchpad:
 ${notes.trim() || '(none)'}
-${code.trim() ? `\nCandidate's final code (Java):\n${code.trim()}\n` : ''}
+${code.trim() ? `\nCandidate's final code (${codeLang}):\n${code.trim()}\n` : ''}
 Transcript:
 ${transcript || '(no AI interviewer was used; judge from the notes)'}
 
