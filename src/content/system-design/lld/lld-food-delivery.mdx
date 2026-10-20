@@ -2,6 +2,90 @@
 
 "Design Swiggy/Zomato" in an LLD round is about the order pipeline inside one service: restaurants and menus, a cart with business rules, a price breakdown with coupons, an **order state machine** with cancellation rules, delivery-partner assignment, and notifications on every status change. It combines most of the patterns from earlier case studies, so it's a good test of whether you can **compose** them without the design turning into one giant service class.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="70" write={["A cart that only allows one restaurant", "Coupons as a strategy", "An order state machine (an enum is enough)"]} say={["Reserving limited stock when the order is placed", "Delivery fee by distance, and a price breakdown", "Assigning a delivery partner"]} skip={["Restaurant admin and menus", "Ratings, refunds and live tracking"]} />
+
+### The interview-sized version
+
+Cart rules, a coupon strategy and an order lifecycle that rejects impossible moves. It's about **70 lines**, and it compiles and runs.
+
+```java
+record MenuItem(String name, int price) { }
+
+class Restaurant {
+    final String id;
+    final Map<String, MenuItem> menu = new HashMap<>();
+    Restaurant(String id, List<MenuItem> items) { this.id = id; items.forEach(i -> menu.put(i.name(), i)); }
+}
+
+class Cart {                                          // the cart owns its own rules
+    private String restaurantId;
+    private final Map<MenuItem, Integer> lines = new LinkedHashMap<>();
+
+    void add(Restaurant r, String itemName, int qty) {
+        if (restaurantId != null && !restaurantId.equals(r.id)) throw new IllegalStateException("Cart has items from another restaurant");
+        MenuItem item = r.menu.get(itemName);
+        if (item == null) throw new IllegalArgumentException(itemName + " is not on the menu");
+        restaurantId = r.id;
+        lines.merge(item, qty, Integer::sum);
+    }
+
+    int subtotal() { return lines.entrySet().stream().mapToInt(e -> e.getKey().price() * e.getValue()).sum(); }
+    boolean isEmpty() { return lines.isEmpty(); }
+}
+
+interface Coupon {                                    // Strategy: each offer is one class
+    int discount(int subtotal);
+    Coupon NONE = subtotal -> 0;
+}
+
+record PercentOff(int percent, int maxDiscount) implements Coupon {
+    public int discount(int subtotal) { return Math.min(subtotal * percent / 100, maxDiscount); }
+}
+
+enum OrderStatus {                                    // an enum is enough for a simple state machine
+    PLACED, PREPARING, OUT_FOR_DELIVERY, DELIVERED, CANCELLED;
+
+    boolean canMoveTo(OrderStatus next) {
+        return switch (this) {
+            case PLACED -> next == PREPARING || next == CANCELLED;
+            case PREPARING -> next == OUT_FOR_DELIVERY || next == CANCELLED;
+            case OUT_FOR_DELIVERY -> next == DELIVERED;
+            case DELIVERED, CANCELLED -> false;
+        };
+    }
+}
+
+class Order {
+    final int id;
+    final int total;
+    OrderStatus status = OrderStatus.PLACED;
+    Order(int id, int total) { this.id = id; this.total = total; }
+
+    synchronized void moveTo(OrderStatus next) {
+        if (!status.canMoveTo(next)) throw new IllegalStateException("Can't go from " + status + " to " + next);
+        status = next;
+    }
+}
+
+class OrderService {
+    private int nextId = 1;
+
+    synchronized Order place(Cart cart, Coupon coupon) {
+        if (cart.isEmpty()) throw new IllegalArgumentException("Cart is empty");
+        int subtotal = cart.subtotal();
+        return new Order(nextId++, subtotal - coupon.discount(subtotal));
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

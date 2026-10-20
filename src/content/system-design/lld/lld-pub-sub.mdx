@@ -2,6 +2,81 @@
 
 "Design an in-memory pub-sub / message queue (like a mini Kafka)" is a hard machine-coding problem because it's mostly about **concurrency**: multiple publishers, multiple subscribers consuming at their own pace, ordering guarantees, offsets and replay. A clean answer shows producer–consumer done right.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="60" write={["Topics that keep messages in an append-only list", "One reader per subscriber with its own offset", "Subscribers on separate threads, so a slow one only slows itself"]} say={["Why a log (keep messages) beats a queue (delete on read)", "Retries and a dead-letter list for failing subscribers", "Starting from the beginning vs only new messages"]} skip={["Partitions, consumer groups and disk storage (that is Kafka, an HLD topic)"]} />
+
+### The interview-sized version
+
+Topics as logs, one offset per subscriber, and delivery that a slow subscriber can’t block. It's about **60 lines**, and it compiles and runs.
+
+```java
+interface Subscriber { void onMessage(String topic, String message); }
+
+class Topic {
+    final String name;
+    private final List<String> log = new ArrayList<>();     // messages are kept; each reader tracks its position
+
+    Topic(String name) { this.name = name; }
+
+    synchronized void publish(String message) {
+        log.add(message);
+        notifyAll();                                         // wake readers waiting for new messages
+    }
+
+    synchronized String read(int offset) throws InterruptedException {
+        while (offset >= log.size()) wait();                 // nothing new yet: wait
+        return log.get(offset);
+    }
+}
+
+class Subscription implements Runnable {                     // one per subscriber, on its own thread
+    private final Topic topic;
+    private final Subscriber subscriber;
+    private int offset = 0;                                  // the next message this subscriber will read
+
+    Subscription(Topic topic, Subscriber subscriber) { this.topic = topic; this.subscriber = subscriber; }
+
+    public void run() {
+        try {
+            while (true) {
+                String message = topic.read(offset);
+                subscriber.onMessage(topic.name, message);   // a slow subscriber only slows itself
+                offset++;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();              // shutdown
+        }
+    }
+}
+
+class Broker {
+    private final Map<String, Topic> topics = new ConcurrentHashMap<>();
+    private final List<Thread> workers = new CopyOnWriteArrayList<>();
+
+    void createTopic(String name) { topics.putIfAbsent(name, new Topic(name)); }
+    void publish(String topic, String message) { topic(topic).publish(message); }
+
+    void subscribe(String topic, Subscriber s) {
+        workers.add(Thread.ofVirtual().start(new Subscription(topic(topic), s)));
+    }
+
+    void shutdown() { workers.forEach(Thread::interrupt); }
+
+    private Topic topic(String name) {
+        Topic t = topics.get(name);
+        if (t == null) throw new IllegalArgumentException("No topic " + name);
+        return t;
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - Create topics; publishers publish messages to a topic.
@@ -127,6 +202,8 @@ public record Message(long offset, String key, byte[] payload, Instant timestamp
 
 ### Subscription worker: one thread (or task) per subscription
 
+<FullCode title="Show the full code: Subscription worker: one thread (or task) per subscription (41 lines)">
+
 ```java
 public final class SubscriptionWorker implements Runnable {
     private final Topic topic;
@@ -170,6 +247,8 @@ public final class SubscriptionWorker implements Runnable {
     public void stop() { running = false; }
 }
 ```
+
+</FullCode>
 
 <Callout type="warning" title="Seek and the in-flight batch">
 The worker reads a batch of up to 100 messages and then delivers them one by one. If the subscriber calls `seek(0)` halfway through, the compare-and-set correctly refuses to move the offset forward — but without the `break`, the loop would keep delivering the rest of the **old** batch first. The reference solution's test shows the difference: 36 stale messages delivered after a rewind without the check, at most one (the one already in flight) with it.

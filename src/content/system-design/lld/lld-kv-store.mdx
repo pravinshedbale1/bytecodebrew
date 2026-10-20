@@ -2,6 +2,55 @@
 
 "Build an in-memory key-value store that supports transactions" is a favourite machine-coding prompt because it starts trivially (`get`/`set`) and then goes deep fast: **nested transactions**, **rollback**, **isolation between clients**, **TTL**, and **lost updates** under concurrency. It's a miniature database, and the interviewer is checking whether you understand what a transaction actually promises.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="30" write={["`get`, `set`, `delete`", "A stack of change layers for nested BEGIN, COMMIT and ROLLBACK", "Deletes inside a transaction (store `null` as \"deleted\")"]} say={["Many clients at once: versions and optimistic checks at commit", "What isolation level this gives", "TTL on keys"]} skip={["Persistence, logs and recovery", "Replication"]} />
+
+### The interview-sized version
+
+Nested transactions with a stack of maps: the version most rounds expect, in about 40 lines. It's about **30 lines**, and it compiles and runs.
+
+```java
+class KvStore {
+    private final Map<String, String> data = new HashMap<>();
+    // One layer of changes per open BEGIN, newest first. A null value means "deleted in this layer".
+    private final Deque<Map<String, String>> transactions = new ArrayDeque<>();
+
+    String get(String key) {
+        for (Map<String, String> layer : transactions)       // newest layer wins
+            if (layer.containsKey(key)) return layer.get(key);
+        return data.get(key);
+    }
+
+    void set(String key, String value) { write(key, value); }
+    void delete(String key)            { write(key, null); }
+
+    void begin() { transactions.push(new HashMap<>()); }
+
+    void rollback() {
+        if (transactions.isEmpty()) throw new IllegalStateException("No transaction");
+        transactions.pop();                                  // just throw the layer away
+    }
+
+    void commit() {
+        if (transactions.isEmpty()) throw new IllegalStateException("No transaction");
+        Map<String, String> top = transactions.pop();
+        top.forEach(this::write);                            // fold into the parent layer, or the store
+    }
+
+    private void write(String key, String value) {
+        if (!transactions.isEmpty()) { transactions.peek().put(key, value); return; }
+        if (value == null) data.remove(key); else data.put(key, value);
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |
@@ -78,6 +127,8 @@ classDiagram
 
 ### The store: versions, one lock, atomic validate-and-apply
 
+<FullCode title="Show the full code: The store: versions, one lock, atomic validate-and-apply (55 lines)">
+
 ```java
 public final class KeyValueStore {
     private record Entry(String value, long version, Instant expiresAt) {
@@ -136,9 +187,13 @@ public record Write(Optional<String> value, Duration ttl) {               // emp
 }
 ```
 
+</FullCode>
+
 Why keep a **tombstone** on delete instead of removing the key? Its version. If A reads key `k` (absent, version 0), B creates and deletes `k`, and A then commits a write based on "k is absent" — with the tombstone, `k` is at a newer version and A's commit conflicts, as it should. Without it, the version would silently return to 0. (A background compactor can drop old tombstones once no transaction could still be holding their version.)
 
 ### The session: a stack of write layers
+
+<FullCode title="Show the full code: The session: a stack of write layers (42 lines)">
 
 ```java
 public final class Session {
@@ -184,6 +239,8 @@ public final class Session {
     }
 }
 ```
+
+</FullCode>
 
 That's the whole transaction engine. Notice what we **didn't** need: no undo log, no copying the whole map on `begin`. Buffering writes makes rollback free.
 

@@ -2,6 +2,75 @@
 
 Hotel booking looks like movie booking, but the resource is different: a seat is booked for **one show**; a room is booked for a **range of nights**. That turns availability into an **interval-overlap** problem, and it's where most candidates slip — off-by-one on checkout day, O(n) scans of every booking, or double bookings under concurrency.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="50" write={["Half-open date ranges (you leave on the check-out day)", "Search free rooms of a type, then book one", "`synchronized` booking so a room is never sold twice"]} say={["A sorted calendar per room for fast availability checks", "A lock per room instead of one global lock", "Weekend pricing and cancellation rules as strategies"]} skip={["Payments and loyalty points", "Overbooking policies"]} />
+
+### The interview-sized version
+
+The date-range rule and an atomic check-and-book. Most bugs in this problem live in those two places. It's about **50 lines**, and it compiles and runs.
+
+```java
+record DateRange(LocalDate checkIn, LocalDate checkOut) {            // [checkIn, checkOut): you leave on checkOut
+    DateRange {
+        if (!checkOut.isAfter(checkIn)) throw new IllegalArgumentException("Stay at least one night");
+    }
+    boolean overlaps(DateRange o) { return checkIn.isBefore(o.checkOut) && o.checkIn.isBefore(checkOut); }
+    long nights() { return ChronoUnit.DAYS.between(checkIn, checkOut); }
+}
+
+enum RoomType { STANDARD, DELUXE }
+
+class Room {
+    final String number;
+    final RoomType type;
+    final int pricePerNight;
+    final List<Booking> bookings = new ArrayList<>();
+
+    Room(String number, RoomType type, int pricePerNight) { this.number = number; this.type = type; this.pricePerNight = pricePerNight; }
+
+    boolean isFree(DateRange dates) {
+        return bookings.stream().filter(b -> b.active).noneMatch(b -> b.dates.overlaps(dates));
+    }
+}
+
+class Booking {
+    final String guest;
+    final Room room;
+    final DateRange dates;
+    boolean active = true;
+
+    Booking(String guest, Room room, DateRange dates) { this.guest = guest; this.room = room; this.dates = dates; }
+    int price() { return (int) dates.nights() * room.pricePerNight; }
+}
+
+class Hotel {
+    private final List<Room> rooms;
+    Hotel(List<Room> rooms) { this.rooms = rooms; }
+
+    synchronized List<Room> search(RoomType type, DateRange dates) {
+        return rooms.stream().filter(r -> r.type == type && r.isFree(dates)).toList();
+    }
+
+    // synchronized: "is it free?" and "book it" happen as one step, so two guests can't get the same room
+    synchronized Booking book(String guest, RoomType type, DateRange dates) {
+        Room room = search(type, dates).stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("No " + type + " room for those dates"));
+        Booking booking = new Booking(guest, room, dates);
+        room.bookings.add(booking);
+        return booking;
+    }
+
+    synchronized void cancel(Booking booking) { booking.active = false; }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

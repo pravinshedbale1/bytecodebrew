@@ -1,4 +1,44 @@
-**Intent:** convert the interface of a class into another interface clients expect, so classes with incompatible interfaces can work together.
+## The idea in plain words
+
+Your code expects one interface. A class you want to use, often from a third-party library, offers a **different** one. An **Adapter** is a small wrapper that translates between them, so neither side has to change.
+
+**Picture it:** a travel plug adapter. Your Indian charger has round pins, the hotel wall in London has square holes. You don't rewire the charger or the wall. You put a small adapter in between.
+
+### The smallest example
+
+```java
+interface PaymentGateway { boolean pay(String orderId, long paise); }   // what our code expects
+
+class QuickPaySdk {                                                    // third-party: we can't edit it
+    String makePayment(double rupees, String reference) { return "SUCCESS"; }
+}
+
+class QuickPayAdapter implements PaymentGateway {
+    private final QuickPaySdk sdk = new QuickPaySdk();
+
+    public boolean pay(String orderId, long paise) {
+        String status = sdk.makePayment(paise / 100.0, orderId);   // translate units and argument order
+        return status.equals("SUCCESS");                            // translate the answer back
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        PaymentGateway gateway = new QuickPayAdapter();             // checkout only sees PaymentGateway
+        System.out.println(gateway.pay("ORD-7", 49_900));           // true
+    }
+}
+```
+
+If you switch to another provider later, you write one more adapter. Checkout code stays the same.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You must plug in code whose interface you can't change (SDKs, legacy modules) | You own both sides: just change the interface |
+
+The rest of this lesson shows a realistic integration and how Adapter differs from Facade, Proxy and Decorator.
+
+**The textbook definition:** convert the interface of a class into another interface clients expect, so classes with incompatible interfaces can work together.
 
 Adapter is one of the most practical patterns in real systems: every time you integrate a third-party SDK, a legacy module or an external API, you're writing an adapter — whether you call it that or not.
 

@@ -1,5 +1,19 @@
 SOLID gets the attention, but a few older, simpler principles do most of the work in day-to-day design — and they're the ideas design patterns are built from. If you understand these, most patterns stop feeling like recipes to memorise and start feeling like obvious consequences.
 
+## The principles in one line each
+
+| Principle | In plain words |
+| --- | --- |
+| Encapsulate what varies | Put the part that keeps changing in its own box, so changes stay inside that box |
+| Program to an interface | Depend on *what* something does (`Notifier`), not *which* class does it (`EmailNotifier`) |
+| Composition over inheritance | Build objects out of smaller objects you can swap, instead of deep family trees of classes |
+| High cohesion, low coupling | Things that belong together stay together; separate parts know little about each other |
+| DRY, KISS, YAGNI | Don't repeat yourself, keep it simple, and don't build what nobody has asked for yet |
+| Law of Demeter | Talk to your direct friends only: `order.total()`, not `order.getCart().getItems().get(0).getPrice()` |
+| Tell, don't ask | Ask an object to do the job (`account.withdraw(100)`) instead of pulling its data out and doing it yourself |
+
+Each one is explained below with a short before-and-after.
+
 ## Encapsulate what varies
 
 > Identify the aspects of your application that vary and separate them from what stays the same.

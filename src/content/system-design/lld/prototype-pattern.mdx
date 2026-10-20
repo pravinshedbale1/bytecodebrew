@@ -1,4 +1,41 @@
-**Intent:** create new objects by **copying an existing object** (the prototype), without making your code depend on the object's concrete class.
+## The idea in plain words
+
+Sometimes the easiest way to make a new object is to **copy one you already have**, then change a little. Prototype gives objects a `copy()` method, so you can duplicate them even when you only know their interface, not their exact class.
+
+**Picture it:** a teacher fills in one permission slip, photocopies it for the whole class, and each student only writes their own name.
+
+### The smallest example
+
+```java
+interface Shape { Shape copy(); }
+
+class Circle implements Shape {
+    int x, y, radius;
+    String color;
+
+    Circle(int x, int y, int radius, String color) { this.x = x; this.y = y; this.radius = radius; this.color = color; }
+    public Shape copy() { return new Circle(x, y, radius, color); }   // the object copies itself
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Shape original = new Circle(0, 0, 10, "red");
+        Circle twin = (Circle) original.copy();     // we only held a Shape, and still got a Circle
+        twin.x = 50;                                 // changing the copy...
+        System.out.println(((Circle) original).x);   // ...leaves the original alone: 0
+    }
+}
+```
+
+The object knows its own class and fields, so it is the best one to copy itself.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Objects are costly to set up, or you hold many pre-configured "templates" to stamp out | A constructor call is cheap and you know the class |
+
+The tricky part is **shallow vs deep copy**: what happens to lists and other objects inside. That is what the rest of this lesson, and interviewers, focus on.
+
+**The textbook definition:** create new objects by **copying an existing object** (the prototype), without making your code depend on the object's concrete class.
 
 ## The problem
 

@@ -1,5 +1,16 @@
 Every design pattern and every LLD answer is built from a handful of object-oriented ideas. Interviewers probe them directly ("What's the difference between an abstract class and an interface?") and indirectly, through the quality of your models. This lesson covers the four pillars with Java examples, then the practical details that separate solid OO code from textbook OO code: interfaces vs abstract classes, `equals`/`hashCode`, and immutability.
 
+## The four ideas in plain words
+
+| Idea | In plain words | Everyday picture |
+| --- | --- | --- |
+| **Encapsulation** | An object keeps its data private and lets others change it only through its own methods | At an ATM you press buttons; you can't reach into the cash box |
+| **Abstraction** | Show what something does, hide how it does it | You drive with a steering wheel and pedals, not by touching the engine |
+| **Inheritance** | A new class reuses and extends an existing one ("is a kind of") | A savings account is a kind of bank account, with interest added |
+| **Polymorphism** | One call, many behaviours: the object decides what the call means | "Pay ₹250" works with UPI, card or cash; each pays its own way |
+
+The rest of this lesson shows each one in Java, then the details interviewers like to probe.
+
 ## Objects and classes
 
 A **class** is a blueprint that defines **state** (fields) and **behaviour** (methods). An **object** is an instance with its own state. Good OO design is about deciding *which object owns which data and which behaviour* — keeping data and the logic that uses it together.

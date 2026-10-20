@@ -1,4 +1,43 @@
-**Intent:** define a **one-to-many** dependency so that when one object (the **subject** or publisher) changes state, all its dependents (**observers** or subscribers) are notified automatically.
+## The idea in plain words
+
+When something happens to one object, several other objects want to know. With **Observer**, they **subscribe** to that object, and it notifies all of them, without knowing who they are or what they'll do.
+
+**Picture it:** pressing the bell icon on a YouTube channel. When a new video goes up, every subscriber gets told. The channel doesn't call people one by one; it just announces.
+
+### The smallest example
+
+```java
+interface Subscriber { void onNewVideo(String title); }
+
+class Channel {
+    private final List<Subscriber> subscribers = new ArrayList<>();
+    void subscribe(Subscriber s) { subscribers.add(s); }
+
+    void upload(String title) {
+        System.out.println("Uploaded: " + title);
+        for (Subscriber s : subscribers) s.onNewVideo(title);    // tell everyone
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Channel channel = new Channel();
+        channel.subscribe(title -> System.out.println("Asha gets a push notification: " + title));
+        channel.subscribe(title -> System.out.println("Ravi's home feed shows: " + title));
+        channel.upload("LLD in 10 minutes");
+    }
+}
+```
+
+The channel never changes when a new kind of subscriber (email digest, analytics) is added.
+
+| Use it when | Skip it when |
+| --- | --- |
+| One change should trigger several independent reactions (display boards, notifications, audit logs) | Exactly one thing reacts, always: call it directly |
+
+The rest of this lesson covers what goes in an event, unsubscribing, slow subscribers and thread safety.
+
+**The textbook definition:** define a **one-to-many** dependency so that when one object (the **subject** or publisher) changes state, all its dependents (**observers** or subscribers) are notified automatically.
 
 Observer is the in-process ancestor of event-driven architecture: listeners, event buses, reactive streams and pub-sub all build on it.
 

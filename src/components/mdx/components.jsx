@@ -31,6 +31,8 @@ import { StackedBar } from './StackedBar';
 import { SolvedToggle } from './SolvedToggle';
 import { ProblemTracker } from './ProblemTracker';
 import { Quiz } from './Quiz';
+import { FullCode } from './FullCode';
+import { InterviewScope } from './InterviewScope';
 import { problemSlug } from '../../hooks/useSolved';
 import { useLessonKey } from '../lesson/LessonContext';
 import { openInPlayground } from '../../lib/playground';
@@ -150,4 +152,6 @@ export const mdxComponents = {
   StackedBar,
   ProblemTracker,
   Quiz,
+  FullCode,
+  InterviewScope,
 };

@@ -2,6 +2,93 @@
 
 "Design Uber/Ola" as an **LLD** round is about the objects inside the matching service: riders, drivers, rides, a way to find nearby drivers fast, a ride lifecycle, fares — and the race every interviewer asks about: **two riders matched to the same driver at the same moment**. (The distributed version — location ingestion at scale, geo-sharding — is the HLD case study [Design a Ride-Sharing Service](/system-design/hld/design-ride-hailing).)
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="70" write={["Rider, Driver and Ride, with ride states", "A `MatchingStrategy` (nearest first) and a `FareStrategy`", "An atomic claim so a driver gets only one ride"]} say={["A grid index to find nearby drivers fast", "Surge pricing as a decorator over the fare", "Driver accept/reject and timeouts"]} skip={["Maps, routes and real ETAs", "Payments and ratings"]} />
+
+### The interview-sized version
+
+Nearest-driver matching, a ride state machine and a compare-and-set that prevents double assignment. It's about **70 lines**, and it compiles and runs.
+
+```java
+record Location(double x, double y) {
+    double distanceTo(Location o) { return Math.hypot(x - o.x, y - o.y); }   // km, on a flat map
+}
+
+enum DriverStatus { AVAILABLE, ON_TRIP }
+enum RideStatus { ASSIGNED, STARTED, COMPLETED, CANCELLED }
+
+class Driver {
+    final String id;
+    volatile Location location;
+    final AtomicReference<DriverStatus> status = new AtomicReference<>(DriverStatus.AVAILABLE);
+    Driver(String id, Location location) { this.id = id; this.location = location; }
+}
+
+class Ride {
+    final String rider;
+    final Driver driver;
+    final Location pickup, drop;
+    RideStatus status = RideStatus.ASSIGNED;
+
+    Ride(String rider, Driver driver, Location pickup, Location drop) { this.rider = rider; this.driver = driver; this.pickup = pickup; this.drop = drop; }
+
+    synchronized void start()    { moveTo(RideStatus.STARTED, RideStatus.ASSIGNED); }
+    synchronized void complete() { moveTo(RideStatus.COMPLETED, RideStatus.STARTED); }
+    synchronized void cancel()   { moveTo(RideStatus.CANCELLED, RideStatus.ASSIGNED); driver.status.set(DriverStatus.AVAILABLE); }
+
+    private void moveTo(RideStatus next, RideStatus required) {
+        if (status != required) throw new IllegalStateException("Can't go from " + status + " to " + next);
+        status = next;
+    }
+}
+
+interface MatchingStrategy { List<Driver> rank(Collection<Driver> drivers, Location pickup); }
+
+class NearestFirst implements MatchingStrategy {
+    public List<Driver> rank(Collection<Driver> drivers, Location pickup) {
+        return drivers.stream()
+                .filter(d -> d.status.get() == DriverStatus.AVAILABLE)
+                .sorted(Comparator.comparingDouble(d -> d.location.distanceTo(pickup)))
+                .toList();
+    }
+}
+
+interface FareStrategy { int fare(double km); }
+
+record PerKmFare(int base, int perKm) implements FareStrategy {
+    public int fare(double km) { return base + (int) Math.ceil(km) * perKm; }
+}
+
+class RideService {
+    private final Map<String, Driver> drivers = new ConcurrentHashMap<>();
+    private final MatchingStrategy matching;
+    private final FareStrategy fares;
+
+    RideService(MatchingStrategy matching, FareStrategy fares) { this.matching = matching; this.fares = fares; }
+    void addDriver(Driver d) { drivers.put(d.id, d); }
+
+    Ride request(String rider, Location pickup, Location drop) {
+        for (Driver d : matching.rank(drivers.values(), pickup))
+            if (d.status.compareAndSet(DriverStatus.AVAILABLE, DriverStatus.ON_TRIP))   // atomic claim: one ride per driver
+                return new Ride(rider, d, pickup, drop);
+        throw new IllegalStateException("No driver available");
+    }
+
+    int complete(Ride ride) {
+        ride.complete();
+        ride.driver.status.set(DriverStatus.AVAILABLE);
+        return fares.fare(ride.pickup.distanceTo(ride.drop));
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

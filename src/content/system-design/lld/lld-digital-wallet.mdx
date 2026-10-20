@@ -2,6 +2,76 @@
 
 A digital wallet (Paytm, PhonePe, Amazon Pay balance) is the LLD problem where **correctness is money**. The interviewer is looking for four things: transfers that are **atomic** and **deadlock-free**, requests that are **idempotent** (a retried tap must not pay twice), a **ledger** from which every balance can be proven, and limits and refunds handled without ever editing history.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="50" write={["Accounts and a ledger: every transfer writes a debit and a credit", "Transfers that lock both accounts in a fixed order", "Idempotency: a retried request never pays twice"]} say={["Why a ledger beats just changing balances", "Limits by KYC level, freezing and refunds", "Daily reconciliation"]} skip={["Bank and UPI integration", "Currencies"]} />
+
+### The interview-sized version
+
+Double-entry records, deadlock-free locking and idempotent transfers: the three things this problem tests. It's about **50 lines**, and it compiles and runs.
+
+```java
+class Account {
+    final String id;
+    long balance;                                        // in paise; changed only while holding this account's lock
+    Account(String id) { this.id = id; }
+}
+
+record Entry(String txnId, String accountId, long amount) { }   // + credit, − debit; every transfer writes two
+
+class Wallet {
+    private final Map<String, Account> accounts = new ConcurrentHashMap<>();
+    private final List<Entry> ledger = new CopyOnWriteArrayList<>();
+    private final Map<String, String> finished = new ConcurrentHashMap<>();   // request id -> txn id
+    private int nextTxn = 1;
+
+    void open(String id) { accounts.putIfAbsent(id, new Account(id)); }
+
+    void addMoney(String id, long amount) {
+        Account a = account(id);
+        synchronized (a) { a.balance += amount; ledger.add(new Entry("topup", id, amount)); }
+    }
+
+    String transfer(String from, String to, long amount, String requestId) {
+        if (amount <= 0 || from.equals(to)) throw new IllegalArgumentException("Bad transfer");
+        Account a = account(from), b = account(to);
+        Account first = from.compareTo(to) < 0 ? a : b;  // always lock in id order, so A→B and B→A can't deadlock
+        Account second = first == a ? b : a;
+        synchronized (first) {
+            synchronized (second) {
+                String done = finished.get(requestId);
+                if (done != null) return done;           // a retried tap: return the first result, don't pay again
+                if (a.balance < amount) throw new IllegalStateException("Insufficient funds");
+                String txn = "T" + nextTxnId();
+                a.balance -= amount;
+                b.balance += amount;
+                ledger.add(new Entry(txn, from, -amount));
+                ledger.add(new Entry(txn, to, amount));
+                finished.put(requestId, txn);
+                return txn;
+            }
+        }
+    }
+
+    long balance(String id) { Account a = account(id); synchronized (a) { return a.balance; } }
+    List<Entry> statement(String id) { return ledger.stream().filter(e -> e.accountId().equals(id)).toList(); }
+
+    private synchronized int nextTxnId() { return nextTxn++; }
+
+    private Account account(String id) {
+        Account a = accounts.get(id);
+        if (a == null) throw new IllegalArgumentException("No account " + id);
+        return a;
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

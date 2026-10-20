@@ -1,3 +1,51 @@
+## The idea in plain words
+
+A **factory** is one place in your code whose job is to create objects. The rest of the code asks the factory for "a notifier for SMS" and gets one back, without knowing or caring which class was used.
+
+**Picture it:** at a tea stall you say "one masala chai". You don't boil the milk yourself or pick the pan. If the stall changes its recipe tomorrow, you still order the same way.
+
+### The smallest example
+
+```java
+interface Notifier { void send(String to, String msg); }
+
+class EmailNotifier implements Notifier {
+    public void send(String to, String msg) { System.out.println("Email to " + to + ": " + msg); }
+}
+class SmsNotifier implements Notifier {
+    public void send(String to, String msg) { System.out.println("SMS to " + to + ": " + msg); }
+}
+
+class NotifierFactory {
+    static Notifier create(String channel) {              // the only place that says "new"
+        return switch (channel) {
+            case "email" -> new EmailNotifier();
+            case "sms"   -> new SmsNotifier();
+            default -> throw new IllegalArgumentException("Unknown channel: " + channel);
+        };
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        NotifierFactory.create("sms").send("98450 12345", "Your OTP is 4821");
+    }
+}
+```
+
+Adding WhatsApp means one new class and one new line in the factory. No caller changes.
+
+That example is a **Simple Factory**. Two more "factory" patterns build on the same idea:
+
+- **Factory Method:** the "create" step is a method that **subclasses override**. A `Dialog` calls `createButton()`; a `WindowsDialog` returns a Windows button.
+- **Abstract Factory:** one object that creates a **matching set** of things. A `DarkTheme` factory makes a dark button, a dark checkbox and a dark menu, so you never mix themes by accident.
+
+| Use a factory when | Skip it when |
+| --- | --- |
+| Which class to create depends on input or configuration, or creating is more than one line | There's only one class and a plain `new` reads fine |
+
+Here is how the three compare, and when interviewers expect each one.
+
 Three related ideas share the word "factory". Interviewers expect you to distinguish them:
 
 | | Simple Factory | Factory Method (GoF) | Abstract Factory (GoF) |
@@ -63,7 +111,7 @@ public final class NotifierRegistry {
 
 ## Factory Method
 
-**Intent:** define an interface for creating an object, but let **subclasses** decide which class to instantiate.
+**The textbook definition:** define an interface for creating an object, but let **subclasses** decide which class to instantiate.
 
 ### The problem
 

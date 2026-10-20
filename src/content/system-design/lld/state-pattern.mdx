@@ -1,4 +1,49 @@
-**Intent:** allow an object to **alter its behaviour when its internal state changes** — the object appears to change its class.
+## The idea in plain words
+
+Some objects **behave differently depending on their current state**. Cancelling an order is easy before it ships and impossible after. Instead of an `if (status == ...)` in every method, **each state becomes a small class** that knows how to handle each action and which state comes next.
+
+**Picture it:** your phone's power button. When the phone is off it turns on, when it's unlocked it locks the screen, when it's ringing it silences the call. Same button, different behaviour, decided by the state the phone is in.
+
+### The smallest example
+
+```java
+interface OrderState { OrderState cancel(); }
+
+class Placed implements OrderState {
+    public OrderState cancel() { System.out.println("Cancelled. Full refund."); return new Cancelled(); }
+}
+class Shipped implements OrderState {
+    public OrderState cancel() { System.out.println("Already shipped. Please return it after delivery."); return this; }
+}
+class Cancelled implements OrderState {
+    public OrderState cancel() { System.out.println("This order is already cancelled."); return this; }
+}
+
+class Order {
+    private OrderState state;
+    Order(OrderState start) { state = start; }
+    void cancel() { state = state.cancel(); }         // same call; the current state decides what happens
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Order a = new Order(new Placed());
+        a.cancel();                                    // Cancelled. Full refund.
+        a.cancel();                                    // This order is already cancelled.
+        new Order(new Shipped()).cancel();             // Already shipped. Please return it after delivery.
+    }
+}
+```
+
+`Order` has no `if` at all. A new state like `OutForDelivery` is one new class.
+
+| Use it when | Skip it when |
+| --- | --- |
+| The allowed actions depend on a "mode" and the rules keep growing (vending machine, ATM, order, elevator) | Two or three states with simple rules: an enum and a `switch` are clearer |
+
+The rest of this lesson builds a full state machine, the kind used in vending machine and ATM rounds.
+
+**The textbook definition:** allow an object to **alter its behaviour when its internal state changes** — the object appears to change its class.
 
 State is the backbone of many machine-coding problems: vending machines, ATMs, elevators, orders, document workflows, game turns, traffic lights. If an object's valid operations depend on what "mode" it's in, think State.
 
@@ -69,6 +114,8 @@ classDiagram
   VendingState <|.. OutOfServiceState
 ```
 
+<FullCode title="The full vending machine states (64 lines)" note="one class per state, transitions inside them">
+
 ```java
 public interface VendingState {
     default void insertCoin(VendingMachine m, Coin c)        { throw invalid("insert a coin"); }
@@ -135,6 +182,8 @@ public final class VendingMachine {
     // ... balance and inventory helpers
 }
 ```
+
+</FullCode>
 
 Each state class answers one question: *what does each operation mean in this state?* Invalid operations fall through to the `default` methods that throw a clear error.
 

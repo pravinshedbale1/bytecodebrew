@@ -2,6 +2,94 @@
 
 Chess is the richest classic LLD problem: a polymorphic piece hierarchy, move validation with many special cases, check/checkmate detection, and undo — all of which reward clean responsibility assignment. You won't implement every rule in an interview; you need a design where every rule has an obvious home.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="70" write={["A `Piece` base class where each piece checks its own move shape", "A `Board` with a \"path is clear\" check for sliding pieces", "A `Game` that enforces turns and captures"]} say={["Check: \"after this move, is my king attacked?\"", "Pawn rules, then castling, en passant and promotion", "Undo by storing moves (Command)"]} skip={["Checkmate and stalemate detection, unless asked", "Clocks, notation (PGN) and an engine"]} />
+
+### The interview-sized version
+
+Pieces, board and turns. Interviewers want to see how you split move rules between pieces and the board. It's about **70 lines**, and it compiles and runs.
+
+```java
+enum Color { WHITE, BLACK }
+
+record Pos(int row, int col) {
+    boolean onBoard() { return row >= 0 && row < 8 && col >= 0 && col < 8; }
+}
+
+abstract class Piece {                            // each piece knows the shape of its own moves
+    final Color color;
+    Piece(Color color) { this.color = color; }
+    abstract boolean canMove(Board board, Pos from, Pos to);
+}
+
+class Rook extends Piece {
+    Rook(Color c) { super(c); }
+    boolean canMove(Board b, Pos from, Pos to) {
+        return (from.row() == to.row() || from.col() == to.col()) && b.pathClear(from, to);
+    }
+}
+
+class Bishop extends Piece {
+    Bishop(Color c) { super(c); }
+    boolean canMove(Board b, Pos from, Pos to) {
+        return Math.abs(from.row() - to.row()) == Math.abs(from.col() - to.col()) && b.pathClear(from, to);
+    }
+}
+
+class Knight extends Piece {                      // jumps, so no path check
+    Knight(Color c) { super(c); }
+    boolean canMove(Board b, Pos from, Pos to) {
+        return Math.abs(from.row() - to.row()) * Math.abs(from.col() - to.col()) == 2;
+    }
+}
+
+class King extends Piece {
+    King(Color c) { super(c); }
+    boolean canMove(Board b, Pos from, Pos to) {
+        return Math.max(Math.abs(from.row() - to.row()), Math.abs(from.col() - to.col())) == 1;
+    }
+}
+
+class Board {
+    private final Piece[][] grid = new Piece[8][8];
+    Piece at(Pos p) { return grid[p.row()][p.col()]; }
+    void put(Pos p, Piece piece) { grid[p.row()][p.col()] = piece; }
+
+    boolean pathClear(Pos from, Pos to) {         // every square strictly between from and to is empty
+        int dr = Integer.signum(to.row() - from.row()), dc = Integer.signum(to.col() - from.col());
+        for (Pos p = new Pos(from.row() + dr, from.col() + dc); !p.equals(to); p = new Pos(p.row() + dr, p.col() + dc))
+            if (at(p) != null) return false;
+        return true;
+    }
+}
+
+class Game {
+    private final Board board;
+    private Color turn = Color.WHITE;
+    Game(Board board) { this.board = board; }
+
+    Piece move(Pos from, Pos to) {                // returns the captured piece, or null
+        if (!from.onBoard() || !to.onBoard() || from.equals(to)) throw new IllegalArgumentException("Bad squares");
+        Piece piece = board.at(from);
+        if (piece == null || piece.color != turn) throw new IllegalArgumentException("No " + turn + " piece there");
+        Piece target = board.at(to);
+        if (target != null && target.color == turn) throw new IllegalArgumentException("Your own piece is there");
+        if (!piece.canMove(board, from, to)) throw new IllegalArgumentException("Illegal move");
+        board.put(to, piece);
+        board.put(from, null);
+        turn = turn == Color.WHITE ? Color.BLACK : Color.WHITE;
+        return target;
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - 8×8 board; two players (white, black) alternate moves.
@@ -101,6 +189,8 @@ public record Position(int file, int rank) {                 // file a–h = 0�
 
 Rook, bishop and queen differ only in **directions**; express that once:
 
+<FullCode title="Show the full code: Sliding pieces share logic (51 lines)">
+
 ```java
 public abstract class Piece {
     private final Color color;
@@ -154,6 +244,8 @@ public final class Bishop extends SlidingPiece {
 
 public final class Queen extends SlidingPiece { /* union of rook and bishop directions */ }
 ```
+
+</FullCode>
 
 Knight and king use fixed offsets (a shared `StepPiece` base class); the pawn is the special one (direction depends on colour, double step from the start rank, diagonal captures, promotion on the last rank). Its `attacks` must return only the **diagonal** squares, because pawns don't capture forward:
 

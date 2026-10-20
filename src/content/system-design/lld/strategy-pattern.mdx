@@ -1,4 +1,44 @@
-**Intent:** define a **family of algorithms**, encapsulate each one behind a common interface, and make them **interchangeable** — so the algorithm can vary independently from the code that uses it.
+## The idea in plain words
+
+There are **several ways to do the same job**. Put each way in its own class behind one shared interface, and choose which one to use at runtime. The code that needs the job done only knows the interface.
+
+**Picture it:** paying at a shop. The shopkeeper just says "₹250, please". Whether you pay by UPI, card or cash is your choice, and the shop's billing doesn't change.
+
+### The smallest example
+
+```java
+interface PaymentMethod { void pay(int amount); }
+
+class Upi implements PaymentMethod {
+    public void pay(int amount) { System.out.println("Paid ₹" + amount + " by UPI"); }
+}
+class Card implements PaymentMethod {
+    public void pay(int amount) { System.out.println("Paid ₹" + (amount + amount * 2 / 100) + " by card (2% fee)"); }
+}
+
+class Checkout {
+    private final PaymentMethod method;
+    Checkout(PaymentMethod method) { this.method = method; }
+    void complete(int amount) { method.pay(amount); }    // doesn't know or care which method it has
+}
+
+class Demo {
+    public static void main(String[] args) {
+        new Checkout(new Upi()).complete(250);    // Paid ₹250 by UPI
+        new Checkout(new Card()).complete(250);   // Paid ₹255 by card (2% fee)
+    }
+}
+```
+
+Adding wallet payments is a new class. `Checkout` never changes, and each method can be tested alone.
+
+| Use it when | Skip it when |
+| --- | --- |
+| A requirement says "it can be done in different ways": pricing, splitting, matching, routing, ranking | There is one way and no sign of a second |
+
+The rest of this lesson uses a parking-lot pricing problem.
+
+**The textbook definition:** define a **family of algorithms**, encapsulate each one behind a common interface, and make them **interchangeable** — so the algorithm can vary independently from the code that uses it.
 
 Strategy is the single most useful pattern in LLD interviews. Pricing, allocation, splitting, routing, ranking, retry, scheduling — whenever a requirement says "it can be done in different ways", Strategy is the answer.
 

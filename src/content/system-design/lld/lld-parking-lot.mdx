@@ -2,6 +2,79 @@
 
 The parking lot is the most frequently asked LLD problem. It's small enough to finish, yet it tests modelling, the Strategy pattern, extensibility (new vehicle types, pricing rules) and — the part most candidates miss — **concurrency at entry gates**.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="60" write={["Vehicle, Spot and Ticket as small classes or records", "A `PricingStrategy` interface with an hourly version", "`park()` and `unpark()` in one service, made `synchronized`"]} say={["Floors and spot sizes (\"a bike may use a car spot\")", "Why one lock is fine at first, and a lock per floor scales better", "Payment behind an interface, called outside the lock"]} skip={["Display boards, reservations, EV charging", "Repositories and databases", "Lost tickets and monthly passes"]} />
+
+### The interview-sized version
+
+One lot, one lock, one pricing strategy. It parks, unparks, charges by the hour and never gives a spot twice. It's about **60 lines**, and it compiles and runs.
+
+```java
+enum VehicleType { BIKE, CAR, TRUCK }
+
+record Vehicle(String plate, VehicleType type) { }
+
+record Ticket(int id, Vehicle vehicle, ParkingSpot spot, long entryMillis) { }
+
+class ParkingSpot {
+    final int id;
+    final VehicleType type;                    // keep it simple: one vehicle type per spot
+    private Vehicle parked;                    // null when free
+
+    ParkingSpot(int id, VehicleType type) { this.id = id; this.type = type; }
+    boolean isFree() { return parked == null; }
+    void park(Vehicle v) { parked = v; }
+    void free() { parked = null; }
+}
+
+interface PricingStrategy { int fee(Ticket ticket, long exitMillis); }
+
+class HourlyPricing implements PricingStrategy {
+    private final Map<VehicleType, Integer> ratePerHour;
+    HourlyPricing(Map<VehicleType, Integer> ratePerHour) { this.ratePerHour = ratePerHour; }
+
+    public int fee(Ticket t, long exitMillis) {
+        long hours = Math.max(1, (exitMillis - t.entryMillis() + 3_599_999) / 3_600_000);   // round up, minimum 1
+        return (int) hours * ratePerHour.get(t.vehicle().type());
+    }
+}
+
+class ParkingLot {
+    private final List<ParkingSpot> spots;
+    private final PricingStrategy pricing;
+    private final Map<Integer, Ticket> active = new HashMap<>();
+    private int nextTicketId = 1;
+
+    ParkingLot(List<ParkingSpot> spots, PricingStrategy pricing) { this.spots = spots; this.pricing = pricing; }
+
+    // synchronized: two entry gates can never take the same spot
+    synchronized Ticket park(Vehicle v, long nowMillis) {
+        ParkingSpot spot = spots.stream()
+                .filter(s -> s.isFree() && s.type == v.type())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No free spot for " + v.type()));
+        spot.park(v);
+        Ticket ticket = new Ticket(nextTicketId++, v, spot, nowMillis);
+        active.put(ticket.id(), ticket);
+        return ticket;
+    }
+
+    synchronized int unpark(int ticketId, long nowMillis) {
+        Ticket ticket = active.remove(ticketId);
+        if (ticket == null) throw new IllegalArgumentException("Unknown or used ticket " + ticketId);
+        ticket.spot().free();
+        return pricing.fee(ticket, nowMillis);
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Clarify requirements
 
 | Question | Assumption |
@@ -172,6 +245,8 @@ public final class SmallestFitFirst implements SpotAllocationStrategy {
 
 ### Floor — atomic allocation
 
+<FullCode title="Show the full code: Floor — atomic allocation (41 lines)">
+
 ```java
 public final class Floor {
     private final int number;
@@ -216,6 +291,8 @@ public final class Floor {
 }
 ```
 
+</FullCode>
+
 A **lock per floor** keeps contention low (gates allocating on different floors don't block each other) while keeping the check-then-act on spots atomic.
 
 ### Pricing strategies
@@ -244,6 +321,8 @@ public final class FlatRatePricing implements PricingStrategy {
 ```
 
 ### The service (façade over the use cases)
+
+<FullCode title="Show the full code: The service (façade over the use cases) (63 lines)">
 
 ```java
 public final class ParkingService {
@@ -310,6 +389,8 @@ public final class ParkingService {
     }
 }
 ```
+
+</FullCode>
 
 ### Repository
 

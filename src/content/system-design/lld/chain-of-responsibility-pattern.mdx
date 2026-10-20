@@ -1,4 +1,52 @@
-**Intent:** pass a request along a **chain of handlers**. Each handler decides either to process the request, to pass it to the next handler — or both — so the sender doesn't need to know which handler will deal with it.
+## The idea in plain words
+
+A request passes along a **line of handlers**. Each handler either deals with it or hands it to the next one. The sender only talks to the first handler and never needs to know who finally handled it.
+
+**Picture it:** a refund request at customer support. The chatbot can approve small refunds. Bigger ones go to an agent, and very big ones to a manager. Each level tries, and escalates if it can't decide.
+
+### The smallest example
+
+```java
+abstract class Approver {
+    private Approver next;
+    Approver then(Approver next) { this.next = next; return next; }
+
+    void approve(int amount) {                       // default: pass it on
+        if (next != null) next.approve(amount);
+        else System.out.println("Nobody can approve ₹" + amount);
+    }
+}
+
+class Bot extends Approver {
+    void approve(int amount) { if (amount <= 500) System.out.println("Bot approved ₹" + amount); else super.approve(amount); }
+}
+class Agent extends Approver {
+    void approve(int amount) { if (amount <= 5_000) System.out.println("Agent approved ₹" + amount); else super.approve(amount); }
+}
+class Manager extends Approver {
+    void approve(int amount) { if (amount <= 50_000) System.out.println("Manager approved ₹" + amount); else super.approve(amount); }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Approver chain = new Bot();
+        chain.then(new Agent()).then(new Manager());
+        chain.approve(300);       // Bot approved ₹300
+        chain.approve(12_000);    // Manager approved ₹12000
+        chain.approve(90_000);    // Nobody can approve ₹90000
+    }
+}
+```
+
+Adding a "senior manager" level means one new class and one more `then(...)`. No other handler changes.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Several checks or handlers run in order, and the order or the list may change (validation, filters, middleware) | There's one fixed rule: a simple `if` is clearer |
+
+The rest of this lesson covers both styles of chain (stop at the first handler vs run them all) on a realistic problem.
+
+**The textbook definition:** pass a request along a **chain of handlers**. Each handler decides either to process the request, to pass it to the next handler — or both — so the sender doesn't need to know which handler will deal with it.
 
 ## The problem
 
@@ -31,6 +79,8 @@ classDiagram
 ```
 
 ### Variant 1 — middleware pipeline (every handler may act and pass on)
+
+<FullCode title="The full middleware pipeline (43 lines)" note="each handler may act, then pass on">
 
 ```java
 public interface Handler {
@@ -77,6 +127,8 @@ auth.setNext(new RateLimitHandler(limiter))
 
 Response r = auth.handle(request);
 ```
+
+</FullCode>
 
 ### Variant 2 — "first capable handler wins" (classic GoF)
 

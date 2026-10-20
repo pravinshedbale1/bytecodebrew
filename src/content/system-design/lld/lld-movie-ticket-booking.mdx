@@ -2,6 +2,70 @@
 
 BookMyShow-style booking is the LLD problem where **concurrency is the whole point**: many users select the same seats for a popular show at the same moment, and the design must guarantee no double booking while letting users hold seats during payment. (The large-scale version is the HLD case study [Design a Ticket Booking System](/system-design/hld/design-ticket-booking); this is the in-process object design.)
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="50" write={["Seats with FREE, HELD and BOOKED states", "Hold seats all-or-nothing, with an expiry", "Confirm only if the hold is still yours"]} say={["Taking payment between hold and confirm, outside the lock", "A lock per show instead of one global lock", "Pricing by seat type or time as a strategy"]} skip={["Cinema and movie admin", "Coupons and refunds", "Search and listings"]} />
+
+### The interview-sized version
+
+The heart of the problem: holding seats safely while two users race for the same one. It's about **50 lines**, and it compiles and runs.
+
+```java
+enum SeatState { FREE, HELD, BOOKED }
+
+class Seat {
+    final String id;
+    SeatState state = SeatState.FREE;
+    String heldBy;
+    long holdUntil;
+
+    Seat(String id) { this.id = id; }
+
+    boolean availableAt(long now) {                   // an expired hold counts as free
+        return state == SeatState.FREE || (state == SeatState.HELD && now >= holdUntil);
+    }
+}
+
+class Show {
+    static final long HOLD_MILLIS = 10 * 60 * 1000;   // seats are held for 10 minutes while the user pays
+    private final Map<String, Seat> seats = new LinkedHashMap<>();
+
+    Show(List<String> seatIds) { seatIds.forEach(id -> seats.put(id, new Seat(id))); }
+
+    // synchronized: two users can never hold the same seat
+    synchronized boolean hold(String user, List<String> seatIds, long now) {
+        List<Seat> wanted = seatIds.stream().map(this::seat).toList();
+        if (!wanted.stream().allMatch(s -> s.availableAt(now))) return false;   // all or nothing
+        for (Seat s : wanted) { s.state = SeatState.HELD; s.heldBy = user; s.holdUntil = now + HOLD_MILLIS; }
+        return true;
+    }
+
+    synchronized void confirm(String user, List<String> seatIds, long now) {   // called after payment succeeds
+        List<Seat> wanted = seatIds.stream().map(this::seat).toList();
+        for (Seat s : wanted)
+            if (s.state != SeatState.HELD || !user.equals(s.heldBy) || now >= s.holdUntil)
+                throw new IllegalStateException("Seat " + s.id + " is no longer held for " + user);
+        for (Seat s : wanted) s.state = SeatState.BOOKED;
+    }
+
+    synchronized List<String> available(long now) {
+        return seats.values().stream().filter(s -> s.availableAt(now)).map(s -> s.id).toList();
+    }
+
+    private Seat seat(String id) {
+        Seat s = seats.get(id);
+        if (s == null) throw new IllegalArgumentException("No seat " + id);
+        return s;
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - Browse cities → theatres → screens → shows (movie, start time, screen).
@@ -85,6 +149,8 @@ stateDiagram-v2
 
 One object owns **all** seat state for a show — temporary holds *and* confirmed bookings — behind **one lock per show**. Keeping both under the same lock is the point: if holds lived in one structure and bookings in another, each with its own lock, a hold could be granted for a seat that another thread is confirming at that very moment.
 
+<FullCode title="Show the full code: Seat inventory — the core (68 lines)">
+
 ```java
 public interface SeatInventory {
     void hold(ShowId show, Set<SeatId> seats, UserId user, Duration ttl);   // all or nothing
@@ -156,6 +222,8 @@ public final class InMemorySeatInventory implements SeatInventory {
 }
 ```
 
+</FullCode>
+
 Design points:
 
 - **All-or-nothing**: either all requested seats are held or none (no partial selections left dangling).
@@ -164,6 +232,8 @@ Design points:
 - Seat state is behind an **interface**, so a distributed implementation (Redis `SET NX PX` per seat with a Lua script for multi-seat holds, or conditional `UPDATE`s on seat rows) can replace it without changing the booking service.
 
 ## 5. Booking service
+
+<FullCode title="Show the full code: Booking service (43 lines)">
 
 ```java
 public final class BookingService {
@@ -210,6 +280,8 @@ public final class BookingService {
     }
 }
 ```
+
+</FullCode>
 
 The subtle case interviewers probe: **payment completes after the hold expired** and another user grabbed the seat. Step 1 avoids charging when the hold is already gone; step 3 catches the rarer case where it lapses mid-payment, and refunds. Keeping the hold TTL comfortably longer than the payment provider's timeout makes step 3 very rare.
 

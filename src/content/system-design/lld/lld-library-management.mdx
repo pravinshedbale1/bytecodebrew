@@ -2,6 +2,93 @@
 
 The library system is a classic **domain-modelling** problem. There's little algorithmic difficulty; the grading is about getting the entities and relationships right — especially the difference between a **book** (a title) and a **book copy** (a physical item) — and handling business rules like borrowing limits, reservations and fines cleanly.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="70" write={["Book vs BookCopy (title vs the thing on the shelf)", "`borrow()` and `returnCopy()` with a loan limit", "A `FinePolicy` interface with a per-day fine"]} say={["Reservations as a queue per book, with a notification", "Blocking members who owe fines", "Search by title, author or ISBN"]} skip={["Librarian admin screens", "Payments for fines", "Persistence"]} />
+
+### The interview-sized version
+
+Members borrow and return copies, limits are enforced, and late returns are fined through a policy. It's about **70 lines**, and it compiles and runs.
+
+```java
+record Book(String isbn, String title) { }
+
+class BookCopy {                                   // a Book is the title; a copy is the thing on the shelf
+    final String barcode;
+    final Book book;
+    String borrowedBy;                             // member id, or null when on the shelf
+    LocalDate dueDate;
+    BookCopy(String barcode, Book book) { this.barcode = barcode; this.book = book; }
+}
+
+class Member {
+    static final int MAX_LOANS = 3;
+    final String id;
+    final List<BookCopy> loans = new ArrayList<>();
+    Member(String id) { this.id = id; }
+}
+
+interface FinePolicy { int fine(LocalDate due, LocalDate returned); }
+
+class PerDayFine implements FinePolicy {
+    private final int perDay;
+    PerDayFine(int perDay) { this.perDay = perDay; }
+    public int fine(LocalDate due, LocalDate returned) {
+        long lateDays = ChronoUnit.DAYS.between(due, returned);
+        return lateDays > 0 ? (int) lateDays * perDay : 0;
+    }
+}
+
+class Library {
+    private final Map<String, BookCopy> copies = new HashMap<>();
+    private final Map<String, Member> members = new HashMap<>();
+    private final FinePolicy finePolicy;
+
+    Library(FinePolicy finePolicy) { this.finePolicy = finePolicy; }
+    void addCopy(BookCopy c) { copies.put(c.barcode, c); }
+    void addMember(Member m) { members.put(m.id, m); }
+
+    synchronized void borrow(String memberId, String barcode, LocalDate today) {
+        Member m = find(members, memberId);
+        BookCopy c = find(copies, barcode);
+        if (c.borrowedBy != null) throw new IllegalStateException("Copy " + barcode + " is already out");
+        if (m.loans.size() >= Member.MAX_LOANS) throw new IllegalStateException("Loan limit reached");
+        c.borrowedBy = memberId;
+        c.dueDate = today.plusDays(14);
+        m.loans.add(c);
+    }
+
+    synchronized int returnCopy(String barcode, LocalDate today) {          // returns the fine
+        BookCopy c = find(copies, barcode);
+        if (c.borrowedBy == null) throw new IllegalStateException("Copy " + barcode + " is not on loan");
+        members.get(c.borrowedBy).loans.remove(c);
+        int fine = finePolicy.fine(c.dueDate, today);
+        c.borrowedBy = null;
+        c.dueDate = null;
+        return fine;
+    }
+
+    synchronized List<BookCopy> search(String titleWord) {                  // free copies only
+        String w = titleWord.toLowerCase();
+        return copies.values().stream()
+                .filter(c -> c.borrowedBy == null && c.book.title().toLowerCase().contains(w))
+                .toList();
+    }
+
+    private static <T> T find(Map<String, T> map, String id) {
+        T value = map.get(id);
+        if (value == null) throw new IllegalArgumentException("Not found: " + id);
+        return value;
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - Catalogue: books with ISBN, title, authors, subject; each book has one or more **physical copies** (barcode, rack location).
@@ -80,6 +167,8 @@ classDiagram
 
 ### Models
 
+<FullCode title="Show the full code: Models (45 lines)">
+
 ```java
 public enum CopyStatus { AVAILABLE, LOANED, ON_HOLD, LOST }
 public enum MemberStatus { ACTIVE, BLOCKED }
@@ -128,6 +217,8 @@ public final class Loan {
 }
 ```
 
+</FullCode>
+
 The copy guards its own state transitions — business rules live with the data (tell, don't ask).
 
 ### Policies as strategies
@@ -152,6 +243,8 @@ public interface BorrowingPolicy {
 Different member tiers (student, faculty, premium) get different `BorrowingPolicy` implementations — no `if (member.type == FACULTY)` scattered around.
 
 ### The service
+
+<FullCode title="Show the full code: The service (66 lines)">
 
 ```java
 public final class LibraryService {
@@ -221,6 +314,8 @@ public final class LibraryService {
     }
 }
 ```
+
+</FullCode>
 
 ### Search
 

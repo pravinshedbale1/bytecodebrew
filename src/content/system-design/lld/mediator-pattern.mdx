@@ -1,4 +1,54 @@
-**Intent:** reduce chaotic dependencies between objects by making them communicate **only through a mediator object**, instead of referring to each other directly.
+## The idea in plain words
+
+When many objects all talk to each other directly, you get a tangled web where every change touches everything. A **Mediator** is one object in the middle: the others only talk to it, and it decides who needs to know what.
+
+**Picture it:** air traffic control. Planes don't radio each other to agree on who lands first. Every plane talks only to the tower, and the tower coordinates.
+
+### The smallest example
+
+```java
+class ControlTower {
+    private String onRunway;                             // the shared thing being coordinated
+
+    boolean requestLanding(String flight) {
+        if (onRunway != null) { System.out.println(flight + ": hold, " + onRunway + " is landing"); return false; }
+        onRunway = flight;
+        System.out.println(flight + ": cleared to land");
+        return true;
+    }
+    void runwayClear(String flight) { if (flight.equals(onRunway)) onRunway = null; }
+}
+
+class Plane {
+    private final String flight;
+    private final ControlTower tower;                    // a plane knows the tower, never other planes
+    Plane(String flight, ControlTower tower) { this.flight = flight; this.tower = tower; }
+
+    boolean approach() { return tower.requestLanding(flight); }
+    void vacate() { tower.runwayClear(flight); }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        ControlTower tower = new ControlTower();
+        Plane a = new Plane("AI101", tower), b = new Plane("6E202", tower);
+        a.approach();   // AI101: cleared to land
+        b.approach();   // 6E202: hold, AI101 is landing
+        a.vacate();
+        b.approach();   // 6E202: cleared to land
+    }
+}
+```
+
+With 10 planes talking directly you'd have up to 45 links between them. With a tower, each plane has one.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Many objects react to each other (form fields, chat room members, game pieces) | Two objects talk: a direct call is simpler |
+
+The rest of this lesson shows a realistic mediator and how to stop it becoming a "god object".
+
+**The textbook definition:** reduce chaotic dependencies between objects by making them communicate **only through a mediator object**, instead of referring to each other directly.
 
 ## The problem
 
@@ -141,6 +191,8 @@ The room can add muting, moderation, message history or rate limits without touc
 
 The classic form puts every rule in one `notify(sender, event)` switch, which is exactly how god mediators grow. A common fix is to make the mediator a small router: each message type is a class, and each rule is a separate handler registered for that type. This is how libraries such as MediatR work, and it is close to Spring's application events.
 
+<FullCode title="The full message router (44 lines)" note="one handler class per message type">
+
 ```java
 // A mediator that routes each message type to its own handler class,
 // so coordination rules stay small instead of piling up in one switch.
@@ -187,6 +239,8 @@ public final class MediatorDemo {
     }
 }
 ```
+
+</FullCode>
 
 Output:
 

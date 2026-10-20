@@ -2,6 +2,73 @@
 
 The vending machine is **the** State-pattern problem. Interviewers watch for three things: a clear state diagram, invalid operations handled explicitly in every state, and correct money handling (including change).
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="50" write={["A `State` interface with Idle and HasMoney states", "The machine forwarding each button to its current state", "Insert coin, select, cancel and refund"]} say={["How you would give change with a limited set of coins", "A Dispensing state for when the motor can fail", "Why the State pattern beats a big `switch`"]} skip={["Maintenance mode and restocking screens", "Card payments", "Hardware drivers"]} />
+
+### The interview-sized version
+
+Two states, three buttons. Wrong actions fail with a clear message, and the machine never loses your money. It's about **50 lines**, and it compiles and runs.
+
+```java
+class Product {
+    final String name;
+    final int price;
+    int stock;
+    Product(String name, int price, int stock) { this.name = name; this.price = price; this.stock = stock; }
+}
+
+interface State {                                  // each action is "not allowed" unless a state allows it
+    default void insertCoin(VendingMachine m, int amount) { throw new IllegalStateException("Can't insert coins now"); }
+    default int select(VendingMachine m, String code)      { throw new IllegalStateException("Insert money first"); }
+    default int cancel(VendingMachine m)                   { throw new IllegalStateException("Nothing to cancel"); }
+}
+
+class Idle implements State {
+    public void insertCoin(VendingMachine m, int amount) { m.balance += amount; m.state = new HasMoney(); }
+}
+
+class HasMoney implements State {
+    public void insertCoin(VendingMachine m, int amount) { m.balance += amount; }
+
+    public int select(VendingMachine m, String code) {
+        Product p = m.products.get(code);
+        if (p == null) throw new IllegalArgumentException("No product " + code);
+        if (p.stock == 0) throw new IllegalStateException(p.name + " is sold out");
+        if (m.balance < p.price) throw new IllegalStateException("Insert ₹" + (p.price - m.balance) + " more");
+        p.stock--;
+        int change = m.balance - p.price;
+        m.balance = 0;
+        m.state = new Idle();
+        return change;
+    }
+
+    public int cancel(VendingMachine m) {
+        int refund = m.balance;
+        m.balance = 0;
+        m.state = new Idle();
+        return refund;
+    }
+}
+
+class VendingMachine {                             // the context: it just forwards to the current state
+    final Map<String, Product> products = new HashMap<>();
+    State state = new Idle();
+    int balance;
+
+    void addProduct(String code, Product p) { products.put(code, p); }
+    synchronized void insertCoin(int amount) { state.insertCoin(this, amount); }
+    synchronized int select(String code)    { return state.select(this, code); }
+    synchronized int cancel()               { return state.cancel(this); }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |
@@ -207,6 +274,8 @@ public final class CashBox {
 
 ### States
 
+<FullCode title="Show the full code: States (72 lines)">
+
 ```java
 public interface State {
     default void insert(VendingMachine m, Denomination d) { throw new IllegalOperationException("insert", name()); }
@@ -281,6 +350,8 @@ final class MaintenanceState implements State {
     public String name() { return "MAINTENANCE"; }
 }
 ```
+
+</FullCode>
 
 ### The machine (context)
 

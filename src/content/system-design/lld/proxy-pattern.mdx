@@ -1,4 +1,46 @@
-**Intent:** provide a **substitute or placeholder** for another object to **control access** to it. The proxy implements the same interface as the real object, so clients can't tell the difference.
+## The idea in plain words
+
+A **Proxy** is a stand-in object with the **same interface** as the real one. Callers talk to the proxy, and the proxy decides when, or whether, to call the real object. It can load things lazily, check permissions, cache results or log calls.
+
+**Picture it:** a receptionist at an office. Visitors speak to the receptionist first. The receptionist checks the appointment, and only then lets you meet the manager. To the visitor it's still "a meeting".
+
+### The smallest example
+
+```java
+interface Report { String content(); }
+
+class RealReport implements Report {                     // expensive to create
+    RealReport() { System.out.println("Loading 50 MB report..."); }
+    public String content() { return "Q3 sales numbers"; }
+}
+
+class LazyReport implements Report {                     // the proxy: same interface
+    private RealReport real;
+    public String content() {
+        if (real == null) real = new RealReport();        // load only when first needed
+        return real.content();
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Report report = new LazyReport();                 // nothing loaded yet
+        System.out.println("Report object ready");
+        System.out.println(report.content());             // loads now, once
+        System.out.println(report.content());             // already loaded
+    }
+}
+```
+
+The caller can't tell it's holding a proxy. That's the point.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You need to control access to an object: lazy loading, access checks, caching, remote calls | You're adding unrelated features in layers: that's Decorator |
+
+The rest of this lesson covers the kinds of proxy and Java's built-in dynamic proxies.
+
+**The textbook definition:** provide a **substitute or placeholder** for another object to **control access** to it. The proxy implements the same interface as the real object, so clients can't tell the difference.
 
 ## The problem
 

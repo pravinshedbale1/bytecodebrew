@@ -2,6 +2,88 @@
 
 The ATM combines two classic patterns cleanly: a **state machine** for the session (card → PIN → transaction → eject) and a **chain of responsibility** for dispensing cash in denominations. It also tests how you handle failures that involve money and hardware.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="60" write={["States: Idle, CardInserted, Authenticated", "Three wrong PINs retain the card", "Withdraw: check notes, then debit, then dispense"]} say={["Why the order of withdraw steps keeps money safe", "Note dispensing as a Chain of Responsibility (₹500 → ₹200 → ₹100)", "What happens if the bank times out"]} skip={["Deposits, mini-statements and PIN change", "Encryption and hardware details"]} />
+
+### The interview-sized version
+
+A State machine for the session and a cash box that never debits the account for notes it can’t give. It's about **60 lines**, and it compiles and runs.
+
+```java
+interface Bank {                                         // the real bank is behind an interface
+    boolean checkPin(String card, String pin);
+    void debit(String card, int amount);                 // throws if the account can't pay
+}
+
+class CashBox {
+    private final TreeMap<Integer, Integer> notes = new TreeMap<>(Comparator.reverseOrder());   // ₹500 before ₹100
+
+    CashBox(Map<Integer, Integer> notes) { this.notes.putAll(notes); }
+
+    Map<Integer, Integer> plan(int amount) {             // which notes to give; changes nothing
+        Map<Integer, Integer> plan = new LinkedHashMap<>();
+        for (var e : notes.entrySet()) {
+            int count = Math.min(amount / e.getKey(), e.getValue());
+            if (count > 0) { plan.put(e.getKey(), count); amount -= count * e.getKey(); }
+        }
+        if (amount != 0) throw new IllegalStateException("Can't make this amount with the notes available");
+        return plan;
+    }
+
+    void remove(Map<Integer, Integer> plan) { plan.forEach((note, count) -> notes.merge(note, -count, Integer::sum)); }
+}
+
+interface AtmState {
+    default void insertCard(Atm atm, String card)          { throw new IllegalStateException("Not allowed now"); }
+    default void enterPin(Atm atm, String pin)             { throw new IllegalStateException("Insert a card first"); }
+    default Map<Integer, Integer> withdraw(Atm atm, int a) { throw new IllegalStateException("Enter your PIN first"); }
+    default void eject(Atm atm) { atm.card = null; atm.state = new Idle(); }
+}
+
+class Idle implements AtmState {
+    public void insertCard(Atm atm, String card) { atm.card = card; atm.state = new CardInserted(); }
+    public void eject(Atm atm) { throw new IllegalStateException("No card"); }
+}
+
+class CardInserted implements AtmState {
+    private int wrongTries;
+    public void enterPin(Atm atm, String pin) {
+        if (atm.bank.checkPin(atm.card, pin)) { atm.state = new Authenticated(); return; }
+        if (++wrongTries == 3) { atm.card = null; atm.state = new Idle(); throw new IllegalStateException("Card retained"); }
+        throw new IllegalArgumentException("Wrong PIN");
+    }
+}
+
+class Authenticated implements AtmState {
+    public Map<Integer, Integer> withdraw(Atm atm, int amount) {
+        Map<Integer, Integer> notes = atm.cash.plan(amount);   // 1. check we can give the notes
+        atm.bank.debit(atm.card, amount);                      // 2. only then take the money
+        atm.cash.remove(notes);                                // 3. dispense
+        return notes;
+    }
+}
+
+class Atm {                                              // the context: forwards each action to its state
+    AtmState state = new Idle();
+    String card;
+    final Bank bank;
+    final CashBox cash;
+
+    Atm(Bank bank, CashBox cash) { this.bank = bank; this.cash = cash; }
+    synchronized void insertCard(String card) { state.insertCard(this, card); }
+    synchronized void enterPin(String pin) { state.enterPin(this, pin); }
+    synchronized Map<Integer, Integer> withdraw(int amount) { return state.withdraw(this, amount); }
+    synchronized void eject() { state.eject(this); }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - Insert card → enter PIN (3 attempts, then card retained) → choose transaction → complete → eject card.

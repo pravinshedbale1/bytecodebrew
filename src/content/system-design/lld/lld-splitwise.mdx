@@ -2,6 +2,79 @@
 
 Splitwise is one of the most common machine-coding problems in Indian product-company interviews. It looks simple, but tests money handling (rounding!), the Strategy pattern for split types, a clean balance model, and — as a classic follow-up — **debt simplification**.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="60" write={["A `SplitStrategy` interface with equal, exact and percent splits", "Amounts in paise, so no rupee is lost to rounding", "A balance sheet: who owes whom"]} say={["Debt simplification (fewest payments to settle a group)", "Groups, and recording a settlement payment", "Validating that exact amounts and percentages add up"]} skip={["Currencies and exchange rates", "Notifications and reminders"]} />
+
+### The interview-sized version
+
+Three split strategies and a balance sheet that nets debts in both directions. It's about **60 lines**, and it compiles and runs.
+
+```java
+// Amounts are in paise (long), so ₹100 split three ways never loses a paisa to rounding.
+interface SplitStrategy { Map<String, Long> split(long total, List<String> people, List<Long> values); }
+
+class EqualSplit implements SplitStrategy {
+    public Map<String, Long> split(long total, List<String> people, List<Long> ignored) {
+        Map<String, Long> shares = new LinkedHashMap<>();
+        long base = total / people.size(), leftover = total % people.size();
+        for (int i = 0; i < people.size(); i++) shares.put(people.get(i), base + (i < leftover ? 1 : 0));
+        return shares;
+    }
+}
+
+class ExactSplit implements SplitStrategy {
+    public Map<String, Long> split(long total, List<String> people, List<Long> amounts) {
+        if (amounts.stream().mapToLong(Long::longValue).sum() != total) throw new IllegalArgumentException("Amounts must add up to the total");
+        Map<String, Long> shares = new LinkedHashMap<>();
+        for (int i = 0; i < people.size(); i++) shares.put(people.get(i), amounts.get(i));
+        return shares;
+    }
+}
+
+class PercentSplit implements SplitStrategy {
+    public Map<String, Long> split(long total, List<String> people, List<Long> percents) {
+        if (percents.stream().mapToLong(Long::longValue).sum() != 100) throw new IllegalArgumentException("Percentages must add up to 100");
+        Map<String, Long> shares = new LinkedHashMap<>();
+        long given = 0;
+        for (int i = 0; i < people.size(); i++) {
+            long share = i == people.size() - 1 ? total - given : total * percents.get(i) / 100;   // last person takes the rounding
+            shares.put(people.get(i), share);
+            given += share;
+        }
+        return shares;
+    }
+}
+
+class ExpenseService {
+    // balance.get(a).get(b) = how much b owes a (negative means a owes b)
+    private final Map<String, Map<String, Long>> balance = new HashMap<>();
+
+    synchronized void addExpense(String paidBy, long total, List<String> people, List<Long> values, SplitStrategy strategy) {
+        strategy.split(total, people, values).forEach((person, share) -> {
+            if (person.equals(paidBy)) return;
+            add(paidBy, person, share);
+            add(person, paidBy, -share);
+        });
+    }
+
+    synchronized long owes(String debtor, String creditor) {
+        long amount = balance.getOrDefault(creditor, Map.of()).getOrDefault(debtor, 0L);
+        return Math.max(0, amount);
+    }
+
+    private void add(String a, String b, long amount) {
+        balance.computeIfAbsent(a, k -> new HashMap<>()).merge(b, amount, Long::sum);
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - Users; groups of users.
@@ -73,6 +146,8 @@ classDiagram
 
 ### Request and split strategies
 
+<FullCode title="Show the full code: Request and split strategies (46 lines)">
+
 ```java
 public enum SplitType { EQUAL, EXACT, PERCENT, SHARES }
 
@@ -122,6 +197,8 @@ public final class ShareSplit implements SplitStrategy {
 }
 ```
 
+</FullCode>
+
 `largestRemainder` allocates `amount × weight / totalWeight` (floored) to each participant, then hands out the leftover paise to those with the largest fractional remainders — so parts always sum exactly to the total:
 
 ```java
@@ -165,6 +242,8 @@ public final class SplitStrategies {
 
 Represent "A owes B ₹X" as a directed, **netted** ledger: if A owes B 300 and B owes A 100, store only A → B 200.
 
+<FullCode title="Show the full code: Balance sheet (40 lines)">
+
 ```java
 public final class BalanceSheet {
     // owes.get(a).get(b) = amount a owes b (always positive; only one direction stored per pair)
@@ -207,6 +286,8 @@ public final class BalanceSheet {
     }
 }
 ```
+
+</FullCode>
 
 ### Service
 

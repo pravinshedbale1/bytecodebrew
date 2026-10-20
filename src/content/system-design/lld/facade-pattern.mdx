@@ -1,4 +1,44 @@
-**Intent:** provide a **simplified, unified interface** to a set of interfaces in a subsystem, making the subsystem easier to use.
+## The idea in plain words
+
+A task needs several classes called in the right order. A **Facade** is one simple class with one simple method that does all those calls for you. Callers use the facade; they don't need to know the steps.
+
+**Picture it:** a waiter at a restaurant. You say "one thali, please". The waiter deals with the kitchen, the billing counter and the drinks. You never walk into the kitchen.
+
+### The smallest example
+
+```java
+class Inventory { void reserve(String item) { System.out.println("Reserved " + item); } }
+class Payments  { void charge(String user, int amount) { System.out.println("Charged " + user + " ₹" + amount); } }
+class Shipping  { void ship(String item, String user) { System.out.println("Shipping " + item + " to " + user); } }
+
+class OrderFacade {                                   // the one door callers use
+    private final Inventory inventory = new Inventory();
+    private final Payments payments = new Payments();
+    private final Shipping shipping = new Shipping();
+
+    void placeOrder(String user, String item, int amount) {
+        inventory.reserve(item);                      // the steps, in the right order, in one place
+        payments.charge(user, amount);
+        shipping.ship(item, user);
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        new OrderFacade().placeOrder("asha", "Headphones", 1999);
+    }
+}
+```
+
+The web app, the mobile app and the admin tool all call `placeOrder`. If the steps change, you change one class.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Many callers repeat the same multi-step choreography | The facade would just forward one call: that's an extra layer for nothing |
+
+In LLD case studies, the "service" class you write first (`ParkingService`, `BookingService`) is usually a facade. The rest of this lesson shows a realistic one and its pitfalls.
+
+**The textbook definition:** provide a **simplified, unified interface** to a set of interfaces in a subsystem, making the subsystem easier to use.
 
 ## The problem
 
@@ -114,6 +154,8 @@ In machine-coding rounds your top-level service class (`ParkingService`, `Bookin
 
 One of the most valuable facades wraps a vendor SDK you do not control. The SDK's awkward API, its error codes and its types stay inside one class; the rest of your code uses a small interface with your own types. Switching vendors, or testing without the network, then touches one class.
 
+<FullCode title="The full SDK facade (47 lines)" note="vendor types stay inside one class">
+
 ```java
 // ---- A clumsy third-party SDK we don't control (simplified)
 public final class AcmePayClient {
@@ -163,6 +205,8 @@ public final class FacadeDemo {
     }
 }
 ```
+
+</FullCode>
 
 Output:
 

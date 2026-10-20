@@ -1,4 +1,45 @@
-**Intent:** represent an **operation** to be performed on the elements of an object structure as a separate object, letting you **add new operations without changing the classes** of the elements.
+## The idea in plain words
+
+You have a fixed set of classes (say, shapes) and you keep adding **new operations** on them: area, perimeter, export to SVG. Instead of editing every shape class each time, put each operation in its own **visitor** class, with one method per shape.
+
+**Picture it:** a tax inspector visiting different kinds of shops. The inspector brings the rules; each shop just opens the door ("accept"). A new kind of inspection means a new inspector, not changes to every shop.
+
+### The smallest example
+
+```java
+interface ShapeVisitor { double visit(Circle c); double visit(Square s); }
+
+interface Shape { double accept(ShapeVisitor v); }
+record Circle(double r) implements Shape    { public double accept(ShapeVisitor v) { return v.visit(this); } }
+record Square(double side) implements Shape { public double accept(ShapeVisitor v) { return v.visit(this); } }
+
+class Area implements ShapeVisitor {                         // one operation = one visitor
+    public double visit(Circle c) { return Math.PI * c.r() * c.r(); }
+    public double visit(Square s) { return s.side() * s.side(); }
+}
+class Perimeter implements ShapeVisitor {
+    public double visit(Circle c) { return 2 * Math.PI * c.r(); }
+    public double visit(Square s) { return 4 * s.side(); }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        List<Shape> shapes = List.of(new Circle(1), new Square(2));
+        for (Shape s : shapes)
+            System.out.printf("area %.2f, perimeter %.2f%n", s.accept(new Area()), s.accept(new Perimeter()));
+    }
+}
+```
+
+`accept` is the trick: each shape calls the `visit` method meant for its own type, so no `instanceof` is needed.
+
+| Use it when | Skip it when |
+| --- | --- |
+| The classes rarely change but the operations on them keep growing (compilers, file-system reports) | You add new classes often: every visitor must change each time |
+
+In modern Java a `sealed` interface with a `switch` often does the same job with less code. The rest of this lesson compares both.
+
+**The textbook definition:** represent an **operation** to be performed on the elements of an object structure as a separate object, letting you **add new operations without changing the classes** of the elements.
 
 Visitor is the most complex GoF pattern and comes up less often in machine coding, but interviewers use it to test understanding of **double dispatch** and the **expression problem**.
 

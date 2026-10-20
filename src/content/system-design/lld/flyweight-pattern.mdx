@@ -1,4 +1,45 @@
-**Intent:** support **large numbers of fine-grained objects** efficiently by **sharing** the parts of their state that are common, instead of storing a copy in every object.
+## The idea in plain words
+
+When you have a **huge number** of similar objects, much of their data is often the same. **Flyweight** stores that repeated part **once** and lets every object point to it. Each object keeps only what is unique to it.
+
+**Picture it:** a cinema with 10,000 seats. Each seat doesn't carry its own printed copy of the price list. It just says "Gold" or "Silver", and there is one Gold card and one Silver card at the counter.
+
+### The smallest example
+
+```java
+record SeatType(String name, int price) { }               // shared part: stored once per type
+
+class SeatTypes {
+    private static final Map<String, SeatType> cache = new HashMap<>();
+    static SeatType of(String name, int price) {
+        return cache.computeIfAbsent(name, n -> new SeatType(n, price));   // reuse if it exists
+    }
+}
+
+record Seat(int row, int number, SeatType type) { }       // unique part + a pointer to the shared part
+
+class Demo {
+    public static void main(String[] args) {
+        List<Seat> seats = new ArrayList<>();
+        for (int row = 0; row < 100; row++) {
+            SeatType type = row < 20 ? SeatTypes.of("Gold", 300) : SeatTypes.of("Silver", 180);
+            for (int n = 0; n < 100; n++) seats.add(new Seat(row, n, type));
+        }
+        System.out.println(seats.size() + " seats share " + seats.stream().map(Seat::type).distinct().count() + " seat types");
+        // 10000 seats share 2 seat types
+    }
+}
+```
+
+Here the shared part is small, so the saving is small too. Flyweight pays off when the shared part is **heavy** (images, fonts, 3D models) and the count is in the millions.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You've measured that memory is a problem and objects repeat the same data | You have hundreds or thousands of objects: memory is not your bottleneck |
+
+The rest of this lesson shows the "intrinsic vs extrinsic" split properly and how much it really saves.
+
+**The textbook definition:** support **large numbers of fine-grained objects** efficiently by **sharing** the parts of their state that are common, instead of storing a copy in every object.
 
 Flyweight is a **memory optimisation**. Reach for it only when you've measured (or can estimate) that object count is the problem.
 
@@ -129,6 +170,8 @@ A 5× saving, and the real win is larger when the shared part holds big data suc
 
 A text editor where every character can have a style is the classic interview version. Each distinct style becomes one immutable, shared object; characters keep only the character and a reference to their style.
 
+<FullCode title="The full styled-text example (44 lines)" note="one shared Style per combination">
+
 ```java
 // Flyweight: one immutable Style per distinct combination, shared by every character that uses it
 public record Style(String font, int size, int rgb, boolean bold) { }
@@ -175,6 +218,8 @@ public final class FlyweightDemo {
     }
 }
 ```
+
+</FullCode>
 
 Output: `140000 characters, 3 style objects` and `true`. Records give value-based `equals` and `hashCode`, which makes the record itself a convenient cache key. Real editors go one step further and store **style runs** (style X from position 10 to 57) instead of one reference per character.
 

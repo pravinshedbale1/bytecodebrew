@@ -2,6 +2,65 @@
 
 "Design a task scheduler" — run jobs at a time, on a fixed rate, or with a delay between runs; with priorities, retries and cancellation — is a concurrency problem dressed as an LLD problem. The interviewer wants to see a **priority queue ordered by time**, a dispatcher that **sleeps until the next job is due without busy-waiting**, a worker pool, and precise answers about edge cases (missed runs, retries, cancelling a running job). It's what `ScheduledThreadPoolExecutor`, Quartz and cron do inside.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="40" write={["A priority queue ordered by run time", "One dispatcher thread that sleeps until the next job is due", "A worker pool that runs jobs, and repeating jobs"]} say={["Fixed rate vs fixed delay", "Retries with back-off", "Why cancelling by marking is cheaper than searching the heap"]} skip={["Cron expressions", "Running across many machines"]} />
+
+### The interview-sized version
+
+A time-ordered queue, a dispatcher that wakes up exactly when needed, and workers that run the jobs. It's about **40 lines**, and it compiles and runs.
+
+```java
+record Job(String id, long runAt, Runnable task, long repeatEveryMillis) { }   // repeatEveryMillis = 0: run once
+
+class Scheduler {
+    private final PriorityQueue<Job> queue = new PriorityQueue<>(Comparator.comparingLong(Job::runAt));
+    private final Set<String> cancelled = ConcurrentHashMap.newKeySet();
+    private final ExecutorService workers;
+    private final Thread dispatcher = new Thread(this::dispatchLoop);
+    private volatile boolean running = true;
+
+    Scheduler(int workerThreads) {
+        workers = Executors.newFixedThreadPool(workerThreads);
+        dispatcher.setDaemon(true);
+        dispatcher.start();
+    }
+
+    synchronized void schedule(Job job) {
+        queue.add(job);
+        notify();                                    // wake the dispatcher: this job may now be the earliest
+    }
+
+    void cancel(String id) { cancelled.add(id); }   // checked when the job comes due: no searching the heap
+
+    private synchronized void dispatchLoop() {
+        try {
+            while (running) {
+                Job next = queue.peek();
+                long now = System.currentTimeMillis();
+                if (next == null) { wait(); continue; }                              // nothing to do
+                if (next.runAt() > now) { wait(next.runAt() - now); continue; }      // sleep until due (or a new job)
+                queue.poll();
+                if (cancelled.contains(next.id())) continue;
+                workers.submit(next.task());         // run on the pool, so a slow job never blocks the loop
+                if (next.repeatEveryMillis() > 0)
+                    queue.add(new Job(next.id(), next.runAt() + next.repeatEveryMillis(), next.task(), next.repeatEveryMillis()));
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    void shutdown() { running = false; dispatcher.interrupt(); workers.shutdown(); }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

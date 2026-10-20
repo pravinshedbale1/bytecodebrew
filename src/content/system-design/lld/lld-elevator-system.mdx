@@ -2,6 +2,77 @@
 
 The elevator problem tests whether you can separate **what the hardware does** (a car moving between floors) from **how requests are scheduled** — and whether you can reason about a simple real-time system with concurrency.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="50" write={["An `Elevator` that keeps a sorted set of stops and moves one floor per step", "A `DispatchStrategy` that picks which car answers a call", "A controller with hall calls and in-car buttons"]} say={["The LOOK algorithm: keep going while there are stops ahead", "Better dispatch rules (direction-aware, zoning)", "How a real system runs each car on its own thread"]} skip={["Door timers, weight limits and alarms", "Fire mode and VIP mode", "Energy optimisation"]} />
+
+### The interview-sized version
+
+Cars that serve stops in a sensible order, and a strategy that picks the nearest idle car. It's about **50 lines**, and it compiles and runs.
+
+```java
+enum Direction { UP, DOWN, IDLE }
+
+class Elevator {
+    final int id;
+    int floor = 0;
+    Direction direction = Direction.IDLE;
+    private final TreeSet<Integer> stops = new TreeSet<>();      // sorted, so "next stop above me" is cheap
+
+    Elevator(int id) { this.id = id; }
+
+    void addStop(int f) {
+        if (f == floor && direction == Direction.IDLE) return;   // already here: just open the doors
+        stops.add(f);
+        if (direction == Direction.IDLE) direction = f > floor ? Direction.UP : Direction.DOWN;
+    }
+
+    /** Move one floor. Keep going the same way while there are stops ahead, then turn (the LOOK algorithm). */
+    void step() {
+        if (stops.isEmpty()) { direction = Direction.IDLE; return; }
+        if (direction == Direction.UP && stops.ceiling(floor) == null) direction = Direction.DOWN;
+        if (direction == Direction.DOWN && stops.floor(floor) == null) direction = Direction.UP;
+        floor += direction == Direction.UP ? 1 : -1;
+        stops.remove(floor);                                     // arrived at a stop: doors open
+        if (stops.isEmpty()) direction = Direction.IDLE;
+    }
+
+    int stopsLeft() { return stops.size(); }
+}
+
+interface DispatchStrategy { Elevator pick(List<Elevator> cars, int floor); }
+
+class NearestIdleFirst implements DispatchStrategy {
+    public Elevator pick(List<Elevator> cars, int floor) {
+        return cars.stream()
+                .min(Comparator.comparing((Elevator c) -> c.direction != Direction.IDLE)   // idle cars first
+                        .thenComparingInt(c -> Math.abs(c.floor - floor)))                 // then the closest
+                .orElseThrow();
+    }
+}
+
+class ElevatorSystem {
+    private final List<Elevator> cars;
+    private final DispatchStrategy strategy;
+
+    ElevatorSystem(List<Elevator> cars, DispatchStrategy strategy) { this.cars = cars; this.strategy = strategy; }
+
+    synchronized Elevator callFromHall(int floor) {              // someone presses the button on a floor
+        Elevator car = strategy.pick(cars, floor);
+        car.addStop(floor);
+        return car;
+    }
+    synchronized void pressInCar(int carId, int floor) { cars.get(carId).addStop(floor); }
+    synchronized void tick() { cars.forEach(Elevator::step); }   // one time step for every car
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |
@@ -76,6 +147,8 @@ public record HallCall(int floor, Direction direction) { }
 
 ### The car: LOOK scheduling for its own stops
 
+<FullCode title="Show the full code: The car: LOOK scheduling for its own stops (66 lines)">
+
 ```java
 public final class ElevatorCar {
     private final int id;
@@ -144,6 +217,8 @@ public final class ElevatorCar {
     public synchronized int currentFloor() { return currentFloor; }
 }
 ```
+
+</FullCode>
 
 Using two `TreeSet`s gives O(log n) insertion and natural ordering of stops; the LOOK rule is three lines.
 

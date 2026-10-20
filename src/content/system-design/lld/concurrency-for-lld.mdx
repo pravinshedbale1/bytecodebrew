@@ -2,6 +2,51 @@ In LLD interviews, concurrency is where good designs separate from great ones. T
 
 This lesson is the Java toolkit, focused on what you'll actually use in machine-coding rounds.
 
+## The idea in plain words
+
+When two threads change the **same data at the same time**, they can step on each other and the result comes out wrong, even though each line of code looks right.
+
+**Picture it:** two railway counters sell the last seat on a train at the same moment. Both clerks look at the screen, both see "1 seat left", both sell it. Now two people hold the same seat. The fix is to make "check the seat and sell it" one step that only one clerk can do at a time.
+
+### The smallest example
+
+```java
+class Counter {
+    private int count = 0;
+    void increment() { count++; }                    // looks like one step, but it is read, add, write
+    int get() { return count; }
+}
+
+class SafeCounter {
+    private int count = 0;
+    synchronized void increment() { count++; }       // only one thread at a time may run this
+    synchronized int get() { return count; }
+}
+
+class Demo {
+    public static void main(String[] args) throws InterruptedException {
+        Counter unsafe = new Counter();
+        SafeCounter safe = new SafeCounter();
+        Runnable work = () -> { for (int i = 0; i < 100_000; i++) { unsafe.increment(); safe.increment(); } };
+        Thread a = new Thread(work), b = new Thread(work);
+        a.start(); b.start();
+        a.join(); b.join();
+        System.out.println("unsafe: " + unsafe.get());   // usually less than 200000: updates were lost
+        System.out.println("safe:   " + safe.get());     // always 200000
+    }
+}
+```
+
+The good news for interviews: you rarely need more than **three tools**.
+
+| You need to… | Use |
+| --- | --- |
+| Make a check-then-change happen as one step ("is the seat free? then book it") | `synchronized` on the method or on the object being changed |
+| Keep a map that many threads read and write | `ConcurrentHashMap` (and its `computeIfAbsent`, `putIfAbsent`) |
+| Count, or flip a status from one value to another safely | `AtomicInteger`, `AtomicReference` with `compareAndSet` |
+
+Start with these. The rest of this lesson explains why they work and when you need something more.
+
 ## Why concurrency bugs happen
 
 Three properties must hold for correct concurrent code:

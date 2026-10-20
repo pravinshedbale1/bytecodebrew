@@ -2,6 +2,69 @@
 
 "Design an LRU cache" is half data-structures question, half LLD question. The data-structure half: **O(1) `get` and `put`** with a hash map plus a doubly linked list. The LLD half: generics, a pluggable **eviction policy**, **TTL**, and **thread safety** — the follow-ups that distinguish senior answers.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="30–45" lines="50" write={["A `HashMap` plus a doubly linked list with sentinel nodes", "`get` and `put` in O(1), evicting the least recently used", "`synchronized` methods for thread safety"]} say={["Why `LinkedHashMap` can do this in 10 lines, and why they want to see it by hand", "Pluggable eviction (LFU, FIFO) behind an interface", "Lock striping or a concurrent cache for heavy traffic"]} skip={["TTL expiry, unless asked", "Metrics and size by bytes"]} />
+
+### The interview-sized version
+
+The classic answer: a map for lookup and a linked list for order, both changed in O(1). It's about **50 lines**, and it compiles and runs.
+
+```java
+class LruCache<K, V> {
+    private final int capacity;
+    private final Map<K, Node<K, V>> map = new HashMap<>();      // key -> node, for O(1) lookup
+    private final Node<K, V> head = new Node<>(null, null);      // sentinel: most recently used side
+    private final Node<K, V> tail = new Node<>(null, null);      // sentinel: least recently used side
+
+    LruCache(int capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("capacity must be positive");
+        this.capacity = capacity;
+        head.next = tail;
+        tail.prev = head;
+    }
+
+    synchronized V get(K key) {
+        Node<K, V> node = map.get(key);
+        if (node == null) return null;
+        moveToFront(node);                                       // reading counts as "used"
+        return node.value;
+    }
+
+    synchronized void put(K key, V value) {
+        Node<K, V> node = map.get(key);
+        if (node != null) { node.value = value; moveToFront(node); return; }
+        if (map.size() == capacity) {                            // full: drop the least recently used
+            Node<K, V> lru = tail.prev;
+            unlink(lru);
+            map.remove(lru.key);
+        }
+        node = new Node<>(key, value);
+        map.put(key, node);
+        addFront(node);
+    }
+
+    synchronized int size() { return map.size(); }
+
+    private void moveToFront(Node<K, V> n) { unlink(n); addFront(n); }
+    private void unlink(Node<K, V> n) { n.prev.next = n.next; n.next.prev = n.prev; }
+    private void addFront(Node<K, V> n) { n.next = head.next; n.prev = head; head.next.prev = n; head.next = n; }
+
+    private static final class Node<K, V> {
+        final K key;
+        V value;
+        Node<K, V> prev, next;
+        Node(K key, V value) { this.key = key; this.value = value; }
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 - `get(key)` returns the value or empty; counts as a use.
@@ -28,6 +91,8 @@ flowchart LR
 Sentinel head and tail nodes remove null checks at the ends.
 
 ## 3. Implementation (single-threaded)
+
+<FullCode title="Show the full code: Implementation (single-threaded) (62 lines)">
 
 ```java
 public final class LruCache<K, V> {
@@ -93,6 +158,8 @@ public final class LruCache<K, V> {
     }
 }
 ```
+
+</FullCode>
 
 <Callout type="tip" title="The JDK shortcut">
 `LinkedHashMap` with `accessOrder = true` plus an overridden `removeEldestEntry` is a complete LRU cache in a few lines. Mention it — then implement the map + list version if the interviewer wants to see the mechanics.

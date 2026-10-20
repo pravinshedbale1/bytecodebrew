@@ -24,14 +24,14 @@ classDiagram
 
 Ordered from weakest to strongest coupling:
 
-| Relationship | Meaning | Lifetime | UML notation | Java shape |
-| --- | --- | --- | --- | --- |
-| **Dependency** | A *uses* B temporarily | Unrelated | Dashed arrow `..>` | B is a parameter, local variable or return type |
-| **Association** | A *knows about* B (has a reference) | Independent | Solid line/arrow `-->` | A field of type B |
-| **Aggregation** | A *has* B as a part, but B can exist on its own | Independent | Hollow diamond on A `o--` | Field holding B(s) that are passed in from outside |
-| **Composition** | A *owns* B; B can't exist without A | B dies with A | Filled diamond on A `*--` | A creates and fully controls B |
-| **Realization** | A *implements* interface B | — | Dashed line, hollow triangle `..\|>` | `class A implements B` |
-| **Inheritance (generalization)** | A *is a* B | — | Solid line, hollow triangle `--\|>` | `class A extends B` |
+| Relationship | Meaning | Everyday picture | Lifetime | UML notation | Java shape |
+| --- | --- | --- | --- | --- | --- |
+| **Dependency** | A *uses* B temporarily | A driver uses a toll card to pay once, then puts it away | Unrelated | Dashed arrow `..>` | B is a parameter, local variable or return type |
+| **Association** | A *knows about* B (has a reference) | A doctor knows their regular patients | Independent | Solid line/arrow `-->` | A field of type B |
+| **Aggregation** | A *has* B as a part, but B can exist on its own | A cricket team has players; players still exist if the team breaks up | Independent | Hollow diamond on A `o--` | Field holding B(s) that are passed in from outside |
+| **Composition** | A *owns* B; B can't exist without A | A building has floors; demolish the building and the floors go too | B dies with A | Filled diamond on A `*--` | A creates and fully controls B |
+| **Realization** | A *implements* interface B | Every UPI app promises to follow the same UPI rules | — | Dashed line, hollow triangle `..\|>` | `class A implements B` |
+| **Inheritance (generalization)** | A *is a* B | A savings account is a kind of bank account | — | Solid line, hollow triangle `--\|>` | `class A extends B` |
 
 ```mermaid
 classDiagram

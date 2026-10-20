@@ -1,4 +1,50 @@
-**Intent:** attach additional responsibilities to an object **dynamically**, by wrapping it in objects that implement the same interface. Decorators provide a flexible alternative to subclassing for extending behaviour.
+## The idea in plain words
+
+You want to **add extra behaviour** to an object without changing its class. You wrap it in another object that has the **same interface**, does its extra bit, and passes the call through. Wrappers can be stacked in any order.
+
+**Picture it:** a cup of chai. Start with plain chai, then add ginger, then add elaichi. Each addition wraps what was there, adds its own taste and adds to the price.
+
+### The smallest example
+
+```java
+interface Chai { int price(); String describe(); }
+
+class PlainChai implements Chai {
+    public int price() { return 20; }
+    public String describe() { return "Chai"; }
+}
+
+class WithGinger implements Chai {
+    private final Chai inner;                                  // the object being wrapped
+    WithGinger(Chai inner) { this.inner = inner; }
+    public int price() { return inner.price() + 5; }           // do the inner work, then add
+    public String describe() { return inner.describe() + " + ginger"; }
+}
+
+class WithElaichi implements Chai {
+    private final Chai inner;
+    WithElaichi(Chai inner) { this.inner = inner; }
+    public int price() { return inner.price() + 7; }
+    public String describe() { return inner.describe() + " + elaichi"; }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Chai order = new WithElaichi(new WithGinger(new PlainChai()));
+        System.out.println(order.describe() + " = ₹" + order.price());   // Chai + ginger + elaichi = ₹32
+    }
+}
+```
+
+With subclasses you would need `GingerChai`, `ElaichiChai`, `GingerElaichiChai`… With decorators, each extra is one small class you combine as needed.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You need optional extras (logging, retry, caching, discounts) in different combinations | There's one fixed extra: just put it in the class |
+
+The rest of this lesson uses a real notification service and explains why the order of wrapping matters.
+
+**The textbook definition:** attach additional responsibilities to an object **dynamically**, by wrapping it in objects that implement the same interface. Decorators provide a flexible alternative to subclassing for extending behaviour.
 
 ## The problem: subclass explosion
 

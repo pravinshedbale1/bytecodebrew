@@ -139,6 +139,25 @@ for (const slug of Object.keys(problemIndex)) if (!shipped.has(slug)) fail(`inde
   }
 }
 
+// ---- LLD interview-sized versions: the lesson shows exactly the tested code in lld-java/*/*Interview.java
+{
+  const lldJava = join(root, 'lld-java');
+  const mark = '// ---- lesson excerpt: everything below is shown in the lesson\n';
+  let count = 0;
+  for (const dir of readdirSync(lldJava, { withFileTypes: true }).filter((e) => e.isDirectory())) {
+    for (const f of readdirSync(join(lldJava, dir.name)).filter((n) => n.endsWith('Interview.java'))) {
+      const java = readFileSync(join(lldJava, dir.name, f), 'utf8');
+      const lesson = /^\/\/ (.+) — the interview-sized version/.exec(java);
+      const excerpt = java.split(mark)[1]?.trimEnd();
+      if (!excerpt) { fail(`lld-java/${dir.name}/${f}: missing the lesson-excerpt marker`); continue; }
+      const mdx = files.filter((k) => k.startsWith('system-design/lld/lld-')).map((k) => readFileSync(join(contentDir, `${k}.mdx`), 'utf8'));
+      if (!mdx.some((text) => text.includes('### The interview-sized version') && text.includes('```java\n' + excerpt + '\n```'))) fail(`lld-java/${dir.name}/${f}: no lesson shows this code verbatim (${lesson?.[1] ?? 'unknown lesson'})`);
+      count++;
+    }
+  }
+  if (count < 21) fail(`only found ${count} LLD interview versions in lld-java/`);
+}
+
 // ---- behavioral question bank links
 const { THEME_INFO } = await load(join(src, 'data', 'behavioralQuestions.js'));
 for (const [theme, info] of Object.entries(THEME_INFO)) checkLink(`behavioral theme ${theme}`, info.lesson);

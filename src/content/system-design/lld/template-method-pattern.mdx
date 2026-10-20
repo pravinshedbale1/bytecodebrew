@@ -1,4 +1,50 @@
-**Intent:** define the **skeleton of an algorithm** in a base class, deferring some **steps** to subclasses. Subclasses redefine specific steps without changing the algorithm's overall structure.
+## The idea in plain words
+
+A process always runs the **same steps in the same order**, but one or two steps differ. Write the order of steps **once** in a base class, and let subclasses fill in only the steps that change.
+
+**Picture it:** a recipe card for any tea: boil water, add the tea, wait, pour. Masala chai and green tea follow the same card. Only the "add the tea" and "wait" steps are different.
+
+### The smallest example
+
+```java
+abstract class ReportExporter {
+    final void export() {                           // the fixed recipe; final so nobody reorders it
+        String data = fetchData();
+        String body = format(data);
+        System.out.println("Saved: " + body);
+    }
+
+    String fetchData() { return "sales=1200"; }     // a shared step
+    abstract String format(String data);            // the step that varies
+}
+
+class CsvExporter extends ReportExporter {
+    String format(String data) { return data.replace("=", ","); }
+}
+class JsonExporter extends ReportExporter {
+    String format(String data) {
+        String[] kv = data.split("=");
+        return "{\"" + kv[0] + "\": " + kv[1] + "}";
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        new CsvExporter().export();    // Saved: sales,1200
+        new JsonExporter().export();   // Saved: {"sales": 1200}
+    }
+}
+```
+
+The order "fetch, format, save" is written once. Subclasses can't forget a step or do them out of order.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Several classes share the same flow with small differences (exporters, game turns, payment flows) | The varying part should be swapped at runtime: use Strategy (composition) instead |
+
+The rest of this lesson covers hooks, and when to prefer Strategy over inheritance.
+
+**The textbook definition:** define the **skeleton of an algorithm** in a base class, deferring some **steps** to subclasses. Subclasses redefine specific steps without changing the algorithm's overall structure.
 
 ## The problem
 

@@ -2,6 +2,94 @@
 
 "Design an in-memory file system" (`mkdir`, `ls`, read/write files, delete, move, find) is the textbook **Composite** problem, and a common machine-coding round in its own right (a version of it is LeetCode 588). It tests tree modelling, path parsing, precise error handling and — in the follow-ups — operations over the whole tree and thread safety.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="70" write={["Files and folders sharing one `Node` type (Composite)", "Path splitting and walking the tree", "`mkdir -p`, write, read, `ls` and `size`"]} say={["`mv` and how to stop moving a folder inside itself", "Visitors for search and size reports", "Locking a tree: one lock first, finer locks later"]} skip={["Permissions, links and file handles", "Disk blocks and inodes"]} />
+
+### The interview-sized version
+
+A Composite tree with path handling and the five commands interviewers usually ask for. It's about **70 lines**, and it compiles and runs.
+
+```java
+abstract class Node {                                  // Composite: files and folders share one type
+    final String name;
+    Node(String name) { this.name = name; }
+    abstract int size();
+}
+
+class FileNode extends Node {
+    private final StringBuilder content = new StringBuilder();
+    FileNode(String name) { super(name); }
+    void append(String text) { content.append(text); }
+    String read() { return content.toString(); }
+    int size() { return content.length(); }
+}
+
+class Directory extends Node {
+    final Map<String, Node> children = new TreeMap<>(); // sorted, so ls comes out in order
+    Directory(String name) { super(name); }
+    int size() { return children.values().stream().mapToInt(Node::size).sum(); }
+}
+
+class FileSystem {
+    private final Directory root = new Directory("");
+
+    synchronized void mkdir(String path) {             // like mkdir -p
+        Directory dir = root;
+        for (String part : parts(path)) {
+            Node child = dir.children.computeIfAbsent(part, Directory::new);
+            if (!(child instanceof Directory d)) throw new IllegalArgumentException(part + " is a file");
+            dir = d;
+        }
+    }
+
+    synchronized void writeFile(String path, String text) {
+        List<String> p = parts(path);
+        Directory parent = directoryAt(p.subList(0, p.size() - 1));
+        Node node = parent.children.computeIfAbsent(p.get(p.size() - 1), FileNode::new);
+        if (!(node instanceof FileNode file)) throw new IllegalArgumentException(path + " is a directory");
+        file.append(text);
+    }
+
+    synchronized String read(String path) {
+        if (!(nodeAt(parts(path)) instanceof FileNode file)) throw new IllegalArgumentException(path + " is a directory");
+        return file.read();
+    }
+
+    synchronized List<String> ls(String path) {
+        Node node = nodeAt(parts(path));
+        return node instanceof Directory d ? List.copyOf(d.children.keySet()) : List.of(node.name);
+    }
+
+    synchronized int size(String path) { return nodeAt(parts(path)).size(); }
+
+    private Node nodeAt(List<String> parts) {
+        Node node = root;
+        for (String part : parts) {
+            if (!(node instanceof Directory d) || !d.children.containsKey(part))
+                throw new IllegalArgumentException("No such path: /" + String.join("/", parts));
+            node = d.children.get(part);
+        }
+        return node;
+    }
+
+    private Directory directoryAt(List<String> parts) {
+        if (!(nodeAt(parts) instanceof Directory d)) throw new IllegalArgumentException("Not a directory");
+        return d;
+    }
+
+    private static List<String> parts(String path) {
+        return Arrays.stream(path.split("/")).filter(s -> !s.isEmpty()).toList();
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

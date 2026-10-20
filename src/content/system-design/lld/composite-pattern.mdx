@@ -1,4 +1,40 @@
-**Intent:** compose objects into **tree structures** to represent part–whole hierarchies, and let clients treat **individual objects and compositions uniformly**.
+## The idea in plain words
+
+When things **nest inside other things** (folders inside folders, boxes inside boxes), give the single item and the group the **same interface**. Then the code that uses them never has to ask "is this one thing or a group?"
+
+**Picture it:** a parcel. A box can hold products and smaller boxes. To find the total price you ask the big box. It asks everything inside it, and the smaller boxes do the same.
+
+### The smallest example
+
+```java
+interface Item { int price(); }
+
+record Product(String name, int price) implements Item { }      // a leaf
+
+class Box implements Item {                                      // a group
+    private final List<Item> contents = new ArrayList<>();
+    Box add(Item item) { contents.add(item); return this; }
+    public int price() { return contents.stream().mapToInt(Item::price).sum(); }   // asks its children
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Box pencilCase = new Box().add(new Product("Pen", 20)).add(new Product("Ink", 30));
+        Box parcel = new Box().add(new Product("Notebook", 50)).add(pencilCase);
+        System.out.println(parcel.price());   // 100
+    }
+}
+```
+
+There's no `instanceof` anywhere. A box inside a box inside a box still works.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Your data really is a tree, and you run the same operation on single items and groups | The structure is flat: a list is enough |
+
+The rest of this lesson covers where `add`/`remove` should live, real uses (file systems, UI trees) and pitfalls.
+
+**The textbook definition:** compose objects into **tree structures** to represent part–whole hierarchies, and let clients treat **individual objects and compositions uniformly**.
 
 Use it only when your model is genuinely a tree. When it is, Composite removes a lot of `instanceof` checking.
 

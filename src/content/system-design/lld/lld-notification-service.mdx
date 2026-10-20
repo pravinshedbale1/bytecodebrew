@@ -2,6 +2,57 @@
 
 "Design a notification service" is asked as LLD at most product companies because every one of them has built one. The object design is simple — request, channels, templates — but the interviewer listens for the **policies**: user preferences, quiet hours, rate limits, deduplication, priority (an OTP must not wait behind a marketing blast), provider failover, retries and dead letters. The distributed version is the HLD case [Design a Notification System](/system-design/hld/design-notification-system); this is the in-process design.
 
+## What the interviewer expects
+
+The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+
+<InterviewScope minutes="45–60" lines="30" write={["A `Sender` per channel (email, SMS, push)", "Idempotency: the same request id is sent once", "Opt-outs and a few retries"]} say={["Priority queues so an OTP never waits behind marketing", "Templates, quiet hours and daily caps", "Falling back to a second provider"]} skip={["Provider SDK details", "Delivery receipts and analytics"]} />
+
+### The interview-sized version
+
+Channels behind one interface, sent once per request id, with opt-outs and retries. It's about **30 lines**, and it compiles and runs.
+
+```java
+enum Channel { EMAIL, SMS, PUSH }
+enum Status { SENT, DUPLICATE, SKIPPED, FAILED }
+
+record Notification(String id, String userId, Channel channel, String message) { }
+
+interface Sender { void send(String userId, String message); }    // one per channel; wraps a provider (Adapter)
+
+class NotificationService {
+    private final Map<Channel, Sender> senders;
+    private final int maxAttempts;
+    private final Set<String> seenIds = ConcurrentHashMap.newKeySet();           // idempotency
+    private final Map<String, Set<Channel>> optedOut = new ConcurrentHashMap<>();
+
+    NotificationService(Map<Channel, Sender> senders, int maxAttempts) { this.senders = senders; this.maxAttempts = maxAttempts; }
+
+    void optOut(String userId, Channel channel) {
+        optedOut.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet()).add(channel);
+    }
+
+    Status send(Notification n) {
+        if (!seenIds.add(n.id())) return Status.DUPLICATE;                       // a retried request is sent once
+        if (optedOut.getOrDefault(n.userId(), Set.of()).contains(n.channel())) return Status.SKIPPED;
+        Sender sender = senders.get(n.channel());
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                sender.send(n.userId(), n.message());
+                return Status.SENT;
+            } catch (RuntimeException e) {
+                // try again; a real system waits longer each time (back-off)
+            }
+        }
+        return Status.FAILED;                                                    // the full design keeps it in a dead-letter list
+    }
+}
+```
+
+<Callout type="tip" title="How to use the rest of this lesson">
+Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+</Callout>
+
 ## 1. Requirements
 
 | Question | Assumption |

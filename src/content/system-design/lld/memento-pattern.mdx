@@ -1,4 +1,46 @@
-**Intent:** capture and externalise an object's internal state as a **snapshot** so it can be **restored later** — without violating encapsulation.
+## The idea in plain words
+
+A **Memento** is a saved snapshot of an object's state, so you can put the object back the way it was later. The object makes the snapshot itself, so nobody else has to poke at its private fields.
+
+**Picture it:** saving a video game before a hard level. If things go badly, you load the save and you're back exactly where you were.
+
+### The smallest example
+
+```java
+class Game {
+    private int level;
+    private int health;
+
+    void play(int newLevel, int newHealth) { level = newLevel; health = newHealth; }
+
+    Save save() { return new Save(level, health); }                // take a snapshot
+    void load(Save s) { level = s.level(); health = s.health(); }  // go back to it
+    public String toString() { return "level " + level + ", health " + health; }
+
+    record Save(int level, int health) { }                        // a record can't be changed after creation
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Game game = new Game();
+        game.play(5, 80);
+        Game.Save beforeBoss = game.save();     // the caller only holds the save; it never edits it
+        game.play(6, 0);                        // lost the fight
+        game.load(beforeBoss);
+        System.out.println(game);               // level 5, health 80
+    }
+}
+```
+
+Undo in editors, "discard changes" in forms and rollback in a key-value store all work this way.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You need undo, rollback or checkpoints, and the state is reasonably small to copy | The state is huge: store the changes (commands) instead of full copies |
+
+The rest of this lesson builds a proper undo history and covers keeping snapshots private and cheap.
+
+**The textbook definition:** capture and externalise an object's internal state as a **snapshot** so it can be **restored later** — without violating encapsulation.
 
 ## The problem
 
@@ -38,6 +80,8 @@ classDiagram
   Editor ..> Snapshot : creates/reads
   History o-- Snapshot : stores only
 ```
+
+<FullCode title="The full Editor and History code (47 lines)" note="snapshots the caretaker cannot read">
 
 ```java
 public final class Editor {
@@ -88,6 +132,8 @@ public final class History {
     }
 }
 ```
+
+</FullCode>
 
 In Java, a **static nested class with private members** is the idiomatic way to make the memento readable by the originator but opaque to the caretaker. An alternative is a narrow public interface (e.g., only `takenAt()`) with the real class package-private.
 
@@ -140,6 +186,8 @@ Real editors need both directions. The caretaker keeps two stacks: an undo stack
 
 1. Undoing pushes the *current* state onto the redo stack before restoring, so the undo can itself be undone.
 2. Any new edit clears the redo stack, because the "future" it described no longer follows from the present.
+
+<FullCode title="The full undo/redo code (66 lines)" note="two stacks, and new edits clear redo">
 
 ```java
 // Originator: owns its state, creates and restores opaque snapshots
@@ -209,6 +257,8 @@ public final class MementoDemo {
     }
 }
 ```
+
+</FullCode>
 
 Output:
 

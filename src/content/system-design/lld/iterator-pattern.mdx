@@ -1,4 +1,45 @@
-**Intent:** provide a way to **access the elements of a collection sequentially** without exposing its underlying representation (list, tree, graph, paginated API…).
+## The idea in plain words
+
+An **Iterator** lets you walk through a collection **one item at a time**, without knowing how the collection stores its items inside (array, tree, pages from an API).
+
+**Picture it:** the "next" button on a music player. You don't know if songs are stored on the phone, streamed or shuffled. You just press next until there are no more.
+
+### The smallest example
+
+```java
+class Playlist implements Iterable<String> {
+    private final String[] songs;                    // how it's stored is private
+    Playlist(String... songs) { this.songs = songs; }
+
+    public Iterator<String> iterator() {
+        return new Iterator<>() {
+            private int i = 0;                       // where this walk has reached
+            public boolean hasNext() { return i < songs.length; }
+            public String next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                return songs[i++];
+            }
+        };
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        for (String song : new Playlist("Kesariya", "Tum Hi Ho", "Ilahi"))   // for-each uses iterator()
+            System.out.println(song);
+    }
+}
+```
+
+If `Playlist` later stores songs in a linked list or a database, the `for` loop doesn't change.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Your own collection (tree, grid, paged results) should work with a `for` loop, or needs more than one way to walk it | A `List` already holds the data: it has an iterator |
+
+The rest of this lesson covers tree iterators, lazy paging and the mistakes interviewers look for.
+
+**The textbook definition:** provide a way to **access the elements of a collection sequentially** without exposing its underlying representation (list, tree, graph, paginated API…).
 
 Java built this pattern into the language — `Iterable`, `Iterator` and the enhanced `for` loop — so the interview interest lies in **implementing** custom iterators correctly and understanding traversal semantics.
 
@@ -148,6 +189,8 @@ Callers just loop; pages are fetched on demand. Java `Stream`s and database curs
 
 Many interview questions ask you to build an iterator out of other iterators. Two useful building blocks:
 
+<FullCode title="The round-robin and flattening iterators (59 lines)" note="two building blocks for interview questions">
+
 ```java
 // Round-robin ("zigzag") iterator: take one element from each source in turn, skipping exhausted ones
 public final class RoundRobinIterator<T> implements Iterator<T> {
@@ -209,6 +252,8 @@ public final class IteratorDemo {
     }
 }
 ```
+
+</FullCode>
 
 Output: `1 10 100 2 20 3`, then `true true 2`, then `4 6`. Two details matter in both classes: `next()` throws `NoSuchElementException` when there is nothing left, and the filtering iterator does its work in `hasNext()` and remembers the element it found, so calling `hasNext()` twice never skips anything.
 

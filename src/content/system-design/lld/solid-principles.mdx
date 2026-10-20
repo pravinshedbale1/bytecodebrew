@@ -1,14 +1,47 @@
 SOLID is five principles, popularised by Robert C. Martin, for designing classes that are easy to change. Almost every LLD interview touches them — either directly ("explain Liskov with an example") or by asking you to extend your design and watching whether it bends or breaks.
 
-Treat them as **heuristics for managing change**, not laws. Each has a cost when over-applied, and knowing that cost is what distinguishes a senior answer.
+## The idea in plain words
 
-| Principle | One-line summary | Fights |
-| --- | --- | --- |
-| **S**ingle Responsibility | A class should have one reason to change | God classes |
-| **O**pen/Closed | Open for extension, closed for modification | Editing working code for every new case |
-| **L**iskov Substitution | Subtypes must be usable wherever their base type is | Subclasses that surprise callers |
-| **I**nterface Segregation | Clients shouldn't depend on methods they don't use | Fat interfaces |
-| **D**ependency Inversion | Depend on abstractions; high-level policy shouldn't depend on low-level details | Business logic welded to infrastructure |
+All five rules aim at one thing: **when requirements change, you should have to touch as little working code as possible.**
+
+| Principle | In plain words | Everyday picture | Fights |
+| --- | --- | --- | --- |
+| **S**ingle Responsibility | One class, one job | The cook cooks and the cashier bills. A new GST rule doesn't disturb the kitchen. | God classes |
+| **O**pen/Closed | Add new behaviour by adding code, not by editing code that works | A power strip: plug in a new device without rewiring the house | Editing working code for every new case |
+| **L**iskov Substitution | A child class must work anywhere its parent works, with no surprises | A substitute driver must drive the same car the same way. One who can't reverse is not a substitute. | Subclasses that surprise callers |
+| **I**nterface Segregation | Don't make a class depend on methods it doesn't use | A remote for a child with three buttons, not fifty | Fat interfaces |
+| **D**ependency Inversion | Important logic depends on an interface, not on one specific tool | A phone with a USB-C port, not a charger cable soldered on | Business logic welded to infrastructure |
+
+### All five in one small example
+
+```java
+interface Notifier { void send(String to, String text); }       // I: small, focused interface
+
+class EmailNotifier implements Notifier {
+    public void send(String to, String text) { System.out.println("Email to " + to + ": " + text); }
+}
+class SmsNotifier implements Notifier {                           // O: a new channel is a new class
+    public void send(String to, String text) { System.out.println("SMS to " + to + ": " + text); }
+}
+
+class OrderService {                                              // S: it only places orders
+    private final Notifier notifier;
+    OrderService(Notifier notifier) { this.notifier = notifier; } // D: given an interface, not "new EmailNotifier()"
+
+    void place(String user, String item) {
+        System.out.println(user + " ordered " + item);
+        notifier.send(user, "Order placed: " + item);             // L: any Notifier works here, no surprises
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        new OrderService(new SmsNotifier()).place("asha", "Headphones");
+    }
+}
+```
+
+Treat them as **heuristics for managing change**, not laws. Each has a cost when over-applied, and knowing that cost is what distinguishes a senior answer. The rest of this lesson takes each principle in turn, with the kind of example interviewers use.
 
 ## S — Single Responsibility Principle
 

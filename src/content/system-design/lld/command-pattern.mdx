@@ -1,4 +1,50 @@
-**Intent:** turn a **request into a standalone object** containing everything needed to perform it. That lets you pass requests as arguments, **queue** or **schedule** them, **log** them, and support **undo/redo**.
+## The idea in plain words
+
+Turn an **action into an object**. Once "type the word Hello" is an object, you can keep it in a list, run it later, send it to another thread, log it, or **undo** it.
+
+**Picture it:** a waiter writes your order on a slip. The slip goes into the kitchen's queue, the cook makes it when ready, and the slip can be cancelled before it's cooked. The slip is the command.
+
+### The smallest example
+
+```java
+interface Command { void execute(); void undo(); }
+
+class Editor { final StringBuilder text = new StringBuilder(); }
+
+class TypeCommand implements Command {
+    private final Editor editor;
+    private final String word;
+    TypeCommand(Editor editor, String word) { this.editor = editor; this.word = word; }
+
+    public void execute() { editor.text.append(word); }
+    public void undo()    { editor.text.setLength(editor.text.length() - word.length()); }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Editor editor = new Editor();
+        Deque<Command> history = new ArrayDeque<>();
+
+        for (String word : List.of("Hello", " world")) {
+            Command c = new TypeCommand(editor, word);
+            c.execute();
+            history.push(c);              // remember what we did
+        }
+        history.pop().undo();             // Ctrl+Z
+        System.out.println(editor.text);  // Hello
+    }
+}
+```
+
+Each command knows how to do **and** undo itself, so undo is just "pop the last command and call `undo()`".
+
+| Use it when | Skip it when |
+| --- | --- |
+| You need undo/redo, a queue of jobs, retries, or a log of what happened | You just call a method once and forget it |
+
+The rest of this lesson builds undo/redo properly and shows commands in job queues.
+
+**The textbook definition:** turn a **request into a standalone object** containing everything needed to perform it. That lets you pass requests as arguments, **queue** or **schedule** them, **log** them, and support **undo/redo**.
 
 ## The problem
 
@@ -54,6 +100,8 @@ Roles:
 - **Client** — creates commands and hands them to invokers.
 
 ## Undo/redo
+
+<FullCode title="The full undo/redo code (55 lines)" note="commands plus a history with two stacks">
 
 ```java
 public interface Command {
@@ -112,6 +160,8 @@ public final class CommandHistory {
     }
 }
 ```
+
+</FullCode>
 
 Two strategies for undo:
 

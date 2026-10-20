@@ -1,4 +1,49 @@
-**Intent:** separate the construction of a complex object from its representation, so you can build it step by step — and, in its modern Java form, create **valid, immutable objects with many optional parameters** readably.
+## The idea in plain words
+
+Some objects have a few **required** fields and many **optional** ones. A constructor with nine arguments is hard to read (`new Pizza("L", true, false, null, 2)`, what is `false`?). A **Builder** lets you set only what you need, each by name, and then call `build()`.
+
+**Picture it:** ordering at a sandwich counter. You say "brown bread" first, then "add cheese, add paneer, no onion", then "done". You never say every option in one breath.
+
+### The smallest example
+
+```java
+final class Pizza {
+    private final String size;
+    private final boolean extraCheese;
+    private final List<String> toppings;
+
+    private Pizza(Builder b) { size = b.size; extraCheese = b.extraCheese; toppings = List.copyOf(b.toppings); }
+    public String toString() { return size + " pizza, extra cheese: " + extraCheese + ", toppings: " + toppings; }
+
+    static class Builder {
+        private final String size;                       // required, so it goes in the constructor
+        private boolean extraCheese;                     // optional fields get a method each
+        private final List<String> toppings = new ArrayList<>();
+
+        Builder(String size) { this.size = size; }
+        Builder extraCheese() { extraCheese = true; return this; }    // "return this" allows chaining
+        Builder topping(String t) { toppings.add(t); return this; }
+        Pizza build() { return new Pizza(this); }
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        Pizza p = new Pizza.Builder("Large").extraCheese().topping("Paneer").topping("Corn").build();
+        System.out.println(p);   // Large pizza, extra cheese: true, toppings: [Paneer, Corn]
+    }
+}
+```
+
+Notice that `Pizza` has no setters. Once built, it can't change, and every call reads like a sentence.
+
+| Use it when | Skip it when |
+| --- | --- |
+| Four or more parameters, several of them optional, or rules to check before the object exists | Two or three fields: a constructor or a record is clearer |
+
+The rest of this lesson covers validation in `build()`, the classic GoF version and the pitfalls.
+
+**The textbook definition:** separate the construction of a complex object from its representation, so you can build it step by step — and, in its modern Java form, create **valid, immutable objects with many optional parameters** readably.
 
 ## The problem: telescoping constructors
 
@@ -12,6 +57,8 @@ new HttpRequest(url, "POST", headers, null, body, 5000, 3, null, true);   // wha
 - **JavaBeans setters** (`new X(); x.setA(); x.setB();`) are readable but leave the object **mutable** and possibly **half-built and invalid** between calls — and you can't make it immutable.
 
 ## The solution: a fluent builder
+
+<FullCode title="The full HttpRequest builder (46 lines)" note="required fields, defaults, validation in build()">
 
 ```java
 public final class HttpRequest {
@@ -61,6 +108,8 @@ public final class HttpRequest {
     }
 }
 ```
+
+</FullCode>
 
 ```java
 HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.example.com/orders"), Method.POST)

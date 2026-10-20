@@ -1,4 +1,49 @@
-**Intent:** decouple an **abstraction** from its **implementation** so the two can vary independently — by splitting one class hierarchy that grows in two dimensions into two hierarchies connected by composition.
+## The idea in plain words
+
+Sometimes a class grows in **two directions at once**: *what* it is and *how* it does its work. With inheritance you end up with a class for every combination. **Bridge** splits the two directions into two small hierarchies and joins them with a field.
+
+**Picture it:** a TV remote and a TV. Any remote (basic, voice, phone app) works with any TV brand. Remote makers and TV makers improve their products separately. The signal between them is the "bridge".
+
+### The smallest example
+
+Messages (*what*) and channels (*how*):
+
+```java
+interface Channel { void deliver(String text); }              // the "how" side
+class Email implements Channel { public void deliver(String t) { System.out.println("Email: " + t); } }
+class Sms   implements Channel { public void deliver(String t) { System.out.println("SMS: " + t); } }
+
+abstract class Message {                                      // the "what" side
+    protected final Channel channel;                          // the bridge
+    Message(Channel channel) { this.channel = channel; }
+    abstract void send();
+}
+class OtpMessage extends Message {
+    OtpMessage(Channel c) { super(c); }
+    void send() { channel.deliver("Your OTP is 4821"); }
+}
+class OfferMessage extends Message {
+    OfferMessage(Channel c) { super(c); }
+    void send() { channel.deliver("20% off today only"); }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        new OtpMessage(new Sms()).send();       // SMS: Your OTP is 4821
+        new OfferMessage(new Email()).send();   // Email: 20% off today only
+    }
+}
+```
+
+Without the bridge you'd write `OtpSms`, `OtpEmail`, `OfferSms`, `OfferEmail`… Here, adding WhatsApp is **one** class, not one per message type.
+
+| Use it when | Skip it when |
+| --- | --- |
+| You see class names that combine two ideas (`OtpSms`, `OfferEmail`) and the list keeps growing | Only one thing varies: that's just Strategy |
+
+The rest of this lesson gives the full picture and compares Bridge with Strategy, Adapter and State.
+
+**The textbook definition:** decouple an **abstraction** from its **implementation** so the two can vary independently — by splitting one class hierarchy that grows in two dimensions into two hierarchies connected by composition.
 
 Bridge is the pattern people find most abstract. The key is to look for **two independent dimensions of variation** tangled into one inheritance tree.
 
