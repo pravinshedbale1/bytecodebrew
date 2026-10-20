@@ -137,13 +137,8 @@ export function PrivacyPage() {
         <li><strong>Payment records</strong> when you buy Premium: your email, the plan, amount, order number, status and dates. We use them to activate Premium and handle support.</li>
         <li><strong>Phone number</strong> entered in the payment window. It goes to Razorpay, which uses it to process the payment and send your receipt; we don't receive or keep it.</li>
       </ul>
+      <p>We use your study data to run the service, help you when you contact support, and improve lessons and features.</p>
       <p>We do not use advertising or analytics trackers, and we never sell or rent your data.</p>
-      <h2>Who at ByteCodeBrew can see your data</h2>
-      <p>
-        The site administrator can view your study data read-only, to help when you ask for support and to see, in aggregate,
-        which lessons and features are used so we can improve them. The administrator can't change your data, and never sees
-        your Claude API key or any payment card or bank details.
-      </p>
       <h2>What stays only in your browser</h2>
       <p>
         Settings such as the theme, and a Claude API key if you add one for the AI interviewer, are kept only in your browser's local storage and are never sent to our servers.
