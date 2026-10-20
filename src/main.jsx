@@ -1,3 +1,5 @@
+// first: an admin "view as" tab must be known before any store reads this browser's data
+import './lib/viewAs';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';

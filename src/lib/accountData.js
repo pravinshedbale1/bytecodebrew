@@ -2,6 +2,7 @@ import { SYNCED_STORES, KEEP_KEYS, learningKeys, wipeBrowser, markResetSeen, pau
 import { loadFirebase } from './firebase';
 import { deleteRemoteSubmissions, readRemoteSubmissions } from './submissions';
 import { clearApiKey } from './claude';
+import { viewAs, noteReadOnly } from './viewAs';
 
 /**
  * "Download my data" and "Delete my data".
@@ -51,6 +52,7 @@ const TIMEOUT_MS = 20000;
 const withTimeout = (p, ms = TIMEOUT_MS) => Promise.race([p, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 
 export async function exportData() {
+  if (viewAs) { noteReadOnly(); return; }
   const stores = Object.fromEntries(SYNCED_STORES.map((s) => [s.name, s.get()]));
   const storeKeys = new Set(SYNCED_STORES.map((s) => s.storageKey));
   const browser = {};
@@ -88,6 +90,7 @@ async function deleteAccountData(fb, uid) {
  * learner if the account couldn't be reached, in which case this browser is left as it was.
  */
 export async function deleteAllData({ removeApiKey = false } = {}) {
+  if (viewAs) { noteReadOnly(); throw new DeleteError('This is a read-only view of another learner.'); }
   const at = Date.now();
   const fb = await loadFirebase();
   const uid = fb?.auth.currentUser?.uid;

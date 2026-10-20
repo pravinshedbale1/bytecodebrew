@@ -1,0 +1,254 @@
+.muted {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.tile {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.tile strong {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 170px;
+  margin-top: var(--space-3);
+}
+
+.barCol {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-accent);
+}
+
+.barVal,
+.barDay {
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.barDay {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  height: 30px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+
+.table th {
+  text-align: left;
+  font-weight: 650;
+  color: var(--color-text-subtle);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: bottom;
+}
+
+.table td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.meter {
+  display: inline-block;
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.head select {
+  width: auto;
+  margin-left: 6px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.matrix td,
+.matrix th {
+  text-align: center;
+}
+
+.matrix td:first-child,
+.matrix th:first-child {
+  text-align: left;
+}
+
+.rot {
+  white-space: nowrap;
+}
+
+.heat {
+  background: color-mix(in srgb, var(--color-accent) calc(var(--a) * 70%), transparent);
+  font-weight: 600;
+  min-width: 44px;
+}
+
+.zero {
+  color: var(--color-text-subtle);
+  font-weight: 400;
+}
+
+.who {
+  display: grid;
+  min-width: 180px;
+  text-align: left;
+}
+
+.who .muted {
+  font-size: var(--text-xs);
+}
+
+.pro {
+  justify-self: start;
+  font-size: 10px;
+  font-weight: 650;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chips li {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.grid2 > section {
+  margin: 0 !important;
+}
+
+.rank {
+  margin: 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: 4px;
+  font-size: var(--text-sm);
+}
+
+.rank li span {
+  display: inline-block;
+  max-width: calc(100% - 40px);
+}
+
+.rank li strong {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-5);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+@media (max-width: 900px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

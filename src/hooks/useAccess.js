@@ -4,6 +4,7 @@ import { loadFirebase } from '../lib/firebase';
 import { setPremiumSync } from '../lib/syncedStore';
 import { firebaseEnabled } from '../config/firebase';
 import { isAdminEmail, PREMIUM_CONTENT } from '../config/access';
+import { viewAs, exitViewAs } from '../lib/viewAs';
 
 /**
  * Access level of the current visitor, shared by the whole app:
@@ -28,11 +29,21 @@ function set(next) {
 }
 
 async function watch(user) {
-  const email = (user.email ?? '').toLowerCase();
+  if (viewAs) {
+    // only an admin may view as someone; everyone else is sent back to their own view
+    if (!isAdminEmail(user.email ?? '') || !user.emailVerified) { exitViewAs('/'); return; }
+    if (!viewAs.email) { set({ status: 'free', isAdmin: false, email: null }); return; }
+    return watchEntitlement(viewAs.email, { isAdmin: false });
+  }
+  return watchEntitlement((user.email ?? '').toLowerCase(), { user });
+}
+
+async function watchEntitlement(emailIn, { user = null, isAdmin: forceAdmin } = {}) {
+  const email = emailIn;
   if (watching === email) return;
   stopWatch?.();
   watching = email;
-  if (isAdminEmail(email) && user.emailVerified) {
+  if (forceAdmin !== false && isAdminEmail(email) && user?.emailVerified) {
     set({ status: 'premium', isAdmin: true, email });
     return;
   }

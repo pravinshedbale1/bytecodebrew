@@ -6,6 +6,7 @@ import { site } from '../../config/site';
 import { SearchDialog } from '../search/SearchDialog';
 import { SignInNudge } from './SignInNudge';
 import { SiteFooter } from './SiteFooter';
+import { ViewAsBanner } from './ViewAsBanner';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
@@ -33,6 +34,7 @@ export function AppShell() {
       {navOpen && <div className={styles.scrim} onClick={() => setNavOpen(false)} aria-hidden="true" />}
 
       <div className={styles.content}>
+        <ViewAsBanner />
         <TopBar onOpenNav={() => setNavOpen(true)} />
         <main id="main" className={styles.main}>
           <Outlet />

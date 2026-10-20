@@ -3,6 +3,7 @@ import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
 import { resetGuard, isSyncPaused } from './syncedStore';
+import { viewAs, noteReadOnly } from './viewAs';
 
 /**
  * Submissions on practice problems: the latest MAX_SUBS per problem, newest first, each
@@ -50,6 +51,7 @@ const parse = (snap) => {
 
 /** Merges `add` into the account's copy and returns the result. */
 async function pushRemote(uid, slug, add) {
+  if (viewAs) return null;
   await resetGuard(uid);                 // never re-upload submissions from before a "Delete my data"
   if (isSyncPaused()) return null;
   const r = await remoteRef(uid, slug);
@@ -87,6 +89,12 @@ export function useSubmissions(slug) {
   useEffect(() => {
     setSubs(readLocalSubs(slug));
     if (!uid) return undefined;
+    if (viewAs) {
+      // admin "view as": the learner's own submissions, read-only
+      let alive = true;
+      remoteRef(viewAs.uid, slug).then((r) => r && r.fb.fsMod.getDoc(r.ref)).then((snap) => { if (alive && snap) setSubs(parse(snap) ?? []); }).catch(() => {});
+      return () => { alive = false; };
+    }
     let alive = true;
     pushRemote(uid, slug, readLocalSubs(slug))
       .then((merged) => { if (alive && merged) apply(mergeSubs(readLocalSubs(slug), merged)); })
@@ -95,6 +103,7 @@ export function useSubmissions(slug) {
   }, [slug, uid, apply]);
 
   const add = useCallback((entry) => {
+    if (viewAs) { noteReadOnly(); return; }
     const next = mergeSubs([entry], readLocalSubs(slug));
     apply(next);
     if (uid) {

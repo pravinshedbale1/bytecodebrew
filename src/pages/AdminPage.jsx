@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { Link } from 'react-router';
+import { ShieldCheck, Trash2, UserPlus, BarChart3 } from 'lucide-react';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { useAccess } from '../hooks/useAccess';
 import { loadFirebase } from '../lib/firebase';
@@ -86,6 +87,7 @@ export function AdminPage() {
         <li>Removing access stops premium features and syncing of premium data; their saved data is kept.</li>
         <li>Free for everyone: lessons, highlights, progress, lesson quizzes and practice, search, cheat sheets.</li>
         <li>People buy premium at /premium; payments grant access automatically for the plan's period. You can still approve accounts by hand here (no expiry).</li>
+        <li>The eye button on a registered user opens the site as they see it, read-only, in a new tab. Your own data and theirs never mix, and nothing you do there changes their data.</li>
         <li>Questions come to {CONTACT_EMAIL}.</li>
       </ul>
     </RailCard>
@@ -96,6 +98,7 @@ export function AdminPage() {
       <header className={page.header}>
         <p className={page.eyebrow}>Admin</p>
         <h1 className={page.title}>Users, access and payments</h1>
+        <p><Link to="/admin/analytics" className={`${ui.btn} ${ui.small}`}><BarChart3 size={14} /> Usage analytics</Link></p>
         <p className={page.lead}>{rows ? `${rows.length} approved account${rows.length === 1 ? '' : 's'}.` : 'Loading…'} You ({me}) always have access.</p>
       </header>
 

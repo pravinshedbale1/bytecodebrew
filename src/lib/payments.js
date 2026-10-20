@@ -1,5 +1,6 @@
 import { PAYMENTS_API } from '../config/services';
 import { loadFirebase } from './firebase';
+import { viewAs, noteReadOnly } from './viewAs';
 
 /** Active plans, cheapest first (public Firestore collection, edited on /admin). */
 export async function listPlans({ includeInactive = false } = {}) {
@@ -13,6 +14,7 @@ export async function listPlans({ includeInactive = false } = {}) {
 }
 
 async function call(path, body) {
+  if (viewAs && path !== 'admin/users') { noteReadOnly(); throw new Error('This is a read-only view of another learner: nothing can be bought here.'); }
   const fb = await loadFirebase();
   const user = fb?.auth.currentUser;
   if (!user) throw new Error('Sign in with Google first.');

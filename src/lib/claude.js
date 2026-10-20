@@ -3,6 +3,7 @@ import { CLAUDE_MODEL } from '../config/services';
 import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
+import { viewAs, noteReadOnly } from './viewAs';
 
 /**
  * The AI interviewer calls the Claude API straight from the browser with the learner's own API key.
@@ -42,6 +43,7 @@ async function saveRemote(k) {
 }
 
 onAuth((auth) => {
+  if (viewAs) return;                        // admin "view as": the learner's key stays private
   const next = auth.status === 'signed-in' ? auth.user.uid : null;
   if (next === uid) return;
   stop?.();
@@ -80,6 +82,7 @@ export function useApiKey() {
 
 /** Save the key here and to the account. Resolves when the account has confirmed it (at once when signed out); rejects if it couldn't. */
 export async function setApiKey(k) {
+  if (viewAs) { noteReadOnly(); throw new Error('This is a read-only view of another learner.'); }
   const key = k.trim();
   setLocal(key);
   await saveRemote(key);
@@ -87,6 +90,7 @@ export async function setApiKey(k) {
 
 /** Remove the key here and from the account (and so from every device). */
 export async function clearApiKey() {
+  if (viewAs) { noteReadOnly(); throw new Error('This is a read-only view of another learner.'); }
   setLocal('');
   await saveRemote('');
 }

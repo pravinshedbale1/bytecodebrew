@@ -13,6 +13,7 @@ import { PATTERNS, cxLabel } from '../lib/coach/patterns';
 import { retention, labelOf, changesSince, DAY, DRILL_SECONDS, RESOLVE_MINUTES, RESOLVE_GAPS, FAIL_GAP } from '../lib/coach/model';
 import { useDeck } from '../lib/reviewDeck';
 import { readJSON, writeJSON } from '../lib/storage';
+import { isViewingAs } from '../lib/viewAs';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from './TodayPage.module.css';
@@ -51,7 +52,14 @@ function TodayInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
 
-  if (!session) return <PageLayout><p className={styles.muted}>Building today's session…</p></PageLayout>;
+  if (!session) {
+    return (
+      <PageLayout>
+        <p className={styles.muted}>{isViewingAs() ? 'This learner hasn’t opened today’s session yet. Their skill map is below once they have evidence.' : 'Building today’s session…'}</p>
+        {isViewingAs() && <SkillMap model={model} now={Date.now()} />}
+      </PageLayout>
+    );
+  }
 
   const answered = Object.keys(session.answers ?? {}).length;
   const drillsDone = answered >= session.drills.length;

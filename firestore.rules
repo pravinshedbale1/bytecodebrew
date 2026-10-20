@@ -3,7 +3,7 @@ rules_version = '2';
 // ByteCodeBrew security rules.
 //
 //  users/{uid}/state/{name}   one document per synced store (src/lib/syncedStore.js). Each user reads and
-//                             writes only their own. Premium stores accept writes only from premium accounts.
+//                             writes only their own; the admin can read them (view-as and analytics), never write. Premium stores accept writes only from premium accounts.
 //  users/{uid}/private/settings  { claudeKey }: the learner's own Claude API key (src/lib/claude.js); only
 //                             that account can read or write it, and it is never exported or shown to the admin.
 //  users/{uid}/submissions/{slug}  code submissions on one practice problem (src/lib/submissions.js), same
@@ -66,8 +66,10 @@ service cloud.firestore {
         && d.updatedAt == request.time;     // must be serverTimestamp()
     }
 
+    // The admin may READ a learner's learning data ("view as" on /admin and usage analytics); only the
+    // learner can ever write it. The private settings document (API key) is never readable by the admin.
     match /users/{uid}/state/{name} {
-      allow read: if isOwner(uid) && (name in freeNames() || name in premiumNames());
+      allow read: if (isOwner(uid) || isAdmin()) && (name in freeNames() || name in premiumNames());
       allow write: if isOwner(uid) && validState()
         && (name in freeNames() || (name in premiumNames() && isPremium()));
       allow delete: if isOwner(uid);
@@ -83,7 +85,8 @@ service cloud.firestore {
     }
 
     match /users/{uid}/submissions/{slug} {
-      allow read, delete: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid);
       allow create, update: if isOwner(uid) && slug.size() <= 120 && validState() && isPremium();
     }
 
@@ -125,6 +128,11 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow write: if false;
+    }
+
+    // Admin analytics: one query over every learner's state documents (collection group), read-only.
+    match /{path=**}/state/{name} {
+      allow read: if isAdmin();
     }
 
     // Deny everything else.

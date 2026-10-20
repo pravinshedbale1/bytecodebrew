@@ -24,6 +24,7 @@ const AiRoundPage = named(() => import('./pages/AiRoundPage'), 'AiRoundPage');
 const RunwayPage = named(() => import('./pages/RunwayPage'), 'RunwayPage');
 const TodayPage = named(() => import('./pages/TodayPage'), 'TodayPage');
 const SettingsPage = named(() => import('./pages/SettingsPage'), 'SettingsPage');
+const AdminAnalyticsPage = named(() => import('./pages/AdminAnalyticsPage'), 'AdminAnalyticsPage');
 const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
 const policy = (name) => named(() => import('./pages/PolicyPages'), name);
 const ContactPage = policy('ContactPage');
@@ -49,6 +50,7 @@ export function App() {
         <Route path="solve/:slug" element={page(<SolvePage />)} />
         <Route path="problems" element={page(<ProblemsPage />)} />
         <Route path="admin" element={page(<AdminPage />)} />
+        <Route path="admin/analytics" element={page(<AdminAnalyticsPage />)} />
         <Route path="runway" element={page(<RunwayPage />)} />
         <Route path="companies" element={page(<CompaniesPage />)} />
         <Route path="companies/ai-assisted-round" element={page(<AiRoundPage />)} />

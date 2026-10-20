@@ -6,6 +6,7 @@ import { useApiKey, setApiKey, clearApiKey } from '../lib/claude';
 import { useAuth, signIn } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useLook, LOOKS } from '../hooks/useLook';
+import { viewAs } from '../lib/viewAs';
 import { LANGS, LANG_IDS } from '../lib/judge/langs';
 import { preferredLang, setPreferredLang } from '../lib/judge/drafts';
 import ui from '../components/common/ui.module.css';
@@ -38,6 +39,18 @@ export function SettingsPage() {
 }
 
 function ClaudeKey() {
+  if (viewAs) {
+    return (
+      <section className={ui.panel} id="claude-key">
+        <h2 className={ui.panelTitle}><Bot size={16} aria-hidden="true" /> AI interviewer: Claude API key</h2>
+        <p className={styles.lead}>A learner’s Claude API key is private: it isn’t shown or usable in a read-only view, and no one but them can read it.</p>
+      </section>
+    );
+  }
+  return <ClaudeKeyEditor />;
+}
+
+function ClaudeKeyEditor() {
   const key = useApiKey();
   const { status } = useAuth();
   const signedIn = status === 'signed-in';

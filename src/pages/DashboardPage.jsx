@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Flame, Target, UserRound, Timer, Database, Download } from 'lucide-react';
 import { exportData } from '../lib/accountData';
 import { DeleteDataButton } from '../components/dashboard/DeleteData';
+import { viewAs } from '../lib/viewAs';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { DailyPlan } from '../components/dashboard/DailyPlan';
@@ -37,7 +38,9 @@ function DashboardInner() {
   const quizResults = useQuizResults();
   const { mocks } = useMocks();
   const profile = useProfile();
-  const { status, user } = useAuth();
+  const { status, user: me } = useAuth();
+  // admin "view as": the learner's name and email, not the admin's
+  const user = viewAs ? { name: viewAs.name, email: viewAs.email, photo: null } : me;
   const deck = useDeck();
   const [source, setSource] = useState('site');
 
@@ -191,7 +194,7 @@ function GoalsForm({ goals }) {
       {fields.map((f) => (
         <label key={f.id} className={styles.goal}>
           <span>{f.label}</span>
-          <input type="number" min={1} max={f.max} className={ui.input} value={goals[f.id]} onChange={(e) => set(f.id, e.target.value)} />
+          <input type="number" min={1} max={f.max} className={ui.input} value={goals[f.id]} onChange={(e) => set(f.id, e.target.value)} disabled={Boolean(viewAs)} />
         </label>
       ))}
     </div>
@@ -201,6 +204,13 @@ function GoalsForm({ goals }) {
 /** Download or erase everything — available to every signed-in or local user, premium or not. */
 function YourDataCard() {
   const { status } = useAuth();
+  if (viewAs) {
+    return (
+      <RailCard title="Their data" icon={<Database size={14} aria-hidden="true" />}>
+        <p className={ui.help} style={{ marginTop: 0 }}>Read-only view: downloading or deleting a learner’s data is off here. They can do both from their own dashboard.</p>
+      </RailCard>
+    );
+  }
   return (
     <RailCard title="Your data" icon={<Database size={14} aria-hidden="true" />}>
       <p className={ui.help} style={{ marginTop: 0 }}>

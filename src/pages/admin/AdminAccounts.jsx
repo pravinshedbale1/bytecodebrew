@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, Save, UserPlus } from 'lucide-react';
+import { RefreshCw, Save, UserPlus, Eye } from 'lucide-react';
+import { viewAsHref } from '../../lib/viewAs';
 import { useSales, setSales, DEFAULT_PAUSE_MESSAGE } from '../../lib/sales';
 import { listRegisteredUsers } from '../../lib/payments';
 import ui from '../../components/common/ui.module.css';
@@ -159,7 +160,8 @@ export function AdminUsers({ entitlements, adminEmail, onApprove }) {
                     {u.recent && <span className={styles.dot} aria-hidden="true" />}{lastActive(u.lastActiveAt, now)}
                   </td>
                   <td><span className={`${styles.chip} ${styles[u.status.cls]}`}>{u.status.label}</span></td>
-                  <td>
+                  <td className={styles.rowActions}>
+                    <a href={viewAsHref(u)} target="_blank" rel="noopener noreferrer" className={`${ui.btn} ${ui.ghost} ${ui.small}`} title={`See the site as ${u.name || u.email} sees it, read-only (opens a new tab)`} aria-label={`View as ${u.name || u.email}`}><Eye size={14} /></a>
                     {u.email && u.status.cls !== 'chipOn' && (
                       <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => onApprove(u.email)} title={`Approve ${u.email} (fills the form above)`} aria-label={`Approve ${u.email}`}><UserPlus size={14} /></button>
                     )}

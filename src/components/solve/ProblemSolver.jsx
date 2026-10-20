@@ -15,6 +15,7 @@ import { useSubmissions, readLocalSubs } from '../../lib/submissions';
 import { markSolved, useSolved } from '../../hooks/useSolved';
 import { recordSubmission, recordResolve, resolveStatus, noteHint } from '../../lib/coach/store';
 import { RESOLVE_MINUTES } from '../../lib/coach/model';
+import { isViewingAs } from '../../lib/viewAs';
 import ui from '../common/ui.module.css';
 import styles from './ProblemSolver.module.css';
 
@@ -112,6 +113,13 @@ export function ProblemSolver({ slug, compact = false }) {
   // holds untouched starter code, pick up the latest submission in this language.
   useEffect(() => {
     if (!spec || resolvingRef.current || code !== langOf(lang).starter(spec)) return;
+    // admin "view as": open the learner's latest submission in its own language (the admin's
+    // language preference is left alone)
+    if (isViewingAs() && subs[0] && subs[0].lang !== lang) {
+      setLang(subs[0].lang);
+      setCode(subs[0].code);
+      return;
+    }
     const latest = subs.find((s) => s.lang === lang)?.code;
     if (latest && latest !== code) setCode(latest);
     // only when the submissions change
@@ -135,6 +143,7 @@ export function ProblemSolver({ slug, compact = false }) {
 
   const run = async (mode) => {
     if (busy) return;
+    if (isViewingAs()) { setError('This is a read-only view of another learner: running and submitting are off. Their latest submission is in the editor and the Submissions tab.'); return; }
     let tests;
     if (mode === 'submit') tests = spec.tests;
     else {

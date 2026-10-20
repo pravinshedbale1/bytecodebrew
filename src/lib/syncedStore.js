@@ -3,6 +3,7 @@ import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
 import { PREMIUM_STORES } from '../config/access';
+import { viewAs, noteReadOnly } from './viewAs';
 
 /**
  * A small store that always saves to localStorage and, when the user is signed in,
@@ -44,6 +45,7 @@ export function learningKeys(storage, keep = KEEP_KEYS) {
 }
 
 export function wipeBrowser(keep = KEEP_KEYS) {
+  if (viewAs) return;                                   // a view-as tab never touches this browser's data
   for (const storage of [localStorage, sessionStorage]) {
     for (const k of learningKeys(storage, keep)) {
       try { storage.removeItem(k); } catch { /* ignore */ }
@@ -57,6 +59,7 @@ let guard = null;    // { uid, ready }
  * after this browser last saw it, wipes the browser's learning data and reloads (never resolves).
  */
 export function resetGuard(uid) {
+  if (viewAs) return Promise.resolve(true);             // read-only: nothing to upload, nothing to wipe
   if (guard?.uid === uid) return guard.ready;
   guard = {
     uid,
@@ -144,7 +147,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
   }
 
   async function pushRemote() {
-    if (!uid || !docRef || paused) return;
+    if (!uid || !docRef || paused || viewAs) return;
     if (premium && !premiumAllowed) return;     // the rules would refuse it; keep it on this device
     const fb = await loadFirebase();
     const json = JSON.stringify(state);
@@ -170,6 +173,18 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     uid = user.uid;
     firstSnapshot = true;
     lastRemoteJson = null;
+    if (viewAs) {
+      // admin "view as": show the learner's own document, in memory only; nothing is merged or saved
+      docRef = fb.fsMod.doc(fb.db, 'users', viewAs.uid, 'state', name);
+      unsubscribeRemote = fb.fsMod.onSnapshot(docRef, (snap) => {
+        let remote = null;
+        if (snap.exists()) { try { remote = JSON.parse(snap.data().json); } catch { remote = null; } }
+        state = remote ?? initial;
+        setIssue(name, false);
+        emit();
+      }, () => setIssue(name, true));
+      return;
+    }
     await resetGuard(user.uid);
     if (uid !== user.uid) return;                        // signed out or switched while checking
     docRef = fb.fsMod.doc(fb.db, 'users', uid, 'state', name);
@@ -229,17 +244,20 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     },
     /** Replace the value (or pass a function of the old value). */
     set(next) {
+      if (viewAs) { noteReadOnly(); return; }          // read-only view of another learner
       applyLocal(typeof next === 'function' ? next(state) : next);
       schedulePush();
     },
     /** Back to the initial value in this browser only, uploading nothing (Delete my data). */
     clearLocal() {
+      if (viewAs) return;
       clearTimeout(pending);
       lastRemoteJson = null;
       applyLocal(initial);
     },
     /** Back to the initial value, here and (when signed in) in the account. */
     async reset() {
+      if (viewAs) { noteReadOnly(); return; }
       clearTimeout(pending);
       applyLocal(initial);
       if (uid && docRef) {
