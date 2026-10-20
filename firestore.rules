@@ -46,8 +46,9 @@ service cloud.firestore {
     }
 
     // Free for every signed-in user: reading progress, highlights, lesson quizzes and practice.
+    // 'reset' is the marker "Delete my data" leaves, so other devices wipe their copy instead of re-uploading it.
     function freeNames() {
-      return ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity'];
+      return ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reset'];
     }
 
     // Premium: review deck, mock interviews, study plan + LeetCode profile, behavioral drill, story bank, Daily Coach.

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Flame, Target, UserRound, Timer, Database, Download, Trash2 } from 'lucide-react';
-import { exportData, deleteAllData } from '../lib/accountData';
+import { Flame, Target, UserRound, Timer, Database, Download } from 'lucide-react';
+import { exportData } from '../lib/accountData';
+import { DeleteDataButton } from '../components/dashboard/DeleteData';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { PremiumPage } from '../components/access/PremiumPage';
 import { DailyPlan } from '../components/dashboard/DailyPlan';
@@ -203,22 +204,11 @@ function YourDataCard() {
   return (
     <RailCard title="Your data" icon={<Database size={14} aria-hidden="true" />}>
       <p className={ui.help} style={{ marginTop: 0 }}>
-        Everything you've done here, as one file — or erase it{status === 'signed-in' ? ' from this browser and your account' : ''}.
+        Everything you've done here, as one file — or erase it{status === 'signed-in' ? ' everywhere: this browser, your account and your other devices. Premium, payments and your settings are kept.' : ' from this browser. Your settings are kept.'}
       </p>
       <div className={ui.row} style={{ marginTop: 'var(--space-3)' }}>
         <button type="button" className={`${ui.btn} ${ui.small}`} onClick={exportData}><Download size={13} /> Download</button>
-        <button
-          type="button"
-          className={`${ui.btn} ${ui.ghost} ${ui.small} ${ui.danger}`}
-          onClick={async () => {
-            const ok = window.prompt('This erases your progress, solved problems, reviews, quiz results, mocks, stories and highlights' + (status === 'signed-in' ? ' here and in your account' : '') + '. Type DELETE to confirm.');
-            if (ok !== 'DELETE') return;
-            await deleteAllData();
-            window.location.assign('/');
-          }}
-        >
-          <Trash2 size={13} /> Delete
-        </button>
+        <DeleteDataButton signedIn={status === 'signed-in'} />
       </div>
     </RailCard>
   );

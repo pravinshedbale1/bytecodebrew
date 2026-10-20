@@ -517,3 +517,129 @@
   color: var(--color-accent);
   flex: none;
 }
+
+/* ---- Delete my data */
+.deleteDialog {
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.deleteDialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.deleteDialog form {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.deleteHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.deleteHead h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.deleteClose {
+  border: 0;
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.deleteWhere {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+}
+
+.deleteWhere svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-text-subtle);
+}
+
+.deleteList {
+  margin: 0;
+  padding-left: 2.1em;
+  display: grid;
+  gap: 3px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.keptList {
+  list-style: none;
+  padding-left: 1.5em;
+}
+
+.keptList svg {
+  color: var(--color-success);
+  vertical-align: -2px;
+}
+
+.deleteCheck {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 1.5em;
+  font-size: var(--text-sm);
+}
+
+.deleteNote {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.linkBtn {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.deleteType {
+  display: grid;
+  gap: 6px;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.deleteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.deleteGo:not(:disabled) {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.spin {
+  animation: dashSpin 0.9s linear infinite;
+}
+
+@keyframes dashSpin {
+  to { transform: rotate(360deg); }
+}

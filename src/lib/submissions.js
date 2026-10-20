@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { readJSON, writeJSON } from './storage';
 import { onAuth } from '../hooks/useAuth';
 import { loadFirebase } from './firebase';
+import { resetGuard, isSyncPaused } from './syncedStore';
 
 /**
  * Submissions on practice problems: the latest MAX_SUBS per problem, newest first, each
@@ -49,6 +50,8 @@ const parse = (snap) => {
 
 /** Merges `add` into the account's copy and returns the result. */
 async function pushRemote(uid, slug, add) {
+  await resetGuard(uid);                 // never re-upload submissions from before a "Delete my data"
+  if (isSyncPaused()) return null;
   const r = await remoteRef(uid, slug);
   if (!r) return null;
   const { fb, ref } = r;
@@ -108,4 +111,11 @@ export function useSubmissions(slug) {
 export async function deleteRemoteSubmissions(fb, uid) {
   const snaps = await fb.fsMod.getDocs(fb.fsMod.collection(fb.db, 'users', uid, 'submissions'));
   await Promise.all(snaps.docs.map((d) => fb.fsMod.deleteDoc(d.ref)));
+  return snaps.size;
+}
+
+/** Every problem's submissions in the account, { slug: [...] } (for "Download my data"). */
+export async function readRemoteSubmissions(fb, uid) {
+  const snaps = await fb.fsMod.getDocs(fb.fsMod.collection(fb.db, 'users', uid, 'submissions'));
+  return Object.fromEntries(snaps.docs.map((d) => [d.id, parse(d) ?? []]));
 }

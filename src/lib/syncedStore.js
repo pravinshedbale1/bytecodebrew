@@ -18,6 +18,86 @@ import { PREMIUM_STORES } from '../config/access';
  * never clash with Firestore field-name rules.
  */
 export const SYNCED_NAMES = [];
+
+/*
+ * "Delete my data" (src/lib/accountData.js) leaves a marker, users/{uid}/state/reset = { at }. A
+ * browser whose data predates the marker must never upload it again: before any store syncs, the
+ * marker is checked; if it is newer than what this browser has seen, the browser's learning data is
+ * wiped and the page reloads. Open pages watch the marker and do the same the moment it changes,
+ * and other tabs of this browser reload when it is recorded here.
+ */
+export const RESET_SEEN_KEY = 'bcb:reset-seen';
+/** Browser keys that survive a reset: settings, not learning data (src/lib/accountData.js uses the same list). */
+export const KEEP_KEYS = ['bcb:theme', 'bcb:lang', 'bcb:anthropic-key', RESET_SEEN_KEY];
+export const KEEP_PREFIXES = ['bcb:split:'];
+
+const seenReset = () => Number(readJSON(RESET_SEEN_KEY, 0)) || 0;
+export const markResetSeen = (at) => writeJSON(RESET_SEEN_KEY, at);
+
+/** Every learning-data key in this browser (localStorage and sessionStorage), prefixed "bcb:". */
+export function learningKeys(storage, keep = KEEP_KEYS) {
+  try {
+    return Object.keys(storage).filter((k) => k.startsWith('bcb:') && !keep.includes(k) && !KEEP_PREFIXES.some((p) => k.startsWith(p)));
+  } catch {
+    return [];
+  }
+}
+
+export function wipeBrowser(keep = KEEP_KEYS) {
+  for (const storage of [localStorage, sessionStorage]) {
+    for (const k of learningKeys(storage, keep)) {
+      try { storage.removeItem(k); } catch { /* ignore */ }
+    }
+  }
+}
+
+let guard = null;    // { uid, ready }
+/**
+ * Resolves once it is safe for this browser to sync with this account. If the account was reset
+ * after this browser last saw it, wipes the browser's learning data and reloads (never resolves).
+ */
+export function resetGuard(uid) {
+  if (guard?.uid === uid) return guard.ready;
+  guard = {
+    uid,
+    ready: (async () => {
+      const fb = await loadFirebase();
+      const ref = fb.fsMod.doc(fb.db, 'users', uid, 'state', 'reset');
+      const atOf = (snap) => {
+        try { return snap.exists() ? Number(JSON.parse(snap.data().json).at) || 0 : 0; } catch { return 0; }
+      };
+      return new Promise((resolve) => {
+        let first = true;
+        fb.fsMod.onSnapshot(ref, (snap) => {
+          if (snap.metadata.hasPendingWrites) return;          // our own reset echoing back
+          const at = atOf(snap);
+          if (at > seenReset() && !paused) {                   // paused = this browser is the one deleting
+            const hadData = learningKeys(localStorage).length > 0 || SYNCED_STORES.some((st) => JSON.stringify(st.get()) !== JSON.stringify(st.initial));
+            markResetSeen(at);
+            if (hadData) {
+              wipeBrowser();
+              window.location.reload();
+              return;                                            // never resolves: the page is going away
+            }
+          }
+          if (first) { first = false; resolve(true); }
+        }, () => { if (first) { first = false; resolve(true); } });
+      });
+    })(),
+  };
+  return guard.ready;
+}
+
+// Another tab of this browser reset the data: start again from what is left.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => { if (e.key === RESET_SEEN_KEY && e.newValue !== e.oldValue) window.location.reload(); });
+}
+
+// While "Delete my data" runs, nothing is uploaded (a debounced write could recreate a deleted document).
+let paused = false;
+export const pauseSync = () => { paused = true; };
+export const resumeSync = () => { paused = false; };
+export const isSyncPaused = () => paused;
 // Every store, for "download my data" and "delete my data" (src/lib/accountData.js).
 export const SYNCED_STORES = [];
 
@@ -64,7 +144,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
   }
 
   async function pushRemote() {
-    if (!uid || !docRef) return;
+    if (!uid || !docRef || paused) return;
     if (premium && !premiumAllowed) return;     // the rules would refuse it; keep it on this device
     const fb = await loadFirebase();
     const json = JSON.stringify(state);
@@ -90,6 +170,8 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     uid = user.uid;
     firstSnapshot = true;
     lastRemoteJson = null;
+    await resetGuard(user.uid);
+    if (uid !== user.uid) return;                        // signed out or switched while checking
     docRef = fb.fsMod.doc(fb.db, 'users', uid, 'state', name);
     unsubscribeRemote = fb.fsMod.onSnapshot(docRef, (snap) => {
       if (snap.metadata.hasPendingWrites) return;          // our own write echoing back
@@ -139,6 +221,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
   const api = {
     name,
     storageKey,
+    initial,
     get: () => state,
     subscribe(listener) {
       listeners.add(listener);
@@ -148,6 +231,12 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     set(next) {
       applyLocal(typeof next === 'function' ? next(state) : next);
       schedulePush();
+    },
+    /** Back to the initial value in this browser only, uploading nothing (Delete my data). */
+    clearLocal() {
+      clearTimeout(pending);
+      lastRemoteJson = null;
+      applyLocal(initial);
     },
     /** Back to the initial value, here and (when signed in) in the account. */
     async reset() {
