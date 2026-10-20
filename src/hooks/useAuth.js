@@ -53,6 +53,8 @@ export async function signIn() {
 export async function signOutUser() {
   const fb = await loadFirebase();
   if (fb) await fb.authMod.signOut(fb.auth);
+  // the Claude API key belongs to the account (src/lib/claude.js): don't leave a copy in this browser
+  try { localStorage.removeItem('bcb:anthropic-key'); } catch { /* ignore */ }
 }
 
 if (useEmulator && typeof window !== 'undefined') {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { LogIn, LogOut, Highlighter, LayoutDashboard, ShieldCheck, Sparkles } from 'lucide-react';
+import { LogIn, LogOut, Highlighter, LayoutDashboard, ShieldCheck, Sparkles, Settings } from 'lucide-react';
 import { useAccess } from '../../hooks/useAccess';
 import { useAuth, signIn, signOutUser } from '../../hooks/useAuth';
 import { useSyncIssues } from '../../lib/syncedStore';
@@ -60,7 +60,7 @@ export function AccountButton() {
               Some data isn't syncing right now ({syncIssues.join(', ')}). It's saved on this device and will sync when the problem clears.
             </p>
           ) : (
-            <p className={styles.sync}>Progress, solved problems, reviews, stories and highlights sync to this account.</p>
+            <p className={styles.sync}>Your progress, solved problems, submissions, reviews, highlights and settings sync to this account.</p>
           )}
           <Link to="/premium" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
             <Sparkles size={15} /> {access.status === 'premium' ? (access.isAdmin ? 'Premium page' : 'Extend premium') : 'Get Premium'}
@@ -75,6 +75,9 @@ export function AccountButton() {
           </Link>
           <Link to="/highlights" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
             <Highlighter size={15} /> My highlights
+          </Link>
+          <Link to="/settings" className={styles.item} role="menuitem" onClick={() => setOpen(false)}>
+            <Settings size={15} /> Settings
           </Link>
           <button type="button" className={styles.item} role="menuitem" onClick={() => { setOpen(false); signOutUser(); }}>
             <LogOut size={15} /> Sign out

@@ -23,6 +23,13 @@ export function useTheme() {
     window.dispatchEvent(new CustomEvent('bcb:themechange', { detail: theme }));
   }, [theme]);
 
+  // every component using the theme (top bar, Settings) follows a change made in any of them
+  useEffect(() => {
+    const on = (e) => setTheme((t) => (e.detail && e.detail !== t ? e.detail : t));
+    window.addEventListener('bcb:themechange', on);
+    return () => window.removeEventListener('bcb:themechange', on);
+  }, []);
+
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  return { theme, toggle };
+  return { theme, toggle, setTheme };
 }

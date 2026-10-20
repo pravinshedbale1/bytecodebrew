@@ -1,6 +1,7 @@
 import { SYNCED_STORES, KEEP_KEYS, learningKeys, wipeBrowser, markResetSeen, pauseSync, resumeSync } from './syncedStore';
 import { loadFirebase } from './firebase';
 import { deleteRemoteSubmissions, readRemoteSubmissions } from './submissions';
+import { clearApiKey } from './claude';
 
 /**
  * "Download my data" and "Delete my data".
@@ -14,8 +15,8 @@ import { deleteRemoteSubmissions, readRemoteSubmissions } from './submissions';
  * What is kept:
  *   - the Google sign-in, Premium access (entitlements/{email}) and payment receipts (orders/*):
  *     the learner paid for them, and receipts are financial records
- *   - this browser's settings: theme, code language, editor layout (KEEP_KEYS); the Claude API key
- *     unless the learner asks for it to go too
+ *   - settings: the Claude API key (users/{uid}/private/settings, a setting, not learning data) unless
+ *     the learner asks for it to go too; this browser's theme, code language and editor layout (KEEP_KEYS)
  *
  * Consistency: syncing pauses, the account gets a reset marker FIRST (so every other signed-in device
  * and tab wipes its own copy instead of uploading it back: resetGuard in syncedStore.js), then the
@@ -105,6 +106,7 @@ export async function deleteAllData({ removeApiKey = false } = {}) {
       // another device may have uploaded in the second before it saw the marker: sweep once more
       await new Promise((r) => setTimeout(r, 1500));
       await withTimeout(deleteAccountData(fb, uid));
+      if (removeApiKey) await withTimeout(clearApiKey());
     } catch (e) {
       // take the marker back (best effort), or this browser would wipe itself on its next load
       if (marked) await withTimeout(fb.fsMod.deleteDoc(marker), 5000).catch(() => {});
@@ -114,6 +116,7 @@ export async function deleteAllData({ removeApiKey = false } = {}) {
         : `Your account couldn’t be updated (${e?.code ?? e?.message ?? 'unknown error'}). Nothing in this browser was removed; please try again.`);
     }
   }
+  if (removeApiKey && !uid) await clearApiKey();
   for (const s of SYNCED_STORES) s.clearLocal();
   wipeBrowser(removeApiKey ? KEEP_KEYS.filter((k) => k !== 'bcb:anthropic-key') : KEEP_KEYS);
   markResetSeen(at);            // other tabs of this browser reload; a later sign-in elsewhere sees the marker

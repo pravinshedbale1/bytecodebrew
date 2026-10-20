@@ -23,6 +23,7 @@ const CompanyPage = named(() => import('./pages/CompaniesPage'), 'CompanyPage');
 const AiRoundPage = named(() => import('./pages/AiRoundPage'), 'AiRoundPage');
 const RunwayPage = named(() => import('./pages/RunwayPage'), 'RunwayPage');
 const TodayPage = named(() => import('./pages/TodayPage'), 'TodayPage');
+const SettingsPage = named(() => import('./pages/SettingsPage'), 'SettingsPage');
 const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
 const policy = (name) => named(() => import('./pages/PolicyPages'), name);
 const ContactPage = policy('ContactPage');
@@ -39,6 +40,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="highlights" element={<HighlightsPage />} />
         <Route path="today" element={page(<TodayPage />)} />
+        <Route path="settings" element={page(<SettingsPage />)} />
         <Route path="dashboard" element={page(<DashboardPage />)} />
         <Route path="review" element={page(<ReviewPage />)} />
         <Route path="mock" element={page(<MockPage />)} />

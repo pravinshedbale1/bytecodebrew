@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trash2, Download, X, Loader2, Check, Shield } from 'lucide-react';
 import { deleteAllData, exportData, ERASED, KEPT } from '../../lib/accountData';
-import { getApiKey } from '../../lib/claude';
+import { useApiKey } from '../../lib/claude';
 import ui from '../common/ui.module.css';
 import styles from './Dashboard.module.css';
 
@@ -16,7 +16,7 @@ export function DeleteDataButton({ signedIn }) {
   const [removeKey, setRemoveKey] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const hasKey = Boolean(getApiKey());
+  const hasKey = Boolean(useApiKey());
 
   useEffect(() => {
     const d = ref.current;
@@ -72,12 +72,12 @@ export function DeleteDataButton({ signedIn }) {
             </p>
             <ul className={`${styles.deleteList} ${styles.keptList}`}>
               {kept.map((t) => <li key={t}><Check size={13} aria-hidden="true" /> {t}</li>)}
-              {hasKey && !removeKey && <li><Check size={13} aria-hidden="true" /> Your Claude API key in this browser</li>}
+              {hasKey && !removeKey && <li><Check size={13} aria-hidden="true" /> Your Claude API key{signedIn ? ' (a setting in your account)' : ' in this browser'}</li>}
             </ul>
             {hasKey && (
               <label className={styles.deleteCheck}>
                 <input type="checkbox" checked={removeKey} onChange={(e) => setRemoveKey(e.target.checked)} disabled={busy} />
-                Also remove my Claude API key from this browser
+                Also remove my Claude API key{signedIn ? ' from my account' : ' from this browser'}
               </label>
             )}
 

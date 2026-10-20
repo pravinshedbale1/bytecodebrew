@@ -9,7 +9,7 @@ import { ProblemSolver } from '../components/solve/ProblemSolver';
 import { MOCK_TYPES, SIGNALS, withPhases, nextPhase, previousPhase, tick, phaseTimes } from '../data/mockInterviews';
 import { useMocks } from '../hooks/useLearning';
 import { useSolved } from '../hooks/useSolved';
-import { getApiKey } from '../lib/claude';
+import { getApiKey, useApiKey } from '../lib/claude';
 import { MiniMarkdown } from '../lib/miniMarkdown';
 import { readJSON, writeJSON } from '../lib/storage';
 import { currentDraft } from '../lib/judge/drafts';
@@ -421,7 +421,8 @@ function PastMock({ mock, onClose, onDelete, onFeedback }) {
   const [fb, setFb] = useState(mock.aiFeedback ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const canAsk = Boolean(getApiKey()) && (mock.notes?.trim() || mock.chat?.length || mock.code);
+  const hasKey = Boolean(useApiKey());
+  const canAsk = hasKey && (mock.notes?.trim() || mock.chat?.length || mock.code);
 
   const ask = async () => {
     setBusy(true);

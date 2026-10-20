@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send, Square, KeyRound, Bot } from 'lucide-react';
-import { streamClaude, getApiKey, setApiKey, clearApiKey } from '../../lib/claude';
+import { Link } from 'react-router';
+import { streamClaude, useApiKey } from '../../lib/claude';
 import { MiniMarkdown } from '../../lib/miniMarkdown';
 import ui from '../common/ui.module.css';
 import styles from './Mock.module.css';
@@ -29,9 +30,7 @@ How to run it:
 
 /** Live chat with Claude playing the interviewer. `chat` is lifted so feedback can read the transcript. */
 export function AiInterviewer({ type, prompt, chat, setChat, getContext }) {
-  const [hasKey, setHasKey] = useState(Boolean(getApiKey()));
-  const [setupOpen, setSetupOpen] = useState(false);
-  const [keyDraft, setKeyDraft] = useState('');
+  const hasKey = Boolean(useApiKey());
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -75,49 +74,23 @@ export function AiInterviewer({ type, prompt, chat, setChat, getContext }) {
     }
   };
 
-  if (!hasKey && !setupOpen) {
+  if (!hasKey) {
     return (
       <div className={styles.aiCollapsed}>
         <p className={styles.aiHead}><Bot size={16} /> AI interviewer <span className={styles.optional}>optional</span></p>
         <p className={ui.help} style={{ marginTop: 0 }}>
           A live interviewer that asks clarifying questions, pushes back on your choices and probes the deep dives, the
-          way a real one would. It runs on Claude with your own API key, kept only in this browser.
+          way a real one would. It runs on Claude with your own API key, which you add once in Settings and use on every device.
         </p>
-        <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => setSetupOpen(true)}>Set it up</button>
+        <a href="/settings#claude-key" target="_blank" rel="noopener noreferrer" className={`${ui.btn} ${ui.small}`}>
+          <KeyRound size={13} /> Add your key in Settings
+        </a>
+        <p className={ui.help}>Settings opens in a new tab, so this round keeps running. The interviewer appears here as soon as the key is saved.</p>
         <p className={styles.aiFree}>
           No key? Interview yourself out loud with the Guide tab. When you end the round, one click sends your whole
           mock to ChatGPT, Claude or Gemini for a free review.
         </p>
       </div>
-    );
-  }
-
-  if (!hasKey) {
-    return (
-      <form
-        className={styles.keyForm}
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!keyDraft.trim().startsWith('sk-')) return setError('That doesn’t look like a Claude API key (it starts with “sk-”).');
-          setApiKey(keyDraft);
-          setKeyDraft('');
-          setHasKey(true);
-          setError(null);
-        }}
-      >
-        <p className={styles.aiHead}><Bot size={16} /> AI interviewer <span className={styles.optional}>optional</span></p>
-        <p className={ui.help}>
-          Claude can play the interviewer: it asks follow-ups, pushes on trade-offs and gives written feedback at the end.
-          It uses your own Claude API key (from console.anthropic.com), which is kept only in this browser, sent only to
-          Anthropic, and never synced to your account. Usage is billed to your key.
-        </p>
-        <div className={styles.keyRow}>
-          <input type="password" className={ui.input} value={keyDraft} onChange={(e) => setKeyDraft(e.target.value)} placeholder="sk-ant-…" autoComplete="off" aria-label="Claude API key" />
-          <button type="submit" className={`${ui.btn} ${ui.small}`}><KeyRound size={13} /> Save key</button>
-          <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => setSetupOpen(false)}>Cancel</button>
-        </div>
-        {error && <p className={ui.error}>{error}</p>}
-      </form>
     );
   }
 
@@ -127,7 +100,7 @@ export function AiInterviewer({ type, prompt, chat, setChat, getContext }) {
     <div className={styles.ai}>
       <div className={styles.aiTop}>
         <p className={styles.aiHead}><Bot size={16} /> AI interviewer</p>
-        <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => { clearApiKey(); setHasKey(false); }}>Remove key</button>
+        <Link to="/settings#claude-key" target="_blank" className={`${ui.btn} ${ui.ghost} ${ui.small}`}><KeyRound size={13} /> Key settings</Link>
       </div>
 
       {chat.length === 0 ? (
