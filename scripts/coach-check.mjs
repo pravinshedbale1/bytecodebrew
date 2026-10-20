@@ -131,6 +131,21 @@ const ev = (t, k, s, extra = {}) => ({ id: `e${n++}`, t, k, s, ...extra });
   check(ch.some((c) => c.pattern === index[s.drills[0].slug] && c.to > c.from), 'the summary shows the drilled pattern going up');
 }
 
+// ---- a target company: its focus patterns come first; the last days have no stretch problem
+{
+  const events = [ev(T0, 'accept', 'two-sum', { first: true }), ev(T0, 'accept', 'binary-search', { first: true }), ev(T0, 'accept', 'reverse-linked-list', { first: true }), ev(T0, 'accept', 'daily-temperatures', { first: true })];
+  const now = T0 + DAY;
+  const m = buildModel({ events, patternOf, startedAt: T0, now });
+  const plain = buildSession({ model: m, catalog, date: '2026-10-02', now });
+  const focus = ['monotonic-stack'];
+  const focused = buildSession({ model: m, catalog, date: '2026-10-02', now, focus, daysLeft: 20 });
+  check(index[focused.drills[0].slug] === 'monotonic-stack', `a focus pattern is drilled first (${index[focused.drills[0].slug]}; without focus: ${index[plain.drills[0].slug]})`);
+  check(focused.stretch && focused.context.daysLeft === 20, 'a stretch problem while there is time');
+  const last = buildSession({ model: m, catalog, date: '2026-10-02', now, focus, daysLeft: 2 });
+  check(!last.stretch && last.context.final, 'no stretch problem in the final days');
+  check(last.drills.length === 3, 'drills continue in the final days');
+}
+
 // ---- complexity options: 4 distinct classes including the right one, in scale order
 for (const id of CX_IDS) {
   const seen = new Set();

@@ -11,7 +11,7 @@ import { today, dayKey } from '../../lib/dates';
 import styles from './Dashboard.module.css';
 
 /** Today's study plan: one lesson, the due reviews, a couple of problems and a behavioral question. */
-export function DailyPlan({ compact = false }) {
+export function DailyPlan({ compact = false, hideReview = false }) {
   const { isComplete, lastVisited } = useProgress();
   const { isSolved } = useSolved();
   const activity = useActivity();
@@ -40,7 +40,7 @@ export function DailyPlan({ compact = false }) {
       ),
     },
     // Reviews only appear once the deck has cards (after completing a lesson or missing a quiz question).
-    deck && deck.cards.length > 0 && {
+    !hideReview && deck && deck.cards.length > 0 && {
       icon: Layers,
       label: 'Review cards',
       progress: [Math.min(reviewsDone, goals.reviews), goals.reviews],

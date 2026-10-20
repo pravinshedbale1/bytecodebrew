@@ -643,3 +643,61 @@
 @keyframes dashSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ---- Today card (Dashboard and Home) */
+.todayCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.todayBody {
+  flex: 1 1 280px;
+}
+
+.todayLines {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.todayLines li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todayLineDone {
+  color: var(--color-success) !important;
+}
+
+.todayDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-text-subtle);
+  margin: 0 3px;
+}
+
+.todayCompact {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.todayCount {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.todayCount svg {
+  color: var(--color-accent);
+}

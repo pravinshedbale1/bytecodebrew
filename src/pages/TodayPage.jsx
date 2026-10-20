@@ -12,6 +12,11 @@ import { catalog, lessonPath } from '../lib/coach/catalog';
 import { PATTERNS, cxLabel } from '../lib/coach/patterns';
 import { retention, labelOf, changesSince, DAY, DRILL_SECONDS, RESOLVE_MINUTES, RESOLVE_GAPS, FAIL_GAP } from '../lib/coach/model';
 import { useDeck } from '../lib/reviewDeck';
+import { DayCard, useProgressFns } from './RunwayPage';
+import { DailyPlan } from '../components/dashboard/DailyPlan';
+import { setRunway } from '../hooks/useRunway';
+import { PlaneTakeoff, Building2, CalendarCheck2 } from 'lucide-react';
+import { addDays } from '../lib/dates';
 import { readJSON, writeJSON } from '../lib/storage';
 import { isViewingAs } from '../lib/viewAs';
 import ui from '../components/common/ui.module.css';
@@ -41,7 +46,7 @@ export function TodayPage() {
 }
 
 function TodayInner() {
-  const { state, model, session, day } = useCoach();
+  const { state, model, session, day, plan, context } = useCoach();
   const deck = useDeck();
   const now = Date.now();
 
@@ -98,12 +103,24 @@ function TodayInner() {
   return (
     <PageLayout rail={rail} contentWidth="860px">
       <header className={page.header}>
-        <p className={page.eyebrow}>Daily Coach</p>
+        <p className={page.eyebrow}>Your day</p>
         <h1 className={page.title}>Today</h1>
+        {context.daysLeft != null ? (
+          <p className={styles.countdown}>
+            <PlaneTakeoff size={16} aria-hidden="true" />
+            <strong>{context.daysLeft === 0 ? 'Interview day' : `${context.daysLeft} day${context.daysLeft === 1 ? '' : 's'}`}</strong>
+            {context.daysLeft > 0 && (context.company
+              ? <> to your <Link to={`/companies/${context.company.id}`}>{context.company.name}</Link> interview</>
+              : ' to your interview')}
+            {context.company && session && !session.placement && <span className={styles.muted}>· drills lean towards {context.company.name}’s focus patterns</span>}
+          </p>
+        ) : null}
         <p className={page.lead}>
-          About 20 minutes, built from what you know and what you're about to forget. {allDone ? 'Today’s session is done — see you tomorrow.' : 'Work through the parts in order; each one can be skipped.'}
+          Everything for today in one place: {plan ? 'your Runway tasks' : 'a small daily plan'}, then about 20 minutes of coaching built from what you know and what you’re about to forget.
         </p>
       </header>
+
+      <TodayPlan plan={plan} day={day} />
 
       <HowItHelps defaultOpen={!finishedBefore} />
 
@@ -160,6 +177,46 @@ function TodayInner() {
   );
 }
 
+/** The day's tasks: the learner's Runway day when they have a plan, otherwise the small general plan. */
+function TodayPlan({ plan, day }) {
+  const progress = useProgressFns();
+  if (!plan) {
+    return (
+      <section className={ui.panel} aria-labelledby="today-plan">
+        <h2 id="today-plan" className={ui.panelTitle}><CalendarCheck2 size={16} aria-hidden="true" /> Today’s plan</h2>
+        <p className={styles.partLead}>A small, complete day: a lesson, a couple of problems and one behavioral answer out loud. Ticks fill in as you go.</p>
+        <DailyPlan hideReview />
+        <p className={styles.invite}>
+          <PlaneTakeoff size={15} aria-hidden="true" />
+          <span>Interview coming up? <Link to="/runway">Plan your runway</Link>: Today then follows your day-by-day plan, counts down to the date and steers your drills towards your target company.</span>
+        </p>
+      </section>
+    );
+  }
+  const update = (fn) => setRunway((p) => (p ? fn(p) : p));
+  const todayDay = plan.days.find((d) => d.date === day);
+  const before = day < plan.settings.start;
+  const over = day > plan.settings.end;
+  const tomorrow = plan.days.find((d) => d.date === addDays(day, 1));
+  return (
+    <section className={styles.planWrap} aria-labelledby="today-plan">
+      <div className={styles.planHead}>
+        <h2 id="today-plan" className={ui.panelTitle}><CalendarCheck2 size={16} aria-hidden="true" /> Your Runway tasks</h2>
+        <Link to="/runway" className={`${ui.btn} ${ui.ghost} ${ui.small}`}>Full plan <ChevronRight size={14} /></Link>
+      </div>
+      {over ? (
+        <p className={styles.muted}>Your interview date has passed. <Link to="/runway">Set up a new runway</Link> for the next one.</p>
+      ) : before ? (
+        <DayCard plan={plan} day={plan.days[0]} title="Your plan starts" progress={progress} update={update} open />
+      ) : todayDay ? (
+        <DayCard plan={plan} day={todayDay} title="Today" progress={progress} update={update} open highlight />
+      ) : (
+        <p className={styles.muted}>No Runway tasks today.{tomorrow ? ' Tomorrow’s are ready on the Runway page.' : ''}</p>
+      )}
+    </section>
+  );
+}
+
 function HowItHelps({ defaultOpen }) {
   const [open, setOpen] = useState(() => readJSON(HOWTO_KEY, defaultOpen));
   const toggle = (e) => { setOpen(e.currentTarget.open); writeJSON(HOWTO_KEY, e.currentTarget.open); };
@@ -196,6 +253,7 @@ function HowItHelps({ defaultOpen }) {
         <li>Answer before the timer runs out, without looking anything up. A wrong answer here costs nothing and shows the coach what to bring back.</li>
         <li>Re-solve honestly: hints and your old submissions are hidden until you finish.</li>
         <li>Come back daily. Twenty minutes every day beats two hours once a week.</li>
+        <li>With a Runway plan, Today also shows that day’s tasks and counts down to your interview; drills and stretch problems lean towards your target company’s focus patterns, and the last few days drop the stretch problem so you consolidate.</li>
         <li>The coach learns from everything you do here: problems you solve (first try or not, hints used), quick checks in DSA lessons, drills and re-solves. Your skill map at the bottom shows that evidence.</li>
       </ul>
     </details>
@@ -410,7 +468,11 @@ function ResolvePart({ session, model, now }) {
 
 function StretchPart({ session, model, done }) {
   const s = session.stretch;
-  if (!s) return <p className={styles.partBody}>No stretch problem today: you’ve solved everything the coach would pick.</p>;
+  if (!s) {
+    return <p className={styles.partBody}>{session.context?.final
+      ? 'No stretch problem: your interview is days away, so today is for consolidating what you know.'
+      : 'No stretch problem today: you’ve solved everything the coach would pick.'}</p>;
+  }
   const p = catalog.problems[s.slug];
   const st = model.patterns[s.pattern];
   const why = s.reason === 'new' ? 'a pattern you haven’t started yet' : `your weakest pattern (${labelOf(st, Date.now()).toLowerCase()})`;

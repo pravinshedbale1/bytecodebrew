@@ -2,6 +2,9 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { createSyncedStore } from '../syncedStore';
 import { useSolved } from '../../hooks/useSolved';
 import { useQuizResults } from '../../hooks/useLearning';
+import { useRunway } from '../../hooks/useRunway';
+import { companyPlan } from '../../data/companies';
+import { daysBetween } from '../dates';
 import { logActivity } from '../../hooks/useActivity';
 import { today, dayKey } from '../dates';
 import { buildModel, buildSession } from './model.js';
@@ -129,6 +132,16 @@ export function resolveStatus(slug) {
 }
 
 /**
+ * A session nobody has touched yet is rebuilt when the Runway plan changes its company or date, so a
+ * plan made mid-morning steers that same day. Once anything is answered it stays as it is.
+ */
+function stale(s, context) {
+  if (s.placement || Object.keys(s.answers ?? {}).length || s.resolveResult || s.reviewDone) return false;
+  const was = s.context ?? { focus: [], daysLeft: null };
+  return was.daysLeft !== context.daysLeft || was.focus.join() !== context.focus.join();
+}
+
+/**
  * The coach for the Today page: the state, the skill model and today's session (built on first
  * visit of the day and saved, so it stays the same all day and on every device).
  */
@@ -143,17 +156,25 @@ export function useCoach() {
     [state.events, state.startedAt, solved, quiz],
   );
   const session = state.sessions[day] ?? null;
+  // Runway feeds the coach: the target company's focus patterns and the days left to the interview
+  const plan = useRunway();
+  const context = useMemo(() => {
+    if (!plan?.settings) return { focus: [], daysLeft: null, company: null, end: null };
+    const company = plan.settings.company ? companyPlan(plan.settings.company) : null;
+    const daysLeft = daysBetween(day, plan.settings.end);
+    return { focus: company?.focus ?? [], daysLeft: daysLeft >= 0 ? daysLeft : null, company, end: plan.settings.end };
+  }, [plan, day]);
 
   useEffect(() => {
-    if (session) return;
+    if (session && !stale(session, context)) return;
     store.set((prev) => {
-      if (prev.sessions[day]) return prev;
+      if (prev.sessions[day] && !stale(prev.sessions[day], context)) return prev;
       const now = Date.now();
       const placement = !prev.placedAt && model.evidence === 0;
-      const built = buildSession({ model, catalog, date: day, now, placement });
+      const built = buildSession({ model, catalog, date: day, now, placement, focus: context.focus, daysLeft: context.daysLeft });
       return trim({ ...prev, startedAt: prev.startedAt ?? now, sessions: { ...prev.sessions, [day]: { ...built, answers: {} } } });
     });
-  }, [session, day, model]);
+  }, [session, day, model, context]);
 
-  return { state, model, session, day };
+  return { state, model, session, day, plan, context };
 }

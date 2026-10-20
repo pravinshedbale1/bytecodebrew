@@ -4,8 +4,12 @@
  * The class (ids in src/lib/coach/patterns.js → CX) is what a recognition drill asks for: the worst
  * case of the standard solution the pattern lesson teaches, counting every size in the input as n
  * (m·n → n², V + E → n, n·amount → n²). The exact form is shown when the answer is revealed.
- * null = the problem is drilled on its pattern only (the complexity doesn't fit one class cleanly).
- * Checked by scripts/check.mjs: every judged problem has an entry and every class is known.
+ * null = the problem is drilled on its pattern only: the complexity doesn't fit one class cleanly, or
+ * the problem's own hints accept two different classes (so a single "right" class would mark a
+ * correct learner wrong).
+ * Second pass on 2026-10-20: every entry re-checked against its problem's hints (which were written
+ * separately); 4 entries became pattern-only.
+ * Checked by scripts/coach-check.mjs: every judged problem has an entry and every class is known.
  */
 export default {
   // ---- backtracking
@@ -21,7 +25,7 @@ export default {
   'palindrome-partitioning': ['exp', 'O(n·2ⁿ)'],
   'word-search': ['exp', 'O(m·n·3^L), L = word length'],
   'n-queens': ['fact', 'O(n!)'],
-  'sudoku-solver': ['exp', 'O(9^e), e = empty cells'],
+  'sudoku-solver': [null, 'Exponential search over the empty cells, though the board is a fixed 9×9'],
 
   // ---- binary search on the answer
   'koko-eating-bananas': ['nlogn', 'O(n log M), M = largest pile'],
@@ -204,7 +208,7 @@ export default {
   'top-k-frequent-elements': ['nlogn', 'O(n log k) with a heap (O(n) with buckets)'],
   'k-closest-points-to-origin': ['nlogn', 'O(n log k)'],
   'task-scheduler': ['n', 'O(n)'],
-  'kth-smallest-element-in-a-sorted-matrix': ['nlogn', 'O(k log n)'],
+  'kth-smallest-element-in-a-sorted-matrix': [null, 'O(k log n) with a heap, or O(n log(max − min)) by binary search on the value'],
   'merge-k-sorted-lists': ['nlogn', 'O(N log k), N = all nodes'],
   'find-median-from-data-stream': ['logn', 'O(log n) add, O(1) median'],
   ipo: ['nlogn', 'O(n log n)'],
@@ -281,7 +285,7 @@ export default {
   'reverse-pairs': ['nlogn', 'O(n log n)'],
   'count-of-range-sum': ['nlogn', 'O(n log n)'],
   'create-sorted-array-through-instructions': ['nlogn', 'O(n log M), M = largest value'],
-  'falling-squares': ['nlogn', 'O(n log n), segment tree on compressed coordinates'],
+  'falling-squares': [null, 'O(n²) is enough for 1,000 squares; O(n log n) with a segment tree on compressed coordinates'],
 
   // ---- shortest paths
   'network-delay-time': ['nlogn', 'O(E log V), Dijkstra'],
@@ -308,7 +312,7 @@ export default {
   'sort-array-by-increasing-frequency': ['nlogn', 'O(n log n)'],
   'sort-an-array': ['nlogn', 'O(n log n)'],
   'largest-number': ['nlogn', 'O(n log n) comparisons'],
-  'h-index': ['n', 'O(n) with counting sort'],
+  'h-index': [null, 'O(n log n) by sorting, or O(n) with buckets'],
   'sort-characters-by-frequency': ['n', 'O(n) with buckets'],
   'maximum-gap': ['n', 'O(n) with buckets'],
 

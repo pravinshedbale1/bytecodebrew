@@ -208,9 +208,16 @@ export function patternOptions(pattern, seed) {
  *   catalog   { order: [pattern ids, curriculum order], byPattern: { p: [slug, …] (ladder order) },
  *               problems: { slug: { title, level, pattern } }, cx: { slug: [class|null, exact] } }
  *   placement true on a learner's first session with no evidence yet: 10 drills across core patterns
- * Returns { date, createdAt, placement, start, drills: [{ slug, options, cxOptions }], resolve, stretch }.
+ *   focus     pattern ids the learner's target company stresses (from their Runway plan): drills and
+ *             the stretch problem lean towards them
+ *   daysLeft  days to the interview (Runway): in the last FINAL_DAYS there is no stretch problem,
+ *             the session is for consolidating
+ * Returns { date, createdAt, placement, start, drills: [{ slug, options, cxOptions }], resolve, stretch, context }.
  */
-export function buildSession({ model, catalog, date, now = Date.now(), placement = false }) {
+export const FINAL_DAYS = 3;
+const FOCUS_PULL = 0.2;      // a focus pattern counts as this much weaker when choosing what to drill
+
+export function buildSession({ model, catalog, date, now = Date.now(), placement = false, focus = [], daysLeft = null }) {
   const seedOf = (s) => hash(`${date}:${s}`);
   const isSolved = (s) => model.solved.has(s);
   const recentlyDrilled = (s) => model.lastDrill[s] != null && now - model.lastDrill[s] < REDRILL_DAYS * DAY;
@@ -224,9 +231,12 @@ export function buildSession({ model, catalog, date, now = Date.now(), placement
     return pick((s) => !isSolved(s) && !recentlyDrilled(s)) ?? pick((s) => !recentlyDrilled(s)) ?? null;
   };
 
+  const inFocus = new Set(focus);
+  const need = (p) => eff(p) - (inFocus.has(p) ? FOCUS_PULL : 0);
   const started = catalog.order.filter((p) => model.patterns[p]?.n > 0);
-  const weakestFirst = [...started].sort((a, b) => eff(a) - eff(b));
-  const fresh = catalog.order.filter((p) => !model.patterns[p]?.n);
+  const weakestFirst = [...started].sort((a, b) => need(a) - need(b));
+  // unstarted patterns: the company's focus first, then curriculum order
+  const fresh = catalog.order.filter((p) => !model.patterns[p]?.n).sort((a, b) => Number(inFocus.has(b)) - Number(inFocus.has(a)));
 
   let drillPatterns;
   if (placement) drillPatterns = PLACEMENT;
@@ -253,8 +263,9 @@ export function buildSession({ model, catalog, date, now = Date.now(), placement
 
   // stretch: one level above the learner's best in their weakest pattern below Shaky (else their weakest)
   let stretch = null;
+  const final = daysLeft != null && daysLeft <= FINAL_DAYS;
   const below = weakestFirst.filter((p) => eff(p) < SHAKY);
-  for (const p of [...below, ...weakestFirst, ...fresh]) {
+  for (const p of final ? [] : [...below, ...weakestFirst, ...fresh]) {
     const list = catalog.byPattern[p] ?? [];
     const best = Math.max(-1, ...list.filter(isSolved).map((s) => LEVEL[catalog.problems[s].level]));
     const target = Math.min(best + 1, 2);
@@ -268,7 +279,10 @@ export function buildSession({ model, catalog, date, now = Date.now(), placement
     }
   }
 
-  return { date, createdAt: now, placement, start: snapshot(model, now), drills, resolve, stretch };
+  return {
+    date, createdAt: now, placement, start: snapshot(model, now), drills, resolve, stretch,
+    context: { focus: [...inFocus], daysLeft, final },
+  };
 }
 
 /** Patterns whose mastery changed since the session started: [{ pattern, from, to }], biggest change first. */

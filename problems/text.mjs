@@ -2,6 +2,9 @@
 /**
  * Problem text: a fuller statement in our own words, constraints and progressive hints, kept in
  * problems/text/<lesson>.mjs (one entry per slug) and merged into src/data/problems/<lesson>.json.
+ * problems/explain/<lesson>.mjs adds, per slug, `explain`: a walk-through of the first example (shown
+ * under it, LeetCode style; it must state that example's output), and optionally `more`: a paragraph
+ * appended to the statement where the statement alone is terse.
  *
  *   node problems/text.mjs           merge the text into the shipped JSON and check it
  *   node problems/text.mjs --check   only check (CI): text complete, constraints hold, JSON in sync
@@ -23,6 +26,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const textDir = join(here, 'text');
+const explainDir = join(here, 'explain');
 const dataDir = join(here, '..', 'src', 'data', 'problems');
 const perf = (await import(pathToFileURL(join(here, 'perf.mjs')).href)).default;
 
@@ -202,6 +206,35 @@ function validateEntry(p, t) {
   return { errors, checked };
 }
 
+export function loadExplain(lesson) {
+  const f = join(explainDir, `${lesson}.mjs`);
+  return existsSync(f) ? import(pathToFileURL(f).href).then((m) => m.default) : Promise.resolve({});
+}
+
+/** The first example's output, as an explanation must state it (strings without their quotes). */
+function outputWords(out) {
+  try {
+    const v = JSON.parse(out);
+    return typeof v === 'string' ? v : out.replace(/\s+/g, '');
+  } catch {
+    return out;
+  }
+}
+
+function validateExplain(p, e) {
+  const errors = [];
+  if (!e || typeof e.explain !== 'string' || e.explain.trim().split(/\s+/).length < 10) return [`${p.slug}: no explanation of example 1 (problems/explain)`];
+  const out = p.tests[0]?.out;
+  if (out !== undefined && out.length <= 60) {
+    const want = outputWords(out);
+    const text = e.explain.replace(/\s+/g, '');
+    const ok = /^-?\d+(\.\d+)?$/.test(want) ? new RegExp(`(^|[^\\d.])${want.replace('.', '\\.')}([^\\d]|$)`).test(e.explain) : text.includes(want.replace(/\s+/g, ''));
+    if (!ok) errors.push(`${p.slug}: the explanation never states example 1's output ${out}`);
+  }
+  if (e.more !== undefined && (typeof e.more !== 'string' || e.more.trim().split(/\s+/).length < 8)) errors.push(`${p.slug}: "more" is too short`);
+  return errors;
+}
+
 export function loadText(lesson) {
   const f = join(textDir, `${lesson}.mjs`);
   return existsSync(f) ? import(pathToFileURL(f).href).then((m) => m.default) : Promise.resolve({});
@@ -210,6 +243,7 @@ export function loadText(lesson) {
 /** Merge text into one lesson's shipped problems; returns { problems, errors, unchecked, missing }. */
 export async function mergeLesson(lesson, problems) {
   const text = await loadText(lesson);
+  const explain = await loadExplain(lesson);
   const errors = [];
   const unchecked = [];
   const missing = [];
@@ -221,9 +255,13 @@ export async function mergeLesson(lesson, problems) {
     errors.push(...r.errors);
     if (!r.checked && p.params) unchecked.push(p.slug);
     const { statement, constraints, hints } = t;
-    return { ...p, statement: statement.trim(), constraints, hints };
+    const e = explain[p.slug];
+    errors.push(...validateExplain(p, e));
+    const full = e?.more ? `${statement.trim()}\n\n${e.more.trim()}` : statement.trim();
+    return { ...p, statement: full, constraints, hints, ...(e?.explain ? { explain: e.explain.trim() } : {}) };
   });
   for (const slug of Object.keys(text)) if (!problems.some((p) => p.slug === slug)) errors.push(`${lesson}: text for unknown problem ${slug}`);
+  for (const slug of Object.keys(explain)) if (!problems.some((p) => p.slug === slug)) errors.push(`${lesson}: explanation for unknown problem ${slug}`);
   return { problems: out, errors, unchecked, missing };
 }
 
@@ -237,7 +275,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   for (const lesson of lessons) {
     const path = join(dataDir, `${lesson}.json`);
     const shipped = JSON.parse(readFileSync(path, 'utf8'));
-    const base = shipped.map(({ statement, constraints, hints, ...p }) => p);
+    const base = shipped.map(({ statement, constraints, hints, explain, ...p }) => p);
     const r = await mergeLesson(lesson, base);
     total += shipped.length;
     errors = errors.concat(r.errors);

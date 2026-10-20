@@ -368,6 +368,9 @@ function Description({ spec, slug, examples, names, solved, compact, lang, hideH
             <strong>Input:</strong> {t.in.map((v, k) => `${names[k] ?? `input${k + 1}`} = ${v}`).join(', ')}{'\n'}
             <strong>Output:</strong> {t.out}
           </pre>
+          {i === 0 && spec.explain && (
+            <p className={styles.exampleExplain}><strong>Explanation:</strong> <Inline text={spec.explain} /></p>
+          )}
         </div>
       ))}
 

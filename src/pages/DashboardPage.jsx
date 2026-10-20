@@ -6,12 +6,10 @@ import { DeleteDataButton } from '../components/dashboard/DeleteData';
 import { viewAs } from '../lib/viewAs';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { PremiumPage } from '../components/access/PremiumPage';
-import { DailyPlan } from '../components/dashboard/DailyPlan';
 import { Heatmap } from '../components/dashboard/Heatmap';
 import { LeetCodeCard } from '../components/dashboard/LeetCodeCard';
 import { LeetCodeImport } from '../components/dashboard/LeetCodeImport';
-import { RunwayCard } from '../components/dashboard/RunwayCard';
-import { CoachCard } from '../components/dashboard/CoachCard';
+import { TodayCard } from '../components/dashboard/TodayCard';
 import { WeakAreas } from '../components/dashboard/WeakAreas';
 import { useActivity, streakOf, longestStreak, dayTotal } from '../hooks/useActivity';
 import { useProgress } from '../hooks/useProgress';
@@ -106,7 +104,7 @@ function DashboardInner() {
       <header className={page.header}>
         <p className={page.eyebrow}>Dashboard</p>
         <h1 className={page.title}>{firstName ? `Hi, ${firstName}.` : 'Your study dashboard'}</h1>
-        <p className={page.lead}>Today’s plan, your streak, what to revisit and how your LeetCode practice is going.</p>
+        <p className={page.lead}>Your streak, progress, what to revisit and how your LeetCode practice is going. Today’s plan lives on <Link to="/today">Today</Link>.</p>
       </header>
 
       <section className={ui.panel}>
@@ -134,23 +132,13 @@ function DashboardInner() {
         </div>
       </section>
 
-      <CoachCard />
+      <TodayCard />
 
-      <RunwayCard />
-
-      <div className={styles.columns}>
-        <section className={ui.panel}>
-          <h2 className={ui.panelTitle}>Today</h2>
-          <p className={ui.panelLead}>A small, complete day of practice. Ticks fill in as you go.</p>
-          <DailyPlan />
-        </section>
-
-        <section className={ui.panel}>
-          <h2 className={ui.panelTitle}>Revisit these</h2>
-          <p className={ui.panelLead}>Lessons where your answers suggest another pass will pay off.</p>
-          <WeakAreas quizzes={deck?.sources.quizzes} />
-        </section>
-      </div>
+      <section className={ui.panel}>
+        <h2 className={ui.panelTitle}>Revisit these</h2>
+        <p className={ui.panelLead}>Lessons where your answers suggest another pass will pay off.</p>
+        <WeakAreas quizzes={deck?.sources.quizzes} />
+      </section>
 
       <section className={ui.panel}>
         <div className={styles.panelHeadRow}>

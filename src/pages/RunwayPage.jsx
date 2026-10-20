@@ -39,7 +39,7 @@ function useCatalogue() {
   }), []);
 }
 
-function useProgressFns() {
+export function useProgressFns() {
   const { isComplete } = useProgress();
   const { isSolved } = useSolved();
   return useMemo(() => ({ isComplete, isSolved }), [isComplete, isSolved]);
@@ -342,6 +342,8 @@ function PlanView({ plan, onEdit }) {
         </div>
       )}
 
+      <p className={ui.help}>Each day’s tasks also appear on <Link to="/today">Today</Link>, together with your Daily Coach session.</p>
+
       <div className={styles.columns}>
         <div className={styles.todayCol}>
           {before ? (
@@ -366,7 +368,7 @@ function PlanView({ plan, onEdit }) {
   );
 }
 
-function DayCard({ plan, day, title, progress, update, open: startOpen = false, highlight = false }) {
+export function DayCard({ plan, day, title, progress, update, open: startOpen = false, highlight = false }) {
   const [open, setOpen] = useState(startOpen);
   const [adding, setAdding] = useState(false);
   const budget = day.phase === 'interview' ? 30 : budgetFor(plan.settings, day.date);

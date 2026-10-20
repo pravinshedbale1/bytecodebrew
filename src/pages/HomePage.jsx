@@ -9,7 +9,7 @@ import { TrackCard } from '../components/navigation/TrackCard';
 import { NextUpCard } from '../components/navigation/NextUpCard';
 import { ProgressCard, NoteCard } from '../components/rail/RailWidgets';
 import { RailCard } from '../components/layout/PageLayout';
-import { DailyPlan } from '../components/dashboard/DailyPlan';
+import { TodayCard } from '../components/dashboard/TodayCard';
 import { Welcome } from '../components/navigation/Welcome';
 import { usePremium } from '../hooks/useAccess';
 import { useActivity, streakOf } from '../hooks/useActivity';
@@ -39,8 +39,7 @@ export function HomePage() {
         icon={<Flame size={14} aria-hidden="true" />}
         action={<span className={styles.railMeta}>{streak ? `${streak}-day streak` : 'Start a streak'}</span>}
       >
-        <DailyPlan compact />
-        <Link to="/dashboard" className={styles.railLink}>Open your dashboard →</Link>
+        <TodayCard compact />
       </RailCard>}
       <ProgressCard
         title="Overall progress"
