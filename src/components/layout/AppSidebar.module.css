@@ -257,3 +257,28 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
+
+/* ---- liquid glass look (experiment) */
+:global(:root[data-look='glass']) .sidebar {
+  border-right-color: var(--glass-edge-soft);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: inset -1px 0 0 var(--glass-edge-soft);
+}
+
+:global(:root[data-look='glass']) .top,
+:global(:root[data-look='glass']) .child {
+  border-radius: 12px;
+  transition: background 200ms ease, transform 360ms var(--glass-spring), box-shadow 200ms ease;
+}
+
+:global(:root[data-look='glass']) .top:hover,
+:global(:root[data-look='glass']) .child:hover {
+  transform: translateX(2px);
+}
+
+:global(:root[data-look='glass']) .active,
+:global(:root[data-look='glass']) .active:hover {
+  background: var(--glass-sheen), color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-edge-soft), 0 6px 18px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}

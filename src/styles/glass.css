@@ -1,0 +1,172 @@
+/*
+ * "Liquid glass" look (experiment): opt-in with <html data-look="glass">, on top of the light or dark
+ * theme. Surfaces become frosted, translucent panes over a soft, slowly drifting colour field; the
+ * component rules that add blur and highlights live next to each component, under
+ * :global(:root[data-look='glass']). Respects reduced motion and reduced transparency.
+ */
+
+:root[data-look='glass'] {
+  --glass-blur: 22px;
+  --glass-sat: 170%;
+  --glass-edge: rgba(255, 255, 255, 0.75);
+  --glass-edge-soft: rgba(255, 255, 255, 0.28);
+  --glass-shade: 0 10px 40px rgba(38, 52, 92, 0.1), 0 2px 6px rgba(38, 52, 92, 0.05);
+  --glass-shade-hover: 0 16px 48px rgba(38, 52, 92, 0.16), 0 3px 10px rgba(38, 52, 92, 0.07);
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.05) 100%);
+  --glass-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --glass-rim: linear-gradient(150deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.2) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.5));
+  /* menus and popovers are "thick" glass: they must read instantly over anything, and inside a
+     blurred bar they can't blur the page below (a backdrop-filter parent limits what they see) */
+  --glass-popover: rgb(250, 251, 253);
+
+  --color-bg: #e8eef4;
+  --color-surface: rgba(255, 255, 255, 0.58);
+  --color-surface-muted: rgba(255, 255, 255, 0.42);
+  --color-sidebar: rgba(255, 255, 255, 0.26);
+  --color-border: rgba(30, 45, 70, 0.1);
+  --color-border-strong: rgba(30, 45, 70, 0.18);
+  --color-accent-soft: rgba(31, 111, 107, 0.14);
+  --color-code-bg: rgba(255, 255, 255, 0.5);
+}
+
+:root[data-look='glass'][data-theme='dark'] {
+  --glass-edge: rgba(255, 255, 255, 0.22);
+  --glass-edge-soft: rgba(255, 255, 255, 0.07);
+  --glass-shade: 0 12px 44px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --glass-shade-hover: 0 18px 54px rgba(0, 0, 0, 0.55), 0 3px 12px rgba(0, 0, 0, 0.35);
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(255, 255, 255, 0) 100%);
+  --glass-rim: linear-gradient(150deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.06) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.16));
+  --glass-popover: rgb(26, 30, 38);
+
+  --color-bg: #0d1117;
+  --color-surface: rgba(28, 33, 42, 0.55);
+  --color-surface-muted: rgba(255, 255, 255, 0.06);
+  --color-sidebar: rgba(18, 22, 29, 0.5);
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-accent-soft: rgba(108, 186, 179, 0.16);
+  --color-code-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* ---- the colour field everything floats on */
+:root[data-look='glass'] body {
+  background: var(--color-bg);
+  isolation: isolate;
+}
+
+:root[data-look='glass'] body::before,
+:root[data-look='glass'] body::after {
+  content: '';
+  position: fixed;
+  inset: -15%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+:root[data-look='glass'] body::before {
+  background:
+    radial-gradient(30% 38% at 8% 20%, rgba(45, 190, 180, 0.55), transparent 70%),
+    radial-gradient(30% 36% at 92% 14%, rgba(129, 120, 248, 0.5), transparent 70%),
+    radial-gradient(34% 40% at 90% 78%, rgba(250, 150, 110, 0.48), transparent 70%),
+    radial-gradient(32% 38% at 10% 86%, rgba(80, 150, 250, 0.45), transparent 70%),
+    radial-gradient(30% 30% at 50% 50%, rgba(200, 160, 255, 0.22), transparent 70%);
+  filter: blur(30px) saturate(120%);
+  animation: glass-drift 46s ease-in-out infinite alternate;
+}
+
+/* a faint grain keeps large blurred areas from banding */
+:root[data-look='glass'] body::after {
+  inset: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-look='glass'][data-theme='dark'] body::before {
+  background:
+    radial-gradient(38% 42% at 18% 22%, rgba(45, 160, 150, 0.32), transparent 70%),
+    radial-gradient(34% 40% at 82% 18%, rgba(110, 90, 220, 0.3), transparent 70%),
+    radial-gradient(40% 44% at 72% 82%, rgba(200, 90, 140, 0.22), transparent 70%),
+    radial-gradient(36% 40% at 22% 86%, rgba(40, 110, 220, 0.26), transparent 70%);
+}
+
+@keyframes glass-drift {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(3%, -2%, 0) rotate(8deg) scale(1.06); }
+  100% { transform: translate3d(-3%, 3%, 0) rotate(-6deg) scale(1.02); }
+}
+
+/* the shared glass pane, for elements that opt in with .glass-pane (and the component rules) */
+:root[data-look='glass'] .glass-pane {
+  background: var(--glass-sheen), var(--color-surface);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-edge-soft), var(--glass-shade);
+}
+
+/* code blocks and inputs read as recessed glass */
+:root[data-look='glass'] pre,
+:root[data-look='glass'] input:not([type='checkbox']):not([type='radio']),
+:root[data-look='glass'] textarea,
+:root[data-look='glass'] select {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root[data-look='glass'] ::selection {
+  background: rgba(56, 178, 172, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-look='glass'] body::before {
+    animation: none;
+  }
+}
+
+/* people who ask for less transparency (macOS "Reduce transparency") get calmer, more solid panes;
+   they chose this style, so a little glass stays */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-look='glass'] {
+    --color-surface: rgba(255, 255, 255, 0.82);
+    --color-surface-muted: rgba(255, 255, 255, 0.7);
+    --color-sidebar: rgba(255, 255, 255, 0.62);
+  }
+
+  :root[data-look='glass'][data-theme='dark'] {
+    --color-surface: rgba(28, 33, 42, 0.86);
+    --color-sidebar: rgba(18, 22, 29, 0.8);
+  }
+}
+
+/* dialogs (checkout, delete my data, search) float as thick glass over a blurred page */
+:root[data-look='glass'] dialog {
+  background: var(--glass-sheen), var(--glass-popover);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  border-color: var(--glass-edge-soft);
+  border-radius: 24px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 30px 80px rgba(10, 20, 40, 0.28);
+}
+
+:root[data-look='glass'] dialog::backdrop {
+  background: rgba(15, 25, 40, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* the liquid rim: a thin edge that catches the light at the top left and fades around the pane */
+:root[data-look='glass'] .glass-rim {
+  position: relative;
+}
+
+:root[data-look='glass'] .glass-rim::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}

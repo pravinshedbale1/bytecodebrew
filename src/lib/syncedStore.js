@@ -28,7 +28,7 @@ export const SYNCED_NAMES = [];
  */
 export const RESET_SEEN_KEY = 'bcb:reset-seen';
 /** Browser keys that survive a reset: settings, not learning data (src/lib/accountData.js uses the same list). */
-export const KEEP_KEYS = ['bcb:theme', 'bcb:lang', 'bcb:anthropic-key', RESET_SEEN_KEY];
+export const KEEP_KEYS = ['bcb:theme', 'bcb:look', 'bcb:lang', 'bcb:anthropic-key', RESET_SEEN_KEY];
 export const KEEP_PREFIXES = ['bcb:split:'];
 
 const seenReset = () => Number(readJSON(RESET_SEEN_KEY, 0)) || 0;

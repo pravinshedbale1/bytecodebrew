@@ -16,6 +16,10 @@
       try {
         var t = localStorage.getItem('bcb:theme');
         if (t) document.documentElement.dataset.theme = t;
+        // the visual style (experiment): ?look=glass|classic switches it and is remembered
+        var q = new URLSearchParams(location.search).get('look');
+        if (q === 'glass' || q === 'classic') localStorage.setItem('bcb:look', q);
+        if (localStorage.getItem('bcb:look') === 'glass') document.documentElement.dataset.look = 'glass';
       } catch (e) {}
     </script>
   </head>

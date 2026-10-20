@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { KeyRound, Bot, Code2, Palette, Target, Database, Check, ExternalLink, Sun, Moon } from 'lucide-react';
+import { KeyRound, Bot, Code2, Palette, Target, Database, Check, ExternalLink, Sun, Moon, Sparkles, Square } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { useApiKey, setApiKey, clearApiKey } from '../lib/claude';
 import { useAuth, signIn } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useLook, LOOKS } from '../hooks/useLook';
 import { LANGS, LANG_IDS } from '../lib/judge/langs';
 import { preferredLang, setPreferredLang } from '../lib/judge/drafts';
 import ui from '../components/common/ui.module.css';
@@ -133,6 +134,7 @@ function CodeLanguage() {
 
 function Appearance() {
   const { theme, setTheme } = useTheme();
+  const [look, setLook] = useLook();
   return (
     <section className={ui.panel} aria-labelledby="theme-title">
       <h2 id="theme-title" className={ui.panelTitle}><Palette size={16} aria-hidden="true" /> Appearance</h2>
@@ -144,6 +146,19 @@ function Appearance() {
         ))}
       </div>
       <p className={styles.muted}>Saved in this browser. The moon and sun button in the top bar switches it too.</p>
+      <h3 className={styles.subhead}>Style</h3>
+      <div className={styles.choices} role="radiogroup" aria-label="Style">
+        {LOOKS.map(({ id, label }) => (
+          <button key={id} type="button" role="radio" aria-checked={look === id} className={`${styles.choice} ${look === id ? styles.chosen : ''}`} onClick={() => setLook(id)}>
+            {id === 'glass' ? <Sparkles size={14} aria-hidden="true" /> : <Square size={14} aria-hidden="true" />} {label}{id === 'glass' ? <span className={styles.previewTag}>Preview</span> : null}
+          </button>
+        ))}
+      </div>
+      <p className={styles.muted}>
+        Liquid glass turns surfaces into frosted panes over a soft moving colour field, in light and dark.
+        It’s new and still in preview, so some screens may look a little off; you can switch back to Classic anytime.
+        {look === 'glass' && ' If your device has “Reduce transparency” turned on, panes stay mostly solid.'}
+      </p>
     </section>
   );
 }

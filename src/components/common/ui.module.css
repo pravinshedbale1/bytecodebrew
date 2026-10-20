@@ -228,3 +228,88 @@
   padding: 4px 8px;
   text-align: left;
 }
+
+/* ---- liquid glass look (experiment, src/styles/glass.css) */
+:global(:root[data-look='glass']) .panel {
+  background: var(--glass-sheen), var(--color-surface);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border-color: transparent;
+  border-radius: 22px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-edge-soft), var(--glass-shade);
+  transition: box-shadow 320ms ease, transform 420ms var(--glass-spring);
+}
+
+:global(:root[data-look='glass']) .panel:hover {
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 0 0 1px var(--glass-edge-soft), var(--glass-shade-hover);
+}
+
+:global(:root[data-look='glass']) .btn {
+  border-radius: 999px;
+  border-color: var(--glass-edge-soft);
+  background: var(--glass-sheen), var(--color-surface);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 1px 3px rgba(20, 30, 50, 0.08);
+  transition: transform 380ms var(--glass-spring), box-shadow 240ms ease, color var(--transition), border-color var(--transition);
+}
+
+:global(:root[data-look='glass']) .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 6px 16px rgba(20, 30, 50, 0.12);
+}
+
+:global(:root[data-look='glass']) .btn:active:not(:disabled) {
+  transform: scale(0.95);
+  transition-duration: 120ms;
+}
+
+:global(:root[data-look='glass']) .primary {
+  border-color: transparent;
+  color: var(--color-accent-contrast);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 52%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 78%, #5ee0d6), var(--color-accent) 55%, var(--color-accent-hover));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.14), 0 8px 22px color-mix(in srgb, var(--color-accent) 38%, transparent);
+}
+
+:global(:root[data-look='glass']) .primary:hover:not(:disabled) {
+  color: var(--color-accent-contrast);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 52%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 70%, #5ee0d6), var(--color-accent) 50%, var(--color-accent-hover));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.14), 0 12px 28px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+:global(:root[data-look='glass']) .ghost {
+  background: none;
+  box-shadow: none;
+  border-color: transparent;
+  backdrop-filter: none;
+}
+
+:global(:root[data-look='glass']) .input,
+:global(:root[data-look='glass']) .textarea,
+:global(:root[data-look='glass']) .select {
+  border-radius: 14px;
+  background: var(--color-surface-muted);
+  border-color: var(--glass-edge-soft);
+  box-shadow: inset 0 1px 2px rgba(20, 30, 50, 0.08);
+}
+
+:global(:root[data-look='glass']) .panel {
+  position: relative;
+}
+
+:global(:root[data-look='glass']) .panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
