@@ -22,6 +22,8 @@ src/lib/submissions.js   submissions: browser + account (users/{uid}/submissions
 problems/langs/
   check.mjs              checks the C++/Python/JavaScript harnesses locally
   solutions/             sample solutions in each language that must pass every test
+problems/solutions/<lessonId>.mjs   the Solution tab: approaches per problem, code in all four languages
+problems/solutions.mjs              runs every approach through the judge, writes src/data/solutions/*.json
 ```
 
 ## A spec
@@ -85,3 +87,42 @@ node problems/build.mjs two-pointers    # one lesson
 
 The build fails if a reference errors or disagrees with an official example. Commit the generated
 `src/data/problems/*.json`; the site build doesn't need Java.
+
+## Solution tab
+
+Each problem's **Solution** tab (shown once the problem is solved, or on request; hidden in mock
+interviews and re-solves) lists its approaches from brute force to optimal. They live in
+`problems/solutions/<lessonId>.mjs`:
+
+```js
+'two-sum': {
+  pattern: 'Hash map of value → index (complement lookup)',
+  approaches: [
+    {
+      level: 'Brute force',            // 'Brute force' | 'Better' | 'Optimal'; non-decreasing, last is Optimal
+      name: 'Check every pair',
+      idea: 'One or two sentences.',
+      steps: ['…', '…'],                // at least two
+      time: 'O(n²)', space: 'O(1)',     // both start with O(
+      why: 'Where the complexity comes from, edge cases, trade-offs.',
+      code: { java, cpp, python, javascript },  // written as r`…` (String.raw)
+      timesOut: [4],                   // optional, not on Optimal: tests this approach is too slow for
+    },
+  ],
+},
+```
+
+`node problems/solutions.mjs` runs **every approach in every language** through the same harnesses
+and tests as submissions (Optimal approaches also run the Java performance test), and writes
+`src/data/solutions/<lessonId>.json` only when all of them pass. Passing runs are cached in
+`node_modules/.cache/bcb-solutions.json`, so re-runs only execute what changed.
+
+```bash
+node problems/solutions.mjs                    # everything (needs JDK, g++/clang++, python3, node)
+node problems/solutions.mjs dp-linear          # one lesson
+node problems/solutions.mjs --only=two-sum     # slugs containing "two-sum" (checks only, writes nothing)
+node problems/solutions.mjs --lang=python      # one language (checks only, writes nothing)
+node problems/solutions.mjs --check            # fast, no execution: every problem has approaches, JSON is current
+```
+
+Commit the sources and the generated JSON together; `npm run check` and CI run `--check`.
