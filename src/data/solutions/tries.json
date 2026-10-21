@@ -1,0 +1,341 @@
+{
+ "longest-common-prefix": {
+  "pattern": "Character-by-character comparison (vertical scan); a trie generalises it",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Horizontal scan: shrink the prefix word by word",
+    "idea": "Start with the first word as the candidate prefix. For each next word, cut the candidate back until the word starts with it.",
+    "steps": [
+     "Set `prefix = strs[0]`.",
+     "For each other word, while it does not start with `prefix`, drop the last character of `prefix`.",
+     "Return `prefix` (possibly empty)."
+    ],
+    "time": "O(S)",
+    "space": "O(1)",
+    "why": "S is the total number of characters: each comparison is bounded by the word length, and the prefix only shrinks. It still compares whole prefixes for every word even if the first word is long.",
+    "code": {
+     "java": "class Solution {\n    public String longestCommonPrefix(String[] strs) {\n        String prefix = strs[0];\n        for (String w : strs)\n            while (!w.startsWith(prefix)) prefix = prefix.substring(0, prefix.length() - 1);\n        return prefix;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestCommonPrefix(vector<string>& strs) {\n        string prefix = strs[0];\n        for (auto& w : strs)\n            while (w.compare(0, prefix.size(), prefix) != 0) prefix.pop_back();\n        return prefix;\n    }\n};",
+     "python": "class Solution:\n    def longestCommonPrefix(self, strs: List[str]) -> str:\n        prefix = strs[0]\n        for w in strs:\n            while not w.startswith(prefix):\n                prefix = prefix[:-1]\n        return prefix",
+     "javascript": "var longestCommonPrefix = function(strs) {\n    let prefix = strs[0];\n    for (const w of strs)\n        while (!w.startsWith(prefix)) prefix = prefix.slice(0, -1);\n    return prefix;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Vertical scan: compare column by column",
+    "idea": "Check position 0 of every word, then position 1, and so on. Stop at the first position where some word ends or disagrees with the first word.",
+    "steps": [
+     "For each index `i` of the first word:",
+     "If any word has length `i` or a different character at `i`, return `strs[0][0..i)`.",
+     "If the loop finishes, the whole first word is the prefix."
+    ],
+    "time": "O(n·m)",
+    "space": "O(1)",
+    "why": "n words × (m + 1) positions, where m is the answer's length: it never reads past the first mismatch.",
+    "code": {
+     "java": "class Solution {\n    public String longestCommonPrefix(String[] strs) {\n        String first = strs[0];\n        for (int i = 0; i < first.length(); i++)\n            for (String w : strs)\n                if (i == w.length() || w.charAt(i) != first.charAt(i)) return first.substring(0, i);\n        return first;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestCommonPrefix(vector<string>& strs) {\n        const string& first = strs[0];\n        for (size_t i = 0; i < first.size(); i++)\n            for (auto& w : strs)\n                if (i == w.size() || w[i] != first[i]) return first.substr(0, i);\n        return first;\n    }\n};",
+     "python": "class Solution:\n    def longestCommonPrefix(self, strs: List[str]) -> str:\n        first = strs[0]\n        for i, c in enumerate(first):\n            for w in strs:\n                if i == len(w) or w[i] != c:\n                    return first[:i]\n        return first",
+     "javascript": "var longestCommonPrefix = function(strs) {\n    const first = strs[0];\n    for (let i = 0; i < first.length; i++)\n        for (const w of strs)\n            if (i === w.length || w[i] !== first[i]) return first.slice(0, i);\n    return first;\n};"
+    }
+   }
+  ]
+ },
+ "implement-trie-prefix-tree": {
+  "pattern": "Trie: one node per prefix, children indexed by letter, an end-of-word flag",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "A set of words, scanning it for prefixes",
+    "idea": "Store every inserted word in a hash set. Exact search is a set lookup; `startsWith` checks every stored word.",
+    "steps": [
+     "`insert`: add the word to the set.",
+     "`search`: return whether the set contains it.",
+     "`startsWith`: return whether any word in the set starts with the prefix."
+    ],
+    "time": "O(N·L) per startsWith",
+    "space": "O(N·L)",
+    "why": "`insert` and `search` cost O(L) to hash the word, but `startsWith` scans all N words. Storage is every word in full.",
+    "code": {
+     "java": "class Trie {\n    private final Set<String> words = new HashSet<>();\n\n    public Trie() {\n    }\n\n    public void insert(String word) {\n        words.add(word);\n    }\n\n    public boolean search(String word) {\n        return words.contains(word);\n    }\n\n    public boolean startsWith(String prefix) {\n        for (String w : words) if (w.startsWith(prefix)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Trie {\n    unordered_set<string> words;\npublic:\n    Trie() {}\n\n    void insert(string word) {\n        words.insert(word);\n    }\n\n    bool search(string word) {\n        return words.count(word) > 0;\n    }\n\n    bool startsWith(string prefix) {\n        for (auto& w : words) if (w.compare(0, prefix.size(), prefix) == 0) return true;\n        return false;\n    }\n};",
+     "python": "class Trie:\n\n    def __init__(self):\n        self.words = set()\n\n    def insert(self, word: str) -> None:\n        self.words.add(word)\n\n    def search(self, word: str) -> bool:\n        return word in self.words\n\n    def startsWith(self, prefix: str) -> bool:\n        return any(w.startswith(prefix) for w in self.words)",
+     "javascript": "var Trie = function() {\n    this.words = new Set();\n};\n\nTrie.prototype.insert = function(word) {\n    this.words.add(word);\n};\n\nTrie.prototype.search = function(word) {\n    return this.words.has(word);\n};\n\nTrie.prototype.startsWith = function(prefix) {\n    for (const w of this.words) if (w.startsWith(prefix)) return true;\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Trie of 26-way nodes",
+    "idea": "Each node represents a prefix and has up to 26 children, one per next letter; a flag marks nodes where a full word ends. Every operation walks one path of length L.",
+    "steps": [
+     "`insert`: from the root, follow (creating if missing) the child for each letter; mark the last node as a word end.",
+     "`search`: follow the letters; fail on a missing child; succeed only if the last node is a word end.",
+     "`startsWith`: follow the letters; succeed if the walk completes."
+    ],
+    "time": "O(L) per operation",
+    "space": "O(T·26)",
+    "why": "Each call touches one node per character. T is the total number of trie nodes (at most the total length of inserted words), each with 26 child slots.",
+    "code": {
+     "java": "class Trie {\n    private static class Node {\n        Node[] next = new Node[26];\n        boolean end;\n    }\n\n    private final Node root = new Node();\n\n    public Trie() {\n    }\n\n    public void insert(String word) {\n        Node node = root;\n        for (int i = 0; i < word.length(); i++) {\n            int c = word.charAt(i) - 'a';\n            if (node.next[c] == null) node.next[c] = new Node();\n            node = node.next[c];\n        }\n        node.end = true;\n    }\n\n    public boolean search(String word) {\n        Node node = walk(word);\n        return node != null && node.end;\n    }\n\n    public boolean startsWith(String prefix) {\n        return walk(prefix) != null;\n    }\n\n    private Node walk(String s) {\n        Node node = root;\n        for (int i = 0; i < s.length() && node != null; i++) node = node.next[s.charAt(i) - 'a'];\n        return node;\n    }\n}",
+     "cpp": "class Trie {\n    struct Node {\n        Node* next[26] = {};\n        bool end = false;\n    };\n    Node* root = new Node();\n    Node* walk(const string& s) {\n        Node* node = root;\n        for (char c : s) {\n            node = node->next[c - 'a'];\n            if (!node) return nullptr;\n        }\n        return node;\n    }\npublic:\n    Trie() {}\n\n    void insert(string word) {\n        Node* node = root;\n        for (char c : word) {\n            if (!node->next[c - 'a']) node->next[c - 'a'] = new Node();\n            node = node->next[c - 'a'];\n        }\n        node->end = true;\n    }\n\n    bool search(string word) {\n        Node* node = walk(word);\n        return node && node->end;\n    }\n\n    bool startsWith(string prefix) {\n        return walk(prefix) != nullptr;\n    }\n};",
+     "python": "class Trie:\n\n    def __init__(self):\n        self.root = {}\n\n    def insert(self, word: str) -> None:\n        node = self.root\n        for c in word:\n            node = node.setdefault(c, {})\n        node[\"$\"] = True  # end-of-word marker\n\n    def _walk(self, s):\n        node = self.root\n        for c in s:\n            if c not in node:\n                return None\n            node = node[c]\n        return node\n\n    def search(self, word: str) -> bool:\n        node = self._walk(word)\n        return node is not None and \"$\" in node\n\n    def startsWith(self, prefix: str) -> bool:\n        return self._walk(prefix) is not None",
+     "javascript": "var Trie = function() {\n    this.root = { next: {}, end: false };\n};\n\nTrie.prototype.insert = function(word) {\n    let node = this.root;\n    for (const c of word) {\n        if (!node.next[c]) node.next[c] = { next: {}, end: false };\n        node = node.next[c];\n    }\n    node.end = true;\n};\n\nTrie.prototype.walk = function(s) {\n    let node = this.root;\n    for (const c of s) {\n        node = node.next[c];\n        if (!node) return null;\n    }\n    return node;\n};\n\nTrie.prototype.search = function(word) {\n    const node = this.walk(word);\n    return node !== null && node.end;\n};\n\nTrie.prototype.startsWith = function(prefix) {\n    return this.walk(prefix) !== null;\n};"
+    }
+   }
+  ]
+ },
+ "design-add-and-search-words-data-structure": {
+  "pattern": "Trie + DFS that branches on wildcards",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare the pattern with every stored word",
+    "idea": "Keep a list of words. A pattern matches a word of the same length if every non-dot character is equal.",
+    "steps": [
+     "`addWord`: append to the list.",
+     "`search`: for each stored word of the same length, compare position by position (a `.` matches anything); return true on the first match."
+    ],
+    "time": "O(N·L) per search",
+    "space": "O(N·L)",
+    "why": "Every search looks at all N words of up to L letters.",
+    "code": {
+     "java": "class WordDictionary {\n    private final List<String> words = new ArrayList<>();\n\n    public WordDictionary() {\n    }\n\n    public void addWord(String word) {\n        words.add(word);\n    }\n\n    public boolean search(String word) {\n        for (String w : words) {\n            if (w.length() != word.length()) continue;\n            int i = 0;\n            while (i < w.length() && (word.charAt(i) == '.' || word.charAt(i) == w.charAt(i))) i++;\n            if (i == w.length()) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class WordDictionary {\n    vector<string> words;\npublic:\n    WordDictionary() {}\n\n    void addWord(string word) {\n        words.push_back(word);\n    }\n\n    bool search(string word) {\n        for (auto& w : words) {\n            if (w.size() != word.size()) continue;\n            size_t i = 0;\n            while (i < w.size() && (word[i] == '.' || word[i] == w[i])) i++;\n            if (i == w.size()) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class WordDictionary:\n\n    def __init__(self):\n        self.words = []\n\n    def addWord(self, word: str) -> None:\n        self.words.append(word)\n\n    def search(self, word: str) -> bool:\n        return any(\n            len(w) == len(word) and all(p == \".\" or p == c for p, c in zip(word, w))\n            for w in self.words\n        )",
+     "javascript": "var WordDictionary = function() {\n    this.words = [];\n};\n\nWordDictionary.prototype.addWord = function(word) {\n    this.words.push(word);\n};\n\nWordDictionary.prototype.search = function(word) {\n    return this.words.some((w) => w.length === word.length && [...word].every((p, i) => p === '.' || p === w[i]));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Trie with DFS on dots",
+    "idea": "Store the words in a trie. Searching follows a single child for each letter; a `.` tries every existing child. The trie shares prefixes, so most branches die out quickly.",
+    "steps": [
+     "`addWord`: insert into the trie and mark the end node.",
+     "`search(node, i)`: if `i == word.length`, return whether `node` ends a word.",
+     "If `word[i]` is a letter, continue in that child (fail if missing); if it is `.`, return true if any child succeeds."
+    ],
+    "time": "O(L) add, O(26ᵈ·L) search",
+    "space": "O(T·26)",
+    "why": "With d dots (at most 2 here) a search explores up to 26ᵈ branches of length L; without dots it is a single O(L) path. T is the number of trie nodes.",
+    "code": {
+     "java": "class WordDictionary {\n    private static class Node {\n        Node[] next = new Node[26];\n        boolean end;\n    }\n\n    private final Node root = new Node();\n\n    public WordDictionary() {\n    }\n\n    public void addWord(String word) {\n        Node node = root;\n        for (int i = 0; i < word.length(); i++) {\n            int c = word.charAt(i) - 'a';\n            if (node.next[c] == null) node.next[c] = new Node();\n            node = node.next[c];\n        }\n        node.end = true;\n    }\n\n    public boolean search(String word) {\n        return dfs(root, word, 0);\n    }\n\n    private boolean dfs(Node node, String word, int i) {\n        if (i == word.length()) return node.end;\n        char c = word.charAt(i);\n        if (c != '.') {\n            Node child = node.next[c - 'a'];\n            return child != null && dfs(child, word, i + 1);\n        }\n        for (Node child : node.next)\n            if (child != null && dfs(child, word, i + 1)) return true;\n        return false;\n    }\n}",
+     "cpp": "class WordDictionary {\n    struct Node {\n        Node* next[26] = {};\n        bool end = false;\n    };\n    Node* root = new Node();\n    bool dfs(Node* node, const string& word, size_t i) {\n        if (i == word.size()) return node->end;\n        if (word[i] != '.') {\n            Node* child = node->next[word[i] - 'a'];\n            return child && dfs(child, word, i + 1);\n        }\n        for (Node* child : node->next)\n            if (child && dfs(child, word, i + 1)) return true;\n        return false;\n    }\npublic:\n    WordDictionary() {}\n\n    void addWord(string word) {\n        Node* node = root;\n        for (char c : word) {\n            if (!node->next[c - 'a']) node->next[c - 'a'] = new Node();\n            node = node->next[c - 'a'];\n        }\n        node->end = true;\n    }\n\n    bool search(string word) {\n        return dfs(root, word, 0);\n    }\n};",
+     "python": "class WordDictionary:\n\n    def __init__(self):\n        self.root = {}\n\n    def addWord(self, word: str) -> None:\n        node = self.root\n        for c in word:\n            node = node.setdefault(c, {})\n        node[\"$\"] = True\n\n    def search(self, word: str) -> bool:\n        def dfs(node, i):\n            if i == len(word):\n                return \"$\" in node\n            c = word[i]\n            if c != \".\":\n                return c in node and dfs(node[c], i + 1)\n            return any(dfs(child, i + 1) for key, child in node.items() if key != \"$\")\n        return dfs(self.root, 0)",
+     "javascript": "var WordDictionary = function() {\n    this.root = { next: {}, end: false };\n};\n\nWordDictionary.prototype.addWord = function(word) {\n    let node = this.root;\n    for (const c of word) {\n        if (!node.next[c]) node.next[c] = { next: {}, end: false };\n        node = node.next[c];\n    }\n    node.end = true;\n};\n\nWordDictionary.prototype.search = function(word) {\n    const dfs = (node, i) => {\n        if (i === word.length) return node.end;\n        const c = word[i];\n        if (c !== '.') return Boolean(node.next[c]) && dfs(node.next[c], i + 1);\n        return Object.values(node.next).some((child) => dfs(child, i + 1));\n    };\n    return dfs(this.root, 0);\n};"
+    }
+   }
+  ]
+ },
+ "replace-words": {
+  "pattern": "Trie of roots; for each word, walk until the first root ends",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every root against every word",
+    "idea": "For each word in the sentence, check every root; among the roots the word starts with, keep the shortest.",
+    "steps": [
+     "Split the sentence into words.",
+     "For each word, scan all roots and keep the shortest one the word starts with.",
+     "Replace the word with it (if any) and join the words with spaces."
+    ],
+    "time": "O(W·D·L)",
+    "space": "O(n)",
+    "why": "W words × D roots, each prefix check up to L characters. The split words take O(n) for a sentence of n characters.",
+    "code": {
+     "java": "class Solution {\n    public String replaceWords(List<String> dictionary, String sentence) {\n        String[] words = sentence.split(\" \");\n        for (int i = 0; i < words.length; i++) {\n            String best = words[i];\n            for (String root : dictionary)\n                if (words[i].startsWith(root) && root.length() < best.length()) best = root;\n            words[i] = best;\n        }\n        return String.join(\" \", words);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string replaceWords(vector<string>& dictionary, string sentence) {\n        stringstream ss(sentence);\n        string word, out;\n        while (ss >> word) {\n            string best = word;\n            for (auto& root : dictionary)\n                if (word.compare(0, root.size(), root) == 0 && root.size() < best.size()) best = root;\n            if (!out.empty()) out += ' ';\n            out += best;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def replaceWords(self, dictionary: List[str], sentence: str) -> str:\n        def replace(word):\n            roots = [root for root in dictionary if word.startswith(root)]\n            return min(roots, key=len) if roots else word\n        return \" \".join(replace(w) for w in sentence.split(\" \"))",
+     "javascript": "var replaceWords = function(dictionary, sentence) {\n    return sentence.split(' ').map((word) => {\n        let best = word;\n        for (const root of dictionary)\n            if (word.startsWith(root) && root.length < best.length) best = root;\n        return best;\n    }).join(' ');\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Hash set of roots, try each prefix length",
+    "idea": "Put the roots in a set. For each word, test its prefixes from shortest to longest; the first one in the set is the shortest root.",
+    "steps": [
+     "Add all roots to a hash set.",
+     "For each word, for `len = 1 .. word.length`, if `word[0..len)` is in the set, use it and stop.",
+     "Join the results with spaces."
+    ],
+    "time": "O(W·L²)",
+    "space": "O(D·L + n)",
+    "why": "Each word tries up to L prefixes, and building/hashing each prefix costs O(L). No dependence on the number of roots per lookup.",
+    "code": {
+     "java": "class Solution {\n    public String replaceWords(List<String> dictionary, String sentence) {\n        Set<String> roots = new HashSet<>(dictionary);\n        String[] words = sentence.split(\" \");\n        for (int i = 0; i < words.length; i++)\n            for (int len = 1; len <= words[i].length(); len++)\n                if (roots.contains(words[i].substring(0, len))) { words[i] = words[i].substring(0, len); break; }\n        return String.join(\" \", words);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string replaceWords(vector<string>& dictionary, string sentence) {\n        unordered_set<string> roots(dictionary.begin(), dictionary.end());\n        stringstream ss(sentence);\n        string word, out;\n        while (ss >> word) {\n            for (size_t len = 1; len <= word.size(); len++)\n                if (roots.count(word.substr(0, len))) { word = word.substr(0, len); break; }\n            if (!out.empty()) out += ' ';\n            out += word;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def replaceWords(self, dictionary: List[str], sentence: str) -> str:\n        roots = set(dictionary)\n        def replace(word):\n            for length in range(1, len(word) + 1):\n                if word[:length] in roots:\n                    return word[:length]\n            return word\n        return \" \".join(replace(w) for w in sentence.split(\" \"))",
+     "javascript": "var replaceWords = function(dictionary, sentence) {\n    const roots = new Set(dictionary);\n    return sentence.split(' ').map((word) => {\n        for (let len = 1; len <= word.length; len++)\n            if (roots.has(word.slice(0, len))) return word.slice(0, len);\n        return word;\n    }).join(' ');\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Trie of roots",
+    "idea": "Insert the roots into a trie. For each word, walk the trie letter by letter; the first node that ends a root gives the shortest root. If the walk breaks off first, keep the word.",
+    "steps": [
+     "Insert every root into a trie, marking end nodes.",
+     "For each word, walk from the trie root; if a node marks a root end, replace the word with the prefix walked so far.",
+     "If a letter has no child, stop and keep the word. Join with spaces."
+    ],
+    "time": "O(D·L + n)",
+    "space": "O(D·L·26)",
+    "why": "Building the trie costs the total root length; each character of the sentence is looked at at most once. The trie has at most D·L nodes.",
+    "code": {
+     "java": "class Solution {\n    private static class Node {\n        Node[] next = new Node[26];\n        boolean end;\n    }\n\n    public String replaceWords(List<String> dictionary, String sentence) {\n        Node trie = new Node();\n        for (String root : dictionary) {\n            Node node = trie;\n            for (char c : root.toCharArray()) {\n                if (node.next[c - 'a'] == null) node.next[c - 'a'] = new Node();\n                node = node.next[c - 'a'];\n            }\n            node.end = true;\n        }\n        String[] words = sentence.split(\" \");\n        for (int i = 0; i < words.length; i++) {\n            Node node = trie;\n            for (int k = 0; k < words[i].length(); k++) {\n                node = node.next[words[i].charAt(k) - 'a'];\n                if (node == null) break;\n                if (node.end) { words[i] = words[i].substring(0, k + 1); break; }\n            }\n        }\n        return String.join(\" \", words);\n    }\n}",
+     "cpp": "class Solution {\n    struct Node {\n        Node* next[26] = {};\n        bool end = false;\n    };\npublic:\n    string replaceWords(vector<string>& dictionary, string sentence) {\n        Node* trie = new Node();\n        for (auto& root : dictionary) {\n            Node* node = trie;\n            for (char c : root) {\n                if (!node->next[c - 'a']) node->next[c - 'a'] = new Node();\n                node = node->next[c - 'a'];\n            }\n            node->end = true;\n        }\n        stringstream ss(sentence);\n        string word, out;\n        while (ss >> word) {\n            Node* node = trie;\n            for (size_t k = 0; k < word.size(); k++) {\n                node = node->next[word[k] - 'a'];\n                if (!node) break;\n                if (node->end) { word = word.substr(0, k + 1); break; }\n            }\n            if (!out.empty()) out += ' ';\n            out += word;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def replaceWords(self, dictionary: List[str], sentence: str) -> str:\n        trie = {}\n        for root in dictionary:\n            node = trie\n            for c in root:\n                node = node.setdefault(c, {})\n            node[\"$\"] = True\n        def replace(word):\n            node = trie\n            for k, c in enumerate(word):\n                if c not in node:\n                    break\n                node = node[c]\n                if \"$\" in node:\n                    return word[:k + 1]\n            return word\n        return \" \".join(replace(w) for w in sentence.split(\" \"))",
+     "javascript": "var replaceWords = function(dictionary, sentence) {\n    const trie = {};\n    for (const root of dictionary) {\n        let node = trie;\n        for (const c of root) node = node[c] ??= {};\n        node.$ = true;\n    }\n    return sentence.split(' ').map((word) => {\n        let node = trie;\n        for (let k = 0; k < word.length; k++) {\n            node = node[word[k]];\n            if (!node) break;\n            if (node.$) return word.slice(0, k + 1);\n        }\n        return word;\n    }).join(' ');\n};"
+    }
+   }
+  ]
+ },
+ "search-suggestions-system": {
+  "pattern": "Sort + binary search on each prefix (or a trie that stores the top 3 per node)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Filter and sort for every typed prefix",
+    "idea": "After each character, collect every product with that prefix, sort them, and keep the first three.",
+    "steps": [
+     "For each prefix `searchWord[0..i]`:",
+     "Collect the products that start with it, sort them, and take up to three.",
+     "Append that list to the answer."
+    ],
+    "time": "O(m·n·L log n)",
+    "space": "O(n)",
+    "why": "m prefixes; each filters n products (O(L) per check) and sorts the matches. The match list can hold n products.",
+    "code": {
+     "java": "class Solution {\n    public List<List<String>> suggestedProducts(String[] products, String searchWord) {\n        List<List<String>> out = new ArrayList<>();\n        for (int i = 1; i <= searchWord.length(); i++) {\n            String prefix = searchWord.substring(0, i);\n            List<String> match = new ArrayList<>();\n            for (String p : products) if (p.startsWith(prefix)) match.add(p);\n            Collections.sort(match);\n            out.add(match.subList(0, Math.min(3, match.size())));\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<string>> suggestedProducts(vector<string>& products, string searchWord) {\n        vector<vector<string>> out;\n        for (size_t i = 1; i <= searchWord.size(); i++) {\n            string prefix = searchWord.substr(0, i);\n            vector<string> match;\n            for (auto& p : products) if (p.compare(0, prefix.size(), prefix) == 0) match.push_back(p);\n            sort(match.begin(), match.end());\n            if (match.size() > 3) match.resize(3);\n            out.push_back(match);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def suggestedProducts(self, products: List[str], searchWord: str) -> List[List[str]]:\n        out = []\n        for i in range(1, len(searchWord) + 1):\n            prefix = searchWord[:i]\n            out.append(sorted(p for p in products if p.startswith(prefix))[:3])\n        return out",
+     "javascript": "var suggestedProducts = function(products, searchWord) {\n    const out = [];\n    for (let i = 1; i <= searchWord.length; i++) {\n        const prefix = searchWord.slice(0, i);\n        out.push(products.filter((p) => p.startsWith(prefix)).sort().slice(0, 3));\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort once, binary search each prefix",
+    "idea": "In sorted order, all products with a given prefix form one contiguous block, starting at the first product `>=` the prefix. Binary search that position and take up to three products from there that still have the prefix.",
+    "steps": [
+     "Sort `products`.",
+     "For each prefix, binary search the first index `i` with `products[i] >= prefix`.",
+     "Take `products[i], products[i + 1], products[i + 2]` while they exist and start with the prefix."
+    ],
+    "time": "O(n log n·L + m·L log n)",
+    "space": "O(1)",
+    "why": "One sort (string comparisons cost up to O(L)), then one binary search of O(log n) comparisons per typed character (the answer itself aside).",
+    "code": {
+     "java": "class Solution {\n    public List<List<String>> suggestedProducts(String[] products, String searchWord) {\n        Arrays.sort(products);\n        List<List<String>> out = new ArrayList<>();\n        for (int len = 1; len <= searchWord.length(); len++) {\n            String prefix = searchWord.substring(0, len);\n            int lo = 0, hi = products.length;\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (products[mid].compareTo(prefix) < 0) lo = mid + 1; else hi = mid;\n            }\n            List<String> match = new ArrayList<>();\n            for (int i = lo; i < Math.min(lo + 3, products.length) && products[i].startsWith(prefix); i++) match.add(products[i]);\n            out.add(match);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<string>> suggestedProducts(vector<string>& products, string searchWord) {\n        sort(products.begin(), products.end());\n        vector<vector<string>> out;\n        string prefix;\n        for (char c : searchWord) {\n            prefix += c;\n            auto it = lower_bound(products.begin(), products.end(), prefix);\n            vector<string> match;\n            for (int k = 0; k < 3 && it != products.end() && it->compare(0, prefix.size(), prefix) == 0; k++, it++)\n                match.push_back(*it);\n            out.push_back(match);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def suggestedProducts(self, products: List[str], searchWord: str) -> List[List[str]]:\n        products.sort()\n        out = []\n        for i in range(1, len(searchWord) + 1):\n            prefix = searchWord[:i]\n            start = bisect_left(products, prefix)\n            out.append([p for p in products[start:start + 3] if p.startswith(prefix)])\n        return out",
+     "javascript": "var suggestedProducts = function(products, searchWord) {\n    products.sort();\n    const out = [];\n    for (let len = 1; len <= searchWord.length; len++) {\n        const prefix = searchWord.slice(0, len);\n        let lo = 0, hi = products.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (products[mid] < prefix) lo = mid + 1; else hi = mid;\n        }\n        const match = [];\n        for (let i = lo; i < Math.min(lo + 3, products.length) && products[i].startsWith(prefix); i++) match.push(products[i]);\n        out.push(match);\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Trie keeping the first three words at each node",
+    "idea": "Insert the products in sorted order into a trie, and let every node remember the first three products that pass through it. Typing then just walks down the trie, reading each node's list.",
+    "steps": [
+     "Sort `products`. Insert each one; at every node on its path, append it to the node's list if the list has fewer than 3 entries.",
+     "Walk the trie along `searchWord`; after each character, output the current node's list.",
+     "Once a character has no child, output empty lists for the rest."
+    ],
+    "time": "O(n log n·L + S)",
+    "space": "O(S)",
+    "why": "S is the total length of all products: building the trie is linear in it, and each typed character is O(1) plus copying three words. Memory is the trie itself.",
+    "code": {
+     "java": "class Solution {\n    private static class Node {\n        Node[] next = new Node[26];\n        List<String> top = new ArrayList<>();\n    }\n\n    public List<List<String>> suggestedProducts(String[] products, String searchWord) {\n        Arrays.sort(products);\n        Node root = new Node();\n        for (String p : products) {\n            Node node = root;\n            for (char c : p.toCharArray()) {\n                if (node.next[c - 'a'] == null) node.next[c - 'a'] = new Node();\n                node = node.next[c - 'a'];\n                if (node.top.size() < 3) node.top.add(p);\n            }\n        }\n        List<List<String>> out = new ArrayList<>();\n        Node node = root;\n        for (char c : searchWord.toCharArray()) {\n            node = node == null ? null : node.next[c - 'a'];\n            out.add(node == null ? new ArrayList<>() : node.top);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\n    struct Node {\n        Node* next[26] = {};\n        vector<string> top;\n    };\npublic:\n    vector<vector<string>> suggestedProducts(vector<string>& products, string searchWord) {\n        sort(products.begin(), products.end());\n        Node* root = new Node();\n        for (auto& p : products) {\n            Node* node = root;\n            for (char c : p) {\n                if (!node->next[c - 'a']) node->next[c - 'a'] = new Node();\n                node = node->next[c - 'a'];\n                if (node->top.size() < 3) node->top.push_back(p);\n            }\n        }\n        vector<vector<string>> out;\n        Node* node = root;\n        for (char c : searchWord) {\n            node = node ? node->next[c - 'a'] : nullptr;\n            out.push_back(node ? node->top : vector<string>{});\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def suggestedProducts(self, products: List[str], searchWord: str) -> List[List[str]]:\n        root = {}\n        for p in sorted(products):\n            node = root\n            for c in p:\n                node = node.setdefault(c, {\"#\": []})\n                if len(node[\"#\"]) < 3:\n                    node[\"#\"].append(p)\n        out, node = [], root\n        for c in searchWord:\n            node = node.get(c) if node is not None else None\n            out.append(node[\"#\"] if node is not None else [])\n        return out",
+     "javascript": "var suggestedProducts = function(products, searchWord) {\n    products.sort();\n    const root = { next: {}, top: [] };\n    for (const p of products) {\n        let node = root;\n        for (const c of p) {\n            node = node.next[c] ??= { next: {}, top: [] };\n            if (node.top.length < 3) node.top.push(p);\n        }\n    }\n    const out = [];\n    let node = root;\n    for (const c of searchWord) {\n        node = node ? node.next[c] : undefined;\n        out.push(node ? node.top : []);\n    }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "maximum-xor-of-two-numbers-in-an-array": {
+  "pattern": "Binary trie of bits, greedily choosing the opposite bit from the top",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "XOR every pair",
+    "idea": "Compute `nums[i] ^ nums[j]` for every pair and keep the largest.",
+    "steps": [
+     "Set `best = 0`.",
+     "For every `i <= j`, update `best` with `nums[i] ^ nums[j]`.",
+     "Return `best`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About n²/2 pairs: 2 × 10¹⁰ for n = 2 × 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int findMaximumXOR(int[] nums) {\n        int best = 0;\n        for (int i = 0; i < nums.length; i++)\n            for (int j = i + 1; j < nums.length; j++) best = Math.max(best, nums[i] ^ nums[j]);\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findMaximumXOR(vector<int>& nums) {\n        int best = 0, n = nums.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) best = max(best, nums[i] ^ nums[j]);\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def findMaximumXOR(self, nums: List[int]) -> int:\n        best = 0\n        for i in range(len(nums)):\n            for j in range(i + 1, len(nums)):\n                best = max(best, nums[i] ^ nums[j])\n        return best",
+     "javascript": "var findMaximumXOR = function(nums) {\n    let best = 0;\n    for (let i = 0; i < nums.length; i++)\n        for (let j = i + 1; j < nums.length; j++) best = Math.max(best, nums[i] ^ nums[j]);\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary trie, opposite bit first",
+    "idea": "A higher bit is worth more than all lower bits together, so for each number choose, from bit 30 down, the partner bit that differs from its own whenever some stored number has it. Store the numbers in a trie keyed by bits (highest first) to make that choice in O(1) per bit.",
+    "steps": [
+     "Insert every number into a binary trie, bit 30 first.",
+     "For each number `x`, walk the trie from the top: at bit `b`, prefer the child for `1 − bit(x, b)`; if it exists, add `1 << b` to the XOR and go there, else take the other child.",
+     "The best XOR over all `x` is the answer."
+    ],
+    "time": "O(n·31)",
+    "space": "O(n·31)",
+    "why": "Each insert and each query walks 31 levels. The trie has at most 31 nodes per number.",
+    "code": {
+     "java": "class Solution {\n    public int findMaximumXOR(int[] nums) {\n        int[][] child = new int[nums.length * 31 + 1][2];\n        int count = 1;\n        for (int x : nums) {\n            int node = 0;\n            for (int b = 30; b >= 0; b--) {\n                int bit = (x >> b) & 1;\n                if (child[node][bit] == 0) child[node][bit] = count++;\n                node = child[node][bit];\n            }\n        }\n        int best = 0;\n        for (int x : nums) {\n            int node = 0, xor = 0;\n            for (int b = 30; b >= 0; b--) {\n                int want = ((x >> b) & 1) ^ 1;\n                if (child[node][want] != 0) { xor |= 1 << b; node = child[node][want]; }\n                else node = child[node][want ^ 1];\n            }\n            best = Math.max(best, xor);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findMaximumXOR(vector<int>& nums) {\n        vector<array<int, 2>> child(nums.size() * 31 + 1, {0, 0});\n        int count = 1;\n        for (int x : nums) {\n            int node = 0;\n            for (int b = 30; b >= 0; b--) {\n                int bit = (x >> b) & 1;\n                if (!child[node][bit]) child[node][bit] = count++;\n                node = child[node][bit];\n            }\n        }\n        int best = 0;\n        for (int x : nums) {\n            int node = 0, xr = 0;\n            for (int b = 30; b >= 0; b--) {\n                int want = ((x >> b) & 1) ^ 1;\n                if (child[node][want]) { xr |= 1 << b; node = child[node][want]; }\n                else node = child[node][want ^ 1];\n            }\n            best = max(best, xr);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def findMaximumXOR(self, nums: List[int]) -> int:\n        child = [[0, 0]]\n        for x in nums:\n            node = 0\n            for b in range(30, -1, -1):\n                bit = (x >> b) & 1\n                if not child[node][bit]:\n                    child[node][bit] = len(child)\n                    child.append([0, 0])\n                node = child[node][bit]\n        best = 0\n        for x in nums:\n            node = xor = 0\n            for b in range(30, -1, -1):\n                want = ((x >> b) & 1) ^ 1\n                if child[node][want]:\n                    xor |= 1 << b\n                    node = child[node][want]\n                else:\n                    node = child[node][want ^ 1]\n            best = max(best, xor)\n        return best",
+     "javascript": "var findMaximumXOR = function(nums) {\n    const zero = new Int32Array(nums.length * 31 + 1), one = new Int32Array(nums.length * 31 + 1);\n    const child = [zero, one];\n    let count = 1;\n    for (const x of nums) {\n        let node = 0;\n        for (let b = 30; b >= 0; b--) {\n            const bit = (x >> b) & 1;\n            if (!child[bit][node]) child[bit][node] = count++;\n            node = child[bit][node];\n        }\n    }\n    let best = 0;\n    for (const x of nums) {\n        let node = 0, xor = 0;\n        for (let b = 30; b >= 0; b--) {\n            const want = ((x >> b) & 1) ^ 1;\n            if (child[want][node]) { xor |= 1 << b; node = child[want][node]; }\n            else node = child[want ^ 1][node];\n        }\n        best = Math.max(best, xor);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "word-search-ii": {
+  "pattern": "Trie of the words + DFS backtracking on the grid, pruning when no word has the current prefix",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Run Word Search separately for every word",
+    "idea": "For each word, try every starting cell and do a backtracking DFS that matches the word letter by letter, marking cells as used.",
+    "steps": [
+     "For each word, for each cell: DFS(cell, index 0).",
+     "DFS: fail if out of bounds, used, or the letter differs; succeed at the last letter; otherwise mark the cell, try the 4 neighbours with the next index, and unmark.",
+     "Collect the words that were found."
+    ],
+    "time": "O(W·m·n·4·3ᴸ⁻¹)",
+    "space": "O(L)",
+    "why": "Every word repeats the full grid search: from each of the m·n cells, up to 4·3ᴸ⁻¹ paths of length L. With 3 × 10⁴ words that is far too slow.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findWords(char[][] board, String[] words) {\n        List<String> out = new ArrayList<>();\n        for (String w : words) {\n            boolean found = false;\n            for (int r = 0; r < board.length && !found; r++)\n                for (int c = 0; c < board[0].length && !found; c++)\n                    found = dfs(board, w, 0, r, c);\n            if (found) out.add(w);\n        }\n        return out;\n    }\n\n    private boolean dfs(char[][] b, String w, int i, int r, int c) {\n        if (r < 0 || c < 0 || r >= b.length || c >= b[0].length || b[r][c] != w.charAt(i)) return false;\n        if (i == w.length() - 1) return true;\n        char saved = b[r][c];\n        b[r][c] = '#';\n        boolean ok = dfs(b, w, i + 1, r + 1, c) || dfs(b, w, i + 1, r - 1, c) || dfs(b, w, i + 1, r, c + 1) || dfs(b, w, i + 1, r, c - 1);\n        b[r][c] = saved;\n        return ok;\n    }\n}",
+     "cpp": "class Solution {\n    bool dfs(vector<vector<char>>& b, const string& w, size_t i, int r, int c) {\n        if (r < 0 || c < 0 || r >= (int) b.size() || c >= (int) b[0].size() || b[r][c] != w[i]) return false;\n        if (i == w.size() - 1) return true;\n        char saved = b[r][c];\n        b[r][c] = '#';\n        bool ok = dfs(b, w, i + 1, r + 1, c) || dfs(b, w, i + 1, r - 1, c) || dfs(b, w, i + 1, r, c + 1) || dfs(b, w, i + 1, r, c - 1);\n        b[r][c] = saved;\n        return ok;\n    }\npublic:\n    vector<string> findWords(vector<vector<char>>& board, vector<string>& words) {\n        vector<string> out;\n        for (auto& w : words) {\n            bool found = false;\n            for (int r = 0; r < (int) board.size() && !found; r++)\n                for (int c = 0; c < (int) board[0].size() && !found; c++)\n                    found = dfs(board, w, 0, r, c);\n            if (found) out.push_back(w);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findWords(self, board: List[List[str]], words: List[str]) -> List[str]:\n        m, n = len(board), len(board[0])\n        def dfs(w, i, r, c):\n            if r < 0 or c < 0 or r >= m or c >= n or board[r][c] != w[i]:\n                return False\n            if i == len(w) - 1:\n                return True\n            saved, board[r][c] = board[r][c], \"#\"\n            ok = dfs(w, i + 1, r + 1, c) or dfs(w, i + 1, r - 1, c) or dfs(w, i + 1, r, c + 1) or dfs(w, i + 1, r, c - 1)\n            board[r][c] = saved\n            return ok\n        return [w for w in words if any(dfs(w, 0, r, c) for r in range(m) for c in range(n))]",
+     "javascript": "var findWords = function(board, words) {\n    const m = board.length, n = board[0].length;\n    const dfs = (w, i, r, c) => {\n        if (r < 0 || c < 0 || r >= m || c >= n || board[r][c] !== w[i]) return false;\n        if (i === w.length - 1) return true;\n        const saved = board[r][c];\n        board[r][c] = '#';\n        const ok = dfs(w, i + 1, r + 1, c) || dfs(w, i + 1, r - 1, c) || dfs(w, i + 1, r, c + 1) || dfs(w, i + 1, r, c - 1);\n        board[r][c] = saved;\n        return ok;\n    };\n    return words.filter((w) => {\n        for (let r = 0; r < m; r++)\n            for (let c = 0; c < n; c++) if (dfs(w, 0, r, c)) return true;\n        return false;\n    });\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One grid DFS guided by a trie of all words",
+    "idea": "Put all the words in a trie and search the grid once. The DFS carries the trie node for the letters walked so far; if the next letter has no child, no word continues that way, so the path is cut immediately. A node that ends a word records it; clearing that mark avoids reporting it twice.",
+    "steps": [
+     "Insert every word into a trie; store the word itself at its end node.",
+     "From every cell, DFS with the trie root: move to the child for the cell's letter (stop if missing).",
+     "If that node holds a word, add it to the answer and clear it.",
+     "Mark the cell used, explore the 4 neighbours, then restore the cell."
+    ],
+    "time": "O(m·n·4·3ᴸ⁻¹)",
+    "space": "O(S)",
+    "why": "The grid is searched once for all words together, and the trie prunes every path that is not a prefix of some word. S is the total length of the words (trie size); the recursion is at most L = 10 deep.",
+    "code": {
+     "java": "class Solution {\n    private static class Node {\n        Node[] next = new Node[26];\n        String word;\n    }\n\n    public List<String> findWords(char[][] board, String[] words) {\n        Node root = new Node();\n        for (String w : words) {\n            Node node = root;\n            for (char c : w.toCharArray()) {\n                if (node.next[c - 'a'] == null) node.next[c - 'a'] = new Node();\n                node = node.next[c - 'a'];\n            }\n            node.word = w;\n        }\n        List<String> out = new ArrayList<>();\n        for (int r = 0; r < board.length; r++)\n            for (int c = 0; c < board[0].length; c++) dfs(board, r, c, root, out);\n        return out;\n    }\n\n    private void dfs(char[][] b, int r, int c, Node parent, List<String> out) {\n        if (r < 0 || c < 0 || r >= b.length || c >= b[0].length || b[r][c] == '#') return;\n        Node node = parent.next[b[r][c] - 'a'];\n        if (node == null) return;\n        if (node.word != null) { out.add(node.word); node.word = null; }\n        char saved = b[r][c];\n        b[r][c] = '#';\n        dfs(b, r + 1, c, node, out);\n        dfs(b, r - 1, c, node, out);\n        dfs(b, r, c + 1, node, out);\n        dfs(b, r, c - 1, node, out);\n        b[r][c] = saved;\n    }\n}",
+     "cpp": "class Solution {\n    struct Node {\n        Node* next[26] = {};\n        string word;\n    };\n    void dfs(vector<vector<char>>& b, int r, int c, Node* parent, vector<string>& out) {\n        if (r < 0 || c < 0 || r >= (int) b.size() || c >= (int) b[0].size() || b[r][c] == '#') return;\n        Node* node = parent->next[b[r][c] - 'a'];\n        if (!node) return;\n        if (!node->word.empty()) { out.push_back(node->word); node->word.clear(); }\n        char saved = b[r][c];\n        b[r][c] = '#';\n        dfs(b, r + 1, c, node, out);\n        dfs(b, r - 1, c, node, out);\n        dfs(b, r, c + 1, node, out);\n        dfs(b, r, c - 1, node, out);\n        b[r][c] = saved;\n    }\npublic:\n    vector<string> findWords(vector<vector<char>>& board, vector<string>& words) {\n        Node* root = new Node();\n        for (auto& w : words) {\n            Node* node = root;\n            for (char c : w) {\n                if (!node->next[c - 'a']) node->next[c - 'a'] = new Node();\n                node = node->next[c - 'a'];\n            }\n            node->word = w;\n        }\n        vector<string> out;\n        for (int r = 0; r < (int) board.size(); r++)\n            for (int c = 0; c < (int) board[0].size(); c++) dfs(board, r, c, root, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findWords(self, board: List[List[str]], words: List[str]) -> List[str]:\n        root = {}\n        for w in words:\n            node = root\n            for c in w:\n                node = node.setdefault(c, {})\n            node[\"$\"] = w\n        m, n, out = len(board), len(board[0]), []\n        def dfs(r, c, parent):\n            if r < 0 or c < 0 or r >= m or c >= n:\n                return\n            ch = board[r][c]\n            node = parent.get(ch)\n            if node is None:\n                return\n            if \"$\" in node:\n                out.append(node.pop(\"$\"))\n            board[r][c] = \"#\"\n            dfs(r + 1, c, node)\n            dfs(r - 1, c, node)\n            dfs(r, c + 1, node)\n            dfs(r, c - 1, node)\n            board[r][c] = ch\n        for r in range(m):\n            for c in range(n):\n                dfs(r, c, root)\n        return out",
+     "javascript": "var findWords = function(board, words) {\n    const root = {};\n    for (const w of words) {\n        let node = root;\n        for (const c of w) node = node[c] ??= {};\n        node.$ = w;\n    }\n    const m = board.length, n = board[0].length, out = [];\n    const dfs = (r, c, parent) => {\n        if (r < 0 || c < 0 || r >= m || c >= n) return;\n        const ch = board[r][c], node = parent[ch];\n        if (!node) return;\n        if (node.$) { out.push(node.$); delete node.$; }\n        board[r][c] = '#';\n        dfs(r + 1, c, node);\n        dfs(r - 1, c, node);\n        dfs(r, c + 1, node);\n        dfs(r, c - 1, node);\n        board[r][c] = ch;\n    };\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) dfs(r, c, root);\n    return out;\n};"
+    }
+   }
+  ]
+ }
+}
