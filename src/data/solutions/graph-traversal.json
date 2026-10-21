@@ -1,0 +1,495 @@
+{
+ "flood-fill": {
+  "pattern": "Grid DFS/BFS over connected cells of the same colour",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursive DFS",
+    "idea": "Recolour the start pixel, then recursively recolour each of its four neighbours that still has the original colour. Recolouring as you go also marks pixels as visited.",
+    "steps": [
+     "Let `old = image[sr][sc]`; if `old == color`, return the image unchanged (otherwise the fill would never stop).",
+     "`fill(r, c)`: stop if out of bounds or `image[r][c] != old`; else set it to `color` and fill the four neighbours.",
+     "Call `fill(sr, sc)` and return the image."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each pixel is recoloured at most once. The recursion can be as deep as the number of pixels in the region.",
+    "code": {
+     "java": "class Solution {\n    public int[][] floodFill(int[][] image, int sr, int sc, int color) {\n        int old = image[sr][sc];\n        if (old != color) fill(image, sr, sc, old, color);\n        return image;\n    }\n\n    private void fill(int[][] img, int r, int c, int old, int color) {\n        if (r < 0 || c < 0 || r >= img.length || c >= img[0].length || img[r][c] != old) return;\n        img[r][c] = color;\n        fill(img, r + 1, c, old, color);\n        fill(img, r - 1, c, old, color);\n        fill(img, r, c + 1, old, color);\n        fill(img, r, c - 1, old, color);\n    }\n}",
+     "cpp": "class Solution {\n    void fill(vector<vector<int>>& img, int r, int c, int old, int color) {\n        if (r < 0 || c < 0 || r >= (int) img.size() || c >= (int) img[0].size() || img[r][c] != old) return;\n        img[r][c] = color;\n        fill(img, r + 1, c, old, color);\n        fill(img, r - 1, c, old, color);\n        fill(img, r, c + 1, old, color);\n        fill(img, r, c - 1, old, color);\n    }\npublic:\n    vector<vector<int>> floodFill(vector<vector<int>>& image, int sr, int sc, int color) {\n        int old = image[sr][sc];\n        if (old != color) fill(image, sr, sc, old, color);\n        return image;\n    }\n};",
+     "python": "class Solution:\n    def floodFill(self, image: List[List[int]], sr: int, sc: int, color: int) -> List[List[int]]:\n        old = image[sr][sc]\n        if old == color:\n            return image\n        m, n = len(image), len(image[0])\n        def fill(r, c):\n            if 0 <= r < m and 0 <= c < n and image[r][c] == old:\n                image[r][c] = color\n                fill(r + 1, c)\n                fill(r - 1, c)\n                fill(r, c + 1)\n                fill(r, c - 1)\n        fill(sr, sc)\n        return image",
+     "javascript": "var floodFill = function(image, sr, sc, color) {\n    const old = image[sr][sc], m = image.length, n = image[0].length;\n    if (old === color) return image;\n    const fill = (r, c) => {\n        if (r < 0 || c < 0 || r >= m || c >= n || image[r][c] !== old) return;\n        image[r][c] = color;\n        fill(r + 1, c);\n        fill(r - 1, c);\n        fill(r, c + 1);\n        fill(r, c - 1);\n    };\n    fill(sr, sc);\n    return image;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative BFS with a queue",
+    "idea": "The same fill without recursion: recolour a pixel when it is added to the queue, then process its neighbours.",
+    "steps": [
+     "If the colour is unchanged, return. Recolour `(sr, sc)` and queue it.",
+     "Pop a pixel; for each neighbour inside the image with the original colour, recolour it and queue it.",
+     "Return the image when the queue is empty."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each pixel enters the queue at most once. No recursion, so large regions cannot overflow the call stack.",
+    "code": {
+     "java": "class Solution {\n    public int[][] floodFill(int[][] image, int sr, int sc, int color) {\n        int old = image[sr][sc], m = image.length, n = image[0].length;\n        if (old == color) return image;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        image[sr][sc] = color;\n        queue.add(new int[] { sr, sc });\n        while (!queue.isEmpty()) {\n            int[] cell = queue.poll();\n            for (int[] d : dirs) {\n                int r = cell[0] + d[0], c = cell[1] + d[1];\n                if (r >= 0 && c >= 0 && r < m && c < n && image[r][c] == old) {\n                    image[r][c] = color;\n                    queue.add(new int[] { r, c });\n                }\n            }\n        }\n        return image;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> floodFill(vector<vector<int>>& image, int sr, int sc, int color) {\n        int old = image[sr][sc], m = image.size(), n = image[0].size();\n        if (old == color) return image;\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        queue<pair<int, int>> q;\n        image[sr][sc] = color;\n        q.push({sr, sc});\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < m && c < n && image[r][c] == old) {\n                    image[r][c] = color;\n                    q.push({r, c});\n                }\n            }\n        }\n        return image;\n    }\n};",
+     "python": "class Solution:\n    def floodFill(self, image: List[List[int]], sr: int, sc: int, color: int) -> List[List[int]]:\n        old = image[sr][sc]\n        if old == color:\n            return image\n        m, n = len(image), len(image[0])\n        image[sr][sc] = color\n        queue = deque([(sr, sc)])\n        while queue:\n            r0, c0 = queue.popleft()\n            for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                if 0 <= r < m and 0 <= c < n and image[r][c] == old:\n                    image[r][c] = color\n                    queue.append((r, c))\n        return image",
+     "javascript": "var floodFill = function(image, sr, sc, color) {\n    const old = image[sr][sc], m = image.length, n = image[0].length;\n    if (old === color) return image;\n    image[sr][sc] = color;\n    const queue = [[sr, sc]];\n    for (let h = 0; h < queue.length; h++) {\n        const [r0, c0] = queue[h];\n        for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n            if (r >= 0 && c >= 0 && r < m && c < n && image[r][c] === old) {\n                image[r][c] = color;\n                queue.push([r, c]);\n            }\n        }\n    }\n    return image;\n};"
+    }
+   }
+  ]
+ },
+ "number-of-islands": {
+  "pattern": "Count connected components on a grid: start a search at each unvisited land cell",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS that sinks each island",
+    "idea": "Scan the grid. Each time you meet land that has not been visited, that is a new island: count it, then flood it (turn its cells to water) so none of its cells start another count.",
+    "steps": [
+     "For each cell with `'1'`: increase the count and call `sink(r, c)`.",
+     "`sink`: stop if out of bounds or not land; otherwise set the cell to `'0'` and sink the four neighbours.",
+     "Return the count."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is sunk at most once. The recursion can go as deep as the largest island (up to m·n cells). The grid is modified; copy it first if that matters.",
+    "code": {
+     "java": "class Solution {\n    public int numIslands(char[][] grid) {\n        int count = 0;\n        for (int r = 0; r < grid.length; r++)\n            for (int c = 0; c < grid[0].length; c++)\n                if (grid[r][c] == '1') { count++; sink(grid, r, c); }\n        return count;\n    }\n\n    private void sink(char[][] g, int r, int c) {\n        if (r < 0 || c < 0 || r >= g.length || c >= g[0].length || g[r][c] != '1') return;\n        g[r][c] = '0';\n        sink(g, r + 1, c);\n        sink(g, r - 1, c);\n        sink(g, r, c + 1);\n        sink(g, r, c - 1);\n    }\n}",
+     "cpp": "class Solution {\n    void sink(vector<vector<char>>& g, int r, int c) {\n        if (r < 0 || c < 0 || r >= (int) g.size() || c >= (int) g[0].size() || g[r][c] != '1') return;\n        g[r][c] = '0';\n        sink(g, r + 1, c);\n        sink(g, r - 1, c);\n        sink(g, r, c + 1);\n        sink(g, r, c - 1);\n    }\npublic:\n    int numIslands(vector<vector<char>>& grid) {\n        int count = 0;\n        for (int r = 0; r < (int) grid.size(); r++)\n            for (int c = 0; c < (int) grid[0].size(); c++)\n                if (grid[r][c] == '1') { count++; sink(grid, r, c); }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def numIslands(self, grid: List[List[str]]) -> int:\n        m, n = len(grid), len(grid[0])\n        def sink(r, c):\n            if 0 <= r < m and 0 <= c < n and grid[r][c] == \"1\":\n                grid[r][c] = \"0\"\n                sink(r + 1, c)\n                sink(r - 1, c)\n                sink(r, c + 1)\n                sink(r, c - 1)\n        count = 0\n        for r in range(m):\n            for c in range(n):\n                if grid[r][c] == \"1\":\n                    count += 1\n                    sink(r, c)\n        return count",
+     "javascript": "var numIslands = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const sink = (r, c) => {\n        if (r < 0 || c < 0 || r >= m || c >= n || grid[r][c] !== '1') return;\n        grid[r][c] = '0';\n        sink(r + 1, c);\n        sink(r - 1, c);\n        sink(r, c + 1);\n        sink(r, c - 1);\n    };\n    let count = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++)\n            if (grid[r][c] === '1') { count++; sink(r, c); }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS from each new island",
+    "idea": "The same counting, exploring each island with a queue instead of recursion, which is safe even for one huge island.",
+    "steps": [
+     "For each `'1'` cell: count it, set it to `'0'` and queue it.",
+     "While the queue is not empty, pop a cell and queue every neighbouring `'1'`, setting it to `'0'` when queued.",
+     "Return the count."
+    ],
+    "time": "O(m·n)",
+    "space": "O(min(m, n))",
+    "why": "Each cell is queued at most once. A BFS frontier on a grid stays roughly as wide as the smaller dimension.",
+    "code": {
+     "java": "class Solution {\n    public int numIslands(char[][] grid) {\n        int m = grid.length, n = grid[0].length, count = 0;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (grid[r0][c0] != '1') continue;\n                count++;\n                grid[r0][c0] = '0';\n                queue.add(new int[] { r0, c0 });\n                while (!queue.isEmpty()) {\n                    int[] cell = queue.poll();\n                    for (int[] d : dirs) {\n                        int r = cell[0] + d[0], c = cell[1] + d[1];\n                        if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == '1') {\n                            grid[r][c] = '0';\n                            queue.add(new int[] { r, c });\n                        }\n                    }\n                }\n            }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numIslands(vector<vector<char>>& grid) {\n        int m = grid.size(), n = grid[0].size(), count = 0;\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        queue<pair<int, int>> q;\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (grid[r0][c0] != '1') continue;\n                count++;\n                grid[r0][c0] = '0';\n                q.push({r0, c0});\n                while (!q.empty()) {\n                    auto [r1, c1] = q.front();\n                    q.pop();\n                    for (int k = 0; k < 4; k++) {\n                        int r = r1 + dr[k], c = c1 + dc[k];\n                        if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == '1') {\n                            grid[r][c] = '0';\n                            q.push({r, c});\n                        }\n                    }\n                }\n            }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def numIslands(self, grid: List[List[str]]) -> int:\n        m, n, count = len(grid), len(grid[0]), 0\n        for r0 in range(m):\n            for c0 in range(n):\n                if grid[r0][c0] != \"1\":\n                    continue\n                count += 1\n                grid[r0][c0] = \"0\"\n                queue = deque([(r0, c0)])\n                while queue:\n                    r1, c1 = queue.popleft()\n                    for r, c in ((r1 + 1, c1), (r1 - 1, c1), (r1, c1 + 1), (r1, c1 - 1)):\n                        if 0 <= r < m and 0 <= c < n and grid[r][c] == \"1\":\n                            grid[r][c] = \"0\"\n                            queue.append((r, c))\n        return count",
+     "javascript": "var numIslands = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    let count = 0;\n    for (let r0 = 0; r0 < m; r0++)\n        for (let c0 = 0; c0 < n; c0++) {\n            if (grid[r0][c0] !== '1') continue;\n            count++;\n            grid[r0][c0] = '0';\n            const queue = [[r0, c0]];\n            for (let h = 0; h < queue.length; h++) {\n                const [r1, c1] = queue[h];\n                for (const [r, c] of [[r1 + 1, c1], [r1 - 1, c1], [r1, c1 + 1], [r1, c1 - 1]]) {\n                    if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] === '1') {\n                        grid[r][c] = '0';\n                        queue.push([r, c]);\n                    }\n                }\n            }\n        }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find over land cells",
+    "idea": "Treat every land cell as its own set and union it with its land neighbours to the right and below. Each successful union merges two islands, so islands = land cells − successful unions.",
+    "steps": [
+     "Give each cell an id `r·n + c`; count land cells into `islands`.",
+     "For each land cell, union it with the land cell to its right and the one below; whenever two different sets merge, decrease `islands`.",
+     "Return `islands`."
+    ],
+    "time": "O(m·n·α(m·n))",
+    "space": "O(m·n)",
+    "why": "About 2·m·n union operations, each nearly O(1) with path compression and union by size. The parent array has one entry per cell. Useful when land is added over time (Number of Islands II).",
+    "code": {
+     "java": "class Solution {\n    private int[] parent, size;\n\n    public int numIslands(char[][] grid) {\n        int m = grid.length, n = grid[0].length, islands = 0;\n        parent = new int[m * n];\n        size = new int[m * n];\n        for (int i = 0; i < m * n; i++) { parent[i] = i; size[i] = 1; }\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] != '1') continue;\n                islands++;\n                if (c + 1 < n && grid[r][c + 1] == '1' && union(r * n + c, r * n + c + 1)) islands--;\n                if (r + 1 < m && grid[r + 1][c] == '1' && union(r * n + c, (r + 1) * n + c)) islands--;\n            }\n        return islands;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n\n    private boolean union(int a, int b) {\n        a = find(a); b = find(b);\n        if (a == b) return false;\n        if (size[a] < size[b]) { int t = a; a = b; b = t; }\n        parent[b] = a;\n        size[a] += size[b];\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent, sz;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n    bool unite(int a, int b) {\n        a = find(a); b = find(b);\n        if (a == b) return false;\n        if (sz[a] < sz[b]) swap(a, b);\n        parent[b] = a;\n        sz[a] += sz[b];\n        return true;\n    }\npublic:\n    int numIslands(vector<vector<char>>& grid) {\n        int m = grid.size(), n = grid[0].size(), islands = 0;\n        parent.resize(m * n);\n        sz.assign(m * n, 1);\n        iota(parent.begin(), parent.end(), 0);\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] != '1') continue;\n                islands++;\n                if (c + 1 < n && grid[r][c + 1] == '1' && unite(r * n + c, r * n + c + 1)) islands--;\n                if (r + 1 < m && grid[r + 1][c] == '1' && unite(r * n + c, (r + 1) * n + c)) islands--;\n            }\n        return islands;\n    }\n};",
+     "python": "class Solution:\n    def numIslands(self, grid: List[List[str]]) -> int:\n        m, n = len(grid), len(grid[0])\n        parent = list(range(m * n))\n        size = [1] * (m * n)\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        def union(a, b):\n            a, b = find(a), find(b)\n            if a == b:\n                return False\n            if size[a] < size[b]:\n                a, b = b, a\n            parent[b] = a\n            size[a] += size[b]\n            return True\n        islands = 0\n        for r in range(m):\n            for c in range(n):\n                if grid[r][c] != \"1\":\n                    continue\n                islands += 1\n                if c + 1 < n and grid[r][c + 1] == \"1\" and union(r * n + c, r * n + c + 1):\n                    islands -= 1\n                if r + 1 < m and grid[r + 1][c] == \"1\" and union(r * n + c, (r + 1) * n + c):\n                    islands -= 1\n        return islands",
+     "javascript": "var numIslands = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const parent = Array.from({ length: m * n }, (_, i) => i), size = new Array(m * n).fill(1);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    const union = (a, b) => {\n        a = find(a); b = find(b);\n        if (a === b) return false;\n        if (size[a] < size[b]) [a, b] = [b, a];\n        parent[b] = a;\n        size[a] += size[b];\n        return true;\n    };\n    let islands = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (grid[r][c] !== '1') continue;\n            islands++;\n            if (c + 1 < n && grid[r][c + 1] === '1' && union(r * n + c, r * n + c + 1)) islands--;\n            if (r + 1 < m && grid[r + 1][c] === '1' && union(r * n + c, (r + 1) * n + c)) islands--;\n        }\n    return islands;\n};"
+    }
+   }
+  ]
+ },
+ "max-area-of-island": {
+  "pattern": "Grid DFS returning the size of each connected component",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS that returns the area it sinks",
+    "idea": "Like counting islands, but each search returns how many cells it visited: 1 for the cell itself plus the areas found through its four neighbours.",
+    "steps": [
+     "`area(r, c)`: return 0 if out of bounds or water; otherwise set the cell to 0 and return `1 + area(4 neighbours)`.",
+     "Call `area` from every cell and keep the maximum."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each land cell is counted once; the recursion can be as deep as the largest island.",
+    "code": {
+     "java": "class Solution {\n    public int maxAreaOfIsland(int[][] grid) {\n        int best = 0;\n        for (int r = 0; r < grid.length; r++)\n            for (int c = 0; c < grid[0].length; c++) best = Math.max(best, area(grid, r, c));\n        return best;\n    }\n\n    private int area(int[][] g, int r, int c) {\n        if (r < 0 || c < 0 || r >= g.length || c >= g[0].length || g[r][c] != 1) return 0;\n        g[r][c] = 0;\n        return 1 + area(g, r + 1, c) + area(g, r - 1, c) + area(g, r, c + 1) + area(g, r, c - 1);\n    }\n}",
+     "cpp": "class Solution {\n    int area(vector<vector<int>>& g, int r, int c) {\n        if (r < 0 || c < 0 || r >= (int) g.size() || c >= (int) g[0].size() || g[r][c] != 1) return 0;\n        g[r][c] = 0;\n        return 1 + area(g, r + 1, c) + area(g, r - 1, c) + area(g, r, c + 1) + area(g, r, c - 1);\n    }\npublic:\n    int maxAreaOfIsland(vector<vector<int>>& grid) {\n        int best = 0;\n        for (int r = 0; r < (int) grid.size(); r++)\n            for (int c = 0; c < (int) grid[0].size(); c++) best = max(best, area(grid, r, c));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxAreaOfIsland(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        def area(r, c):\n            if not (0 <= r < m and 0 <= c < n) or grid[r][c] != 1:\n                return 0\n            grid[r][c] = 0\n            return 1 + area(r + 1, c) + area(r - 1, c) + area(r, c + 1) + area(r, c - 1)\n        return max(area(r, c) for r in range(m) for c in range(n))",
+     "javascript": "var maxAreaOfIsland = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const area = (r, c) => {\n        if (r < 0 || c < 0 || r >= m || c >= n || grid[r][c] !== 1) return 0;\n        grid[r][c] = 0;\n        return 1 + area(r + 1, c) + area(r - 1, c) + area(r, c + 1) + area(r, c - 1);\n    };\n    let best = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) best = Math.max(best, area(r, c));\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS counting cells per island",
+    "idea": "Explore each island with a queue and count the cells popped.",
+    "steps": [
+     "For each land cell: set it to 0, queue it, and set `size = 0`.",
+     "Pop cells, counting each; queue land neighbours (setting them to 0 when queued).",
+     "Keep the largest `size`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is queued once; no recursion depth to worry about.",
+    "code": {
+     "java": "class Solution {\n    public int maxAreaOfIsland(int[][] grid) {\n        int m = grid.length, n = grid[0].length, best = 0;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (grid[r0][c0] != 1) continue;\n                grid[r0][c0] = 0;\n                queue.add(new int[] { r0, c0 });\n                int size = 0;\n                while (!queue.isEmpty()) {\n                    int[] cell = queue.poll();\n                    size++;\n                    for (int[] d : dirs) {\n                        int r = cell[0] + d[0], c = cell[1] + d[1];\n                        if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == 1) {\n                            grid[r][c] = 0;\n                            queue.add(new int[] { r, c });\n                        }\n                    }\n                }\n                best = Math.max(best, size);\n            }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxAreaOfIsland(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size(), best = 0;\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (grid[r0][c0] != 1) continue;\n                grid[r0][c0] = 0;\n                queue<pair<int, int>> q;\n                q.push({r0, c0});\n                int size = 0;\n                while (!q.empty()) {\n                    auto [r1, c1] = q.front();\n                    q.pop();\n                    size++;\n                    for (int k = 0; k < 4; k++) {\n                        int r = r1 + dr[k], c = c1 + dc[k];\n                        if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == 1) {\n                            grid[r][c] = 0;\n                            q.push({r, c});\n                        }\n                    }\n                }\n                best = max(best, size);\n            }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxAreaOfIsland(self, grid: List[List[int]]) -> int:\n        m, n, best = len(grid), len(grid[0]), 0\n        for r0 in range(m):\n            for c0 in range(n):\n                if grid[r0][c0] != 1:\n                    continue\n                grid[r0][c0] = 0\n                queue, size = deque([(r0, c0)]), 0\n                while queue:\n                    r1, c1 = queue.popleft()\n                    size += 1\n                    for r, c in ((r1 + 1, c1), (r1 - 1, c1), (r1, c1 + 1), (r1, c1 - 1)):\n                        if 0 <= r < m and 0 <= c < n and grid[r][c] == 1:\n                            grid[r][c] = 0\n                            queue.append((r, c))\n                best = max(best, size)\n        return best",
+     "javascript": "var maxAreaOfIsland = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    let best = 0;\n    for (let r0 = 0; r0 < m; r0++)\n        for (let c0 = 0; c0 < n; c0++) {\n            if (grid[r0][c0] !== 1) continue;\n            grid[r0][c0] = 0;\n            const queue = [[r0, c0]];\n            for (let h = 0; h < queue.length; h++) {\n                const [r1, c1] = queue[h];\n                for (const [r, c] of [[r1 + 1, c1], [r1 - 1, c1], [r1, c1 + 1], [r1, c1 - 1]]) {\n                    if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] === 1) {\n                        grid[r][c] = 0;\n                        queue.push([r, c]);\n                    }\n                }\n            }\n            best = Math.max(best, queue.length);\n        }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "number-of-provinces": {
+  "pattern": "Connected components of a graph given as an adjacency matrix (DFS or Union–Find)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS from each unvisited city",
+    "idea": "Each DFS from an unvisited city reaches exactly its province. Count how many searches are started.",
+    "steps": [
+     "Keep `visited[n]`.",
+     "For each city `i` not yet visited: count a province and DFS from `i`.",
+     "DFS(`u`): mark `u`; for every `v` with `isConnected[u][v] == 1` and not visited, DFS(`v`)."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each city scans its row of the matrix once. `visited` and the recursion take O(n).",
+    "code": {
+     "java": "class Solution {\n    public int findCircleNum(int[][] isConnected) {\n        int n = isConnected.length, provinces = 0;\n        boolean[] visited = new boolean[n];\n        for (int i = 0; i < n; i++)\n            if (!visited[i]) { provinces++; dfs(isConnected, i, visited); }\n        return provinces;\n    }\n\n    private void dfs(int[][] g, int u, boolean[] visited) {\n        visited[u] = true;\n        for (int v = 0; v < g.length; v++)\n            if (g[u][v] == 1 && !visited[v]) dfs(g, v, visited);\n    }\n}",
+     "cpp": "class Solution {\n    void dfs(vector<vector<int>>& g, int u, vector<bool>& visited) {\n        visited[u] = true;\n        for (int v = 0; v < (int) g.size(); v++)\n            if (g[u][v] == 1 && !visited[v]) dfs(g, v, visited);\n    }\npublic:\n    int findCircleNum(vector<vector<int>>& isConnected) {\n        int n = isConnected.size(), provinces = 0;\n        vector<bool> visited(n, false);\n        for (int i = 0; i < n; i++)\n            if (!visited[i]) { provinces++; dfs(isConnected, i, visited); }\n        return provinces;\n    }\n};",
+     "python": "class Solution:\n    def findCircleNum(self, isConnected: List[List[int]]) -> int:\n        n = len(isConnected)\n        visited = [False] * n\n        def dfs(u):\n            visited[u] = True\n            for v in range(n):\n                if isConnected[u][v] and not visited[v]:\n                    dfs(v)\n        provinces = 0\n        for i in range(n):\n            if not visited[i]:\n                provinces += 1\n                dfs(i)\n        return provinces",
+     "javascript": "var findCircleNum = function(isConnected) {\n    const n = isConnected.length, visited = new Array(n).fill(false);\n    const dfs = (u) => {\n        visited[u] = true;\n        for (let v = 0; v < n; v++) if (isConnected[u][v] === 1 && !visited[v]) dfs(v);\n    };\n    let provinces = 0;\n    for (let i = 0; i < n; i++) if (!visited[i]) { provinces++; dfs(i); }\n    return provinces;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find",
+    "idea": "Start with n provinces of one city each. For every connection, union the two cities; each union that joins two different sets removes one province.",
+    "steps": [
+     "Initialise `parent[i] = i`; `provinces = n`.",
+     "For every pair `i < j` with `isConnected[i][j] == 1`, union them; if they were in different sets, decrease `provinces`.",
+     "Return `provinces`."
+    ],
+    "time": "O(n²·α(n))",
+    "space": "O(n)",
+    "why": "The matrix still has to be read (n²/2 pairs), each union nearly O(1) with path compression.",
+    "code": {
+     "java": "class Solution {\n    public int findCircleNum(int[][] isConnected) {\n        int n = isConnected.length, provinces = n;\n        int[] parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) {\n                if (isConnected[i][j] == 0) continue;\n                int a = find(parent, i), b = find(parent, j);\n                if (a != b) { parent[a] = b; provinces--; }\n            }\n        return provinces;\n    }\n\n    private int find(int[] parent, int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& parent, int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    int findCircleNum(vector<vector<int>>& isConnected) {\n        int n = isConnected.size(), provinces = n;\n        vector<int> parent(n);\n        iota(parent.begin(), parent.end(), 0);\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) {\n                if (!isConnected[i][j]) continue;\n                int a = find(parent, i), b = find(parent, j);\n                if (a != b) { parent[a] = b; provinces--; }\n            }\n        return provinces;\n    }\n};",
+     "python": "class Solution:\n    def findCircleNum(self, isConnected: List[List[int]]) -> int:\n        n = len(isConnected)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        provinces = n\n        for i in range(n):\n            for j in range(i + 1, n):\n                if isConnected[i][j]:\n                    a, b = find(i), find(j)\n                    if a != b:\n                        parent[a] = b\n                        provinces -= 1\n        return provinces",
+     "javascript": "var findCircleNum = function(isConnected) {\n    const n = isConnected.length, parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    let provinces = n;\n    for (let i = 0; i < n; i++)\n        for (let j = i + 1; j < n; j++) {\n            if (!isConnected[i][j]) continue;\n            const a = find(i), b = find(j);\n            if (a !== b) { parent[a] = b; provinces--; }\n        }\n    return provinces;\n};"
+    }
+   }
+  ]
+ },
+ "clone-graph": {
+  "pattern": "Graph traversal with a map from original node to its copy",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS with an original → copy map",
+    "idea": "Copy a node, record it in the map before visiting its neighbours, then copy the neighbours recursively. The map both returns already-made copies (so shared nodes stay shared) and stops cycles from looping forever.",
+    "steps": [
+     "If `node` is null, return null.",
+     "`clone(n)`: if `n` is in the map, return its copy.",
+     "Otherwise create `copy = new Node(n.val)`, store `map[n] = copy`, then append `clone(nb)` for each neighbour `nb`.",
+     "Return `clone(node)`."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V)",
+    "why": "Every node is copied once and every edge followed once from each end. The map and recursion stack hold up to V entries.",
+    "code": {
+     "java": "class Solution {\n    private final Map<Node, Node> copies = new HashMap<>();\n\n    public Node cloneGraph(Node node) {\n        if (node == null) return null;\n        if (copies.containsKey(node)) return copies.get(node);\n        Node copy = new Node(node.val);\n        copies.put(node, copy);\n        for (Node nb : node.neighbors) copy.neighbors.add(cloneGraph(nb));\n        return copy;\n    }\n}",
+     "cpp": "class Solution {\n    unordered_map<Node*, Node*> copies;\npublic:\n    Node* cloneGraph(Node* node) {\n        if (!node) return nullptr;\n        if (copies.count(node)) return copies[node];\n        Node* copy = new Node(node->val);\n        copies[node] = copy;\n        for (Node* nb : node->neighbors) copy->neighbors.push_back(cloneGraph(nb));\n        return copy;\n    }\n};",
+     "python": "class Solution:\n    def cloneGraph(self, node: Optional['Node']) -> Optional['Node']:\n        copies = {}\n        def clone(n):\n            if n in copies:\n                return copies[n]\n            copy = copies[n] = Node(n.val)\n            copy.neighbors = [clone(nb) for nb in n.neighbors]\n            return copy\n        return clone(node) if node else None",
+     "javascript": "var cloneGraph = function(node) {\n    const copies = new Map();\n    const clone = (n) => {\n        if (copies.has(n)) return copies.get(n);\n        const copy = new _Node(n.val);\n        copies.set(n, copy);\n        copy.neighbors = n.neighbors.map(clone);\n        return copy;\n    };\n    return node ? clone(node) : null;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS with an original → copy map",
+    "idea": "Copy nodes as they are discovered by a BFS, and wire each copy's neighbour list from the map.",
+    "steps": [
+     "Copy the start node, store it in the map, and queue the original.",
+     "Pop a node; for each neighbour, create and queue its copy if it has none yet, then add the neighbour's copy to the popped node's copy.",
+     "Return the start node's copy."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V)",
+    "why": "Each node is queued once and each edge processed once per end; no recursion.",
+    "code": {
+     "java": "class Solution {\n    public Node cloneGraph(Node node) {\n        if (node == null) return null;\n        Map<Node, Node> copies = new HashMap<>();\n        copies.put(node, new Node(node.val));\n        Deque<Node> queue = new ArrayDeque<>();\n        queue.add(node);\n        while (!queue.isEmpty()) {\n            Node u = queue.poll();\n            for (Node v : u.neighbors) {\n                if (!copies.containsKey(v)) { copies.put(v, new Node(v.val)); queue.add(v); }\n                copies.get(u).neighbors.add(copies.get(v));\n            }\n        }\n        return copies.get(node);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* cloneGraph(Node* node) {\n        if (!node) return nullptr;\n        unordered_map<Node*, Node*> copies{{node, new Node(node->val)}};\n        queue<Node*> q;\n        q.push(node);\n        while (!q.empty()) {\n            Node* u = q.front();\n            q.pop();\n            for (Node* v : u->neighbors) {\n                if (!copies.count(v)) { copies[v] = new Node(v->val); q.push(v); }\n                copies[u]->neighbors.push_back(copies[v]);\n            }\n        }\n        return copies[node];\n    }\n};",
+     "python": "class Solution:\n    def cloneGraph(self, node: Optional['Node']) -> Optional['Node']:\n        if not node:\n            return None\n        copies = {node: Node(node.val)}\n        queue = deque([node])\n        while queue:\n            u = queue.popleft()\n            for v in u.neighbors:\n                if v not in copies:\n                    copies[v] = Node(v.val)\n                    queue.append(v)\n                copies[u].neighbors.append(copies[v])\n        return copies[node]",
+     "javascript": "var cloneGraph = function(node) {\n    if (!node) return null;\n    const copies = new Map([[node, new _Node(node.val)]]), queue = [node];\n    for (let h = 0; h < queue.length; h++) {\n        const u = queue[h];\n        for (const v of u.neighbors) {\n            if (!copies.has(v)) { copies.set(v, new _Node(v.val)); queue.push(v); }\n            copies.get(u).neighbors.push(copies.get(v));\n        }\n    }\n    return copies.get(node);\n};"
+    }
+   }
+  ]
+ },
+ "rotting-oranges": {
+  "pattern": "Multi-source BFS (all rotten oranges start at time 0)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Simulate minute by minute over the whole grid",
+    "idea": "Each minute, scan the grid and find every fresh orange next to a rotten one; rot them all at once. Stop when a minute changes nothing.",
+    "steps": [
+     "Repeat: collect every fresh cell that has a rotten neighbour.",
+     "If none, stop; otherwise rot them all and count a minute.",
+     "At the end, return −1 if a fresh orange remains, else the minutes counted."
+    ],
+    "time": "O((m·n)²)",
+    "space": "O(m·n)",
+    "why": "There can be up to m·n minutes (a long winding path), and each minute rescans the whole grid. The list of newly rotten cells is O(m·n).",
+    "code": {
+     "java": "class Solution {\n    public int orangesRotting(int[][] grid) {\n        int m = grid.length, n = grid[0].length, minutes = 0;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (true) {\n            List<int[]> next = new ArrayList<>();\n            for (int r = 0; r < m; r++)\n                for (int c = 0; c < n; c++) {\n                    if (grid[r][c] != 1) continue;\n                    for (int[] d : dirs) {\n                        int rr = r + d[0], cc = c + d[1];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && grid[rr][cc] == 2) { next.add(new int[] { r, c }); break; }\n                    }\n                }\n            if (next.isEmpty()) break;\n            for (int[] cell : next) grid[cell[0]][cell[1]] = 2;\n            minutes++;\n        }\n        for (int[] row : grid) for (int v : row) if (v == 1) return -1;\n        return minutes;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int orangesRotting(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size(), minutes = 0;\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (true) {\n            vector<pair<int, int>> next;\n            for (int r = 0; r < m; r++)\n                for (int c = 0; c < n; c++) {\n                    if (grid[r][c] != 1) continue;\n                    for (int k = 0; k < 4; k++) {\n                        int rr = r + dr[k], cc = c + dc[k];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && grid[rr][cc] == 2) { next.push_back({r, c}); break; }\n                    }\n                }\n            if (next.empty()) break;\n            for (auto [r, c] : next) grid[r][c] = 2;\n            minutes++;\n        }\n        for (auto& row : grid) for (int v : row) if (v == 1) return -1;\n        return minutes;\n    }\n};",
+     "python": "class Solution:\n    def orangesRotting(self, grid: List[List[int]]) -> int:\n        m, n, minutes = len(grid), len(grid[0]), 0\n        while True:\n            nxt = [\n                (r, c) for r in range(m) for c in range(n)\n                if grid[r][c] == 1 and any(\n                    0 <= rr < m and 0 <= cc < n and grid[rr][cc] == 2\n                    for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1))\n                )\n            ]\n            if not nxt:\n                break\n            for r, c in nxt:\n                grid[r][c] = 2\n            minutes += 1\n        return -1 if any(1 in row for row in grid) else minutes",
+     "javascript": "var orangesRotting = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    let minutes = 0;\n    while (true) {\n        const next = [];\n        for (let r = 0; r < m; r++)\n            for (let c = 0; c < n; c++) {\n                if (grid[r][c] !== 1) continue;\n                const near = [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]\n                    .some(([rr, cc]) => rr >= 0 && cc >= 0 && rr < m && cc < n && grid[rr][cc] === 2);\n                if (near) next.push([r, c]);\n            }\n        if (next.length === 0) break;\n        for (const [r, c] of next) grid[r][c] = 2;\n        minutes++;\n    }\n    return grid.some((row) => row.includes(1)) ? -1 : minutes;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Multi-source BFS from every rotten orange",
+    "idea": "Put all rotten oranges in the queue at once, as level 0. Each BFS level is one minute: it rots the fresh neighbours of the current level. Count fresh oranges so you know whether any are left.",
+    "steps": [
+     "Queue every rotten cell; count the fresh cells.",
+     "While the queue is non-empty and fresh oranges remain: process one level, rotting each fresh neighbour (decrease the fresh count, queue it); then add a minute.",
+     "Return −1 if fresh oranges remain, else the minutes."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is queued at most once. Starting from all sources at once gives each orange the time of its nearest rotten source.",
+    "code": {
+     "java": "class Solution {\n    public int orangesRotting(int[][] grid) {\n        int m = grid.length, n = grid[0].length, fresh = 0, minutes = 0;\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] == 2) queue.add(new int[] { r, c });\n                else if (grid[r][c] == 1) fresh++;\n            }\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!queue.isEmpty() && fresh > 0) {\n            for (int k = queue.size(); k > 0; k--) {\n                int[] cell = queue.poll();\n                for (int[] d : dirs) {\n                    int r = cell[0] + d[0], c = cell[1] + d[1];\n                    if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == 1) {\n                        grid[r][c] = 2;\n                        fresh--;\n                        queue.add(new int[] { r, c });\n                    }\n                }\n            }\n            minutes++;\n        }\n        return fresh == 0 ? minutes : -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int orangesRotting(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size(), fresh = 0, minutes = 0;\n        queue<pair<int, int>> q;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (grid[r][c] == 2) q.push({r, c});\n                else if (grid[r][c] == 1) fresh++;\n            }\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!q.empty() && fresh > 0) {\n            for (int k = q.size(); k > 0; k--) {\n                auto [r0, c0] = q.front();\n                q.pop();\n                for (int d = 0; d < 4; d++) {\n                    int r = r0 + dr[d], c = c0 + dc[d];\n                    if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] == 1) {\n                        grid[r][c] = 2;\n                        fresh--;\n                        q.push({r, c});\n                    }\n                }\n            }\n            minutes++;\n        }\n        return fresh == 0 ? minutes : -1;\n    }\n};",
+     "python": "class Solution:\n    def orangesRotting(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        queue = deque((r, c) for r in range(m) for c in range(n) if grid[r][c] == 2)\n        fresh = sum(row.count(1) for row in grid)\n        minutes = 0\n        while queue and fresh:\n            for _ in range(len(queue)):\n                r0, c0 = queue.popleft()\n                for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                    if 0 <= r < m and 0 <= c < n and grid[r][c] == 1:\n                        grid[r][c] = 2\n                        fresh -= 1\n                        queue.append((r, c))\n            minutes += 1\n        return minutes if fresh == 0 else -1",
+     "javascript": "var orangesRotting = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    let level = [], fresh = 0, minutes = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (grid[r][c] === 2) level.push([r, c]);\n            else if (grid[r][c] === 1) fresh++;\n        }\n    while (level.length && fresh > 0) {\n        const next = [];\n        for (const [r0, c0] of level)\n            for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n                if (r >= 0 && c >= 0 && r < m && c < n && grid[r][c] === 1) {\n                    grid[r][c] = 2;\n                    fresh--;\n                    next.push([r, c]);\n                }\n            }\n        level = next;\n        minutes++;\n    }\n    return fresh === 0 ? minutes : -1;\n};"
+    }
+   }
+  ]
+ },
+ "01-matrix": {
+  "pattern": "Multi-source BFS from every 0 (or two-pass DP over the grid)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "BFS from every 1 to its nearest 0",
+    "idea": "For each cell holding 1, run a BFS outward until it reaches a 0; the BFS level is the distance.",
+    "steps": [
+     "For each cell with 1: BFS from it with its own visited set.",
+     "The first 0 popped gives the distance; write it into the answer.",
+     "Cells with 0 have distance 0."
+    ],
+    "time": "O((m·n)²)",
+    "space": "O(m·n)",
+    "why": "Each of the up to m·n searches can explore the whole grid.",
+    "code": {
+     "java": "class Solution {\n    public int[][] updateMatrix(int[][] mat) {\n        int m = mat.length, n = mat[0].length;\n        int[][] out = new int[m][n];\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (mat[r0][c0] == 0) continue;\n                boolean[][] seen = new boolean[m][n];\n                Deque<int[]> queue = new ArrayDeque<>();\n                queue.add(new int[] { r0, c0, 0 });\n                seen[r0][c0] = true;\n                while (!queue.isEmpty()) {\n                    int[] cur = queue.poll();\n                    if (mat[cur[0]][cur[1]] == 0) { out[r0][c0] = cur[2]; break; }\n                    for (int[] d : dirs) {\n                        int r = cur[0] + d[0], c = cur[1] + d[1];\n                        if (r >= 0 && c >= 0 && r < m && c < n && !seen[r][c]) {\n                            seen[r][c] = true;\n                            queue.add(new int[] { r, c, cur[2] + 1 });\n                        }\n                    }\n                }\n            }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {\n        int m = mat.size(), n = mat[0].size();\n        vector<vector<int>> out(m, vector<int>(n, 0));\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (mat[r0][c0] == 0) continue;\n                vector<vector<bool>> seen(m, vector<bool>(n, false));\n                queue<array<int, 3>> q;\n                q.push({r0, c0, 0});\n                seen[r0][c0] = true;\n                while (!q.empty()) {\n                    auto [r1, c1, d] = q.front();\n                    q.pop();\n                    if (mat[r1][c1] == 0) { out[r0][c0] = d; break; }\n                    for (int k = 0; k < 4; k++) {\n                        int r = r1 + dr[k], c = c1 + dc[k];\n                        if (r >= 0 && c >= 0 && r < m && c < n && !seen[r][c]) {\n                            seen[r][c] = true;\n                            q.push({r, c, d + 1});\n                        }\n                    }\n                }\n            }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def updateMatrix(self, mat: List[List[int]]) -> List[List[int]]:\n        m, n = len(mat), len(mat[0])\n        out = [[0] * n for _ in range(m)]\n        for r0 in range(m):\n            for c0 in range(n):\n                if mat[r0][c0] == 0:\n                    continue\n                seen = {(r0, c0)}\n                queue = deque([(r0, c0, 0)])\n                while queue:\n                    r1, c1, d = queue.popleft()\n                    if mat[r1][c1] == 0:\n                        out[r0][c0] = d\n                        break\n                    for r, c in ((r1 + 1, c1), (r1 - 1, c1), (r1, c1 + 1), (r1, c1 - 1)):\n                        if 0 <= r < m and 0 <= c < n and (r, c) not in seen:\n                            seen.add((r, c))\n                            queue.append((r, c, d + 1))\n        return out",
+     "javascript": "var updateMatrix = function(mat) {\n    const m = mat.length, n = mat[0].length;\n    const out = Array.from({ length: m }, () => new Array(n).fill(0));\n    for (let r0 = 0; r0 < m; r0++)\n        for (let c0 = 0; c0 < n; c0++) {\n            if (mat[r0][c0] === 0) continue;\n            const seen = new Set([r0 * n + c0]), queue = [[r0, c0, 0]];\n            for (let h = 0; h < queue.length; h++) {\n                const [r1, c1, d] = queue[h];\n                if (mat[r1][c1] === 0) { out[r0][c0] = d; break; }\n                for (const [r, c] of [[r1 + 1, c1], [r1 - 1, c1], [r1, c1 + 1], [r1, c1 - 1]]) {\n                    if (r >= 0 && c >= 0 && r < m && c < n && !seen.has(r * n + c)) {\n                        seen.add(r * n + c);\n                        queue.push([r, c, d + 1]);\n                    }\n                }\n            }\n        }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Multi-source BFS from all zeros",
+    "idea": "Reverse the question: start one BFS from every 0 at once. A 1 is first reached by the wave from its nearest 0, at exactly that distance.",
+    "steps": [
+     "Set distance 0 for every 0 and queue it; mark every 1 as unknown (−1).",
+     "Pop a cell; for each neighbour that is still unknown, set its distance to the popped cell's distance + 1 and queue it.",
+     "Return the distances."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Every cell is queued once; the queue and the result use O(m·n).",
+    "code": {
+     "java": "class Solution {\n    public int[][] updateMatrix(int[][] mat) {\n        int m = mat.length, n = mat[0].length;\n        int[][] dist = new int[m][n];\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (mat[r][c] == 0) queue.add(new int[] { r, c });\n                else dist[r][c] = -1;\n            }\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!queue.isEmpty()) {\n            int[] cell = queue.poll();\n            for (int[] d : dirs) {\n                int r = cell[0] + d[0], c = cell[1] + d[1];\n                if (r >= 0 && c >= 0 && r < m && c < n && dist[r][c] == -1) {\n                    dist[r][c] = dist[cell[0]][cell[1]] + 1;\n                    queue.add(new int[] { r, c });\n                }\n            }\n        }\n        return dist;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {\n        int m = mat.size(), n = mat[0].size();\n        vector<vector<int>> dist(m, vector<int>(n, -1));\n        queue<pair<int, int>> q;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (mat[r][c] == 0) { dist[r][c] = 0; q.push({r, c}); }\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < m && c < n && dist[r][c] == -1) {\n                    dist[r][c] = dist[r0][c0] + 1;\n                    q.push({r, c});\n                }\n            }\n        }\n        return dist;\n    }\n};",
+     "python": "class Solution:\n    def updateMatrix(self, mat: List[List[int]]) -> List[List[int]]:\n        m, n = len(mat), len(mat[0])\n        dist = [[0 if v == 0 else -1 for v in row] for row in mat]\n        queue = deque((r, c) for r in range(m) for c in range(n) if mat[r][c] == 0)\n        while queue:\n            r0, c0 = queue.popleft()\n            for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                if 0 <= r < m and 0 <= c < n and dist[r][c] == -1:\n                    dist[r][c] = dist[r0][c0] + 1\n                    queue.append((r, c))\n        return dist",
+     "javascript": "var updateMatrix = function(mat) {\n    const m = mat.length, n = mat[0].length;\n    const dist = mat.map((row) => row.map((v) => (v === 0 ? 0 : -1)));\n    const queue = [];\n    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) if (mat[r][c] === 0) queue.push([r, c]);\n    for (let h = 0; h < queue.length; h++) {\n        const [r0, c0] = queue[h];\n        for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n            if (r >= 0 && c >= 0 && r < m && c < n && dist[r][c] === -1) {\n                dist[r][c] = dist[r0][c0] + 1;\n                queue.push([r, c]);\n            }\n        }\n    }\n    return dist;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two DP passes (top-left, then bottom-right)",
+    "idea": "A shortest path to the nearest 0 moves in some mix of the four directions. One pass from the top-left handles zeros above and to the left; a second pass from the bottom-right handles zeros below and to the right, keeping the smaller value.",
+    "steps": [
+     "Set 0 cells to 0 and 1 cells to a large number.",
+     "Pass 1 (top-left to bottom-right): `d[r][c] = min(d[r][c], d[r − 1][c] + 1, d[r][c − 1] + 1)`.",
+     "Pass 2 (bottom-right to top-left): `d[r][c] = min(d[r][c], d[r + 1][c] + 1, d[r][c + 1] + 1)`.",
+     "Return `d`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(1)",
+    "why": "Two linear passes and no queue; apart from the output (which can reuse the input) no extra memory is needed.",
+    "code": {
+     "java": "class Solution {\n    public int[][] updateMatrix(int[][] mat) {\n        int m = mat.length, n = mat[0].length, INF = m + n;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (mat[r][c] == 0) continue;\n                int best = INF;\n                if (r > 0) best = Math.min(best, mat[r - 1][c] + 1);\n                if (c > 0) best = Math.min(best, mat[r][c - 1] + 1);\n                mat[r][c] = best;\n            }\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--) {\n                if (r < m - 1) mat[r][c] = Math.min(mat[r][c], mat[r + 1][c] + 1);\n                if (c < n - 1) mat[r][c] = Math.min(mat[r][c], mat[r][c + 1] + 1);\n            }\n        return mat;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {\n        int m = mat.size(), n = mat[0].size(), INF = m + n;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (mat[r][c] == 0) continue;\n                int best = INF;\n                if (r > 0) best = min(best, mat[r - 1][c] + 1);\n                if (c > 0) best = min(best, mat[r][c - 1] + 1);\n                mat[r][c] = best;\n            }\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--) {\n                if (r < m - 1) mat[r][c] = min(mat[r][c], mat[r + 1][c] + 1);\n                if (c < n - 1) mat[r][c] = min(mat[r][c], mat[r][c + 1] + 1);\n            }\n        return mat;\n    }\n};",
+     "python": "class Solution:\n    def updateMatrix(self, mat: List[List[int]]) -> List[List[int]]:\n        m, n = len(mat), len(mat[0])\n        INF = m + n\n        for r in range(m):\n            for c in range(n):\n                if mat[r][c]:\n                    up = mat[r - 1][c] + 1 if r else INF\n                    left = mat[r][c - 1] + 1 if c else INF\n                    mat[r][c] = min(up, left)\n        for r in range(m - 1, -1, -1):\n            for c in range(n - 1, -1, -1):\n                if r < m - 1:\n                    mat[r][c] = min(mat[r][c], mat[r + 1][c] + 1)\n                if c < n - 1:\n                    mat[r][c] = min(mat[r][c], mat[r][c + 1] + 1)\n        return mat",
+     "javascript": "var updateMatrix = function(mat) {\n    const m = mat.length, n = mat[0].length, INF = m + n;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (mat[r][c] === 0) continue;\n            let best = INF;\n            if (r > 0) best = Math.min(best, mat[r - 1][c] + 1);\n            if (c > 0) best = Math.min(best, mat[r][c - 1] + 1);\n            mat[r][c] = best;\n        }\n    for (let r = m - 1; r >= 0; r--)\n        for (let c = n - 1; c >= 0; c--) {\n            if (r < m - 1) mat[r][c] = Math.min(mat[r][c], mat[r + 1][c] + 1);\n            if (c < n - 1) mat[r][c] = Math.min(mat[r][c], mat[r][c + 1] + 1);\n        }\n    return mat;\n};"
+    }
+   }
+  ]
+ },
+ "shortest-path-in-binary-matrix": {
+  "pattern": "BFS on an unweighted grid graph (8 directions)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS with 8 neighbours",
+    "idea": "Every step costs the same, so BFS from the top-left reaches each cell first by a shortest path. The distance counts cells, so the start has distance 1.",
+    "steps": [
+     "If the start or the end is blocked, return −1.",
+     "Queue `(0, 0)` with distance 1 and mark it visited (set it to 1 in the grid).",
+     "Pop a cell; if it is the bottom-right, return its distance. Otherwise queue each of the 8 neighbours that is open, marking it and giving it distance + 1.",
+     "If the queue empties, return −1."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "Each of the n² cells is queued at most once and checks 8 neighbours. A DFS would find a path, but not necessarily the shortest one.",
+    "code": {
+     "java": "class Solution {\n    public int shortestPathBinaryMatrix(int[][] grid) {\n        int n = grid.length;\n        if (grid[0][0] == 1 || grid[n - 1][n - 1] == 1) return -1;\n        Deque<int[]> queue = new ArrayDeque<>();\n        queue.add(new int[] { 0, 0, 1 });\n        grid[0][0] = 1;\n        while (!queue.isEmpty()) {\n            int[] cur = queue.poll();\n            if (cur[0] == n - 1 && cur[1] == n - 1) return cur[2];\n            for (int dr = -1; dr <= 1; dr++)\n                for (int dc = -1; dc <= 1; dc++) {\n                    int r = cur[0] + dr, c = cur[1] + dc;\n                    if (r >= 0 && c >= 0 && r < n && c < n && grid[r][c] == 0) {\n                        grid[r][c] = 1;\n                        queue.add(new int[] { r, c, cur[2] + 1 });\n                    }\n                }\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int shortestPathBinaryMatrix(vector<vector<int>>& grid) {\n        int n = grid.size();\n        if (grid[0][0] || grid[n - 1][n - 1]) return -1;\n        queue<array<int, 3>> q;\n        q.push({0, 0, 1});\n        grid[0][0] = 1;\n        while (!q.empty()) {\n            auto [r0, c0, d] = q.front();\n            q.pop();\n            if (r0 == n - 1 && c0 == n - 1) return d;\n            for (int dr = -1; dr <= 1; dr++)\n                for (int dc = -1; dc <= 1; dc++) {\n                    int r = r0 + dr, c = c0 + dc;\n                    if (r >= 0 && c >= 0 && r < n && c < n && grid[r][c] == 0) {\n                        grid[r][c] = 1;\n                        q.push({r, c, d + 1});\n                    }\n                }\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def shortestPathBinaryMatrix(self, grid: List[List[int]]) -> int:\n        n = len(grid)\n        if grid[0][0] or grid[n - 1][n - 1]:\n            return -1\n        grid[0][0] = 1\n        queue = deque([(0, 0, 1)])\n        while queue:\n            r0, c0, d = queue.popleft()\n            if r0 == n - 1 and c0 == n - 1:\n                return d\n            for dr in (-1, 0, 1):\n                for dc in (-1, 0, 1):\n                    r, c = r0 + dr, c0 + dc\n                    if 0 <= r < n and 0 <= c < n and grid[r][c] == 0:\n                        grid[r][c] = 1\n                        queue.append((r, c, d + 1))\n        return -1",
+     "javascript": "var shortestPathBinaryMatrix = function(grid) {\n    const n = grid.length;\n    if (grid[0][0] || grid[n - 1][n - 1]) return -1;\n    grid[0][0] = 1;\n    const queue = [[0, 0, 1]];\n    for (let h = 0; h < queue.length; h++) {\n        const [r0, c0, d] = queue[h];\n        if (r0 === n - 1 && c0 === n - 1) return d;\n        for (let dr = -1; dr <= 1; dr++)\n            for (let dc = -1; dc <= 1; dc++) {\n                const r = r0 + dr, c = c0 + dc;\n                if (r >= 0 && c >= 0 && r < n && c < n && grid[r][c] === 0) {\n                    grid[r][c] = 1;\n                    queue.push([r, c, d + 1]);\n                }\n            }\n    }\n    return -1;\n};"
+    }
+   }
+  ]
+ },
+ "surrounded-regions": {
+  "pattern": "Boundary search: mark everything reachable from the edge, flip the rest",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Explore each region and check whether it touches the edge",
+    "idea": "For every unvisited `O`, find its whole region with a BFS, noting whether any cell lies on the border. If none does, flip the region to `X`.",
+    "steps": [
+     "For each `O` not yet visited: BFS to collect its region and set `touchesEdge` if any cell is on the border.",
+     "If `touchesEdge` is false, set every cell of the region to `X`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is visited once across all regions, so this is also linear — but it needs a visited table and a list per region, and the edge-first approach below is simpler.",
+    "code": {
+     "java": "class Solution {\n    public void solve(char[][] board) {\n        int m = board.length, n = board[0].length;\n        boolean[][] seen = new boolean[m][n];\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (board[r0][c0] != 'O' || seen[r0][c0]) continue;\n                List<int[]> region = new ArrayList<>();\n                boolean edge = false;\n                seen[r0][c0] = true;\n                region.add(new int[] { r0, c0 });\n                for (int i = 0; i < region.size(); i++) {\n                    int r = region.get(i)[0], c = region.get(i)[1];\n                    if (r == 0 || c == 0 || r == m - 1 || c == n - 1) edge = true;\n                    for (int[] d : dirs) {\n                        int rr = r + d[0], cc = c + d[1];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && board[rr][cc] == 'O' && !seen[rr][cc]) {\n                            seen[rr][cc] = true;\n                            region.add(new int[] { rr, cc });\n                        }\n                    }\n                }\n                if (!edge) for (int[] cell : region) board[cell[0]][cell[1]] = 'X';\n            }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    void solve(vector<vector<char>>& board) {\n        int m = board.size(), n = board[0].size();\n        vector<vector<bool>> seen(m, vector<bool>(n, false));\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                if (board[r0][c0] != 'O' || seen[r0][c0]) continue;\n                vector<pair<int, int>> region{{r0, c0}};\n                seen[r0][c0] = true;\n                bool edge = false;\n                for (size_t i = 0; i < region.size(); i++) {\n                    auto [r, c] = region[i];\n                    if (r == 0 || c == 0 || r == m - 1 || c == n - 1) edge = true;\n                    for (int k = 0; k < 4; k++) {\n                        int rr = r + dr[k], cc = c + dc[k];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && board[rr][cc] == 'O' && !seen[rr][cc]) {\n                            seen[rr][cc] = true;\n                            region.push_back({rr, cc});\n                        }\n                    }\n                }\n                if (!edge) for (auto [r, c] : region) board[r][c] = 'X';\n            }\n    }\n};",
+     "python": "class Solution:\n    def solve(self, board: List[List[str]]) -> None:\n        m, n = len(board), len(board[0])\n        seen = [[False] * n for _ in range(m)]\n        for r0 in range(m):\n            for c0 in range(n):\n                if board[r0][c0] != \"O\" or seen[r0][c0]:\n                    continue\n                seen[r0][c0] = True\n                region, edge, i = [(r0, c0)], False, 0\n                while i < len(region):\n                    r, c = region[i]\n                    i += 1\n                    if r in (0, m - 1) or c in (0, n - 1):\n                        edge = True\n                    for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                        if 0 <= rr < m and 0 <= cc < n and board[rr][cc] == \"O\" and not seen[rr][cc]:\n                            seen[rr][cc] = True\n                            region.append((rr, cc))\n                if not edge:\n                    for r, c in region:\n                        board[r][c] = \"X\"",
+     "javascript": "var solve = function(board) {\n    const m = board.length, n = board[0].length;\n    const seen = Array.from({ length: m }, () => new Array(n).fill(false));\n    for (let r0 = 0; r0 < m; r0++)\n        for (let c0 = 0; c0 < n; c0++) {\n            if (board[r0][c0] !== 'O' || seen[r0][c0]) continue;\n            seen[r0][c0] = true;\n            const region = [[r0, c0]];\n            let edge = false;\n            for (let i = 0; i < region.length; i++) {\n                const [r, c] = region[i];\n                if (r === 0 || c === 0 || r === m - 1 || c === n - 1) edge = true;\n                for (const [rr, cc] of [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]) {\n                    if (rr >= 0 && cc >= 0 && rr < m && cc < n && board[rr][cc] === 'O' && !seen[rr][cc]) {\n                        seen[rr][cc] = true;\n                        region.push([rr, cc]);\n                    }\n                }\n            }\n            if (!edge) for (const [r, c] of region) board[r][c] = 'X';\n        }\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Mark the safe cells from the border, then flip the rest",
+    "idea": "An `O` survives exactly when it is connected to a border `O`. So start from every border `O`, mark everything reachable as safe (`#`), then flip the remaining `O`s to `X` and turn the `#`s back into `O`.",
+    "steps": [
+     "From each `O` on the border, run a DFS/BFS marking reachable `O` cells as `#`.",
+     "Scan the board: every `O` left is surrounded — set it to `X`; every `#` becomes `O` again."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is marked at most once and scanned once. The board itself stores the marks, so only the search queue (up to m·n cells) is extra.",
+    "code": {
+     "java": "class Solution {\n    public void solve(char[][] board) {\n        int m = board.length, n = board[0].length;\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if ((r == 0 || c == 0 || r == m - 1 || c == n - 1) && board[r][c] == 'O') {\n                    board[r][c] = '#';\n                    queue.add(new int[] { r, c });\n                }\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!queue.isEmpty()) {\n            int[] cell = queue.poll();\n            for (int[] d : dirs) {\n                int r = cell[0] + d[0], c = cell[1] + d[1];\n                if (r >= 0 && c >= 0 && r < m && c < n && board[r][c] == 'O') {\n                    board[r][c] = '#';\n                    queue.add(new int[] { r, c });\n                }\n            }\n        }\n        for (char[] row : board)\n            for (int c = 0; c < n; c++) row[c] = row[c] == '#' ? 'O' : 'X';\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    void solve(vector<vector<char>>& board) {\n        int m = board.size(), n = board[0].size();\n        queue<pair<int, int>> q;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if ((r == 0 || c == 0 || r == m - 1 || c == n - 1) && board[r][c] == 'O') {\n                    board[r][c] = '#';\n                    q.push({r, c});\n                }\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < m && c < n && board[r][c] == 'O') {\n                    board[r][c] = '#';\n                    q.push({r, c});\n                }\n            }\n        }\n        for (auto& row : board)\n            for (char& ch : row) ch = ch == '#' ? 'O' : 'X';\n    }\n};",
+     "python": "class Solution:\n    def solve(self, board: List[List[str]]) -> None:\n        m, n = len(board), len(board[0])\n        queue = deque()\n        for r in range(m):\n            for c in range(n):\n                if (r in (0, m - 1) or c in (0, n - 1)) and board[r][c] == \"O\":\n                    board[r][c] = \"#\"\n                    queue.append((r, c))\n        while queue:\n            r0, c0 = queue.popleft()\n            for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                if 0 <= r < m and 0 <= c < n and board[r][c] == \"O\":\n                    board[r][c] = \"#\"\n                    queue.append((r, c))\n        for row in board:\n            for c in range(n):\n                row[c] = \"O\" if row[c] == \"#\" else \"X\"",
+     "javascript": "var solve = function(board) {\n    const m = board.length, n = board[0].length, queue = [];\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++)\n            if ((r === 0 || c === 0 || r === m - 1 || c === n - 1) && board[r][c] === 'O') {\n                board[r][c] = '#';\n                queue.push([r, c]);\n            }\n    for (let h = 0; h < queue.length; h++) {\n        const [r0, c0] = queue[h];\n        for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n            if (r >= 0 && c >= 0 && r < m && c < n && board[r][c] === 'O') {\n                board[r][c] = '#';\n                queue.push([r, c]);\n            }\n        }\n    }\n    for (const row of board)\n        for (let c = 0; c < n; c++) row[c] = row[c] === '#' ? 'O' : 'X';\n};"
+    }
+   }
+  ]
+ },
+ "pacific-atlantic-water-flow": {
+  "pattern": "Reverse flow: search uphill from each ocean's edge, then intersect",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every cell, follow the water downhill",
+    "idea": "For each cell, explore every cell water can flow to (neighbours that are not higher) and check whether the search reaches a Pacific edge and an Atlantic edge.",
+    "steps": [
+     "For each cell, BFS/DFS to all reachable cells (moving to neighbours with height `<=` the current one).",
+     "Note whether any reached cell is in the top row or left column (Pacific) and whether any is in the bottom row or right column (Atlantic).",
+     "Record the cell if both are true."
+    ],
+    "time": "O((m·n)²)",
+    "space": "O(m·n)",
+    "why": "Each of the m·n searches may cover the whole grid; each uses its own visited table.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> pacificAtlantic(int[][] heights) {\n        int m = heights.length, n = heights[0].length;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        List<List<Integer>> out = new ArrayList<>();\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                boolean[][] seen = new boolean[m][n];\n                Deque<int[]> queue = new ArrayDeque<>();\n                queue.add(new int[] { r0, c0 });\n                seen[r0][c0] = true;\n                boolean pacific = false, atlantic = false;\n                while (!queue.isEmpty() && !(pacific && atlantic)) {\n                    int[] cell = queue.poll();\n                    int r = cell[0], c = cell[1];\n                    if (r == 0 || c == 0) pacific = true;\n                    if (r == m - 1 || c == n - 1) atlantic = true;\n                    for (int[] d : dirs) {\n                        int rr = r + d[0], cc = c + d[1];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && !seen[rr][cc] && heights[rr][cc] <= heights[r][c]) {\n                            seen[rr][cc] = true;\n                            queue.add(new int[] { rr, cc });\n                        }\n                    }\n                }\n                if (pacific && atlantic) out.add(List.of(r0, c0));\n            }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> pacificAtlantic(vector<vector<int>>& heights) {\n        int m = heights.size(), n = heights[0].size();\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        vector<vector<int>> out;\n        for (int r0 = 0; r0 < m; r0++)\n            for (int c0 = 0; c0 < n; c0++) {\n                vector<vector<bool>> seen(m, vector<bool>(n, false));\n                queue<pair<int, int>> q;\n                q.push({r0, c0});\n                seen[r0][c0] = true;\n                bool pacific = false, atlantic = false;\n                while (!q.empty() && !(pacific && atlantic)) {\n                    auto [r, c] = q.front();\n                    q.pop();\n                    if (r == 0 || c == 0) pacific = true;\n                    if (r == m - 1 || c == n - 1) atlantic = true;\n                    for (int k = 0; k < 4; k++) {\n                        int rr = r + dr[k], cc = c + dc[k];\n                        if (rr >= 0 && cc >= 0 && rr < m && cc < n && !seen[rr][cc] && heights[rr][cc] <= heights[r][c]) {\n                            seen[rr][cc] = true;\n                            q.push({rr, cc});\n                        }\n                    }\n                }\n                if (pacific && atlantic) out.push_back({r0, c0});\n            }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def pacificAtlantic(self, heights: List[List[int]]) -> List[List[int]]:\n        m, n = len(heights), len(heights[0])\n        out = []\n        for r0 in range(m):\n            for c0 in range(n):\n                seen, queue = {(r0, c0)}, deque([(r0, c0)])\n                pacific = atlantic = False\n                while queue and not (pacific and atlantic):\n                    r, c = queue.popleft()\n                    pacific |= r == 0 or c == 0\n                    atlantic |= r == m - 1 or c == n - 1\n                    for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                        if 0 <= rr < m and 0 <= cc < n and (rr, cc) not in seen and heights[rr][cc] <= heights[r][c]:\n                            seen.add((rr, cc))\n                            queue.append((rr, cc))\n                if pacific and atlantic:\n                    out.append([r0, c0])\n        return out",
+     "javascript": "var pacificAtlantic = function(heights) {\n    const m = heights.length, n = heights[0].length, out = [];\n    for (let r0 = 0; r0 < m; r0++)\n        for (let c0 = 0; c0 < n; c0++) {\n            const seen = new Set([r0 * n + c0]), queue = [[r0, c0]];\n            let pacific = false, atlantic = false;\n            for (let h = 0; h < queue.length && !(pacific && atlantic); h++) {\n                const [r, c] = queue[h];\n                if (r === 0 || c === 0) pacific = true;\n                if (r === m - 1 || c === n - 1) atlantic = true;\n                for (const [rr, cc] of [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]) {\n                    if (rr >= 0 && cc >= 0 && rr < m && cc < n && !seen.has(rr * n + cc) && heights[rr][cc] <= heights[r][c]) {\n                        seen.add(rr * n + cc);\n                        queue.push([rr, cc]);\n                    }\n                }\n            }\n            if (pacific && atlantic) out.push([r0, c0]);\n        }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS uphill from each ocean, then intersect",
+    "idea": "Turn the flow around: a cell can drain into the Pacific if the Pacific's edge can \"climb\" to it through neighbours that are not lower. Run one BFS from all Pacific edge cells and one from all Atlantic edge cells; answer the cells reached by both.",
+    "steps": [
+     "BFS from every top-row and left-column cell, moving to neighbours with height `>=` the current cell; mark them `pacific`.",
+     "Do the same from the bottom row and right column for `atlantic`.",
+     "Return every cell marked in both."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each BFS visits every cell at most once, and there are only two of them. Two boolean grids record the results.",
+    "code": {
+     "java": "class Solution {\n    private int m, n;\n    private int[][] h;\n\n    public List<List<Integer>> pacificAtlantic(int[][] heights) {\n        h = heights;\n        m = heights.length;\n        n = heights[0].length;\n        Deque<int[]> pq = new ArrayDeque<>(), aq = new ArrayDeque<>();\n        boolean[][] pac = new boolean[m][n], atl = new boolean[m][n];\n        for (int r = 0; r < m; r++) { mark(pac, pq, r, 0); mark(atl, aq, r, n - 1); }\n        for (int c = 0; c < n; c++) { mark(pac, pq, 0, c); mark(atl, aq, m - 1, c); }\n        climb(pac, pq);\n        climb(atl, aq);\n        List<List<Integer>> out = new ArrayList<>();\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) if (pac[r][c] && atl[r][c]) out.add(List.of(r, c));\n        return out;\n    }\n\n    private void mark(boolean[][] seen, Deque<int[]> q, int r, int c) {\n        if (!seen[r][c]) { seen[r][c] = true; q.add(new int[] { r, c }); }\n    }\n\n    private void climb(boolean[][] seen, Deque<int[]> q) {\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!q.isEmpty()) {\n            int[] cell = q.poll();\n            for (int[] d : dirs) {\n                int r = cell[0] + d[0], c = cell[1] + d[1];\n                if (r >= 0 && c >= 0 && r < m && c < n && h[r][c] >= h[cell[0]][cell[1]]) mark(seen, q, r, c);\n            }\n        }\n    }\n}",
+     "cpp": "class Solution {\n    int m, n;\n    void climb(vector<vector<int>>& h, vector<vector<bool>>& seen, queue<pair<int, int>>& q) {\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < m && c < n && !seen[r][c] && h[r][c] >= h[r0][c0]) {\n                    seen[r][c] = true;\n                    q.push({r, c});\n                }\n            }\n        }\n    }\npublic:\n    vector<vector<int>> pacificAtlantic(vector<vector<int>>& heights) {\n        m = heights.size();\n        n = heights[0].size();\n        vector<vector<bool>> pac(m, vector<bool>(n, false)), atl(m, vector<bool>(n, false));\n        queue<pair<int, int>> pq, aq;\n        auto mark = [](vector<vector<bool>>& seen, queue<pair<int, int>>& q, int r, int c) {\n            if (!seen[r][c]) { seen[r][c] = true; q.push({r, c}); }\n        };\n        for (int r = 0; r < m; r++) { mark(pac, pq, r, 0); mark(atl, aq, r, n - 1); }\n        for (int c = 0; c < n; c++) { mark(pac, pq, 0, c); mark(atl, aq, m - 1, c); }\n        climb(heights, pac, pq);\n        climb(heights, atl, aq);\n        vector<vector<int>> out;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) if (pac[r][c] && atl[r][c]) out.push_back({r, c});\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def pacificAtlantic(self, heights: List[List[int]]) -> List[List[int]]:\n        m, n = len(heights), len(heights[0])\n        def climb(starts):\n            seen = set(starts)\n            queue = deque(starts)\n            while queue:\n                r0, c0 = queue.popleft()\n                for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                    if 0 <= r < m and 0 <= c < n and (r, c) not in seen and heights[r][c] >= heights[r0][c0]:\n                        seen.add((r, c))\n                        queue.append((r, c))\n            return seen\n        pacific = climb([(r, 0) for r in range(m)] + [(0, c) for c in range(n)])\n        atlantic = climb([(r, n - 1) for r in range(m)] + [(m - 1, c) for c in range(n)])\n        return [[r, c] for r, c in pacific & atlantic]",
+     "javascript": "var pacificAtlantic = function(heights) {\n    const m = heights.length, n = heights[0].length;\n    const climb = (starts) => {\n        const seen = new Uint8Array(m * n), queue = [];\n        for (const [r, c] of starts) if (!seen[r * n + c]) { seen[r * n + c] = 1; queue.push([r, c]); }\n        for (let h = 0; h < queue.length; h++) {\n            const [r0, c0] = queue[h];\n            for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n                if (r >= 0 && c >= 0 && r < m && c < n && !seen[r * n + c] && heights[r][c] >= heights[r0][c0]) {\n                    seen[r * n + c] = 1;\n                    queue.push([r, c]);\n                }\n            }\n        }\n        return seen;\n    };\n    const rows = [...Array(m).keys()], cols = [...Array(n).keys()];\n    const pac = climb([...rows.map((r) => [r, 0]), ...cols.map((c) => [0, c])]);\n    const atl = climb([...rows.map((r) => [r, n - 1]), ...cols.map((c) => [m - 1, c])]);\n    const out = [];\n    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) if (pac[r * n + c] && atl[r * n + c]) out.push([r, c]);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "word-ladder": {
+  "pattern": "BFS over an implicit graph of words (edges = one-letter changes)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "BFS comparing each word with every word in the list",
+    "idea": "Words are nodes and one-letter differences are edges. BFS from `beginWord` finds the shortest chain. Find each word's neighbours by comparing it with every unvisited word in the list.",
+    "steps": [
+     "Queue `beginWord` with length 1; keep a visited set.",
+     "Pop a word; for each unvisited list word that differs in exactly one position: if it is `endWord`, return length + 1; else mark it and queue it with length + 1.",
+     "Return 0 if the queue empties."
+    ],
+    "time": "O(N²·L)",
+    "space": "O(N)",
+    "why": "Each of the N words, once popped, is compared with all N words in O(L) each.",
+    "code": {
+     "java": "class Solution {\n    public int ladderLength(String beginWord, String endWord, List<String> wordList) {\n        boolean[] used = new boolean[wordList.size()];\n        Deque<String> queue = new ArrayDeque<>();\n        queue.add(beginWord);\n        for (int len = 1; !queue.isEmpty(); len++) {\n            for (int k = queue.size(); k > 0; k--) {\n                String w = queue.poll();\n                for (int i = 0; i < wordList.size(); i++) {\n                    if (used[i] || !oneApart(w, wordList.get(i))) continue;\n                    if (wordList.get(i).equals(endWord)) return len + 1;\n                    used[i] = true;\n                    queue.add(wordList.get(i));\n                }\n            }\n        }\n        return 0;\n    }\n\n    private boolean oneApart(String a, String b) {\n        int diff = 0;\n        for (int i = 0; i < a.length() && diff < 2; i++) if (a.charAt(i) != b.charAt(i)) diff++;\n        return diff == 1;\n    }\n}",
+     "cpp": "class Solution {\n    bool oneApart(const string& a, const string& b) {\n        int diff = 0;\n        for (size_t i = 0; i < a.size() && diff < 2; i++) if (a[i] != b[i]) diff++;\n        return diff == 1;\n    }\npublic:\n    int ladderLength(string beginWord, string endWord, vector<string>& wordList) {\n        vector<bool> used(wordList.size(), false);\n        queue<string> q;\n        q.push(beginWord);\n        for (int len = 1; !q.empty(); len++) {\n            for (int k = q.size(); k > 0; k--) {\n                string w = q.front();\n                q.pop();\n                for (size_t i = 0; i < wordList.size(); i++) {\n                    if (used[i] || !oneApart(w, wordList[i])) continue;\n                    if (wordList[i] == endWord) return len + 1;\n                    used[i] = true;\n                    q.push(wordList[i]);\n                }\n            }\n        }\n        return 0;\n    }\n};",
+     "python": "class Solution:\n    def ladderLength(self, beginWord: str, endWord: str, wordList: List[str]) -> int:\n        def one_apart(a, b):\n            return sum(x != y for x, y in zip(a, b)) == 1\n        used = [False] * len(wordList)\n        level, length = [beginWord], 1\n        while level:\n            nxt = []\n            for w in level:\n                for i, cand in enumerate(wordList):\n                    if used[i] or not one_apart(w, cand):\n                        continue\n                    if cand == endWord:\n                        return length + 1\n                    used[i] = True\n                    nxt.append(cand)\n            level, length = nxt, length + 1\n        return 0",
+     "javascript": "var ladderLength = function(beginWord, endWord, wordList) {\n    const oneApart = (a, b) => {\n        let diff = 0;\n        for (let i = 0; i < a.length && diff < 2; i++) if (a[i] !== b[i]) diff++;\n        return diff === 1;\n    };\n    const used = new Array(wordList.length).fill(false);\n    let level = [beginWord];\n    for (let len = 1; level.length; len++) {\n        const next = [];\n        for (const w of level)\n            for (let i = 0; i < wordList.length; i++) {\n                if (used[i] || !oneApart(w, wordList[i])) continue;\n                if (wordList[i] === endWord) return len + 1;\n                used[i] = true;\n                next.push(wordList[i]);\n            }\n        level = next;\n    }\n    return 0;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS generating neighbours letter by letter",
+    "idea": "Instead of comparing with every word, generate the possible neighbours: change each position to each of the 26 letters and keep the results that are in the dictionary set. With N large, 26·L candidates per word is far fewer than N comparisons.",
+    "steps": [
+     "Put `wordList` in a set; if `endWord` is not in it, return 0.",
+     "BFS from `beginWord`. For each popped word, for each position and each letter, form the candidate.",
+     "If the candidate is `endWord`, return length + 1; if it is in the set, remove it (marks it visited) and queue it.",
+     "Return 0 if the BFS ends."
+    ],
+    "time": "O(N·L²·26)",
+    "space": "O(N·L)",
+    "why": "Each word is popped once and builds 26·L candidates of length L (building and hashing one is O(L)). The set and queue hold O(N) words.",
+    "code": {
+     "java": "class Solution {\n    public int ladderLength(String beginWord, String endWord, List<String> wordList) {\n        Set<String> dict = new HashSet<>(wordList);\n        if (!dict.contains(endWord)) return 0;\n        Deque<String> queue = new ArrayDeque<>();\n        queue.add(beginWord);\n        for (int len = 1; !queue.isEmpty(); len++) {\n            for (int k = queue.size(); k > 0; k--) {\n                char[] w = queue.poll().toCharArray();\n                for (int i = 0; i < w.length; i++) {\n                    char orig = w[i];\n                    for (char c = 'a'; c <= 'z'; c++) {\n                        if (c == orig) continue;\n                        w[i] = c;\n                        String cand = new String(w);\n                        if (cand.equals(endWord)) return len + 1;\n                        if (dict.remove(cand)) queue.add(cand);\n                    }\n                    w[i] = orig;\n                }\n            }\n        }\n        return 0;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int ladderLength(string beginWord, string endWord, vector<string>& wordList) {\n        unordered_set<string> dict(wordList.begin(), wordList.end());\n        if (!dict.count(endWord)) return 0;\n        queue<string> q;\n        q.push(beginWord);\n        for (int len = 1; !q.empty(); len++) {\n            for (int k = q.size(); k > 0; k--) {\n                string w = q.front();\n                q.pop();\n                for (size_t i = 0; i < w.size(); i++) {\n                    char orig = w[i];\n                    for (char c = 'a'; c <= 'z'; c++) {\n                        if (c == orig) continue;\n                        w[i] = c;\n                        if (w == endWord) return len + 1;\n                        if (dict.erase(w)) q.push(w);\n                    }\n                    w[i] = orig;\n                }\n            }\n        }\n        return 0;\n    }\n};",
+     "python": "class Solution:\n    def ladderLength(self, beginWord: str, endWord: str, wordList: List[str]) -> int:\n        words = set(wordList)\n        if endWord not in words:\n            return 0\n        level, length = [beginWord], 1\n        while level:\n            nxt = []\n            for w in level:\n                for i in range(len(w)):\n                    for c in string.ascii_lowercase:\n                        cand = w[:i] + c + w[i + 1:]\n                        if cand == endWord:\n                            return length + 1\n                        if cand in words:\n                            words.remove(cand)\n                            nxt.append(cand)\n            level, length = nxt, length + 1\n        return 0",
+     "javascript": "var ladderLength = function(beginWord, endWord, wordList) {\n    const words = new Set(wordList);\n    if (!words.has(endWord)) return 0;\n    const letters = 'abcdefghijklmnopqrstuvwxyz';\n    let level = [beginWord];\n    for (let len = 1; level.length; len++) {\n        const next = [];\n        for (const w of level)\n            for (let i = 0; i < w.length; i++)\n                for (const c of letters) {\n                    if (c === w[i]) continue;\n                    const cand = w.slice(0, i) + c + w.slice(i + 1);\n                    if (cand === endWord) return len + 1;\n                    if (words.delete(cand)) next.push(cand);\n                }\n        level = next;\n    }\n    return 0;\n};"
+    }
+   }
+  ]
+ }
+}
