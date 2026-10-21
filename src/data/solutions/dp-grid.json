@@ -1,0 +1,523 @@
+{
+ "unique-paths": {
+  "pattern": "Grid DP: paths(r, c) = paths(r − 1, c) + paths(r, c − 1) (or one binomial coefficient)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the last move",
+    "idea": "The robot reaches cell `(r, c)` from the cell above or the cell to the left, so the number of paths is the sum of the paths to those two cells.",
+    "steps": [
+     "`paths(r, c)`: if `r == 0` or `c == 0`, return 1 (a single straight line).",
+     "Otherwise return `paths(r − 1, c) + paths(r, c − 1)`.",
+     "Answer `paths(m − 1, n − 1)`."
+    ],
+    "time": "O(2^(m+n))",
+    "space": "O(m + n)",
+    "why": "Every path is traced separately, so the work is at least the answer itself (up to 2·10⁹ here).",
+    "timesOut": [
+     4
+    ],
+    "code": {
+     "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        if (m == 1 || n == 1) return 1;\n        return uniquePaths(m - 1, n) + uniquePaths(m, n - 1);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        if (m == 1 || n == 1) return 1;\n        return uniquePaths(m - 1, n) + uniquePaths(m, n - 1);\n    }\n};",
+     "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        if m == 1 or n == 1:\n            return 1\n        return self.uniquePaths(m - 1, n) + self.uniquePaths(m, n - 1)",
+     "javascript": "var uniquePaths = function(m, n) {\n    if (m === 1 || n === 1) return 1;\n    return uniquePaths(m - 1, n) + uniquePaths(m, n - 1);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D table",
+    "idea": "Fill `dp[r][c]` = paths to `(r, c)` row by row; the first row and column are all 1.",
+    "steps": [
+     "Set `dp[0][*] = dp[*][0] = 1`.",
+     "For every other cell: `dp[r][c] = dp[r − 1][c] + dp[r][c − 1]`.",
+     "Return `dp[m − 1][n − 1]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each of the m·n cells is computed once from two neighbours.",
+    "code": {
+     "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        int[][] dp = new int[m][n];\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                dp[r][c] = (r == 0 || c == 0) ? 1 : dp[r - 1][c] + dp[r][c - 1];\n        return dp[m - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        vector<vector<int>> dp(m, vector<int>(n, 1));\n        for (int r = 1; r < m; r++)\n            for (int c = 1; c < n; c++) dp[r][c] = dp[r - 1][c] + dp[r][c - 1];\n        return dp[m - 1][n - 1];\n    }\n};",
+     "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        dp = [[1] * n for _ in range(m)]\n        for r in range(1, m):\n            for c in range(1, n):\n                dp[r][c] = dp[r - 1][c] + dp[r][c - 1]\n        return dp[m - 1][n - 1]",
+     "javascript": "var uniquePaths = function(m, n) {\n    const dp = Array.from({ length: m }, () => new Array(n).fill(1));\n    for (let r = 1; r < m; r++)\n        for (let c = 1; c < n; c++) dp[r][c] = dp[r - 1][c] + dp[r][c - 1];\n    return dp[m - 1][n - 1];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "One row",
+    "idea": "Each row only needs the row above. Keep one array: before the update `row[c]` is the value from above, and `row[c − 1]` is already the new value to the left.",
+    "steps": [
+     "Set `row` to n ones.",
+     "Repeat for each of the remaining m − 1 rows: for `c` from 1, `row[c] += row[c − 1]`.",
+     "Return `row[n − 1]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(n)",
+    "why": "Same number of steps; memory drops to a single row.",
+    "code": {
+     "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        int[] row = new int[n];\n        Arrays.fill(row, 1);\n        for (int r = 1; r < m; r++)\n            for (int c = 1; c < n; c++) row[c] += row[c - 1];\n        return row[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        vector<int> row(n, 1);\n        for (int r = 1; r < m; r++)\n            for (int c = 1; c < n; c++) row[c] += row[c - 1];\n        return row[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        row = [1] * n\n        for _ in range(m - 1):\n            for c in range(1, n):\n                row[c] += row[c - 1]\n        return row[-1]",
+     "javascript": "var uniquePaths = function(m, n) {\n    const row = new Array(n).fill(1);\n    for (let r = 1; r < m; r++)\n        for (let c = 1; c < n; c++) row[c] += row[c - 1];\n    return row[n - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count arrangements: C(m + n − 2, m − 1)",
+    "idea": "Every path is a sequence of m − 1 downs and n − 1 rights in some order. The number of paths is the number of ways to choose which of the m + n − 2 moves are downs.",
+    "steps": [
+     "Let `k = min(m, n) − 1` and `total = m + n − 2`.",
+     "Compute `C(total, k)` incrementally: `result = result · (total − k + i) / i` for `i = 1..k`.",
+     "Each intermediate value is an exact binomial coefficient, so the division is exact; use 64-bit numbers."
+    ],
+    "time": "O(min(m, n))",
+    "space": "O(1)",
+    "why": "k multiplications and divisions. The intermediate product before dividing stays below about 2·10⁹ × 100, well inside 64 bits.",
+    "code": {
+     "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        int total = m + n - 2, k = Math.min(m, n) - 1;\n        long result = 1;\n        for (int i = 1; i <= k; i++) result = result * (total - k + i) / i;\n        return (int) result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        int total = m + n - 2, k = min(m, n) - 1;\n        long long result = 1;\n        for (int i = 1; i <= k; i++) result = result * (total - k + i) / i;\n        return (int) result;\n    }\n};",
+     "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        return comb(m + n - 2, m - 1)",
+     "javascript": "var uniquePaths = function(m, n) {\n    const total = m + n - 2, k = Math.min(m, n) - 1;\n    let result = 1;\n    // result stays an exact integer: each step equals C(total - k + i, i)\n    for (let i = 1; i <= k; i++) result = result * (total - k + i) / i;\n    return Math.round(result);\n};"
+    }
+   }
+  ]
+ },
+ "unique-paths-ii": {
+  "pattern": "Grid DP where blocked cells contribute 0 paths",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion that stops at obstacles",
+    "idea": "Same as Unique Paths, but a blocked cell (or a cell off the grid) has 0 paths.",
+    "steps": [
+     "`paths(r, c)`: return 0 if `r < 0`, `c < 0` or the cell is blocked; return 1 at `(0, 0)`.",
+     "Otherwise return `paths(r − 1, c) + paths(r, c − 1)`."
+    ],
+    "time": "O(2^(m+n))",
+    "space": "O(m + n)",
+    "why": "Every path is traced separately.",
+    "code": {
+     "java": "class Solution {\n    public int uniquePathsWithObstacles(int[][] obstacleGrid) {\n        return paths(obstacleGrid, obstacleGrid.length - 1, obstacleGrid[0].length - 1);\n    }\n\n    private int paths(int[][] g, int r, int c) {\n        if (r < 0 || c < 0 || g[r][c] == 1) return 0;\n        if (r == 0 && c == 0) return 1;\n        return paths(g, r - 1, c) + paths(g, r, c - 1);\n    }\n}",
+     "cpp": "class Solution {\n    int paths(vector<vector<int>>& g, int r, int c) {\n        if (r < 0 || c < 0 || g[r][c] == 1) return 0;\n        if (r == 0 && c == 0) return 1;\n        return paths(g, r - 1, c) + paths(g, r, c - 1);\n    }\npublic:\n    int uniquePathsWithObstacles(vector<vector<int>>& obstacleGrid) {\n        return paths(obstacleGrid, obstacleGrid.size() - 1, obstacleGrid[0].size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def uniquePathsWithObstacles(self, obstacleGrid: List[List[int]]) -> int:\n        def paths(r, c):\n            if r < 0 or c < 0 or obstacleGrid[r][c] == 1:\n                return 0\n            if r == 0 and c == 0:\n                return 1\n            return paths(r - 1, c) + paths(r, c - 1)\n        return paths(len(obstacleGrid) - 1, len(obstacleGrid[0]) - 1)",
+     "javascript": "var uniquePathsWithObstacles = function(obstacleGrid) {\n    const paths = (r, c) => {\n        if (r < 0 || c < 0 || obstacleGrid[r][c] === 1) return 0;\n        if (r === 0 && c === 0) return 1;\n        return paths(r - 1, c) + paths(r, c - 1);\n    };\n    return paths(obstacleGrid.length - 1, obstacleGrid[0].length - 1);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D table",
+    "idea": "Fill `dp[r][c]` row by row: 0 for obstacles, otherwise the sum of the values above and to the left.",
+    "steps": [
+     "`dp[0][0] = 1` if the start is free, else 0.",
+     "For every cell: if blocked, 0; else add `dp[r − 1][c]` (if `r > 0`) and `dp[r][c − 1]` (if `c > 0`).",
+     "Return the bottom-right value."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "One pass over the grid. Obstacles can make counts at middle cells larger than the final answer (even beyond 64 bits), so the sums wrap modulo 2³² on purpose: the final answer is below 2³¹, so the wrapped value is still exact. Java's `int` wraps by itself; C++ uses `unsigned` (signed overflow is undefined there) and JavaScript uses `>>> 0`.",
+    "code": {
+     "java": "class Solution {\n    public int uniquePathsWithObstacles(int[][] obstacleGrid) {\n        int m = obstacleGrid.length, n = obstacleGrid[0].length;\n        int[][] dp = new int[m][n];\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (obstacleGrid[r][c] == 1) continue;\n                if (r == 0 && c == 0) { dp[r][c] = 1; continue; }\n                dp[r][c] = (r > 0 ? dp[r - 1][c] : 0) + (c > 0 ? dp[r][c - 1] : 0);\n            }\n        return dp[m - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePathsWithObstacles(vector<vector<int>>& obstacleGrid) {\n        int m = obstacleGrid.size(), n = obstacleGrid[0].size();\n        vector<vector<unsigned>> dp(m, vector<unsigned>(n, 0));\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (obstacleGrid[r][c] == 1) continue;\n                if (r == 0 && c == 0) { dp[r][c] = 1; continue; }\n                dp[r][c] = (r > 0 ? dp[r - 1][c] : 0u) + (c > 0 ? dp[r][c - 1] : 0u);\n            }\n        return (int) dp[m - 1][n - 1];\n    }\n};",
+     "python": "class Solution:\n    def uniquePathsWithObstacles(self, obstacleGrid: List[List[int]]) -> int:\n        m, n = len(obstacleGrid), len(obstacleGrid[0])\n        dp = [[0] * n for _ in range(m)]\n        for r in range(m):\n            for c in range(n):\n                if obstacleGrid[r][c] == 1:\n                    continue\n                if r == 0 and c == 0:\n                    dp[r][c] = 1\n                else:\n                    dp[r][c] = (dp[r - 1][c] if r else 0) + (dp[r][c - 1] if c else 0)\n        return dp[m - 1][n - 1]",
+     "javascript": "var uniquePathsWithObstacles = function(obstacleGrid) {\n    const m = obstacleGrid.length, n = obstacleGrid[0].length;\n    const dp = Array.from({ length: m }, () => new Array(n).fill(0));\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (obstacleGrid[r][c] === 1) continue;\n            if (r === 0 && c === 0) { dp[r][c] = 1; continue; }\n            dp[r][c] = ((r > 0 ? dp[r - 1][c] : 0) + (c > 0 ? dp[r][c - 1] : 0)) >>> 0;\n        }\n    return dp[m - 1][n - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One row",
+    "idea": "Keep a single row: `row[c]` holds the value from above until it is updated; add the new value on its left, or reset it to 0 on an obstacle.",
+    "steps": [
+     "`row[0] = 1` if the start is free.",
+     "For each grid row, for each `c`: if blocked, `row[c] = 0`; else if `c > 0`, `row[c] += row[c − 1]`.",
+     "Return `row[n − 1]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(n)",
+    "why": "Same pass with one row of memory (and the same deliberate 32-bit wrap-around).",
+    "code": {
+     "java": "class Solution {\n    public int uniquePathsWithObstacles(int[][] obstacleGrid) {\n        int n = obstacleGrid[0].length;\n        int[] row = new int[n];\n        row[0] = obstacleGrid[0][0] == 1 ? 0 : 1;\n        for (int[] cells : obstacleGrid)\n            for (int c = 0; c < n; c++) {\n                if (cells[c] == 1) row[c] = 0;\n                else if (c > 0) row[c] += row[c - 1];\n            }\n        return row[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniquePathsWithObstacles(vector<vector<int>>& obstacleGrid) {\n        int n = obstacleGrid[0].size();\n        vector<unsigned> row(n, 0);\n        row[0] = obstacleGrid[0][0] == 1 ? 0 : 1;\n        for (auto& cells : obstacleGrid)\n            for (int c = 0; c < n; c++) {\n                if (cells[c] == 1) row[c] = 0;\n                else if (c > 0) row[c] += row[c - 1];\n            }\n        return (int) row[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def uniquePathsWithObstacles(self, obstacleGrid: List[List[int]]) -> int:\n        n = len(obstacleGrid[0])\n        row = [0] * n\n        row[0] = 0 if obstacleGrid[0][0] == 1 else 1\n        for cells in obstacleGrid:\n            for c in range(n):\n                if cells[c] == 1:\n                    row[c] = 0\n                elif c > 0:\n                    row[c] += row[c - 1]\n        return row[-1]",
+     "javascript": "var uniquePathsWithObstacles = function(obstacleGrid) {\n    const n = obstacleGrid[0].length, row = new Array(n).fill(0);\n    row[0] = obstacleGrid[0][0] === 1 ? 0 : 1;\n    for (const cells of obstacleGrid)\n        for (let c = 0; c < n; c++) {\n            if (cells[c] === 1) row[c] = 0;\n            else if (c > 0) row[c] = (row[c] + row[c - 1]) >>> 0;\n        }\n    return row[n - 1];\n};"
+    }
+   }
+  ]
+ },
+ "minimum-path-sum": {
+  "pattern": "Grid DP: cost(r, c) = grid[r][c] + min(cost from above, cost from the left)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the last move",
+    "idea": "The cheapest path to a cell comes from the cheaper of its top and left neighbours, plus the cell's own value.",
+    "steps": [
+     "`cost(r, c)`: if out of the grid, return ∞; at `(0, 0)`, return `grid[0][0]`.",
+     "Return `grid[r][c] + min(cost(r − 1, c), cost(r, c − 1))`."
+    ],
+    "time": "O(2^(m+n))",
+    "space": "O(m + n)",
+    "why": "Overlapping subproblems are recomputed for every path.",
+    "code": {
+     "java": "class Solution {\n    public int minPathSum(int[][] grid) {\n        return cost(grid, grid.length - 1, grid[0].length - 1);\n    }\n\n    private int cost(int[][] g, int r, int c) {\n        if (r < 0 || c < 0) return Integer.MAX_VALUE;\n        if (r == 0 && c == 0) return g[0][0];\n        return g[r][c] + Math.min(cost(g, r - 1, c), cost(g, r, c - 1));\n    }\n}",
+     "cpp": "class Solution {\n    int cost(vector<vector<int>>& g, int r, int c) {\n        if (r < 0 || c < 0) return INT_MAX;\n        if (r == 0 && c == 0) return g[0][0];\n        return g[r][c] + min(cost(g, r - 1, c), cost(g, r, c - 1));\n    }\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        return cost(grid, grid.size() - 1, grid[0].size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        def cost(r, c):\n            if r < 0 or c < 0:\n                return inf\n            if r == 0 and c == 0:\n                return grid[0][0]\n            return grid[r][c] + min(cost(r - 1, c), cost(r, c - 1))\n        return cost(len(grid) - 1, len(grid[0]) - 1)",
+     "javascript": "var minPathSum = function(grid) {\n    const cost = (r, c) => {\n        if (r < 0 || c < 0) return Infinity;\n        if (r === 0 && c === 0) return grid[0][0];\n        return grid[r][c] + Math.min(cost(r - 1, c), cost(r, c - 1));\n    };\n    return cost(grid.length - 1, grid[0].length - 1);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D table",
+    "idea": "Fill `dp[r][c]` row by row from the same recurrence; the first row and column only have one way in.",
+    "steps": [
+     "`dp[0][0] = grid[0][0]`; the first row and column are running sums.",
+     "Other cells: `dp[r][c] = grid[r][c] + min(dp[r − 1][c], dp[r][c − 1])`.",
+     "Return the bottom-right value."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell once.",
+    "code": {
+     "java": "class Solution {\n    public int minPathSum(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] dp = new int[m][n];\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (r == 0 && c == 0) dp[r][c] = grid[0][0];\n                else if (r == 0) dp[r][c] = dp[r][c - 1] + grid[r][c];\n                else if (c == 0) dp[r][c] = dp[r - 1][c] + grid[r][c];\n                else dp[r][c] = grid[r][c] + Math.min(dp[r - 1][c], dp[r][c - 1]);\n            }\n        return dp[m - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<vector<int>> dp(m, vector<int>(n));\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (r == 0 && c == 0) dp[r][c] = grid[0][0];\n                else if (r == 0) dp[r][c] = dp[r][c - 1] + grid[r][c];\n                else if (c == 0) dp[r][c] = dp[r - 1][c] + grid[r][c];\n                else dp[r][c] = grid[r][c] + min(dp[r - 1][c], dp[r][c - 1]);\n            }\n        return dp[m - 1][n - 1];\n    }\n};",
+     "python": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dp = [[0] * n for _ in range(m)]\n        for r in range(m):\n            for c in range(n):\n                if r == 0 and c == 0:\n                    dp[r][c] = grid[0][0]\n                elif r == 0:\n                    dp[r][c] = dp[r][c - 1] + grid[r][c]\n                elif c == 0:\n                    dp[r][c] = dp[r - 1][c] + grid[r][c]\n                else:\n                    dp[r][c] = grid[r][c] + min(dp[r - 1][c], dp[r][c - 1])\n        return dp[m - 1][n - 1]",
+     "javascript": "var minPathSum = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const dp = Array.from({ length: m }, () => new Array(n).fill(0));\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (r === 0 && c === 0) dp[r][c] = grid[0][0];\n            else if (r === 0) dp[r][c] = dp[r][c - 1] + grid[r][c];\n            else if (c === 0) dp[r][c] = dp[r - 1][c] + grid[r][c];\n            else dp[r][c] = grid[r][c] + Math.min(dp[r - 1][c], dp[r][c - 1]);\n        }\n    return dp[m - 1][n - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One row",
+    "idea": "Keep one row of costs: `row[c]` is the cost from above until updated, and `row[c − 1]` is the new cost to the left.",
+    "steps": [
+     "Fill `row` with the first row's running sums.",
+     "For each next grid row: `row[0] += grid[r][0]`; for `c >= 1`, `row[c] = grid[r][c] + min(row[c], row[c − 1])`.",
+     "Return `row[n − 1]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(n)",
+    "why": "Same work, one row of memory.",
+    "code": {
+     "java": "class Solution {\n    public int minPathSum(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[] row = new int[n];\n        row[0] = grid[0][0];\n        for (int c = 1; c < n; c++) row[c] = row[c - 1] + grid[0][c];\n        for (int r = 1; r < m; r++) {\n            row[0] += grid[r][0];\n            for (int c = 1; c < n; c++) row[c] = grid[r][c] + Math.min(row[c], row[c - 1]);\n        }\n        return row[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<int> row(n);\n        row[0] = grid[0][0];\n        for (int c = 1; c < n; c++) row[c] = row[c - 1] + grid[0][c];\n        for (int r = 1; r < m; r++) {\n            row[0] += grid[r][0];\n            for (int c = 1; c < n; c++) row[c] = grid[r][c] + min(row[c], row[c - 1]);\n        }\n        return row[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        row = list(accumulate(grid[0]))\n        for cells in grid[1:]:\n            row[0] += cells[0]\n            for c in range(1, len(row)):\n                row[c] = cells[c] + min(row[c], row[c - 1])\n        return row[-1]",
+     "javascript": "var minPathSum = function(grid) {\n    const m = grid.length, n = grid[0].length, row = new Array(n);\n    row[0] = grid[0][0];\n    for (let c = 1; c < n; c++) row[c] = row[c - 1] + grid[0][c];\n    for (let r = 1; r < m; r++) {\n        row[0] += grid[r][0];\n        for (let c = 1; c < n; c++) row[c] = grid[r][c] + Math.min(row[c], row[c - 1]);\n    }\n    return row[n - 1];\n};"
+    }
+   }
+  ]
+ },
+ "triangle": {
+  "pattern": "Bottom-up DP: best(r, i) = value + min(best below-left, best below-right)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion from the top",
+    "idea": "From position `(r, i)`, the best path is its value plus the better of the two paths starting just below it.",
+    "steps": [
+     "`best(r, i)`: on the last row, return the value.",
+     "Otherwise return `triangle[r][i] + min(best(r + 1, i), best(r + 1, i + 1))`.",
+     "Answer `best(0, 0)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Two calls per level for n levels, revisiting shared positions repeatedly.",
+    "code": {
+     "java": "class Solution {\n    public int minimumTotal(List<List<Integer>> triangle) {\n        return best(triangle, 0, 0);\n    }\n\n    private int best(List<List<Integer>> t, int r, int i) {\n        int v = t.get(r).get(i);\n        if (r == t.size() - 1) return v;\n        return v + Math.min(best(t, r + 1, i), best(t, r + 1, i + 1));\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<vector<int>>& t, int r, int i) {\n        if (r == (int) t.size() - 1) return t[r][i];\n        return t[r][i] + min(best(t, r + 1, i), best(t, r + 1, i + 1));\n    }\npublic:\n    int minimumTotal(vector<vector<int>>& triangle) {\n        return best(triangle, 0, 0);\n    }\n};",
+     "python": "class Solution:\n    def minimumTotal(self, triangle: List[List[int]]) -> int:\n        def best(r, i):\n            if r == len(triangle) - 1:\n                return triangle[r][i]\n            return triangle[r][i] + min(best(r + 1, i), best(r + 1, i + 1))\n        return best(0, 0)",
+     "javascript": "var minimumTotal = function(triangle) {\n    const best = (r, i) => {\n        if (r === triangle.length - 1) return triangle[r][i];\n        return triangle[r][i] + Math.min(best(r + 1, i), best(r + 1, i + 1));\n    };\n    return best(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoised recursion",
+    "idea": "There are only about n²/2 positions; cache `best(r, i)` for each.",
+    "steps": [
+     "Same recurrence as the brute force.",
+     "Store each position's result the first time it is computed and reuse it."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "Each of the n(n + 1)/2 positions is solved once; the cache has the same size.",
+    "code": {
+     "java": "class Solution {\n    private Integer[][] memo;\n\n    public int minimumTotal(List<List<Integer>> triangle) {\n        memo = new Integer[triangle.size()][triangle.size()];\n        return best(triangle, 0, 0);\n    }\n\n    private int best(List<List<Integer>> t, int r, int i) {\n        if (memo[r][i] != null) return memo[r][i];\n        int v = t.get(r).get(i);\n        if (r < t.size() - 1) v += Math.min(best(t, r + 1, i), best(t, r + 1, i + 1));\n        return memo[r][i] = v;\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> memo;\n    vector<vector<bool>> done;\n    int best(vector<vector<int>>& t, int r, int i) {\n        if (done[r][i]) return memo[r][i];\n        int v = t[r][i];\n        if (r < (int) t.size() - 1) v += min(best(t, r + 1, i), best(t, r + 1, i + 1));\n        done[r][i] = true;\n        return memo[r][i] = v;\n    }\npublic:\n    int minimumTotal(vector<vector<int>>& triangle) {\n        int n = triangle.size();\n        memo.assign(n, vector<int>(n, 0));\n        done.assign(n, vector<bool>(n, false));\n        return best(triangle, 0, 0);\n    }\n};",
+     "python": "class Solution:\n    def minimumTotal(self, triangle: List[List[int]]) -> int:\n        @cache\n        def best(r, i):\n            if r == len(triangle) - 1:\n                return triangle[r][i]\n            return triangle[r][i] + min(best(r + 1, i), best(r + 1, i + 1))\n        return best(0, 0)",
+     "javascript": "var minimumTotal = function(triangle) {\n    const memo = new Map(), n = triangle.length;\n    const best = (r, i) => {\n        if (r === n - 1) return triangle[r][i];\n        const key = r * n + i;\n        if (!memo.has(key)) memo.set(key, triangle[r][i] + Math.min(best(r + 1, i), best(r + 1, i + 1)));\n        return memo.get(key);\n    };\n    return best(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up with one row",
+    "idea": "Start from the bottom row and fold upwards: after processing row `r`, `row[i]` is the best path from `(r, i)` to the bottom. The top entry is the answer.",
+    "steps": [
+     "Copy the last row into `row`.",
+     "For `r` from n − 2 up to 0, for `i` from 0 to r: `row[i] = triangle[r][i] + min(row[i], row[i + 1])`.",
+     "Return `row[0]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each position once; going left to right is safe because `row[i]` only reads `row[i]` and `row[i + 1]`, which are still from the row below.",
+    "code": {
+     "java": "class Solution {\n    public int minimumTotal(List<List<Integer>> triangle) {\n        int n = triangle.size();\n        int[] row = new int[n];\n        for (int i = 0; i < n; i++) row[i] = triangle.get(n - 1).get(i);\n        for (int r = n - 2; r >= 0; r--)\n            for (int i = 0; i <= r; i++) row[i] = triangle.get(r).get(i) + Math.min(row[i], row[i + 1]);\n        return row[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumTotal(vector<vector<int>>& triangle) {\n        int n = triangle.size();\n        vector<int> row = triangle[n - 1];\n        for (int r = n - 2; r >= 0; r--)\n            for (int i = 0; i <= r; i++) row[i] = triangle[r][i] + min(row[i], row[i + 1]);\n        return row[0];\n    }\n};",
+     "python": "class Solution:\n    def minimumTotal(self, triangle: List[List[int]]) -> int:\n        row = list(triangle[-1])\n        for r in range(len(triangle) - 2, -1, -1):\n            for i in range(r + 1):\n                row[i] = triangle[r][i] + min(row[i], row[i + 1])\n        return row[0]",
+     "javascript": "var minimumTotal = function(triangle) {\n    const n = triangle.length, row = [...triangle[n - 1]];\n    for (let r = n - 2; r >= 0; r--)\n        for (let i = 0; i <= r; i++) row[i] = triangle[r][i] + Math.min(row[i], row[i + 1]);\n    return row[0];\n};"
+    }
+   }
+  ]
+ },
+ "minimum-falling-path-sum": {
+  "pattern": "Row-by-row DP over three possible parents",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion from every starting cell",
+    "idea": "From `(r, c)`, the best falling path is its value plus the best of the paths starting at the three cells below (those inside the grid). Try every cell of the first row.",
+    "steps": [
+     "`best(r, c)`: on the last row, return the value.",
+     "Otherwise return `matrix[r][c] + min(best(r + 1, c + d))` over `d ∈ {−1, 0, 1}` inside the grid.",
+     "Answer the minimum of `best(0, c)` over all columns."
+    ],
+    "time": "O(n·3ⁿ)",
+    "space": "O(n)",
+    "why": "Up to three branches per row for n rows, from each of n starts.",
+    "code": {
+     "java": "class Solution {\n    public int minFallingPathSum(int[][] matrix) {\n        int best = Integer.MAX_VALUE;\n        for (int c = 0; c < matrix.length; c++) best = Math.min(best, fall(matrix, 0, c));\n        return best;\n    }\n\n    private int fall(int[][] m, int r, int c) {\n        if (r == m.length - 1) return m[r][c];\n        int below = Integer.MAX_VALUE;\n        for (int d = -1; d <= 1; d++)\n            if (c + d >= 0 && c + d < m.length) below = Math.min(below, fall(m, r + 1, c + d));\n        return m[r][c] + below;\n    }\n}",
+     "cpp": "class Solution {\n    int fall(vector<vector<int>>& m, int r, int c) {\n        int n = m.size();\n        if (r == n - 1) return m[r][c];\n        int below = INT_MAX;\n        for (int d = -1; d <= 1; d++)\n            if (c + d >= 0 && c + d < n) below = min(below, fall(m, r + 1, c + d));\n        return m[r][c] + below;\n    }\npublic:\n    int minFallingPathSum(vector<vector<int>>& matrix) {\n        int best = INT_MAX;\n        for (int c = 0; c < (int) matrix.size(); c++) best = min(best, fall(matrix, 0, c));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def minFallingPathSum(self, matrix: List[List[int]]) -> int:\n        n = len(matrix)\n        def fall(r, c):\n            if r == n - 1:\n                return matrix[r][c]\n            return matrix[r][c] + min(fall(r + 1, c + d) for d in (-1, 0, 1) if 0 <= c + d < n)\n        return min(fall(0, c) for c in range(n))",
+     "javascript": "var minFallingPathSum = function(matrix) {\n    const n = matrix.length;\n    const fall = (r, c) => {\n        if (r === n - 1) return matrix[r][c];\n        let below = Infinity;\n        for (let d = -1; d <= 1; d++) if (c + d >= 0 && c + d < n) below = Math.min(below, fall(r + 1, c + d));\n        return matrix[r][c] + below;\n    };\n    let best = Infinity;\n    for (let c = 0; c < n; c++) best = Math.min(best, fall(0, c));\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Row-by-row DP with one row of memory",
+    "idea": "Keep `prev[c]` = the cheapest falling path ending at column `c` of the previous row. Each cell of the next row adds its value to the cheapest of the up-to-three parents above.",
+    "steps": [
+     "`prev` = the first row.",
+     "For each next row: `cur[c] = matrix[r][c] + min(prev[c − 1], prev[c], prev[c + 1])` (ignoring parents outside the grid).",
+     "Set `prev = cur`; at the end return `min(prev)`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n² cells with 3 parents each; two rows of n values.",
+    "code": {
+     "java": "class Solution {\n    public int minFallingPathSum(int[][] matrix) {\n        int n = matrix.length;\n        int[] prev = matrix[0].clone();\n        for (int r = 1; r < n; r++) {\n            int[] cur = new int[n];\n            for (int c = 0; c < n; c++) {\n                int best = prev[c];\n                if (c > 0) best = Math.min(best, prev[c - 1]);\n                if (c < n - 1) best = Math.min(best, prev[c + 1]);\n                cur[c] = matrix[r][c] + best;\n            }\n            prev = cur;\n        }\n        int ans = Integer.MAX_VALUE;\n        for (int v : prev) ans = Math.min(ans, v);\n        return ans;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minFallingPathSum(vector<vector<int>>& matrix) {\n        int n = matrix.size();\n        vector<int> prev = matrix[0];\n        for (int r = 1; r < n; r++) {\n            vector<int> cur(n);\n            for (int c = 0; c < n; c++) {\n                int best = prev[c];\n                if (c > 0) best = min(best, prev[c - 1]);\n                if (c < n - 1) best = min(best, prev[c + 1]);\n                cur[c] = matrix[r][c] + best;\n            }\n            prev = cur;\n        }\n        return *min_element(prev.begin(), prev.end());\n    }\n};",
+     "python": "class Solution:\n    def minFallingPathSum(self, matrix: List[List[int]]) -> int:\n        n = len(matrix)\n        prev = matrix[0][:]\n        for r in range(1, n):\n            prev = [matrix[r][c] + min(prev[max(c - 1, 0):c + 2]) for c in range(n)]\n        return min(prev)",
+     "javascript": "var minFallingPathSum = function(matrix) {\n    const n = matrix.length;\n    let prev = [...matrix[0]];\n    for (let r = 1; r < n; r++) {\n        const cur = new Array(n);\n        for (let c = 0; c < n; c++) {\n            let best = prev[c];\n            if (c > 0) best = Math.min(best, prev[c - 1]);\n            if (c < n - 1) best = Math.min(best, prev[c + 1]);\n            cur[c] = matrix[r][c] + best;\n        }\n        prev = cur;\n    }\n    return Math.min(...prev);\n};"
+    }
+   }
+  ]
+ },
+ "maximal-square": {
+  "pattern": "Square DP: side(r, c) = 1 + min(top, left, top-left)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Grow a square from every cell",
+    "idea": "Treat each `1` as a top-left corner and keep growing the square while the new bottom row and right column are all `1`s.",
+    "steps": [
+     "For each cell with `1`, set `side = 1`.",
+     "While the square of `side + 1` fits and its new row and column are all `1`, increase `side`.",
+     "Keep the largest `side`; return `side²`."
+    ],
+    "time": "O((m·n)·k²)",
+    "space": "O(1)",
+    "why": "k = min(m, n): each start can grow up to k times, checking up to 2k cells each time.",
+    "code": {
+     "java": "class Solution {\n    public int maximalSquare(char[][] matrix) {\n        int m = matrix.length, n = matrix[0].length, best = 0;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (matrix[r][c] != '1') continue;\n                int side = 1;\n                boolean grow = true;\n                while (grow && r + side < m && c + side < n) {\n                    for (int k = 0; k <= side && grow; k++)\n                        if (matrix[r + side][c + k] != '1' || matrix[r + k][c + side] != '1') grow = false;\n                    if (grow) side++;\n                }\n                best = Math.max(best, side);\n            }\n        return best * best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maximalSquare(vector<vector<char>>& matrix) {\n        int m = matrix.size(), n = matrix[0].size(), best = 0;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (matrix[r][c] != '1') continue;\n                int side = 1;\n                bool grow = true;\n                while (grow && r + side < m && c + side < n) {\n                    for (int k = 0; k <= side && grow; k++)\n                        if (matrix[r + side][c + k] != '1' || matrix[r + k][c + side] != '1') grow = false;\n                    if (grow) side++;\n                }\n                best = max(best, side);\n            }\n        return best * best;\n    }\n};",
+     "python": "class Solution:\n    def maximalSquare(self, matrix: List[List[str]]) -> int:\n        m, n, best = len(matrix), len(matrix[0]), 0\n        for r in range(m):\n            for c in range(n):\n                if matrix[r][c] != \"1\":\n                    continue\n                side = 1\n                while r + side < m and c + side < n and all(\n                    matrix[r + side][c + k] == \"1\" and matrix[r + k][c + side] == \"1\" for k in range(side + 1)\n                ):\n                    side += 1\n                best = max(best, side)\n        return best * best",
+     "javascript": "var maximalSquare = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    let best = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (matrix[r][c] !== '1') continue;\n            let side = 1, grow = true;\n            while (grow && r + side < m && c + side < n) {\n                for (let k = 0; k <= side && grow; k++)\n                    if (matrix[r + side][c + k] !== '1' || matrix[r + k][c + side] !== '1') grow = false;\n                if (grow) side++;\n            }\n            best = Math.max(best, side);\n        }\n    return best * best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D DP on the bottom-right corner",
+    "idea": "`dp[r][c]` = side of the largest all-ones square whose bottom-right corner is `(r, c)`. It can extend the squares ending above, to the left and diagonally above-left only as far as the smallest of them.",
+    "steps": [
+     "Use a table with an extra zero row and column.",
+     "If `matrix[r][c] == \"1\"`: `dp[r + 1][c + 1] = 1 + min(dp[r][c + 1], dp[r + 1][c], dp[r][c])`.",
+     "Track the largest side; return its square."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "One pass with O(1) work per cell.",
+    "code": {
+     "java": "class Solution {\n    public int maximalSquare(char[][] matrix) {\n        int m = matrix.length, n = matrix[0].length, best = 0;\n        int[][] dp = new int[m + 1][n + 1];\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (matrix[r][c] == '1') {\n                    dp[r + 1][c + 1] = 1 + Math.min(dp[r][c], Math.min(dp[r][c + 1], dp[r + 1][c]));\n                    best = Math.max(best, dp[r + 1][c + 1]);\n                }\n        return best * best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maximalSquare(vector<vector<char>>& matrix) {\n        int m = matrix.size(), n = matrix[0].size(), best = 0;\n        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++)\n                if (matrix[r][c] == '1') {\n                    dp[r + 1][c + 1] = 1 + min({dp[r][c], dp[r][c + 1], dp[r + 1][c]});\n                    best = max(best, dp[r + 1][c + 1]);\n                }\n        return best * best;\n    }\n};",
+     "python": "class Solution:\n    def maximalSquare(self, matrix: List[List[str]]) -> int:\n        m, n = len(matrix), len(matrix[0])\n        dp = [[0] * (n + 1) for _ in range(m + 1)]\n        best = 0\n        for r in range(m):\n            for c in range(n):\n                if matrix[r][c] == \"1\":\n                    dp[r + 1][c + 1] = 1 + min(dp[r][c], dp[r][c + 1], dp[r + 1][c])\n                    best = max(best, dp[r + 1][c + 1])\n        return best * best",
+     "javascript": "var maximalSquare = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));\n    let best = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++)\n            if (matrix[r][c] === '1') {\n                dp[r + 1][c + 1] = 1 + Math.min(dp[r][c], dp[r][c + 1], dp[r + 1][c]);\n                best = Math.max(best, dp[r + 1][c + 1]);\n            }\n    return best * best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Same DP with one row",
+    "idea": "Each row of the table only needs the row above, plus the old value of the diagonal neighbour, which can be kept in a variable before it is overwritten.",
+    "steps": [
+     "Keep `row[0..n]` and a variable `diag` (the value from up-left).",
+     "For each cell: save `old = row[c + 1]` (the value above); if `1`, `row[c + 1] = 1 + min(old, row[c], diag)`, else 0; then `diag = old`.",
+     "Reset `diag = 0` at the start of each row; track the best side."
+    ],
+    "time": "O(m·n)",
+    "space": "O(n)",
+    "why": "Same pass, one row of n + 1 integers.",
+    "code": {
+     "java": "class Solution {\n    public int maximalSquare(char[][] matrix) {\n        int n = matrix[0].length, best = 0;\n        int[] row = new int[n + 1];\n        for (char[] cells : matrix) {\n            int diag = 0;\n            for (int c = 0; c < n; c++) {\n                int old = row[c + 1];\n                row[c + 1] = cells[c] == '1' ? 1 + Math.min(old, Math.min(row[c], diag)) : 0;\n                best = Math.max(best, row[c + 1]);\n                diag = old;\n            }\n        }\n        return best * best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maximalSquare(vector<vector<char>>& matrix) {\n        int n = matrix[0].size(), best = 0;\n        vector<int> row(n + 1, 0);\n        for (auto& cells : matrix) {\n            int diag = 0;\n            for (int c = 0; c < n; c++) {\n                int old = row[c + 1];\n                row[c + 1] = cells[c] == '1' ? 1 + min({old, row[c], diag}) : 0;\n                best = max(best, row[c + 1]);\n                diag = old;\n            }\n        }\n        return best * best;\n    }\n};",
+     "python": "class Solution:\n    def maximalSquare(self, matrix: List[List[str]]) -> int:\n        n = len(matrix[0])\n        row = [0] * (n + 1)\n        best = 0\n        for cells in matrix:\n            diag = 0\n            for c in range(n):\n                old = row[c + 1]\n                row[c + 1] = 1 + min(old, row[c], diag) if cells[c] == \"1\" else 0\n                best = max(best, row[c + 1])\n                diag = old\n        return best * best",
+     "javascript": "var maximalSquare = function(matrix) {\n    const n = matrix[0].length, row = new Array(n + 1).fill(0);\n    let best = 0;\n    for (const cells of matrix) {\n        let diag = 0;\n        for (let c = 0; c < n; c++) {\n            const old = row[c + 1];\n            row[c + 1] = cells[c] === '1' ? 1 + Math.min(old, row[c], diag) : 0;\n            best = Math.max(best, row[c + 1]);\n            diag = old;\n        }\n    }\n    return best * best;\n};"
+    }
+   }
+  ]
+ },
+ "count-square-submatrices-with-all-ones": {
+  "pattern": "Square DP: the largest square ending at a cell also counts the smaller ones there",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check every square of every size",
+    "idea": "For each top-left corner, grow the square one size at a time while its new edge cells are all ones, counting each size that works.",
+    "steps": [
+     "For each cell with 1, grow `side` from 1 while the square fits and the new bottom row and right column are all 1.",
+     "Each successful size is one more square; add them up."
+    ],
+    "time": "O(m·n·k²)",
+    "space": "O(1)",
+    "why": "k = min(m, n): up to k sizes per corner with up to 2k edge checks each.",
+    "code": {
+     "java": "class Solution {\n    public int countSquares(int[][] matrix) {\n        int m = matrix.length, n = matrix[0].length, total = 0;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (matrix[r][c] != 1) continue;\n                int side = 1;\n                total++;\n                boolean grow = true;\n                while (r + side < m && c + side < n) {\n                    for (int k = 0; k <= side && grow; k++)\n                        if (matrix[r + side][c + k] != 1 || matrix[r + k][c + side] != 1) grow = false;\n                    if (!grow) break;\n                    side++;\n                    total++;\n                }\n            }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countSquares(vector<vector<int>>& matrix) {\n        int m = matrix.size(), n = matrix[0].size(), total = 0;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                if (matrix[r][c] != 1) continue;\n                int side = 1;\n                total++;\n                bool grow = true;\n                while (r + side < m && c + side < n) {\n                    for (int k = 0; k <= side && grow; k++)\n                        if (matrix[r + side][c + k] != 1 || matrix[r + k][c + side] != 1) grow = false;\n                    if (!grow) break;\n                    side++;\n                    total++;\n                }\n            }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def countSquares(self, matrix: List[List[int]]) -> int:\n        m, n, total = len(matrix), len(matrix[0]), 0\n        for r in range(m):\n            for c in range(n):\n                if matrix[r][c] != 1:\n                    continue\n                side = 1\n                total += 1\n                while r + side < m and c + side < n and all(\n                    matrix[r + side][c + k] == 1 and matrix[r + k][c + side] == 1 for k in range(side + 1)\n                ):\n                    side += 1\n                    total += 1\n        return total",
+     "javascript": "var countSquares = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    let total = 0;\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            if (matrix[r][c] !== 1) continue;\n            let side = 1, grow = true;\n            total++;\n            while (r + side < m && c + side < n) {\n                for (let k = 0; k <= side && grow; k++)\n                    if (matrix[r + side][c + k] !== 1 || matrix[r + k][c + side] !== 1) grow = false;\n                if (!grow) break;\n                side++;\n                total++;\n            }\n        }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DP on the bottom-right corner, summing the sides",
+    "idea": "With `dp[r][c]` = side of the largest all-ones square ending at `(r, c)` (as in Maximal Square), that cell is the bottom-right corner of exactly `dp[r][c]` squares: one of each size up to it. Sum the table.",
+    "steps": [
+     "For each cell with 1: `dp[r][c] = 1` on the first row or column, else `1 + min(dp[r − 1][c], dp[r][c − 1], dp[r − 1][c − 1])`.",
+     "Add `dp[r][c]` to the total.",
+     "Return the total. (The matrix itself can store `dp`.)"
+    ],
+    "time": "O(m·n)",
+    "space": "O(1)",
+    "why": "One pass with O(1) work per cell; writing the values into the input avoids an extra table.",
+    "code": {
+     "java": "class Solution {\n    public int countSquares(int[][] matrix) {\n        int total = 0;\n        for (int r = 0; r < matrix.length; r++)\n            for (int c = 0; c < matrix[0].length; c++) {\n                if (matrix[r][c] == 1 && r > 0 && c > 0)\n                    matrix[r][c] = 1 + Math.min(matrix[r - 1][c - 1], Math.min(matrix[r - 1][c], matrix[r][c - 1]));\n                total += matrix[r][c];\n            }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countSquares(vector<vector<int>>& matrix) {\n        int total = 0;\n        for (size_t r = 0; r < matrix.size(); r++)\n            for (size_t c = 0; c < matrix[0].size(); c++) {\n                if (matrix[r][c] == 1 && r > 0 && c > 0)\n                    matrix[r][c] = 1 + min({matrix[r - 1][c - 1], matrix[r - 1][c], matrix[r][c - 1]});\n                total += matrix[r][c];\n            }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def countSquares(self, matrix: List[List[int]]) -> int:\n        total = 0\n        for r in range(len(matrix)):\n            for c in range(len(matrix[0])):\n                if matrix[r][c] == 1 and r > 0 and c > 0:\n                    matrix[r][c] = 1 + min(matrix[r - 1][c - 1], matrix[r - 1][c], matrix[r][c - 1])\n                total += matrix[r][c]\n        return total",
+     "javascript": "var countSquares = function(matrix) {\n    let total = 0;\n    for (let r = 0; r < matrix.length; r++)\n        for (let c = 0; c < matrix[0].length; c++) {\n            if (matrix[r][c] === 1 && r > 0 && c > 0)\n                matrix[r][c] = 1 + Math.min(matrix[r - 1][c - 1], matrix[r - 1][c], matrix[r][c - 1]);\n            total += matrix[r][c];\n        }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "dungeon-game": {
+  "pattern": "Reverse grid DP: health needed on entering a cell, computed from the princess back to the start",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion on the health needed from each cell",
+    "idea": "Working forwards fails (a path that looks good early may need more health later). Instead ask: entering `(r, c)`, how much health do I need to survive to the end? It is what the better next cell needs, minus this room's effect, but at least 1.",
+    "steps": [
+     "`need(r, c)`: if out of the grid, return ∞.",
+     "At the princess's room: `max(1, 1 − dungeon[r][c])`.",
+     "Otherwise `max(1, min(need(r + 1, c), need(r, c + 1)) − dungeon[r][c])`.",
+     "Answer `need(0, 0)`."
+    ],
+    "time": "O(2^(m+n))",
+    "space": "O(m + n)",
+    "why": "Two calls per cell without remembering results.",
+    "code": {
+     "java": "class Solution {\n    public int calculateMinimumHP(int[][] dungeon) {\n        return need(dungeon, 0, 0);\n    }\n\n    private int need(int[][] d, int r, int c) {\n        int m = d.length, n = d[0].length;\n        if (r >= m || c >= n) return Integer.MAX_VALUE;\n        if (r == m - 1 && c == n - 1) return Math.max(1, 1 - d[r][c]);\n        return Math.max(1, Math.min(need(d, r + 1, c), need(d, r, c + 1)) - d[r][c]);\n    }\n}",
+     "cpp": "class Solution {\n    int need(vector<vector<int>>& d, int r, int c) {\n        int m = d.size(), n = d[0].size();\n        if (r >= m || c >= n) return INT_MAX;\n        if (r == m - 1 && c == n - 1) return max(1, 1 - d[r][c]);\n        return max(1, min(need(d, r + 1, c), need(d, r, c + 1)) - d[r][c]);\n    }\npublic:\n    int calculateMinimumHP(vector<vector<int>>& dungeon) {\n        return need(dungeon, 0, 0);\n    }\n};",
+     "python": "class Solution:\n    def calculateMinimumHP(self, dungeon: List[List[int]]) -> int:\n        m, n = len(dungeon), len(dungeon[0])\n        def need(r, c):\n            if r >= m or c >= n:\n                return inf\n            if r == m - 1 and c == n - 1:\n                return max(1, 1 - dungeon[r][c])\n            return max(1, min(need(r + 1, c), need(r, c + 1)) - dungeon[r][c])\n        return need(0, 0)",
+     "javascript": "var calculateMinimumHP = function(dungeon) {\n    const m = dungeon.length, n = dungeon[0].length;\n    const need = (r, c) => {\n        if (r >= m || c >= n) return Infinity;\n        if (r === m - 1 && c === n - 1) return Math.max(1, 1 - dungeon[r][c]);\n        return Math.max(1, Math.min(need(r + 1, c), need(r, c + 1)) - dungeon[r][c]);\n    };\n    return need(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D table from the bottom-right",
+    "idea": "Fill `dp[r][c]` (health needed on entering) from the princess's room backwards, using a border of ∞ with a 1 placed just right of and just below the end so the formula works there too.",
+    "steps": [
+     "Make `dp` of size (m + 1) × (n + 1) filled with ∞; set `dp[m][n − 1] = dp[m − 1][n] = 1`.",
+     "For `r` from m − 1 down to 0, `c` from n − 1 down to 0: `dp[r][c] = max(1, min(dp[r + 1][c], dp[r][c + 1]) − dungeon[r][c])`.",
+     "Return `dp[0][0]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell once.",
+    "code": {
+     "java": "class Solution {\n    public int calculateMinimumHP(int[][] dungeon) {\n        int m = dungeon.length, n = dungeon[0].length;\n        int[][] dp = new int[m + 1][n + 1];\n        for (int[] row : dp) Arrays.fill(row, Integer.MAX_VALUE);\n        dp[m][n - 1] = dp[m - 1][n] = 1;\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--)\n                dp[r][c] = Math.max(1, Math.min(dp[r + 1][c], dp[r][c + 1]) - dungeon[r][c]);\n        return dp[0][0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int calculateMinimumHP(vector<vector<int>>& dungeon) {\n        int m = dungeon.size(), n = dungeon[0].size();\n        vector<vector<int>> dp(m + 1, vector<int>(n + 1, INT_MAX));\n        dp[m][n - 1] = dp[m - 1][n] = 1;\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--)\n                dp[r][c] = max(1, min(dp[r + 1][c], dp[r][c + 1]) - dungeon[r][c]);\n        return dp[0][0];\n    }\n};",
+     "python": "class Solution:\n    def calculateMinimumHP(self, dungeon: List[List[int]]) -> int:\n        m, n = len(dungeon), len(dungeon[0])\n        dp = [[inf] * (n + 1) for _ in range(m + 1)]\n        dp[m][n - 1] = dp[m - 1][n] = 1\n        for r in range(m - 1, -1, -1):\n            for c in range(n - 1, -1, -1):\n                dp[r][c] = max(1, min(dp[r + 1][c], dp[r][c + 1]) - dungeon[r][c])\n        return dp[0][0]",
+     "javascript": "var calculateMinimumHP = function(dungeon) {\n    const m = dungeon.length, n = dungeon[0].length;\n    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(Infinity));\n    dp[m][n - 1] = dp[m - 1][n] = 1;\n    for (let r = m - 1; r >= 0; r--)\n        for (let c = n - 1; c >= 0; c--)\n            dp[r][c] = Math.max(1, Math.min(dp[r + 1][c], dp[r][c + 1]) - dungeon[r][c]);\n    return dp[0][0];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One row, filled backwards",
+    "idea": "Each row only needs the row below, so one array of n + 1 values is enough: `row[c]` holds the value from below until it is overwritten.",
+    "steps": [
+     "`row` = n + 1 values of ∞, with `row[n − 1] = 1` before the last grid row.",
+     "For `r` from m − 1 down to 0, for `c` from n − 1 down to 0: `row[c] = max(1, min(row[c], row[c + 1]) − dungeon[r][c])`. `row[n]` stays ∞: there is no way out past the right edge.",
+     "Return `row[0]`."
+    ],
+    "time": "O(m·n)",
+    "space": "O(n)",
+    "why": "Same pass with a single row of memory.",
+    "code": {
+     "java": "class Solution {\n    public int calculateMinimumHP(int[][] dungeon) {\n        int m = dungeon.length, n = dungeon[0].length;\n        int[] row = new int[n + 1];\n        Arrays.fill(row, Integer.MAX_VALUE);\n        row[n - 1] = 1;\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--)\n                row[c] = Math.max(1, Math.min(row[c], row[c + 1]) - dungeon[r][c]);\n        return row[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int calculateMinimumHP(vector<vector<int>>& dungeon) {\n        int m = dungeon.size(), n = dungeon[0].size();\n        vector<int> row(n + 1, INT_MAX);\n        row[n - 1] = 1;\n        for (int r = m - 1; r >= 0; r--)\n            for (int c = n - 1; c >= 0; c--)\n                row[c] = max(1, min(row[c], row[c + 1]) - dungeon[r][c]);\n        return row[0];\n    }\n};",
+     "python": "class Solution:\n    def calculateMinimumHP(self, dungeon: List[List[int]]) -> int:\n        n = len(dungeon[0])\n        row = [inf] * (n + 1)\n        row[n - 1] = 1\n        for cells in reversed(dungeon):\n            for c in range(n - 1, -1, -1):\n                row[c] = max(1, min(row[c], row[c + 1]) - cells[c])\n        return row[0]",
+     "javascript": "var calculateMinimumHP = function(dungeon) {\n    const m = dungeon.length, n = dungeon[0].length, row = new Array(n + 1).fill(Infinity);\n    row[n - 1] = 1;\n    for (let r = m - 1; r >= 0; r--)\n        for (let c = n - 1; c >= 0; c--)\n            row[c] = Math.max(1, Math.min(row[c], row[c + 1]) - dungeon[r][c]);\n    return row[0];\n};"
+    }
+   }
+  ]
+ },
+ "cherry-pickup": {
+  "pattern": "Two walkers moving together: DP over (step, row of walker 1, row of walker 2)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every forward path, then the best return path",
+    "idea": "Enumerate every right/down path from the top-left to the bottom-right. For each, pick up its cherries, then find the best return path on the remaining grid with a simple grid DP. (Taking the single best forward path first and then the best return path is NOT enough — the two trips must be planned together.)",
+    "steps": [
+     "DFS over all forward paths avoiding thorns.",
+     "At the bottom-right, compute the best second trip with `best[r][c] = grid[r][c] + max(best from above, best from the left)` on the grid with the first path's cherries removed.",
+     "Answer = max over forward paths of (cherries on it + best second trip); 0 if no path exists."
+    ],
+    "time": "O(C(2n − 2, n − 1)·n²)",
+    "space": "O(n²)",
+    "why": "The number of forward paths grows like 4ⁿ/√n, and each needs an O(n²) DP for the return trip. Only workable for tiny grids, but it shows why both trips must be decided together.",
+    "code": {
+     "java": "class Solution {\n    private int n, best = 0;\n    private int[][] g;\n\n    public int cherryPickup(int[][] grid) {\n        g = grid;\n        n = grid.length;\n        walk(0, 0, 0);\n        return best;\n    }\n\n    private void walk(int r, int c, int got) {\n        if (r >= n || c >= n || g[r][c] == -1) return;\n        int cherry = g[r][c];\n        got += cherry;\n        g[r][c] = 0;\n        if (r == n - 1 && c == n - 1) {\n            int back = secondTrip();\n            if (back >= 0) best = Math.max(best, got + back);\n        } else {\n            walk(r + 1, c, got);\n            walk(r, c + 1, got);\n        }\n        g[r][c] = cherry;\n    }\n\n    // the most cherries on one right/down path over the current grid (-1 if there is none)\n    private int secondTrip() {\n        int[][] dp = new int[n][n];\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++) {\n                if (g[r][c] == -1) { dp[r][c] = -1; continue; }\n                int from = (r == 0 && c == 0) ? 0 : Math.max(r > 0 ? dp[r - 1][c] : -1, c > 0 ? dp[r][c - 1] : -1);\n                dp[r][c] = from < 0 ? -1 : from + g[r][c];\n            }\n        return dp[n - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\n    int n, best = 0;\n    vector<vector<int>>* g;\n    int secondTrip() {\n        auto& G = *g;\n        vector<vector<int>> dp(n, vector<int>(n, -1));\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++) {\n                if (G[r][c] == -1) continue;\n                int from = (r == 0 && c == 0) ? 0 : max(r > 0 ? dp[r - 1][c] : -1, c > 0 ? dp[r][c - 1] : -1);\n                dp[r][c] = from < 0 ? -1 : from + G[r][c];\n            }\n        return dp[n - 1][n - 1];\n    }\n    void walk(int r, int c, int got) {\n        auto& G = *g;\n        if (r >= n || c >= n || G[r][c] == -1) return;\n        int cherry = G[r][c];\n        got += cherry;\n        G[r][c] = 0;\n        if (r == n - 1 && c == n - 1) {\n            int back = secondTrip();\n            if (back >= 0) best = max(best, got + back);\n        } else {\n            walk(r + 1, c, got);\n            walk(r, c + 1, got);\n        }\n        G[r][c] = cherry;\n    }\npublic:\n    int cherryPickup(vector<vector<int>>& grid) {\n        g = &grid;\n        n = grid.size();\n        walk(0, 0, 0);\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def cherryPickup(self, grid: List[List[int]]) -> int:\n        n = len(grid)\n        best = 0\n        def second_trip():\n            dp = [[-1] * n for _ in range(n)]\n            for r in range(n):\n                for c in range(n):\n                    if grid[r][c] == -1:\n                        continue\n                    if r == 0 and c == 0:\n                        frm = 0\n                    else:\n                        frm = max(dp[r - 1][c] if r else -1, dp[r][c - 1] if c else -1)\n                    dp[r][c] = -1 if frm < 0 else frm + grid[r][c]\n            return dp[n - 1][n - 1]\n        def walk(r, c, got):\n            nonlocal best\n            if r >= n or c >= n or grid[r][c] == -1:\n                return\n            cherry = grid[r][c]\n            got += cherry\n            grid[r][c] = 0\n            if r == n - 1 and c == n - 1:\n                back = second_trip()\n                if back >= 0:\n                    best = max(best, got + back)\n            else:\n                walk(r + 1, c, got)\n                walk(r, c + 1, got)\n            grid[r][c] = cherry\n        walk(0, 0, 0)\n        return best",
+     "javascript": "var cherryPickup = function(grid) {\n    const n = grid.length;\n    let best = 0;\n    const secondTrip = () => {\n        const dp = Array.from({ length: n }, () => new Array(n).fill(-1));\n        for (let r = 0; r < n; r++)\n            for (let c = 0; c < n; c++) {\n                if (grid[r][c] === -1) continue;\n                const from = r === 0 && c === 0 ? 0 : Math.max(r > 0 ? dp[r - 1][c] : -1, c > 0 ? dp[r][c - 1] : -1);\n                dp[r][c] = from < 0 ? -1 : from + grid[r][c];\n            }\n        return dp[n - 1][n - 1];\n    };\n    const walk = (r, c, got) => {\n        if (r >= n || c >= n || grid[r][c] === -1) return;\n        const cherry = grid[r][c];\n        got += cherry;\n        grid[r][c] = 0;\n        if (r === n - 1 && c === n - 1) {\n            const back = secondTrip();\n            if (back >= 0) best = Math.max(best, got + back);\n        } else {\n            walk(r + 1, c, got);\n            walk(r, c + 1, got);\n        }\n        grid[r][c] = cherry;\n    };\n    walk(0, 0, 0);\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two walkers at once: DP over (step, r1, r2)",
+    "idea": "The return trip reversed is just another top-left → bottom-right path, so send two walkers forward together. After `t` steps each is on the anti-diagonal `r + c = t`, so the state is `(t, r1, r2)`. When both stand on the same cell, its cherry counts once.",
+    "steps": [
+     "`dp[r1][r2]` = most cherries with walker 1 at `(r1, t − r1)` and walker 2 at `(r2, t − r2)`; −∞ if impossible. Start: `dp[0][0] = grid[0][0]` at `t = 0`.",
+     "For `t` from 1 to 2n − 2: for each pair of rows, skip thorns and out-of-grid cells; take the best of the four previous pairs (each walker came from up or left).",
+     "Add the cherries at both cells (once if they are the same cell).",
+     "Answer `max(0, dp[n − 1][n − 1])` after the last step."
+    ],
+    "time": "O(n³)",
+    "space": "O(n²)",
+    "why": "2n − 1 steps × n² row pairs with 4 transitions each; only the previous step's n × n table is kept.",
+    "code": {
+     "java": "class Solution {\n    public int cherryPickup(int[][] grid) {\n        int n = grid.length, NEG = Integer.MIN_VALUE / 2;\n        int[][] dp = new int[n][n];\n        for (int[] row : dp) Arrays.fill(row, NEG);\n        dp[0][0] = grid[0][0];\n        for (int t = 1; t <= 2 * n - 2; t++) {\n            int[][] next = new int[n][n];\n            for (int[] row : next) Arrays.fill(row, NEG);\n            for (int r1 = Math.max(0, t - n + 1); r1 <= Math.min(n - 1, t); r1++)\n                for (int r2 = Math.max(0, t - n + 1); r2 <= Math.min(n - 1, t); r2++) {\n                    int c1 = t - r1, c2 = t - r2;\n                    if (grid[r1][c1] == -1 || grid[r2][c2] == -1) continue;\n                    int prev = NEG;\n                    for (int d1 = 0; d1 <= 1; d1++)\n                        for (int d2 = 0; d2 <= 1; d2++) {\n                            int p1 = r1 - d1, p2 = r2 - d2;\n                            if (p1 >= 0 && p2 >= 0) prev = Math.max(prev, dp[p1][p2]);\n                        }\n                    if (prev == NEG) continue;\n                    next[r1][r2] = prev + grid[r1][c1] + (r1 == r2 ? 0 : grid[r2][c2]);\n                }\n            dp = next;\n        }\n        return Math.max(0, dp[n - 1][n - 1]);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int cherryPickup(vector<vector<int>>& grid) {\n        int n = grid.size(), NEG = INT_MIN / 2;\n        vector<vector<int>> dp(n, vector<int>(n, NEG));\n        dp[0][0] = grid[0][0];\n        for (int t = 1; t <= 2 * n - 2; t++) {\n            vector<vector<int>> next(n, vector<int>(n, NEG));\n            for (int r1 = max(0, t - n + 1); r1 <= min(n - 1, t); r1++)\n                for (int r2 = max(0, t - n + 1); r2 <= min(n - 1, t); r2++) {\n                    int c1 = t - r1, c2 = t - r2;\n                    if (grid[r1][c1] == -1 || grid[r2][c2] == -1) continue;\n                    int prev = NEG;\n                    for (int d1 = 0; d1 <= 1; d1++)\n                        for (int d2 = 0; d2 <= 1; d2++) {\n                            int p1 = r1 - d1, p2 = r2 - d2;\n                            if (p1 >= 0 && p2 >= 0) prev = max(prev, dp[p1][p2]);\n                        }\n                    if (prev == NEG) continue;\n                    next[r1][r2] = prev + grid[r1][c1] + (r1 == r2 ? 0 : grid[r2][c2]);\n                }\n            dp = next;\n        }\n        return max(0, dp[n - 1][n - 1]);\n    }\n};",
+     "python": "class Solution:\n    def cherryPickup(self, grid: List[List[int]]) -> int:\n        n = len(grid)\n        NEG = -inf\n        dp = [[NEG] * n for _ in range(n)]\n        dp[0][0] = grid[0][0]\n        for t in range(1, 2 * n - 1):\n            nxt = [[NEG] * n for _ in range(n)]\n            lo, hi = max(0, t - n + 1), min(n - 1, t)\n            for r1 in range(lo, hi + 1):\n                for r2 in range(lo, hi + 1):\n                    c1, c2 = t - r1, t - r2\n                    if grid[r1][c1] == -1 or grid[r2][c2] == -1:\n                        continue\n                    prev = max(dp[p1][p2] for p1 in (r1, r1 - 1) for p2 in (r2, r2 - 1) if p1 >= 0 and p2 >= 0)\n                    if prev == NEG:\n                        continue\n                    nxt[r1][r2] = prev + grid[r1][c1] + (0 if r1 == r2 else grid[r2][c2])\n            dp = nxt\n        return max(0, dp[n - 1][n - 1])",
+     "javascript": "var cherryPickup = function(grid) {\n    const n = grid.length, NEG = -Infinity;\n    let dp = Array.from({ length: n }, () => new Array(n).fill(NEG));\n    dp[0][0] = grid[0][0];\n    for (let t = 1; t <= 2 * n - 2; t++) {\n        const next = Array.from({ length: n }, () => new Array(n).fill(NEG));\n        const lo = Math.max(0, t - n + 1), hi = Math.min(n - 1, t);\n        for (let r1 = lo; r1 <= hi; r1++)\n            for (let r2 = lo; r2 <= hi; r2++) {\n                const c1 = t - r1, c2 = t - r2;\n                if (grid[r1][c1] === -1 || grid[r2][c2] === -1) continue;\n                let prev = NEG;\n                for (const p1 of [r1, r1 - 1])\n                    for (const p2 of [r2, r2 - 1])\n                        if (p1 >= 0 && p2 >= 0) prev = Math.max(prev, dp[p1][p2]);\n                if (prev === NEG) continue;\n                next[r1][r2] = prev + grid[r1][c1] + (r1 === r2 ? 0 : grid[r2][c2]);\n            }\n        dp = next;\n    }\n    return Math.max(0, dp[n - 1][n - 1]);\n};"
+    }
+   }
+  ]
+ }
+}
