@@ -1,0 +1,567 @@
+{
+ "house-robber": {
+  "pattern": "1-D DP: best(i) = max(skip house i, rob it + best(i − 2))",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion: rob or skip each house",
+    "idea": "For house `i`, either skip it (best of the houses before) or rob it (its money plus the best two houses back). Recurse on both choices.",
+    "steps": [
+     "`best(i)` = most money from houses `0..i`; `best(−1) = best(−2) = 0`.",
+     "`best(i) = max(best(i − 1), nums[i] + best(i − 2))`.",
+     "Return `best(n − 1)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Two calls per house with the same subproblems recomputed many times.",
+    "code": {
+     "java": "class Solution {\n    public int rob(int[] nums) {\n        return best(nums, nums.length - 1);\n    }\n\n    private int best(int[] nums, int i) {\n        if (i < 0) return 0;\n        return Math.max(best(nums, i - 1), nums[i] + best(nums, i - 2));\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& nums, int i) {\n        if (i < 0) return 0;\n        return max(best(nums, i - 1), nums[i] + best(nums, i - 2));\n    }\npublic:\n    int rob(vector<int>& nums) {\n        return best(nums, (int) nums.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        def best(i):\n            return 0 if i < 0 else max(best(i - 1), nums[i] + best(i - 2))\n        return best(len(nums) - 1)",
+     "javascript": "var rob = function(nums) {\n    const best = (i) => (i < 0 ? 0 : Math.max(best(i - 1), nums[i] + best(i - 2)));\n    return best(nums.length - 1);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Tabulation",
+    "idea": "Compute `dp[i]` (best for the first `i` houses) from left to right; each entry needs only the two before it.",
+    "steps": [
+     "`dp[0] = 0`, `dp[1] = nums[0]`.",
+     "For `i` from 2 to n: `dp[i] = max(dp[i − 1], dp[i − 2] + nums[i − 1])`.",
+     "Return `dp[n]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass with an array of n + 1 values.",
+    "code": {
+     "java": "class Solution {\n    public int rob(int[] nums) {\n        int n = nums.length;\n        int[] dp = new int[n + 1];\n        dp[1] = nums[0];\n        for (int i = 2; i <= n; i++) dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i - 1]);\n        return dp[n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> dp(n + 1, 0);\n        dp[1] = nums[0];\n        for (int i = 2; i <= n; i++) dp[i] = max(dp[i - 1], dp[i - 2] + nums[i - 1]);\n        return dp[n];\n    }\n};",
+     "python": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        n = len(nums)\n        dp = [0] * (n + 1)\n        dp[1] = nums[0]\n        for i in range(2, n + 1):\n            dp[i] = max(dp[i - 1], dp[i - 2] + nums[i - 1])\n        return dp[n]",
+     "javascript": "var rob = function(nums) {\n    const n = nums.length, dp = new Array(n + 1).fill(0);\n    dp[1] = nums[0];\n    for (let i = 2; i <= n; i++) dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i - 1]);\n    return dp[n];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two rolling values",
+    "idea": "Keep only `prev2` (best up to two houses back) and `prev1` (best up to the previous house).",
+    "steps": [
+     "Set `prev2 = 0`, `prev1 = 0`.",
+     "For each amount `x`: `cur = max(prev1, prev2 + x)`; then `prev2 = prev1`, `prev1 = cur`.",
+     "Return `prev1`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with two variables.",
+    "code": {
+     "java": "class Solution {\n    public int rob(int[] nums) {\n        int prev2 = 0, prev1 = 0;\n        for (int x : nums) {\n            int cur = Math.max(prev1, prev2 + x);\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        int prev2 = 0, prev1 = 0;\n        for (int x : nums) {\n            int cur = max(prev1, prev2 + x);\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\n};",
+     "python": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        prev2 = prev1 = 0\n        for x in nums:\n            prev2, prev1 = prev1, max(prev1, prev2 + x)\n        return prev1",
+     "javascript": "var rob = function(nums) {\n    let prev2 = 0, prev1 = 0;\n    for (const x of nums) [prev2, prev1] = [prev1, Math.max(prev1, prev2 + x)];\n    return prev1;\n};"
+    }
+   }
+  ]
+ },
+ "house-robber-ii": {
+  "pattern": "Break the circle into two straight lines (without the first house, without the last)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion remembering whether the first house was robbed",
+    "idea": "Go house by house choosing rob or skip, carrying a flag that says whether house 0 was robbed; at the last house, robbing is allowed only if house 0 was not.",
+    "steps": [
+     "`best(i, firstRobbed)`: if `i >= n`, return 0.",
+     "Skip: `best(i + 1, firstRobbed)`. Rob (if allowed — not the last house when `firstRobbed`): `nums[i] + best(i + 2, firstRobbed || i == 0)`.",
+     "Return the larger; answer `best(0, false)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Two choices per house without remembering results.",
+    "code": {
+     "java": "class Solution {\n    public int rob(int[] nums) {\n        return best(nums, 0, false);\n    }\n\n    private int best(int[] nums, int i, boolean firstRobbed) {\n        int n = nums.length;\n        if (i >= n) return 0;\n        int skip = best(nums, i + 1, firstRobbed);\n        if (i == n - 1 && firstRobbed && n > 1) return skip;\n        return Math.max(skip, nums[i] + best(nums, i + 2, firstRobbed || i == 0));\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& nums, int i, bool firstRobbed) {\n        int n = nums.size();\n        if (i >= n) return 0;\n        int skip = best(nums, i + 1, firstRobbed);\n        if (i == n - 1 && firstRobbed && n > 1) return skip;\n        return max(skip, nums[i] + best(nums, i + 2, firstRobbed || i == 0));\n    }\npublic:\n    int rob(vector<int>& nums) {\n        return best(nums, 0, false);\n    }\n};",
+     "python": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        n = len(nums)\n        def best(i, first_robbed):\n            if i >= n:\n                return 0\n            skip = best(i + 1, first_robbed)\n            if i == n - 1 and first_robbed and n > 1:\n                return skip\n            return max(skip, nums[i] + best(i + 2, first_robbed or i == 0))\n        return best(0, False)",
+     "javascript": "var rob = function(nums) {\n    const n = nums.length;\n    const best = (i, firstRobbed) => {\n        if (i >= n) return 0;\n        const skip = best(i + 1, firstRobbed);\n        if (i === n - 1 && firstRobbed && n > 1) return skip;\n        return Math.max(skip, nums[i] + best(i + 2, firstRobbed || i === 0));\n    };\n    return best(0, false);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two passes of House Robber",
+    "idea": "The first and last houses cannot both be robbed, so the answer is the better of two straight-line problems: houses `0..n − 2` and houses `1..n − 1`. Each is the ordinary House Robber.",
+    "steps": [
+     "If there is one house, return its money.",
+     "Run the two-variable House Robber on `nums[0..n − 2]` and on `nums[1..n − 1]`.",
+     "Return the larger result."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two linear passes with two variables each. Every valid circular choice avoids house 0 or house n − 1, so it is counted in one of the passes.",
+    "code": {
+     "java": "class Solution {\n    public int rob(int[] nums) {\n        int n = nums.length;\n        if (n == 1) return nums[0];\n        return Math.max(line(nums, 0, n - 2), line(nums, 1, n - 1));\n    }\n\n    private int line(int[] nums, int lo, int hi) {\n        int prev2 = 0, prev1 = 0;\n        for (int i = lo; i <= hi; i++) {\n            int cur = Math.max(prev1, prev2 + nums[i]);\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\n}",
+     "cpp": "class Solution {\n    int line(vector<int>& nums, int lo, int hi) {\n        int prev2 = 0, prev1 = 0;\n        for (int i = lo; i <= hi; i++) {\n            int cur = max(prev1, prev2 + nums[i]);\n            prev2 = prev1;\n            prev1 = cur;\n        }\n        return prev1;\n    }\npublic:\n    int rob(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return nums[0];\n        return max(line(nums, 0, n - 2), line(nums, 1, n - 1));\n    }\n};",
+     "python": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        def line(houses):\n            prev2 = prev1 = 0\n            for x in houses:\n                prev2, prev1 = prev1, max(prev1, prev2 + x)\n            return prev1\n        if len(nums) == 1:\n            return nums[0]\n        return max(line(nums[:-1]), line(nums[1:]))",
+     "javascript": "var rob = function(nums) {\n    const n = nums.length;\n    if (n === 1) return nums[0];\n    const line = (lo, hi) => {\n        let prev2 = 0, prev1 = 0;\n        for (let i = lo; i <= hi; i++) [prev2, prev1] = [prev1, Math.max(prev1, prev2 + nums[i])];\n        return prev1;\n    };\n    return Math.max(line(0, n - 2), line(1, n - 1));\n};"
+    }
+   }
+  ]
+ },
+ "maximum-subarray": {
+  "pattern": "Kadane's algorithm (best subarray ending here = max(x, previous best + x))",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every start, extended with a running sum",
+    "idea": "Try every start and extend to the right, keeping the running sum and the best seen.",
+    "steps": [
+     "For each `i`, set `sum = 0`.",
+     "For each `j >= i`, add `nums[j]` and update the best.",
+     "Return the best."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n(n + 1)/2 subarrays, O(1) each thanks to the running sum.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        int best = Integer.MIN_VALUE;\n        for (int i = 0; i < nums.length; i++) {\n            int sum = 0;\n            for (int j = i; j < nums.length; j++) {\n                sum += nums[j];\n                best = Math.max(best, sum);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums) {\n        int best = INT_MIN, n = nums.size();\n        for (int i = 0; i < n; i++) {\n            int sum = 0;\n            for (int j = i; j < n; j++) {\n                sum += nums[j];\n                best = max(best, sum);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        best = -inf\n        for i in range(len(nums)):\n            s = 0\n            for j in range(i, len(nums)):\n                s += nums[j]\n                best = max(best, s)\n        return best",
+     "javascript": "var maxSubArray = function(nums) {\n    let best = -Infinity;\n    for (let i = 0; i < nums.length; i++) {\n        let sum = 0;\n        for (let j = i; j < nums.length; j++) {\n            sum += nums[j];\n            best = Math.max(best, sum);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Divide and conquer",
+    "idea": "The best subarray lies entirely in the left half, entirely in the right half, or crosses the middle. The crossing case is the best suffix of the left half plus the best prefix of the right half.",
+    "steps": [
+     "`solve(lo, hi)`: if one element, return it.",
+     "Recursively solve both halves.",
+     "Compute the best sum ending at `mid` (going left) and the best sum starting at `mid + 1` (going right); add them.",
+     "Return the largest of the three."
+    ],
+    "time": "O(n log n)",
+    "space": "O(log n)",
+    "why": "Each level does O(n) work for the crossing sums and there are log n levels; the recursion depth is log n.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        return solve(nums, 0, nums.length - 1);\n    }\n\n    private int solve(int[] a, int lo, int hi) {\n        if (lo == hi) return a[lo];\n        int mid = (lo + hi) >>> 1;\n        int leftBest = Integer.MIN_VALUE, rightBest = Integer.MIN_VALUE, sum = 0;\n        for (int i = mid; i >= lo; i--) { sum += a[i]; leftBest = Math.max(leftBest, sum); }\n        sum = 0;\n        for (int i = mid + 1; i <= hi; i++) { sum += a[i]; rightBest = Math.max(rightBest, sum); }\n        return Math.max(leftBest + rightBest, Math.max(solve(a, lo, mid), solve(a, mid + 1, hi)));\n    }\n}",
+     "cpp": "class Solution {\n    int solve(vector<int>& a, int lo, int hi) {\n        if (lo == hi) return a[lo];\n        int mid = (lo + hi) / 2;\n        int leftBest = INT_MIN, rightBest = INT_MIN, sum = 0;\n        for (int i = mid; i >= lo; i--) { sum += a[i]; leftBest = max(leftBest, sum); }\n        sum = 0;\n        for (int i = mid + 1; i <= hi; i++) { sum += a[i]; rightBest = max(rightBest, sum); }\n        return max(leftBest + rightBest, max(solve(a, lo, mid), solve(a, mid + 1, hi)));\n    }\npublic:\n    int maxSubArray(vector<int>& nums) {\n        return solve(nums, 0, (int) nums.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        def solve(lo, hi):\n            if lo == hi:\n                return nums[lo]\n            mid = (lo + hi) // 2\n            left_best = right_best = -inf\n            s = 0\n            for i in range(mid, lo - 1, -1):\n                s += nums[i]\n                left_best = max(left_best, s)\n            s = 0\n            for i in range(mid + 1, hi + 1):\n                s += nums[i]\n                right_best = max(right_best, s)\n            return max(left_best + right_best, solve(lo, mid), solve(mid + 1, hi))\n        return solve(0, len(nums) - 1)",
+     "javascript": "var maxSubArray = function(nums) {\n    const solve = (lo, hi) => {\n        if (lo === hi) return nums[lo];\n        const mid = (lo + hi) >> 1;\n        let leftBest = -Infinity, rightBest = -Infinity, sum = 0;\n        for (let i = mid; i >= lo; i--) { sum += nums[i]; leftBest = Math.max(leftBest, sum); }\n        sum = 0;\n        for (let i = mid + 1; i <= hi; i++) { sum += nums[i]; rightBest = Math.max(rightBest, sum); }\n        return Math.max(leftBest + rightBest, solve(lo, mid), solve(mid + 1, hi));\n    };\n    return solve(0, nums.length - 1);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Kadane's algorithm",
+    "idea": "The best subarray ending at `i` either extends the best one ending at `i − 1` or starts fresh at `i` — whichever is larger. A negative running sum only hurts, so drop it.",
+    "steps": [
+     "Set `cur = best = nums[0]`.",
+     "For each next value `x`: `cur = max(x, cur + x)`; `best = max(best, cur)`.",
+     "Return `best`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with two variables. Starting from `nums[0]` (not 0) handles all-negative arrays.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        int cur = nums[0], best = nums[0];\n        for (int i = 1; i < nums.length; i++) {\n            cur = Math.max(nums[i], cur + nums[i]);\n            best = Math.max(best, cur);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums) {\n        int cur = nums[0], best = nums[0];\n        for (size_t i = 1; i < nums.size(); i++) {\n            cur = max(nums[i], cur + nums[i]);\n            best = max(best, cur);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        cur = best = nums[0]\n        for x in nums[1:]:\n            cur = max(x, cur + x)\n            best = max(best, cur)\n        return best",
+     "javascript": "var maxSubArray = function(nums) {\n    let cur = nums[0], best = nums[0];\n    for (let i = 1; i < nums.length; i++) {\n        cur = Math.max(nums[i], cur + nums[i]);\n        best = Math.max(best, cur);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "maximum-product-subarray": {
+  "pattern": "Kadane variant tracking both the largest and the smallest product ending here",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every start, extended with a running product",
+    "idea": "For each start, multiply in elements one by one and keep the best product seen.",
+    "steps": [
+     "For each `i`, set `prod = 1`.",
+     "For each `j >= i`, multiply by `nums[j]` and update the best.",
+     "Return the best."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n(n + 1)/2 subarrays with O(1) work each.",
+    "code": {
+     "java": "class Solution {\n    public int maxProduct(int[] nums) {\n        int best = Integer.MIN_VALUE;\n        for (int i = 0; i < nums.length; i++) {\n            int prod = 1;\n            for (int j = i; j < nums.length; j++) {\n                prod *= nums[j];\n                best = Math.max(best, prod);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProduct(vector<int>& nums) {\n        int best = INT_MIN, n = nums.size();\n        for (int i = 0; i < n; i++) {\n            int prod = 1;\n            for (int j = i; j < n; j++) {\n                prod *= nums[j];\n                best = max(best, prod);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxProduct(self, nums: List[int]) -> int:\n        best = -inf\n        for i in range(len(nums)):\n            prod = 1\n            for j in range(i, len(nums)):\n                prod *= nums[j]\n                best = max(best, prod)\n        return best",
+     "javascript": "var maxProduct = function(nums) {\n    let best = -Infinity;\n    for (let i = 0; i < nums.length; i++) {\n        let prod = 1;\n        for (let j = i; j < nums.length; j++) {\n            prod *= nums[j];\n            best = Math.max(best, prod);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Track the maximum and minimum product ending here",
+    "idea": "A negative number turns the smallest product into the largest one. So at each position keep both the largest and the smallest product of a subarray ending there; the new values come from `x`, `max·x` and `min·x`.",
+    "steps": [
+     "Set `hi = lo = best = nums[0]`.",
+     "For each next `x`: compute `a = hi·x`, `b = lo·x`; `hi = max(x, a, b)`, `lo = min(x, a, b)`.",
+     "Update `best` with `hi`; return it."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with three variables. Taking `x` alone restarts after a zero.",
+    "code": {
+     "java": "class Solution {\n    public int maxProduct(int[] nums) {\n        int hi = nums[0], lo = nums[0], best = nums[0];\n        for (int i = 1; i < nums.length; i++) {\n            int x = nums[i], a = hi * x, b = lo * x;\n            hi = Math.max(x, Math.max(a, b));\n            lo = Math.min(x, Math.min(a, b));\n            best = Math.max(best, hi);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProduct(vector<int>& nums) {\n        int hi = nums[0], lo = nums[0], best = nums[0];\n        for (size_t i = 1; i < nums.size(); i++) {\n            int x = nums[i], a = hi * x, b = lo * x;\n            hi = max({x, a, b});\n            lo = min({x, a, b});\n            best = max(best, hi);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxProduct(self, nums: List[int]) -> int:\n        hi = lo = best = nums[0]\n        for x in nums[1:]:\n            a, b = hi * x, lo * x\n            hi, lo = max(x, a, b), min(x, a, b)\n            best = max(best, hi)\n        return best",
+     "javascript": "var maxProduct = function(nums) {\n    let hi = nums[0], lo = nums[0], best = nums[0];\n    for (let i = 1; i < nums.length; i++) {\n        const x = nums[i], a = hi * x, b = lo * x;\n        hi = Math.max(x, a, b);\n        lo = Math.min(x, a, b);\n        best = Math.max(best, hi);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Prefix and suffix products",
+    "idea": "Within a stretch without zeros, the best product starts at the left end or ends at the right end (dropping a prefix or suffix up to an odd negative). So scan running products from both ends, restarting after zeros, and take the best value seen.",
+    "steps": [
+     "Keep `left = right = 1` and `best = −∞`.",
+     "For `i` from 0 to n − 1: multiply `left` by `nums[i]` and `right` by `nums[n − 1 − i]`; update `best` with both.",
+     "If either product becomes 0, reset it to 1 (a zero splits the array) — after recording 0."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with two products. A max-product subarray never contains a zero unless the answer is 0, and among zero-free stretches it is a prefix or a suffix.",
+    "code": {
+     "java": "class Solution {\n    public int maxProduct(int[] nums) {\n        int n = nums.length, best = Integer.MIN_VALUE, left = 1, right = 1;\n        for (int i = 0; i < n; i++) {\n            left *= nums[i];\n            right *= nums[n - 1 - i];\n            best = Math.max(best, Math.max(left, right));\n            if (left == 0) left = 1;\n            if (right == 0) right = 1;\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProduct(vector<int>& nums) {\n        int n = nums.size(), best = INT_MIN, left = 1, right = 1;\n        for (int i = 0; i < n; i++) {\n            left *= nums[i];\n            right *= nums[n - 1 - i];\n            best = max(best, max(left, right));\n            if (left == 0) left = 1;\n            if (right == 0) right = 1;\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxProduct(self, nums: List[int]) -> int:\n        n, best, left, right = len(nums), -inf, 1, 1\n        for i in range(n):\n            left *= nums[i]\n            right *= nums[n - 1 - i]\n            best = max(best, left, right)\n            left = left or 1\n            right = right or 1\n        return best",
+     "javascript": "var maxProduct = function(nums) {\n    const n = nums.length;\n    let best = -Infinity, left = 1, right = 1;\n    for (let i = 0; i < n; i++) {\n        left *= nums[i];\n        right *= nums[n - 1 - i];\n        best = Math.max(best, left, right);\n        if (left === 0) left = 1;\n        if (right === 0) right = 1;\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "decode-ways": {
+  "pattern": "1-D DP over string positions (take one digit or two digits)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the first one or two digits",
+    "idea": "From position `i`, decode one digit (if it is not `0`) or two digits (if they form 10–26), and count the ways for the rest.",
+    "steps": [
+     "`ways(i)`: if `i == n`, return 1 (decoded everything).",
+     "If `s[i] == \"0\"`, return 0 (no code starts with 0).",
+     "Return `ways(i + 1)` plus `ways(i + 2)` when `s[i..i + 1]` is between 10 and 26."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Up to two branches per position and no memory of results.",
+    "code": {
+     "java": "class Solution {\n    public int numDecodings(String s) {\n        return ways(s, 0);\n    }\n\n    private int ways(String s, int i) {\n        if (i == s.length()) return 1;\n        if (s.charAt(i) == '0') return 0;\n        int total = ways(s, i + 1);\n        if (i + 1 < s.length() && Integer.parseInt(s.substring(i, i + 2)) <= 26) total += ways(s, i + 2);\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    int ways(const string& s, size_t i) {\n        if (i == s.size()) return 1;\n        if (s[i] == '0') return 0;\n        int total = ways(s, i + 1);\n        if (i + 1 < s.size() && stoi(s.substr(i, 2)) <= 26) total += ways(s, i + 2);\n        return total;\n    }\npublic:\n    int numDecodings(string s) {\n        return ways(s, 0);\n    }\n};",
+     "python": "class Solution:\n    def numDecodings(self, s: str) -> int:\n        n = len(s)\n        def ways(i):\n            if i == n:\n                return 1\n            if s[i] == \"0\":\n                return 0\n            total = ways(i + 1)\n            if i + 1 < n and int(s[i:i + 2]) <= 26:\n                total += ways(i + 2)\n            return total\n        return ways(0)",
+     "javascript": "var numDecodings = function(s) {\n    const n = s.length;\n    const ways = (i) => {\n        if (i === n) return 1;\n        if (s[i] === '0') return 0;\n        let total = ways(i + 1);\n        if (i + 1 < n && Number(s.slice(i, i + 2)) <= 26) total += ways(i + 2);\n        return total;\n    };\n    return ways(0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Tabulation from the end",
+    "idea": "`dp[i]` = number of ways to decode `s[i..]`. Fill it from right to left with the same rule.",
+    "steps": [
+     "`dp[n] = 1`.",
+     "For `i` from n − 1 down to 0: if `s[i] == \"0\"`, `dp[i] = 0`; else `dp[i] = dp[i + 1]` plus `dp[i + 2]` if the two-digit number is ≤ 26.",
+     "Return `dp[0]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass over n positions with an n + 1 table.",
+    "code": {
+     "java": "class Solution {\n    public int numDecodings(String s) {\n        int n = s.length();\n        int[] dp = new int[n + 1];\n        dp[n] = 1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s.charAt(i) == '0') continue;\n            dp[i] = dp[i + 1];\n            if (i + 1 < n && (s.charAt(i) - '0') * 10 + (s.charAt(i + 1) - '0') <= 26) dp[i] += dp[i + 2];\n        }\n        return dp[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numDecodings(string s) {\n        int n = s.size();\n        vector<int> dp(n + 1, 0);\n        dp[n] = 1;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '0') continue;\n            dp[i] = dp[i + 1];\n            if (i + 1 < n && (s[i] - '0') * 10 + (s[i + 1] - '0') <= 26) dp[i] += dp[i + 2];\n        }\n        return dp[0];\n    }\n};",
+     "python": "class Solution:\n    def numDecodings(self, s: str) -> int:\n        n = len(s)\n        dp = [0] * (n + 1)\n        dp[n] = 1\n        for i in range(n - 1, -1, -1):\n            if s[i] == \"0\":\n                continue\n            dp[i] = dp[i + 1]\n            if i + 1 < n and int(s[i:i + 2]) <= 26:\n                dp[i] += dp[i + 2]\n        return dp[0]",
+     "javascript": "var numDecodings = function(s) {\n    const n = s.length, dp = new Array(n + 1).fill(0);\n    dp[n] = 1;\n    for (let i = n - 1; i >= 0; i--) {\n        if (s[i] === '0') continue;\n        dp[i] = dp[i + 1];\n        if (i + 1 < n && Number(s.slice(i, i + 2)) <= 26) dp[i] += dp[i + 2];\n    }\n    return dp[0];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two rolling values",
+    "idea": "Each `dp[i]` uses only `dp[i + 1]` and `dp[i + 2]`, so keep those two numbers.",
+    "steps": [
+     "Set `next1 = 1` (dp[i + 1]) and `next2 = 0` (dp[i + 2]), starting from the end.",
+     "For `i` from n − 1 down to 0: `cur = 0` if `s[i] == \"0\"`, else `next1` plus `next2` when the pair is ≤ 26.",
+     "Shift: `next2 = next1`, `next1 = cur`. Return `next1`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with two variables.",
+    "code": {
+     "java": "class Solution {\n    public int numDecodings(String s) {\n        int n = s.length(), next1 = 1, next2 = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            int cur = 0;\n            if (s.charAt(i) != '0') {\n                cur = next1;\n                if (i + 1 < n && (s.charAt(i) - '0') * 10 + (s.charAt(i + 1) - '0') <= 26) cur += next2;\n            }\n            next2 = next1;\n            next1 = cur;\n        }\n        return next1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numDecodings(string s) {\n        int n = s.size(), next1 = 1, next2 = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            int cur = 0;\n            if (s[i] != '0') {\n                cur = next1;\n                if (i + 1 < n && (s[i] - '0') * 10 + (s[i + 1] - '0') <= 26) cur += next2;\n            }\n            next2 = next1;\n            next1 = cur;\n        }\n        return next1;\n    }\n};",
+     "python": "class Solution:\n    def numDecodings(self, s: str) -> int:\n        n, next1, next2 = len(s), 1, 0\n        for i in range(n - 1, -1, -1):\n            cur = 0\n            if s[i] != \"0\":\n                cur = next1\n                if i + 1 < n and int(s[i:i + 2]) <= 26:\n                    cur += next2\n            next1, next2 = cur, next1\n        return next1",
+     "javascript": "var numDecodings = function(s) {\n    const n = s.length;\n    let next1 = 1, next2 = 0;\n    for (let i = n - 1; i >= 0; i--) {\n        let cur = 0;\n        if (s[i] !== '0') {\n            cur = next1;\n            if (i + 1 < n && Number(s.slice(i, i + 2)) <= 26) cur += next2;\n        }\n        next2 = next1;\n        next1 = cur;\n    }\n    return next1;\n};"
+    }
+   }
+  ]
+ },
+ "word-break": {
+  "pattern": "1-D DP over prefixes: dp[i] is true if some word ends at i after a breakable prefix",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion trying every first word",
+    "idea": "From position `i`, try every dictionary word that matches at `i`; if the rest can be broken, the whole string can.",
+    "steps": [
+     "`can(i)`: if `i == n`, return true.",
+     "For each word `w` with `s.startsWith(w, i)`, if `can(i + |w|)`, return true.",
+     "Return false."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Different word choices reach the same position many times, and each is re-explored (e.g. \"aaaa…b\" with words \"a\", \"aa\").",
+    "code": {
+     "java": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        return can(s, 0, wordDict);\n    }\n\n    private boolean can(String s, int i, List<String> dict) {\n        if (i == s.length()) return true;\n        for (String w : dict)\n            if (s.startsWith(w, i) && can(s, i + w.length(), dict)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool can(const string& s, size_t i, vector<string>& dict) {\n        if (i == s.size()) return true;\n        for (auto& w : dict)\n            if (s.compare(i, w.size(), w) == 0 && can(s, i + w.size(), dict)) return true;\n        return false;\n    }\npublic:\n    bool wordBreak(string s, vector<string>& wordDict) {\n        return can(s, 0, wordDict);\n    }\n};",
+     "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        def can(i):\n            if i == len(s):\n                return True\n            return any(s.startswith(w, i) and can(i + len(w)) for w in wordDict)\n        return can(0)",
+     "javascript": "var wordBreak = function(s, wordDict) {\n    const can = (i) => i === s.length || wordDict.some((w) => s.startsWith(w, i) && can(i + w.length));\n    return can(0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoised recursion",
+    "idea": "Whether `s[i..]` can be broken depends only on `i`, so remember the answer for each position.",
+    "steps": [
+     "`can(i)`: return a cached answer if there is one.",
+     "Try every word matching at `i` as before; cache and return the result."
+    ],
+    "time": "O(n·m·L)",
+    "space": "O(n)",
+    "why": "n positions, each trying m words with an O(L) match check (L = word length).",
+    "code": {
+     "java": "class Solution {\n    private Boolean[] memo;\n\n    public boolean wordBreak(String s, List<String> wordDict) {\n        memo = new Boolean[s.length() + 1];\n        return can(s, 0, wordDict);\n    }\n\n    private boolean can(String s, int i, List<String> dict) {\n        if (i == s.length()) return true;\n        if (memo[i] != null) return memo[i];\n        for (String w : dict)\n            if (s.startsWith(w, i) && can(s, i + w.length(), dict)) return memo[i] = true;\n        return memo[i] = false;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> memo; // -1 unknown, 0 false, 1 true\n    bool can(const string& s, size_t i, vector<string>& dict) {\n        if (i == s.size()) return true;\n        if (memo[i] != -1) return memo[i];\n        for (auto& w : dict)\n            if (s.compare(i, w.size(), w) == 0 && can(s, i + w.size(), dict)) return memo[i] = 1;\n        return memo[i] = 0;\n    }\npublic:\n    bool wordBreak(string s, vector<string>& wordDict) {\n        memo.assign(s.size() + 1, -1);\n        return can(s, 0, wordDict);\n    }\n};",
+     "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        @cache\n        def can(i):\n            if i == len(s):\n                return True\n            return any(s.startswith(w, i) and can(i + len(w)) for w in wordDict)\n        return can(0)",
+     "javascript": "var wordBreak = function(s, wordDict) {\n    const memo = new Map();\n    const can = (i) => {\n        if (i === s.length) return true;\n        if (!memo.has(i)) memo.set(i, wordDict.some((w) => s.startsWith(w, i) && can(i + w.length)));\n        return memo.get(i);\n    };\n    return can(0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up DP with a word set and the longest word length",
+    "idea": "`dp[i]` is true when `s[0..i)` can be broken. It is true if for some length `len` (up to the longest word), `dp[i − len]` is true and `s[i − len..i)` is a dictionary word.",
+    "steps": [
+     "Put the words in a set; let `maxLen` be the longest word.",
+     "`dp[0] = true`.",
+     "For each `i` from 1 to n, for `len` from 1 to `min(i, maxLen)`: if `dp[i − len]` and the substring is in the set, set `dp[i] = true` and stop.",
+     "Return `dp[n]`."
+    ],
+    "time": "O(n·L²)",
+    "space": "O(n + m·L)",
+    "why": "n positions × up to L lengths, each building and hashing a substring of length up to L (L ≤ 20). Independent of the number of words m, which only affects the set.",
+    "code": {
+     "java": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        Set<String> words = new HashSet<>(wordDict);\n        int maxLen = 0;\n        for (String w : wordDict) maxLen = Math.max(maxLen, w.length());\n        int n = s.length();\n        boolean[] dp = new boolean[n + 1];\n        dp[0] = true;\n        for (int i = 1; i <= n; i++)\n            for (int len = 1; len <= Math.min(i, maxLen) && !dp[i]; len++)\n                if (dp[i - len] && words.contains(s.substring(i - len, i))) dp[i] = true;\n        return dp[n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool wordBreak(string s, vector<string>& wordDict) {\n        unordered_set<string> words(wordDict.begin(), wordDict.end());\n        size_t maxLen = 0;\n        for (auto& w : wordDict) maxLen = max(maxLen, w.size());\n        int n = s.size();\n        vector<bool> dp(n + 1, false);\n        dp[0] = true;\n        for (int i = 1; i <= n; i++)\n            for (int len = 1; len <= min(i, (int) maxLen) && !dp[i]; len++)\n                if (dp[i - len] && words.count(s.substr(i - len, len))) dp[i] = true;\n        return dp[n];\n    }\n};",
+     "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        words = set(wordDict)\n        max_len = max(map(len, wordDict))\n        n = len(s)\n        dp = [True] + [False] * n\n        for i in range(1, n + 1):\n            for length in range(1, min(i, max_len) + 1):\n                if dp[i - length] and s[i - length:i] in words:\n                    dp[i] = True\n                    break\n        return dp[n]",
+     "javascript": "var wordBreak = function(s, wordDict) {\n    const words = new Set(wordDict), maxLen = Math.max(...wordDict.map((w) => w.length));\n    const n = s.length, dp = new Array(n + 1).fill(false);\n    dp[0] = true;\n    for (let i = 1; i <= n; i++)\n        for (let len = 1; len <= Math.min(i, maxLen) && !dp[i]; len++)\n            if (dp[i - len] && words.has(s.slice(i - len, i))) dp[i] = true;\n    return dp[n];\n};"
+    }
+   }
+  ]
+ },
+ "longest-increasing-subsequence": {
+  "pattern": "O(n²) DP over \"LIS ending at i\", or patience sorting with binary search (O(n log n))",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion: take or skip each element",
+    "idea": "Walk the array keeping the last taken value; each element can be taken (if larger) or skipped. Return the longest result.",
+    "steps": [
+     "`best(i, prev)`: the longest increasing subsequence from index `i` with all values greater than `nums[prev]` (`prev = −1` means no limit).",
+     "Skip: `best(i + 1, prev)`. Take (if `prev == −1` or `nums[i] > nums[prev]`): `1 + best(i + 1, i)`.",
+     "Return the larger; answer `best(0, −1)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Every subset of positions can be explored.",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLIS(int[] nums) {\n        return best(nums, 0, -1);\n    }\n\n    private int best(int[] nums, int i, int prev) {\n        if (i == nums.length) return 0;\n        int result = best(nums, i + 1, prev);\n        if (prev == -1 || nums[i] > nums[prev]) result = Math.max(result, 1 + best(nums, i + 1, i));\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& nums, int i, int prev) {\n        if (i == (int) nums.size()) return 0;\n        int result = best(nums, i + 1, prev);\n        if (prev == -1 || nums[i] > nums[prev]) result = max(result, 1 + best(nums, i + 1, i));\n        return result;\n    }\npublic:\n    int lengthOfLIS(vector<int>& nums) {\n        return best(nums, 0, -1);\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        def best(i, prev):\n            if i == len(nums):\n                return 0\n            result = best(i + 1, prev)\n            if prev == -1 or nums[i] > nums[prev]:\n                result = max(result, 1 + best(i + 1, i))\n            return result\n        return best(0, -1)",
+     "javascript": "var lengthOfLIS = function(nums) {\n    const best = (i, prev) => {\n        if (i === nums.length) return 0;\n        let result = best(i + 1, prev);\n        if (prev === -1 || nums[i] > nums[prev]) result = Math.max(result, 1 + best(i + 1, i));\n        return result;\n    };\n    return best(0, -1);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "DP: longest subsequence ending at each index",
+    "idea": "`dp[i]` = length of the longest increasing subsequence that ends with `nums[i]`. It is 1 plus the best `dp[j]` over earlier `j` with a smaller value.",
+    "steps": [
+     "Set every `dp[i] = 1`.",
+     "For each `i`, for each `j < i` with `nums[j] < nums[i]`: `dp[i] = max(dp[i], dp[j] + 1)`.",
+     "Return the maximum of `dp`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Every pair `j < i` is checked once.",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLIS(int[] nums) {\n        int n = nums.length, best = 0;\n        int[] dp = new int[n];\n        for (int i = 0; i < n; i++) {\n            dp[i] = 1;\n            for (int j = 0; j < i; j++) if (nums[j] < nums[i]) dp[i] = Math.max(dp[i], dp[j] + 1);\n            best = Math.max(best, dp[i]);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lengthOfLIS(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> dp(n, 1);\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < i; j++) if (nums[j] < nums[i]) dp[i] = max(dp[i], dp[j] + 1);\n        return *max_element(dp.begin(), dp.end());\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        n = len(nums)\n        dp = [1] * n\n        for i in range(n):\n            for j in range(i):\n                if nums[j] < nums[i]:\n                    dp[i] = max(dp[i], dp[j] + 1)\n        return max(dp)",
+     "javascript": "var lengthOfLIS = function(nums) {\n    const n = nums.length, dp = new Array(n).fill(1);\n    for (let i = 0; i < n; i++)\n        for (let j = 0; j < i; j++) if (nums[j] < nums[i]) dp[i] = Math.max(dp[i], dp[j] + 1);\n    return Math.max(...dp);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Patience sorting with binary search",
+    "idea": "Keep `tails[k]` = the smallest possible last value of an increasing subsequence of length `k + 1`. `tails` is sorted, so for each value binary search the first tail `>= x` and replace it (or append if `x` is larger than all). The length of `tails` is the answer.",
+    "steps": [
+     "Start with an empty `tails`.",
+     "For each `x`: find the first index `p` with `tails[p] >= x` (lower bound).",
+     "If `p == tails.length`, append `x`; otherwise set `tails[p] = x`.",
+     "Return `tails.length`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "One binary search per element. Using \"≥\" (lower bound) makes the subsequence strictly increasing. Note `tails` is not itself an LIS — only its length is meaningful.",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLIS(int[] nums) {\n        int[] tails = new int[nums.length];\n        int size = 0;\n        for (int x : nums) {\n            int lo = 0, hi = size;\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (tails[mid] < x) lo = mid + 1; else hi = mid;\n            }\n            tails[lo] = x;\n            if (lo == size) size++;\n        }\n        return size;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lengthOfLIS(vector<int>& nums) {\n        vector<int> tails;\n        for (int x : nums) {\n            auto it = lower_bound(tails.begin(), tails.end(), x);\n            if (it == tails.end()) tails.push_back(x);\n            else *it = x;\n        }\n        return tails.size();\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        tails = []\n        for x in nums:\n            p = bisect_left(tails, x)\n            if p == len(tails):\n                tails.append(x)\n            else:\n                tails[p] = x\n        return len(tails)",
+     "javascript": "var lengthOfLIS = function(nums) {\n    const tails = [];\n    for (const x of nums) {\n        let lo = 0, hi = tails.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (tails[mid] < x) lo = mid + 1; else hi = mid;\n        }\n        tails[lo] = x;\n    }\n    return tails.length;\n};"
+    }
+   }
+  ]
+ },
+ "number-of-longest-increasing-subsequence": {
+  "pattern": "LIS DP carrying both the length and the count of subsequences ending at each index",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Enumerate every increasing subsequence",
+    "idea": "Recursively build every increasing subsequence (each element taken or skipped), tracking the longest length found and how many subsequences have it.",
+    "steps": [
+     "`explore(i, prev, length)`: at the end of the array, record `length` (raise the best and reset the count, or add to the count if equal).",
+     "Always try skipping `nums[i]`; take it if it is larger than `nums[prev]`.",
+     "Return the count for the best length."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Every subset of positions may be visited.",
+    "code": {
+     "java": "class Solution {\n    private int bestLen = 0, count = 0;\n\n    public int findNumberOfLIS(int[] nums) {\n        explore(nums, 0, -1, 0);\n        return count;\n    }\n\n    private void explore(int[] nums, int i, int prev, int len) {\n        if (i == nums.length) {\n            if (len > bestLen) { bestLen = len; count = 1; }\n            else if (len == bestLen) count++;\n            return;\n        }\n        explore(nums, i + 1, prev, len);\n        if (prev == -1 || nums[i] > nums[prev]) explore(nums, i + 1, i, len + 1);\n    }\n}",
+     "cpp": "class Solution {\n    int bestLen = 0, count = 0;\n    void explore(vector<int>& nums, int i, int prev, int len) {\n        if (i == (int) nums.size()) {\n            if (len > bestLen) { bestLen = len; count = 1; }\n            else if (len == bestLen) count++;\n            return;\n        }\n        explore(nums, i + 1, prev, len);\n        if (prev == -1 || nums[i] > nums[prev]) explore(nums, i + 1, i, len + 1);\n    }\npublic:\n    int findNumberOfLIS(vector<int>& nums) {\n        explore(nums, 0, -1, 0);\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def findNumberOfLIS(self, nums: List[int]) -> int:\n        best = [0, 0]  # [length, count]\n        def explore(i, prev, length):\n            if i == len(nums):\n                if length > best[0]:\n                    best[0], best[1] = length, 1\n                elif length == best[0]:\n                    best[1] += 1\n                return\n            explore(i + 1, prev, length)\n            if prev == -1 or nums[i] > nums[prev]:\n                explore(i + 1, i, length + 1)\n        explore(0, -1, 0)\n        return best[1]",
+     "javascript": "var findNumberOfLIS = function(nums) {\n    let bestLen = 0, count = 0;\n    const explore = (i, prev, len) => {\n        if (i === nums.length) {\n            if (len > bestLen) { bestLen = len; count = 1; }\n            else if (len === bestLen) count++;\n            return;\n        }\n        explore(i + 1, prev, len);\n        if (prev === -1 || nums[i] > nums[prev]) explore(i + 1, i, len + 1);\n    };\n    explore(0, -1, 0);\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DP with lengths and counts",
+    "idea": "For each `i`, keep `len[i]` (longest increasing subsequence ending at `i`) and `cnt[i]` (how many have that length). An earlier `j` with a smaller value either gives a longer length (take over its count) or the same length (add its count).",
+    "steps": [
+     "Set `len[i] = cnt[i] = 1`.",
+     "For each `j < i` with `nums[j] < nums[i]`: if `len[j] + 1 > len[i]`, set `len[i] = len[j] + 1`, `cnt[i] = cnt[j]`; else if equal, `cnt[i] += cnt[j]`.",
+     "Let `L` be the maximum length; return the sum of `cnt[i]` over all `i` with `len[i] == L`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "All pairs `j < i` once; two arrays of size n. (An O(n log n) version exists with a segment tree or Fenwick tree keyed by value.)",
+    "code": {
+     "java": "class Solution {\n    public int findNumberOfLIS(int[] nums) {\n        int n = nums.length, longest = 0;\n        int[] len = new int[n], cnt = new int[n];\n        for (int i = 0; i < n; i++) {\n            len[i] = cnt[i] = 1;\n            for (int j = 0; j < i; j++) {\n                if (nums[j] >= nums[i]) continue;\n                if (len[j] + 1 > len[i]) { len[i] = len[j] + 1; cnt[i] = cnt[j]; }\n                else if (len[j] + 1 == len[i]) cnt[i] += cnt[j];\n            }\n            longest = Math.max(longest, len[i]);\n        }\n        int total = 0;\n        for (int i = 0; i < n; i++) if (len[i] == longest) total += cnt[i];\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findNumberOfLIS(vector<int>& nums) {\n        int n = nums.size(), longest = 0;\n        vector<int> len(n, 1), cnt(n, 1);\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < i; j++) {\n                if (nums[j] >= nums[i]) continue;\n                if (len[j] + 1 > len[i]) { len[i] = len[j] + 1; cnt[i] = cnt[j]; }\n                else if (len[j] + 1 == len[i]) cnt[i] += cnt[j];\n            }\n            longest = max(longest, len[i]);\n        }\n        int total = 0;\n        for (int i = 0; i < n; i++) if (len[i] == longest) total += cnt[i];\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def findNumberOfLIS(self, nums: List[int]) -> int:\n        n = len(nums)\n        length, cnt = [1] * n, [1] * n\n        for i in range(n):\n            for j in range(i):\n                if nums[j] < nums[i]:\n                    if length[j] + 1 > length[i]:\n                        length[i], cnt[i] = length[j] + 1, cnt[j]\n                    elif length[j] + 1 == length[i]:\n                        cnt[i] += cnt[j]\n        longest = max(length)\n        return sum(c for l, c in zip(length, cnt) if l == longest)",
+     "javascript": "var findNumberOfLIS = function(nums) {\n    const n = nums.length, len = new Array(n).fill(1), cnt = new Array(n).fill(1);\n    for (let i = 0; i < n; i++)\n        for (let j = 0; j < i; j++) {\n            if (nums[j] >= nums[i]) continue;\n            if (len[j] + 1 > len[i]) { len[i] = len[j] + 1; cnt[i] = cnt[j]; }\n            else if (len[j] + 1 === len[i]) cnt[i] += cnt[j];\n        }\n    const longest = Math.max(...len);\n    let total = 0;\n    for (let i = 0; i < n; i++) if (len[i] === longest) total += cnt[i];\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "best-time-to-buy-and-sell-stock-with-cooldown": {
+  "pattern": "State-machine DP: holding, just sold (cooldown), resting",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over each day's choice",
+    "idea": "On each day you either do nothing, or buy (if not holding), or sell (if holding — and then you must skip the next day). Try every choice.",
+    "steps": [
+     "`best(day, holding)`: return 0 after the last day.",
+     "Rest: `best(day + 1, holding)`.",
+     "If holding: also `prices[day] + best(day + 2, false)` (sell, skip a day). Else: also `−prices[day] + best(day + 1, true)` (buy).",
+     "Return the maximum; answer `best(0, false)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Two branches per day without memory.",
+    "code": {
+     "java": "class Solution {\n    public int maxProfit(int[] prices) {\n        return best(prices, 0, false);\n    }\n\n    private int best(int[] p, int day, boolean holding) {\n        if (day >= p.length) return 0;\n        int rest = best(p, day + 1, holding);\n        int act = holding ? p[day] + best(p, day + 2, false) : -p[day] + best(p, day + 1, true);\n        return Math.max(rest, act);\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& p, int day, bool holding) {\n        if (day >= (int) p.size()) return 0;\n        int rest = best(p, day + 1, holding);\n        int act = holding ? p[day] + best(p, day + 2, false) : -p[day] + best(p, day + 1, true);\n        return max(rest, act);\n    }\npublic:\n    int maxProfit(vector<int>& prices) {\n        return best(prices, 0, false);\n    }\n};",
+     "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        def best(day, holding):\n            if day >= len(prices):\n                return 0\n            rest = best(day + 1, holding)\n            if holding:\n                act = prices[day] + best(day + 2, False)\n            else:\n                act = -prices[day] + best(day + 1, True)\n            return max(rest, act)\n        return best(0, False)",
+     "javascript": "var maxProfit = function(prices) {\n    const best = (day, holding) => {\n        if (day >= prices.length) return 0;\n        const rest = best(day + 1, holding);\n        const act = holding ? prices[day] + best(day + 2, false) : -prices[day] + best(day + 1, true);\n        return Math.max(rest, act);\n    };\n    return best(0, false);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoised recursion over (day, holding)",
+    "idea": "The future depends only on the day and whether you hold a share: 2n states. Cache them.",
+    "steps": [
+     "Same recurrence as the brute force.",
+     "Store `memo[day][holding]` and reuse it."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "2n states, O(1) each; the table and recursion are O(n).",
+    "code": {
+     "java": "class Solution {\n    private Integer[][] memo;\n\n    public int maxProfit(int[] prices) {\n        memo = new Integer[prices.length][2];\n        return best(prices, 0, 0);\n    }\n\n    private int best(int[] p, int day, int holding) {\n        if (day >= p.length) return 0;\n        if (memo[day][holding] != null) return memo[day][holding];\n        int rest = best(p, day + 1, holding);\n        int act = holding == 1 ? p[day] + best(p, day + 2, 0) : -p[day] + best(p, day + 1, 1);\n        return memo[day][holding] = Math.max(rest, act);\n    }\n}",
+     "cpp": "class Solution {\n    vector<array<int, 2>> memo;\n    int best(vector<int>& p, int day, int holding) {\n        if (day >= (int) p.size()) return 0;\n        if (memo[day][holding] != INT_MIN) return memo[day][holding];\n        int rest = best(p, day + 1, holding);\n        int act = holding ? p[day] + best(p, day + 2, 0) : -p[day] + best(p, day + 1, 1);\n        return memo[day][holding] = max(rest, act);\n    }\npublic:\n    int maxProfit(vector<int>& prices) {\n        memo.assign(prices.size(), {INT_MIN, INT_MIN});\n        return best(prices, 0, 0);\n    }\n};",
+     "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        @cache\n        def best(day, holding):\n            if day >= len(prices):\n                return 0\n            rest = best(day + 1, holding)\n            act = prices[day] + best(day + 2, False) if holding else -prices[day] + best(day + 1, True)\n            return max(rest, act)\n        return best(0, False)",
+     "javascript": "var maxProfit = function(prices) {\n    const memo = new Map();\n    const best = (day, holding) => {\n        if (day >= prices.length) return 0;\n        const key = day * 2 + holding;\n        if (memo.has(key)) return memo.get(key);\n        const rest = best(day + 1, holding);\n        const act = holding ? prices[day] + best(day + 2, 0) : -prices[day] + best(day + 1, 1);\n        memo.set(key, Math.max(rest, act));\n        return memo.get(key);\n    };\n    return best(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Three rolling states",
+    "idea": "At the end of each day you are in one of three states: holding a share, just sold today (cooldown tomorrow), or resting with no share. Each state's best profit depends only on yesterday's three values.",
+    "steps": [
+     "Start: `hold = −∞`, `sold = 0`, `rest = 0`.",
+     "For each price `p`: `newHold = max(hold, rest − p)` (keep holding, or buy after resting); `newSold = hold + p`; `newRest = max(rest, sold)`.",
+     "Update the three values; return `max(sold, rest)`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with three variables. Buying only from `rest` (not from `sold`) is what enforces the cooldown.",
+    "code": {
+     "java": "class Solution {\n    public int maxProfit(int[] prices) {\n        int hold = Integer.MIN_VALUE / 2, sold = 0, rest = 0;\n        for (int p : prices) {\n            int newHold = Math.max(hold, rest - p), newSold = hold + p, newRest = Math.max(rest, sold);\n            hold = newHold;\n            sold = newSold;\n            rest = newRest;\n        }\n        return Math.max(sold, rest);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int hold = INT_MIN / 2, sold = 0, rest = 0;\n        for (int p : prices) {\n            int newHold = max(hold, rest - p), newSold = hold + p, newRest = max(rest, sold);\n            hold = newHold;\n            sold = newSold;\n            rest = newRest;\n        }\n        return max(sold, rest);\n    }\n};",
+     "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        hold, sold, rest = -inf, 0, 0\n        for p in prices:\n            hold, sold, rest = max(hold, rest - p), hold + p, max(rest, sold)\n        return max(sold, rest)",
+     "javascript": "var maxProfit = function(prices) {\n    let hold = -Infinity, sold = 0, rest = 0;\n    for (const p of prices) [hold, sold, rest] = [Math.max(hold, rest - p), hold + p, Math.max(rest, sold)];\n    return Math.max(sold, rest);\n};"
+    }
+   }
+  ]
+ },
+ "russian-doll-envelopes": {
+  "pattern": "Sort by width ascending and height descending, then LIS on heights",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Sort, then O(n²) LIS",
+    "idea": "Sort envelopes by width; then nesting is an increasing chain in both width and height. `dp[i]` = longest chain ending at envelope `i`, built from every earlier envelope that is strictly smaller in both dimensions.",
+    "steps": [
+     "Sort by width ascending (ties in any order).",
+     "For each `i`, `dp[i] = 1 + max(dp[j])` over `j < i` with `w[j] < w[i]` and `h[j] < h[i]`.",
+     "Return the largest `dp[i]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "All pairs are compared: too slow for n = 10⁵, but simple and correct.",
+    "code": {
+     "java": "class Solution {\n    public int maxEnvelopes(int[][] envelopes) {\n        Arrays.sort(envelopes, (a, b) -> Integer.compare(a[0], b[0]));\n        int n = envelopes.length, best = 0;\n        int[] dp = new int[n];\n        for (int i = 0; i < n; i++) {\n            dp[i] = 1;\n            for (int j = 0; j < i; j++)\n                if (envelopes[j][0] < envelopes[i][0] && envelopes[j][1] < envelopes[i][1]) dp[i] = Math.max(dp[i], dp[j] + 1);\n            best = Math.max(best, dp[i]);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxEnvelopes(vector<vector<int>>& envelopes) {\n        sort(envelopes.begin(), envelopes.end());\n        int n = envelopes.size(), best = 0;\n        vector<int> dp(n, 1);\n        for (int i = 0; i < n; i++) {\n            for (int j = 0; j < i; j++)\n                if (envelopes[j][0] < envelopes[i][0] && envelopes[j][1] < envelopes[i][1]) dp[i] = max(dp[i], dp[j] + 1);\n            best = max(best, dp[i]);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxEnvelopes(self, envelopes: List[List[int]]) -> int:\n        envelopes.sort()\n        n = len(envelopes)\n        dp = [1] * n\n        for i in range(n):\n            for j in range(i):\n                if envelopes[j][0] < envelopes[i][0] and envelopes[j][1] < envelopes[i][1]:\n                    dp[i] = max(dp[i], dp[j] + 1)\n        return max(dp)",
+     "javascript": "var maxEnvelopes = function(envelopes) {\n    envelopes.sort((a, b) => a[0] - b[0]);\n    const n = envelopes.length, dp = new Array(n).fill(1);\n    for (let i = 0; i < n; i++)\n        for (let j = 0; j < i; j++)\n            if (envelopes[j][0] < envelopes[i][0] && envelopes[j][1] < envelopes[i][1]) dp[i] = Math.max(dp[i], dp[j] + 1);\n    return Math.max(...dp);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort (width ↑, height ↓) and patience-sort the heights",
+    "idea": "After sorting by width ascending, the problem is a strictly increasing subsequence of heights — except that envelopes with the same width must not chain. Sorting equal widths by height descending makes any increasing run of heights pick at most one envelope per width. Then run the O(n log n) LIS on the heights.",
+    "steps": [
+     "Sort by width ascending; for equal widths, by height descending.",
+     "Run patience sorting on the heights: for each height, replace the first tail `>=` it (lower bound) or append.",
+     "Return the number of tails."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "The sort and n binary searches are each O(n log n).",
+    "code": {
+     "java": "class Solution {\n    public int maxEnvelopes(int[][] envelopes) {\n        Arrays.sort(envelopes, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(b[1], a[1]));\n        int[] tails = new int[envelopes.length];\n        int size = 0;\n        for (int[] e : envelopes) {\n            int lo = 0, hi = size;\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (tails[mid] < e[1]) lo = mid + 1; else hi = mid;\n            }\n            tails[lo] = e[1];\n            if (lo == size) size++;\n        }\n        return size;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxEnvelopes(vector<vector<int>>& envelopes) {\n        sort(envelopes.begin(), envelopes.end(), [](auto& a, auto& b) { return a[0] != b[0] ? a[0] < b[0] : a[1] > b[1]; });\n        vector<int> tails;\n        for (auto& e : envelopes) {\n            auto it = lower_bound(tails.begin(), tails.end(), e[1]);\n            if (it == tails.end()) tails.push_back(e[1]);\n            else *it = e[1];\n        }\n        return tails.size();\n    }\n};",
+     "python": "class Solution:\n    def maxEnvelopes(self, envelopes: List[List[int]]) -> int:\n        envelopes.sort(key=lambda e: (e[0], -e[1]))\n        tails = []\n        for _, h in envelopes:\n            p = bisect_left(tails, h)\n            if p == len(tails):\n                tails.append(h)\n            else:\n                tails[p] = h\n        return len(tails)",
+     "javascript": "var maxEnvelopes = function(envelopes) {\n    envelopes.sort((a, b) => (a[0] !== b[0] ? a[0] - b[0] : b[1] - a[1]));\n    const tails = [];\n    for (const [, h] of envelopes) {\n        let lo = 0, hi = tails.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (tails[mid] < h) lo = mid + 1; else hi = mid;\n        }\n        tails[lo] = h;\n    }\n    return tails.length;\n};"
+    }
+   }
+  ]
+ }
+}
