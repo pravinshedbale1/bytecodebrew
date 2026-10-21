@@ -1,0 +1,348 @@
+{
+ "find-if-path-exists-in-graph": {
+  "pattern": "Connectivity: graph search or Union–Find",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS from the source",
+    "idea": "Build adjacency lists and run a BFS from `source`; the answer is whether `destination` gets visited.",
+    "steps": [
+     "Build the adjacency lists for the undirected edges.",
+     "BFS from `source`, marking visited nodes; stop early if `destination` is reached.",
+     "Return whether `destination` was visited."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each node and edge is processed at most once.",
+    "code": {
+     "java": "class Solution {\n    public boolean validPath(int n, int[][] edges, int source, int destination) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        boolean[] seen = new boolean[n];\n        Deque<Integer> queue = new ArrayDeque<>();\n        queue.add(source);\n        seen[source] = true;\n        while (!queue.isEmpty() && !seen[destination]) {\n            for (int v : adj.get(queue.poll())) if (!seen[v]) { seen[v] = true; queue.add(v); }\n        }\n        return seen[destination];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool validPath(int n, vector<vector<int>>& edges, int source, int destination) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<bool> seen(n, false);\n        queue<int> q;\n        q.push(source);\n        seen[source] = true;\n        while (!q.empty() && !seen[destination]) {\n            int u = q.front();\n            q.pop();\n            for (int v : adj[u]) if (!seen[v]) { seen[v] = true; q.push(v); }\n        }\n        return seen[destination];\n    }\n};",
+     "python": "class Solution:\n    def validPath(self, n: int, edges: List[List[int]], source: int, destination: int) -> bool:\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        seen, queue = {source}, deque([source])\n        while queue and destination not in seen:\n            for v in adj[queue.popleft()]:\n                if v not in seen:\n                    seen.add(v)\n                    queue.append(v)\n        return destination in seen",
+     "javascript": "var validPath = function(n, edges, source, destination) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const seen = new Array(n).fill(false), queue = [source];\n    seen[source] = true;\n    for (let h = 0; h < queue.length && !seen[destination]; h++)\n        for (const v of adj[queue[h]]) if (!seen[v]) { seen[v] = true; queue.push(v); }\n    return seen[destination];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find",
+    "idea": "Union the two ends of every edge; afterwards, two nodes are connected exactly when they have the same root.",
+    "steps": [
+     "Initialise `parent[i] = i`.",
+     "For each edge, union its endpoints (with path compression and union by size).",
+     "Return `find(source) == find(destination)`."
+    ],
+    "time": "O((V + E)·α(V))",
+    "space": "O(V)",
+    "why": "E unions and two finds, each nearly O(1). No adjacency lists are built, so it is light on memory.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent, size;\n\n    public boolean validPath(int n, int[][] edges, int source, int destination) {\n        parent = new int[n];\n        size = new int[n];\n        for (int i = 0; i < n; i++) { parent[i] = i; size[i] = 1; }\n        for (int[] e : edges) union(e[0], e[1]);\n        return find(source) == find(destination);\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n\n    private void union(int a, int b) {\n        a = find(a); b = find(b);\n        if (a == b) return;\n        if (size[a] < size[b]) { int t = a; a = b; b = t; }\n        parent[b] = a;\n        size[a] += size[b];\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent, sz;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n    void unite(int a, int b) {\n        a = find(a); b = find(b);\n        if (a == b) return;\n        if (sz[a] < sz[b]) swap(a, b);\n        parent[b] = a;\n        sz[a] += sz[b];\n    }\npublic:\n    bool validPath(int n, vector<vector<int>>& edges, int source, int destination) {\n        parent.resize(n);\n        sz.assign(n, 1);\n        iota(parent.begin(), parent.end(), 0);\n        for (auto& e : edges) unite(e[0], e[1]);\n        return find(source) == find(destination);\n    }\n};",
+     "python": "class Solution:\n    def validPath(self, n: int, edges: List[List[int]], source: int, destination: int) -> bool:\n        parent, size = list(range(n)), [1] * n\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for a, b in edges:\n            a, b = find(a), find(b)\n            if a != b:\n                if size[a] < size[b]:\n                    a, b = b, a\n                parent[b] = a\n                size[a] += size[b]\n        return find(source) == find(destination)",
+     "javascript": "var validPath = function(n, edges, source, destination) {\n    const parent = Array.from({ length: n }, (_, i) => i), size = new Array(n).fill(1);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    for (let [a, b] of edges) {\n        a = find(a); b = find(b);\n        if (a === b) continue;\n        if (size[a] < size[b]) [a, b] = [b, a];\n        parent[b] = a;\n        size[a] += size[b];\n    }\n    return find(source) === find(destination);\n};"
+    }
+   }
+  ]
+ },
+ "redundant-connection": {
+  "pattern": "Union–Find: the first edge whose ends are already connected closes the cycle",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Before adding each edge, search for an existing path",
+    "idea": "Add edges one at a time. Before adding `[u, v]`, DFS in the graph built so far; if `u` already reaches `v`, this edge closes the cycle.",
+    "steps": [
+     "Start with an empty graph.",
+     "For each edge `[u, v]`: if `u` can already reach `v` (DFS), return this edge.",
+     "Otherwise add the edge to the graph."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n edges, each followed by an O(n) search. With exactly one extra edge, the first edge that closes a cycle is the last cycle edge in the input, as required.",
+    "code": {
+     "java": "class Solution {\n    public int[] findRedundantConnection(int[][] edges) {\n        int n = edges.length;\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) {\n            if (reaches(adj, e[0], e[1], new boolean[n + 1])) return e;\n            adj.get(e[0]).add(e[1]);\n            adj.get(e[1]).add(e[0]);\n        }\n        return new int[0];\n    }\n\n    private boolean reaches(List<List<Integer>> adj, int u, int target, boolean[] seen) {\n        if (u == target) return true;\n        seen[u] = true;\n        for (int v : adj.get(u)) if (!seen[v] && reaches(adj, v, target, seen)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool reaches(vector<vector<int>>& adj, int u, int target, vector<bool>& seen) {\n        if (u == target) return true;\n        seen[u] = true;\n        for (int v : adj[u]) if (!seen[v] && reaches(adj, v, target, seen)) return true;\n        return false;\n    }\npublic:\n    vector<int> findRedundantConnection(vector<vector<int>>& edges) {\n        int n = edges.size();\n        vector<vector<int>> adj(n + 1);\n        for (auto& e : edges) {\n            vector<bool> seen(n + 1, false);\n            if (reaches(adj, e[0], e[1], seen)) return e;\n            adj[e[0]].push_back(e[1]);\n            adj[e[1]].push_back(e[0]);\n        }\n        return {};\n    }\n};",
+     "python": "class Solution:\n    def findRedundantConnection(self, edges: List[List[int]]) -> List[int]:\n        adj = defaultdict(list)\n        def reaches(u, target, seen):\n            if u == target:\n                return True\n            seen.add(u)\n            return any(v not in seen and reaches(v, target, seen) for v in adj[u])\n        for u, v in edges:\n            if reaches(u, v, set()):\n                return [u, v]\n            adj[u].append(v)\n            adj[v].append(u)\n        return []",
+     "javascript": "var findRedundantConnection = function(edges) {\n    const adj = Array.from({ length: edges.length + 1 }, () => []);\n    const reaches = (u, target, seen) => {\n        if (u === target) return true;\n        seen.add(u);\n        return adj[u].some((v) => !seen.has(v) && reaches(v, target, seen));\n    };\n    for (const [u, v] of edges) {\n        if (reaches(u, v, new Set())) return [u, v];\n        adj[u].push(v);\n        adj[v].push(u);\n    }\n    return [];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find",
+    "idea": "Process edges in order, unioning their endpoints. The first edge whose endpoints already share a root would create a cycle — that is the redundant edge.",
+    "steps": [
+     "Initialise `parent[i] = i` for nodes 1..n.",
+     "For each edge `[u, v]`: if `find(u) == find(v)`, return the edge.",
+     "Otherwise union them."
+    ],
+    "time": "O(n·α(n))",
+    "space": "O(n)",
+    "why": "n near-constant union/find operations. As above, the first cycle-closing edge is the last cycle edge in the input order.",
+    "code": {
+     "java": "class Solution {\n    public int[] findRedundantConnection(int[][] edges) {\n        int[] parent = new int[edges.length + 1];\n        for (int i = 0; i < parent.length; i++) parent[i] = i;\n        for (int[] e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a == b) return e;\n            parent[a] = b;\n        }\n        return new int[0];\n    }\n\n    private int find(int[] parent, int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& parent, int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    vector<int> findRedundantConnection(vector<vector<int>>& edges) {\n        vector<int> parent(edges.size() + 1);\n        iota(parent.begin(), parent.end(), 0);\n        for (auto& e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a == b) return e;\n            parent[a] = b;\n        }\n        return {};\n    }\n};",
+     "python": "class Solution:\n    def findRedundantConnection(self, edges: List[List[int]]) -> List[int]:\n        parent = list(range(len(edges) + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for u, v in edges:\n            a, b = find(u), find(v)\n            if a == b:\n                return [u, v]\n            parent[a] = b\n        return []",
+     "javascript": "var findRedundantConnection = function(edges) {\n    const parent = Array.from({ length: edges.length + 1 }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    for (const [u, v] of edges) {\n        const a = find(u), b = find(v);\n        if (a === b) return [u, v];\n        parent[a] = b;\n    }\n    return [];\n};"
+    }
+   }
+  ]
+ },
+ "satisfiability-of-equality-equations": {
+  "pattern": "Union–Find: apply all equalities first, then check the inequalities",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Graph of equalities and connected components",
+    "idea": "Variables joined by `==` must share a value: they form connected components. An inequality `a != b` is impossible exactly when `a` and `b` are in the same component.",
+    "steps": [
+     "Build an undirected graph on 26 letters with an edge for each `==`.",
+     "Label each letter with its component using DFS.",
+     "For each `!=` equation, return false if both letters have the same label. Otherwise return true."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "n equations, and the graph has only 26 nodes, so the DFS is constant work. The edges stored are at most n, but the 26-node labelling is O(1).",
+    "code": {
+     "java": "class Solution {\n    public boolean equationsPossible(String[] equations) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < 26; i++) adj.add(new ArrayList<>());\n        for (String e : equations)\n            if (e.charAt(1) == '=') {\n                int a = e.charAt(0) - 'a', b = e.charAt(3) - 'a';\n                adj.get(a).add(b);\n                adj.get(b).add(a);\n            }\n        int[] label = new int[26];\n        Arrays.fill(label, -1);\n        for (int i = 0; i < 26; i++) if (label[i] == -1) paint(adj, i, i, label);\n        for (String e : equations)\n            if (e.charAt(1) == '!' && label[e.charAt(0) - 'a'] == label[e.charAt(3) - 'a']) return false;\n        return true;\n    }\n\n    private void paint(List<List<Integer>> adj, int u, int id, int[] label) {\n        label[u] = id;\n        for (int v : adj.get(u)) if (label[v] == -1) paint(adj, v, id, label);\n    }\n}",
+     "cpp": "class Solution {\n    void paint(vector<vector<int>>& adj, int u, int id, vector<int>& label) {\n        label[u] = id;\n        for (int v : adj[u]) if (label[v] == -1) paint(adj, v, id, label);\n    }\npublic:\n    bool equationsPossible(vector<string>& equations) {\n        vector<vector<int>> adj(26);\n        for (auto& e : equations)\n            if (e[1] == '=') { adj[e[0] - 'a'].push_back(e[3] - 'a'); adj[e[3] - 'a'].push_back(e[0] - 'a'); }\n        vector<int> label(26, -1);\n        for (int i = 0; i < 26; i++) if (label[i] == -1) paint(adj, i, i, label);\n        for (auto& e : equations)\n            if (e[1] == '!' && label[e[0] - 'a'] == label[e[3] - 'a']) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def equationsPossible(self, equations: List[str]) -> bool:\n        adj = defaultdict(list)\n        for e in equations:\n            if e[1] == \"=\":\n                adj[e[0]].append(e[3])\n                adj[e[3]].append(e[0])\n        label = {}\n        def paint(u, comp):\n            label[u] = comp\n            for v in adj[u]:\n                if v not in label:\n                    paint(v, comp)\n        for c in string.ascii_lowercase:\n            if c not in label:\n                paint(c, c)\n        return all(not (e[1] == \"!\" and label[e[0]] == label[e[3]]) for e in equations)",
+     "javascript": "var equationsPossible = function(equations) {\n    const adj = Array.from({ length: 26 }, () => []), code = (c) => c.charCodeAt(0) - 97;\n    for (const e of equations)\n        if (e[1] === '=') { adj[code(e[0])].push(code(e[3])); adj[code(e[3])].push(code(e[0])); }\n    const label = new Array(26).fill(-1);\n    const paint = (u, id) => {\n        label[u] = id;\n        for (const v of adj[u]) if (label[v] === -1) paint(v, id);\n    };\n    for (let i = 0; i < 26; i++) if (label[i] === -1) paint(i, i);\n    return equations.every((e) => e[1] !== '!' || label[code(e[0])] !== label[code(e[3])]);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find over 26 letters",
+    "idea": "Two passes: first union the letters of every `==`, then check that no `!=` joins two letters with the same root. Doing all equalities first matters, because an equality later in the list can merge groups.",
+    "steps": [
+     "Initialise `parent` for 26 letters.",
+     "Pass 1: for each `a==b`, union `a` and `b`.",
+     "Pass 2: for each `a!=b`, if `find(a) == find(b)`, return false.",
+     "Return true."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two passes over the n equations with near-constant finds on a 26-element array.",
+    "code": {
+     "java": "class Solution {\n    private final int[] parent = new int[26];\n\n    public boolean equationsPossible(String[] equations) {\n        for (int i = 0; i < 26; i++) parent[i] = i;\n        for (String e : equations)\n            if (e.charAt(1) == '=') parent[find(e.charAt(0) - 'a')] = find(e.charAt(3) - 'a');\n        for (String e : equations)\n            if (e.charAt(1) == '!' && find(e.charAt(0) - 'a') == find(e.charAt(3) - 'a')) return false;\n        return true;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    int parent[26];\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    bool equationsPossible(vector<string>& equations) {\n        for (int i = 0; i < 26; i++) parent[i] = i;\n        for (auto& e : equations)\n            if (e[1] == '=') parent[find(e[0] - 'a')] = find(e[3] - 'a');\n        for (auto& e : equations)\n            if (e[1] == '!' && find(e[0] - 'a') == find(e[3] - 'a')) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def equationsPossible(self, equations: List[str]) -> bool:\n        parent = list(range(26))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        idx = lambda c: ord(c) - 97\n        for e in equations:\n            if e[1] == \"=\":\n                parent[find(idx(e[0]))] = find(idx(e[3]))\n        return all(e[1] == \"=\" or find(idx(e[0])) != find(idx(e[3])) for e in equations)",
+     "javascript": "var equationsPossible = function(equations) {\n    const parent = Array.from({ length: 26 }, (_, i) => i), code = (c) => c.charCodeAt(0) - 97;\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    for (const e of equations) if (e[1] === '=') parent[find(code(e[0]))] = find(code(e[3]));\n    return equations.every((e) => e[1] === '=' || find(code(e[0])) !== find(code(e[3])));\n};"
+    }
+   }
+  ]
+ },
+ "smallest-string-with-swaps": {
+  "pattern": "Connected components of indices; sort the letters inside each component",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS components, then sort each one",
+    "idea": "Swaps along connected pairs can produce any arrangement of the letters within a connected group of indices. So, per group, put its letters in sorted order into its indices in sorted order.",
+    "steps": [
+     "Build a graph on indices with an edge per pair.",
+     "For each unvisited index, collect its component with an iterative DFS.",
+     "Sort the component's indices and its letters; write the smallest letter at the smallest index, and so on.",
+     "Return the new string."
+    ],
+    "time": "O(n log n + p)",
+    "space": "O(n + p)",
+    "why": "Finding components is O(n + p) for p pairs; sorting all components together costs O(n log n). The graph takes O(n + p).",
+    "code": {
+     "java": "class Solution {\n    public String smallestStringWithSwaps(String s, List<List<Integer>> pairs) {\n        int n = s.length();\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (List<Integer> p : pairs) { adj.get(p.get(0)).add(p.get(1)); adj.get(p.get(1)).add(p.get(0)); }\n        char[] out = s.toCharArray();\n        boolean[] seen = new boolean[n];\n        for (int start = 0; start < n; start++) {\n            if (seen[start]) continue;\n            List<Integer> comp = new ArrayList<>();\n            Deque<Integer> stack = new ArrayDeque<>();\n            stack.push(start);\n            seen[start] = true;\n            while (!stack.isEmpty()) {\n                int u = stack.pop();\n                comp.add(u);\n                for (int v : adj.get(u)) if (!seen[v]) { seen[v] = true; stack.push(v); }\n            }\n            Collections.sort(comp);\n            char[] letters = new char[comp.size()];\n            for (int k = 0; k < letters.length; k++) letters[k] = s.charAt(comp.get(k));\n            Arrays.sort(letters);\n            for (int k = 0; k < letters.length; k++) out[comp.get(k)] = letters[k];\n        }\n        return new String(out);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string smallestStringWithSwaps(string s, vector<vector<int>>& pairs) {\n        int n = s.size();\n        vector<vector<int>> adj(n);\n        for (auto& p : pairs) { adj[p[0]].push_back(p[1]); adj[p[1]].push_back(p[0]); }\n        string out = s;\n        vector<bool> seen(n, false);\n        for (int start = 0; start < n; start++) {\n            if (seen[start]) continue;\n            vector<int> comp, stack{start};\n            seen[start] = true;\n            while (!stack.empty()) {\n                int u = stack.back();\n                stack.pop_back();\n                comp.push_back(u);\n                for (int v : adj[u]) if (!seen[v]) { seen[v] = true; stack.push_back(v); }\n            }\n            sort(comp.begin(), comp.end());\n            string letters;\n            for (int i : comp) letters += s[i];\n            sort(letters.begin(), letters.end());\n            for (size_t k = 0; k < comp.size(); k++) out[comp[k]] = letters[k];\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def smallestStringWithSwaps(self, s: str, pairs: List[List[int]]) -> str:\n        n = len(s)\n        adj = [[] for _ in range(n)]\n        for a, b in pairs:\n            adj[a].append(b)\n            adj[b].append(a)\n        out, seen = list(s), [False] * n\n        for start in range(n):\n            if seen[start]:\n                continue\n            seen[start] = True\n            comp, stack = [], [start]\n            while stack:\n                u = stack.pop()\n                comp.append(u)\n                for v in adj[u]:\n                    if not seen[v]:\n                        seen[v] = True\n                        stack.append(v)\n            comp.sort()\n            for i, c in zip(comp, sorted(s[i] for i in comp)):\n                out[i] = c\n        return \"\".join(out)",
+     "javascript": "var smallestStringWithSwaps = function(s, pairs) {\n    const n = s.length, adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of pairs) { adj[a].push(b); adj[b].push(a); }\n    const out = s.split(''), seen = new Array(n).fill(false);\n    for (let start = 0; start < n; start++) {\n        if (seen[start]) continue;\n        seen[start] = true;\n        const comp = [], stack = [start];\n        while (stack.length) {\n            const u = stack.pop();\n            comp.push(u);\n            for (const v of adj[u]) if (!seen[v]) { seen[v] = true; stack.push(v); }\n        }\n        comp.sort((a, b) => a - b);\n        const letters = comp.map((i) => s[i]).sort();\n        comp.forEach((i, k) => { out[i] = letters[k]; });\n    }\n    return out.join('');\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find, then counting sort per group",
+    "idea": "Union the indices of every pair. Then count the letters in each group (26 counters per root) and fill the indices from left to right with each group's smallest remaining letter.",
+    "steps": [
+     "Union every pair.",
+     "For each index, add its letter to the counts of its root.",
+     "Walk indices from left to right; for index `i` with root `r`, write the smallest letter whose count in `r` is still positive, and decrease that count."
+    ],
+    "time": "O((n + p)·α(n) + 26·n)",
+    "space": "O(26·n)",
+    "why": "Union–Find handles the pairs; counting replaces sorting. Scanning for the smallest letter takes at most 26 steps per index.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n\n    public String smallestStringWithSwaps(String s, List<List<Integer>> pairs) {\n        int n = s.length();\n        parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (List<Integer> p : pairs) parent[find(p.get(0))] = find(p.get(1));\n        int[][] count = new int[n][];\n        for (int i = 0; i < n; i++) {\n            int root = find(i);\n            if (count[root] == null) count[root] = new int[26];\n            count[root][s.charAt(i) - 'a']++;\n        }\n        char[] out = new char[n];\n        for (int i = 0; i < n; i++) {\n            int[] c = count[find(i)];\n            int k = 0;\n            while (c[k] == 0) k++;\n            c[k]--;\n            out[i] = (char) ('a' + k);\n        }\n        return new String(out);\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    string smallestStringWithSwaps(string s, vector<vector<int>>& pairs) {\n        int n = s.size();\n        parent.resize(n);\n        iota(parent.begin(), parent.end(), 0);\n        for (auto& p : pairs) parent[find(p[0])] = find(p[1]);\n        vector<array<int, 26>> count(n);\n        for (int i = 0; i < n; i++) count[find(i)][s[i] - 'a']++;\n        string out(n, ' ');\n        for (int i = 0; i < n; i++) {\n            auto& c = count[find(i)];\n            int k = 0;\n            while (c[k] == 0) k++;\n            c[k]--;\n            out[i] = 'a' + k;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def smallestStringWithSwaps(self, s: str, pairs: List[List[int]]) -> str:\n        n = len(s)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for a, b in pairs:\n            parent[find(a)] = find(b)\n        count = defaultdict(lambda: [0] * 26)\n        for i, ch in enumerate(s):\n            count[find(i)][ord(ch) - 97] += 1\n        out = []\n        for i in range(n):\n            c = count[find(i)]\n            k = 0\n            while c[k] == 0:\n                k += 1\n            c[k] -= 1\n            out.append(chr(97 + k))\n        return \"\".join(out)",
+     "javascript": "var smallestStringWithSwaps = function(s, pairs) {\n    const n = s.length, parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    for (const [a, b] of pairs) parent[find(a)] = find(b);\n    const count = new Map();\n    for (let i = 0; i < n; i++) {\n        const root = find(i);\n        if (!count.has(root)) count.set(root, new Array(26).fill(0));\n        count.get(root)[s.charCodeAt(i) - 97]++;\n    }\n    const out = [];\n    for (let i = 0; i < n; i++) {\n        const c = count.get(find(i));\n        let k = 0;\n        while (c[k] === 0) k++;\n        c[k]--;\n        out.push(String.fromCharCode(97 + k));\n    }\n    return out.join('');\n};"
+    }
+   }
+  ]
+ },
+ "accounts-merge": {
+  "pattern": "Union–Find (or DFS) over shared emails",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Union–Find over account indices",
+    "idea": "Map each email to the first account that listed it. When another account lists the same email, union the two accounts. Each final group of accounts is one person; collect its emails into a sorted set.",
+    "steps": [
+     "For each account `i` and each of its emails: if the email was seen in account `j`, union `i` and `j`; otherwise record `owner[email] = i`.",
+     "For each email, add it to the set of `find(owner[email])`.",
+     "For each root, output `[name, ...sorted emails]`."
+    ],
+    "time": "O(E log E)",
+    "space": "O(E)",
+    "why": "E is the total number of emails. Unions are near-constant; sorting each person's emails dominates.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n\n    public List<List<String>> accountsMerge(List<List<String>> accounts) {\n        int n = accounts.size();\n        parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        Map<String, Integer> owner = new HashMap<>();\n        for (int i = 0; i < n; i++)\n            for (String email : accounts.get(i).subList(1, accounts.get(i).size())) {\n                Integer j = owner.putIfAbsent(email, i);\n                if (j != null) parent[find(i)] = find(j);\n            }\n        Map<Integer, TreeSet<String>> groups = new HashMap<>();\n        for (Map.Entry<String, Integer> e : owner.entrySet())\n            groups.computeIfAbsent(find(e.getValue()), k -> new TreeSet<>()).add(e.getKey());\n        List<List<String>> out = new ArrayList<>();\n        for (Map.Entry<Integer, TreeSet<String>> g : groups.entrySet()) {\n            List<String> acc = new ArrayList<>();\n            acc.add(accounts.get(g.getKey()).get(0));\n            acc.addAll(g.getValue());\n            out.add(acc);\n        }\n        return out;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    vector<vector<string>> accountsMerge(vector<vector<string>>& accounts) {\n        int n = accounts.size();\n        parent.resize(n);\n        iota(parent.begin(), parent.end(), 0);\n        unordered_map<string, int> owner;\n        for (int i = 0; i < n; i++)\n            for (size_t k = 1; k < accounts[i].size(); k++) {\n                auto it = owner.find(accounts[i][k]);\n                if (it == owner.end()) owner[accounts[i][k]] = i;\n                else parent[find(i)] = find(it->second);\n            }\n        unordered_map<int, set<string>> groups;\n        for (auto& [email, i] : owner) groups[find(i)].insert(email);\n        vector<vector<string>> out;\n        for (auto& [root, emails] : groups) {\n            vector<string> acc{accounts[root][0]};\n            acc.insert(acc.end(), emails.begin(), emails.end());\n            out.push_back(acc);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def accountsMerge(self, accounts: List[List[str]]) -> List[List[str]]:\n        parent = list(range(len(accounts)))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        owner = {}\n        for i, acc in enumerate(accounts):\n            for email in acc[1:]:\n                if email in owner:\n                    parent[find(i)] = find(owner[email])\n                else:\n                    owner[email] = i\n        groups = defaultdict(list)\n        for email, i in owner.items():\n            groups[find(i)].append(email)\n        return [[accounts[root][0]] + sorted(emails) for root, emails in groups.items()]",
+     "javascript": "var accountsMerge = function(accounts) {\n    const parent = accounts.map((_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    const owner = new Map();\n    accounts.forEach((acc, i) => {\n        for (const email of acc.slice(1)) {\n            if (owner.has(email)) parent[find(i)] = find(owner.get(email));\n            else owner.set(email, i);\n        }\n    });\n    const groups = new Map();\n    for (const [email, i] of owner) {\n        const root = find(i);\n        if (!groups.has(root)) groups.set(root, []);\n        groups.get(root).push(email);\n    }\n    // plain sort compares UTF-16 code units, like Java/C++/Python string order\n    return [...groups].map(([root, emails]) => [accounts[root][0], ...emails.sort()]);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS over an email graph",
+    "idea": "Link every email of an account to the account's first email. Each connected component of this graph is one person; collect it with a DFS.",
+    "steps": [
+     "For each account, connect its first email to each of its other emails (both ways) and remember each email's name.",
+     "DFS from every unvisited email to collect its component.",
+     "Sort the component and prepend the name."
+    ],
+    "time": "O(E log E)",
+    "space": "O(E)",
+    "why": "The graph has E nodes and fewer than E edges; DFS is linear, and sorting each component dominates.",
+    "code": {
+     "java": "class Solution {\n    public List<List<String>> accountsMerge(List<List<String>> accounts) {\n        Map<String, List<String>> adj = new HashMap<>();\n        Map<String, String> name = new HashMap<>();\n        for (List<String> acc : accounts) {\n            String first = acc.get(1);\n            for (String email : acc.subList(1, acc.size())) {\n                adj.computeIfAbsent(email, k -> new ArrayList<>()).add(first);\n                adj.computeIfAbsent(first, k -> new ArrayList<>()).add(email);\n                name.put(email, acc.get(0));\n            }\n        }\n        Set<String> seen = new HashSet<>();\n        List<List<String>> out = new ArrayList<>();\n        for (String start : adj.keySet()) {\n            if (!seen.add(start)) continue;\n            List<String> comp = new ArrayList<>();\n            Deque<String> stack = new ArrayDeque<>();\n            stack.push(start);\n            while (!stack.isEmpty()) {\n                String e = stack.pop();\n                comp.add(e);\n                for (String nb : adj.get(e)) if (seen.add(nb)) stack.push(nb);\n            }\n            Collections.sort(comp);\n            comp.add(0, name.get(start));\n            out.add(comp);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<string>> accountsMerge(vector<vector<string>>& accounts) {\n        unordered_map<string, vector<string>> adj;\n        unordered_map<string, string> name;\n        for (auto& acc : accounts)\n            for (size_t k = 1; k < acc.size(); k++) {\n                adj[acc[k]].push_back(acc[1]);\n                adj[acc[1]].push_back(acc[k]);\n                name[acc[k]] = acc[0];\n            }\n        unordered_set<string> seen;\n        vector<vector<string>> out;\n        for (auto& [start, _] : adj) {\n            if (!seen.insert(start).second) continue;\n            vector<string> comp, stack{start};\n            while (!stack.empty()) {\n                string e = stack.back();\n                stack.pop_back();\n                comp.push_back(e);\n                for (auto& nb : adj[e]) if (seen.insert(nb).second) stack.push_back(nb);\n            }\n            sort(comp.begin(), comp.end());\n            comp.insert(comp.begin(), name[start]);\n            out.push_back(comp);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def accountsMerge(self, accounts: List[List[str]]) -> List[List[str]]:\n        adj, name = defaultdict(list), {}\n        for acc in accounts:\n            first = acc[1]\n            for email in acc[1:]:\n                adj[email].append(first)\n                adj[first].append(email)\n                name[email] = acc[0]\n        seen, out = set(), []\n        for start in adj:\n            if start in seen:\n                continue\n            seen.add(start)\n            comp, stack = [], [start]\n            while stack:\n                e = stack.pop()\n                comp.append(e)\n                for nb in adj[e]:\n                    if nb not in seen:\n                        seen.add(nb)\n                        stack.append(nb)\n            out.append([name[start]] + sorted(comp))\n        return out",
+     "javascript": "var accountsMerge = function(accounts) {\n    const adj = new Map(), name = new Map();\n    const link = (a, b) => {\n        if (!adj.has(a)) adj.set(a, []);\n        adj.get(a).push(b);\n    };\n    for (const acc of accounts)\n        for (const email of acc.slice(1)) {\n            link(email, acc[1]);\n            link(acc[1], email);\n            name.set(email, acc[0]);\n        }\n    const seen = new Set(), out = [];\n    for (const start of adj.keys()) {\n        if (seen.has(start)) continue;\n        seen.add(start);\n        const comp = [], stack = [start];\n        while (stack.length) {\n            const e = stack.pop();\n            comp.push(e);\n            for (const nb of adj.get(e)) if (!seen.has(nb)) { seen.add(nb); stack.push(nb); }\n        }\n        out.push([name.get(start), ...comp.sort()]);\n    }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "min-cost-to-connect-all-points": {
+  "pattern": "Minimum spanning tree (Kruskal with Union–Find, or Prim)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Kruskal: sort all edges, add those that join two components",
+    "idea": "Consider every pair as an edge weighted by Manhattan distance. Take edges from cheapest to most expensive, keeping an edge only if it connects two different components (Union–Find). After n − 1 edges, all points are connected at minimum cost.",
+    "steps": [
+     "Generate all n(n − 1)/2 edges with their costs and sort them.",
+     "For each edge in order, if its endpoints are in different sets, union them and add the cost.",
+     "Stop after n − 1 edges; return the total."
+    ],
+    "time": "O(n² log n)",
+    "space": "O(n²)",
+    "why": "There are about n²/2 = 5·10⁵ edges to store and sort. Correct by the cut property: the cheapest edge leaving any component is in some MST.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n\n    public int minCostConnectPoints(int[][] points) {\n        int n = points.length;\n        List<int[]> edges = new ArrayList<>();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                edges.add(new int[] { Math.abs(points[i][0] - points[j][0]) + Math.abs(points[i][1] - points[j][1]), i, j });\n        edges.sort((a, b) -> Integer.compare(a[0], b[0]));\n        parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        int total = 0, used = 0;\n        for (int[] e : edges) {\n            if (used == n - 1) break;\n            int a = find(e[1]), b = find(e[2]);\n            if (a == b) continue;\n            parent[a] = b;\n            total += e[0];\n            used++;\n        }\n        return total;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    int minCostConnectPoints(vector<vector<int>>& points) {\n        int n = points.size();\n        vector<array<int, 3>> edges;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                edges.push_back({abs(points[i][0] - points[j][0]) + abs(points[i][1] - points[j][1]), i, j});\n        sort(edges.begin(), edges.end());\n        parent.resize(n);\n        iota(parent.begin(), parent.end(), 0);\n        int total = 0, used = 0;\n        for (auto& [w, i, j] : edges) {\n            if (used == n - 1) break;\n            int a = find(i), b = find(j);\n            if (a == b) continue;\n            parent[a] = b;\n            total += w;\n            used++;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def minCostConnectPoints(self, points: List[List[int]]) -> int:\n        n = len(points)\n        edges = sorted(\n            (abs(points[i][0] - points[j][0]) + abs(points[i][1] - points[j][1]), i, j)\n            for i in range(n) for j in range(i + 1, n)\n        )\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        total = used = 0\n        for w, i, j in edges:\n            if used == n - 1:\n                break\n            a, b = find(i), find(j)\n            if a != b:\n                parent[a] = b\n                total += w\n                used += 1\n        return total",
+     "javascript": "var minCostConnectPoints = function(points) {\n    const n = points.length, edges = [];\n    for (let i = 0; i < n; i++)\n        for (let j = i + 1; j < n; j++)\n            edges.push([Math.abs(points[i][0] - points[j][0]) + Math.abs(points[i][1] - points[j][1]), i, j]);\n    edges.sort((a, b) => a[0] - b[0]);\n    const parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    let total = 0, used = 0;\n    for (const [w, i, j] of edges) {\n        if (used === n - 1) break;\n        const a = find(i), b = find(j);\n        if (a === b) continue;\n        parent[a] = b;\n        total += w;\n        used++;\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Prim's algorithm on the dense graph",
+    "idea": "Grow the tree from point 0. Keep, for every point outside the tree, the cheapest connection to any point inside it. Repeatedly add the outside point with the cheapest connection and update the others from it. With all pairs as edges, a plain array beats a heap.",
+    "steps": [
+     "Set `dist[i] = ∞` for all points, `dist[0] = 0`.",
+     "Repeat n times: pick the point `u` not in the tree with the smallest `dist`; add it and add `dist[u]` to the total.",
+     "For every point `v` not in the tree, set `dist[v] = min(dist[v], cost(u, v))`.",
+     "Return the total."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n rounds of O(n) scanning and updating; no edge list is ever built. For a complete graph this matches the number of edges, so it is optimal.",
+    "code": {
+     "java": "class Solution {\n    public int minCostConnectPoints(int[][] points) {\n        int n = points.length, total = 0;\n        int[] dist = new int[n];\n        boolean[] inTree = new boolean[n];\n        Arrays.fill(dist, Integer.MAX_VALUE);\n        dist[0] = 0;\n        for (int round = 0; round < n; round++) {\n            int u = -1;\n            for (int i = 0; i < n; i++) if (!inTree[i] && (u == -1 || dist[i] < dist[u])) u = i;\n            inTree[u] = true;\n            total += dist[u];\n            for (int v = 0; v < n; v++) {\n                if (inTree[v]) continue;\n                int cost = Math.abs(points[u][0] - points[v][0]) + Math.abs(points[u][1] - points[v][1]);\n                if (cost < dist[v]) dist[v] = cost;\n            }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minCostConnectPoints(vector<vector<int>>& points) {\n        int n = points.size(), total = 0;\n        vector<int> dist(n, INT_MAX);\n        vector<bool> inTree(n, false);\n        dist[0] = 0;\n        for (int round = 0; round < n; round++) {\n            int u = -1;\n            for (int i = 0; i < n; i++) if (!inTree[i] && (u == -1 || dist[i] < dist[u])) u = i;\n            inTree[u] = true;\n            total += dist[u];\n            for (int v = 0; v < n; v++) {\n                if (inTree[v]) continue;\n                int cost = abs(points[u][0] - points[v][0]) + abs(points[u][1] - points[v][1]);\n                dist[v] = min(dist[v], cost);\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def minCostConnectPoints(self, points: List[List[int]]) -> int:\n        n = len(points)\n        dist, in_tree, total = [inf] * n, [False] * n, 0\n        dist[0] = 0\n        for _ in range(n):\n            u = min((i for i in range(n) if not in_tree[i]), key=lambda i: dist[i])\n            in_tree[u] = True\n            total += dist[u]\n            ux, uy = points[u]\n            for v in range(n):\n                if not in_tree[v]:\n                    cost = abs(ux - points[v][0]) + abs(uy - points[v][1])\n                    if cost < dist[v]:\n                        dist[v] = cost\n        return total",
+     "javascript": "var minCostConnectPoints = function(points) {\n    const n = points.length, dist = new Array(n).fill(Infinity), inTree = new Array(n).fill(false);\n    dist[0] = 0;\n    let total = 0;\n    for (let round = 0; round < n; round++) {\n        let u = -1;\n        for (let i = 0; i < n; i++) if (!inTree[i] && (u === -1 || dist[i] < dist[u])) u = i;\n        inTree[u] = true;\n        total += dist[u];\n        for (let v = 0; v < n; v++) {\n            if (inTree[v]) continue;\n            const cost = Math.abs(points[u][0] - points[v][0]) + Math.abs(points[u][1] - points[v][1]);\n            if (cost < dist[v]) dist[v] = cost;\n        }\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "regions-cut-by-slashes": {
+  "pattern": "Split each cell into pieces and count connected components (Union–Find or flood fill)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Draw the grid at 3× size and flood fill",
+    "idea": "Scale each cell up to a 3 × 3 block of pixels and draw `/` or `\\` as a diagonal of blocked pixels. The regions are then ordinary connected components of free pixels, counted with a flood fill.",
+    "steps": [
+     "Make a `3n × 3n` pixel grid. For `/` in cell `(r, c)`, block pixels `(3r + k, 3c + 2 − k)`; for `\\`, block `(3r + k, 3c + k)`, for `k = 0..2`.",
+     "Count connected groups of free pixels with BFS (4 directions)."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "9n² pixels are filled and searched once. Two pixels per cell side are needed so that regions do not leak through the corners of a diagonal — 3× scaling is the smallest that works.",
+    "code": {
+     "java": "class Solution {\n    public int regionsBySlashes(String[] grid) {\n        int n = grid.length, size = 3 * n, regions = 0;\n        boolean[][] blocked = new boolean[size][size];\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++) {\n                char ch = grid[r].charAt(c);\n                for (int k = 0; k < 3; k++) {\n                    if (ch == '/') blocked[3 * r + k][3 * c + 2 - k] = true;\n                    else if (ch == '\\\\') blocked[3 * r + k][3 * c + k] = true;\n                }\n            }\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        for (int r0 = 0; r0 < size; r0++)\n            for (int c0 = 0; c0 < size; c0++) {\n                if (blocked[r0][c0]) continue;\n                regions++;\n                blocked[r0][c0] = true;\n                queue.add(new int[] { r0, c0 });\n                while (!queue.isEmpty()) {\n                    int[] p = queue.poll();\n                    for (int[] d : dirs) {\n                        int r = p[0] + d[0], c = p[1] + d[1];\n                        if (r >= 0 && c >= 0 && r < size && c < size && !blocked[r][c]) {\n                            blocked[r][c] = true;\n                            queue.add(new int[] { r, c });\n                        }\n                    }\n                }\n            }\n        return regions;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int regionsBySlashes(vector<string>& grid) {\n        int n = grid.size(), size = 3 * n, regions = 0;\n        vector<vector<bool>> blocked(size, vector<bool>(size, false));\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++)\n                for (int k = 0; k < 3; k++) {\n                    if (grid[r][c] == '/') blocked[3 * r + k][3 * c + 2 - k] = true;\n                    else if (grid[r][c] == '\\\\') blocked[3 * r + k][3 * c + k] = true;\n                }\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        for (int r0 = 0; r0 < size; r0++)\n            for (int c0 = 0; c0 < size; c0++) {\n                if (blocked[r0][c0]) continue;\n                regions++;\n                blocked[r0][c0] = true;\n                queue<pair<int, int>> q;\n                q.push({r0, c0});\n                while (!q.empty()) {\n                    auto [r1, c1] = q.front();\n                    q.pop();\n                    for (int k = 0; k < 4; k++) {\n                        int r = r1 + dr[k], c = c1 + dc[k];\n                        if (r >= 0 && c >= 0 && r < size && c < size && !blocked[r][c]) {\n                            blocked[r][c] = true;\n                            q.push({r, c});\n                        }\n                    }\n                }\n            }\n        return regions;\n    }\n};",
+     "python": "class Solution:\n    def regionsBySlashes(self, grid: List[str]) -> int:\n        n = len(grid)\n        size = 3 * n\n        blocked = [[False] * size for _ in range(size)]\n        for r in range(n):\n            for c in range(n):\n                for k in range(3):\n                    if grid[r][c] == \"/\":\n                        blocked[3 * r + k][3 * c + 2 - k] = True\n                    elif grid[r][c] == \"\\\\\":\n                        blocked[3 * r + k][3 * c + k] = True\n        regions = 0\n        for r0 in range(size):\n            for c0 in range(size):\n                if blocked[r0][c0]:\n                    continue\n                regions += 1\n                blocked[r0][c0] = True\n                queue = deque([(r0, c0)])\n                while queue:\n                    r1, c1 = queue.popleft()\n                    for r, c in ((r1 + 1, c1), (r1 - 1, c1), (r1, c1 + 1), (r1, c1 - 1)):\n                        if 0 <= r < size and 0 <= c < size and not blocked[r][c]:\n                            blocked[r][c] = True\n                            queue.append((r, c))\n        return regions",
+     "javascript": "var regionsBySlashes = function(grid) {\n    const n = grid.length, size = 3 * n;\n    const blocked = Array.from({ length: size }, () => new Array(size).fill(false));\n    for (let r = 0; r < n; r++)\n        for (let c = 0; c < n; c++)\n            for (let k = 0; k < 3; k++) {\n                if (grid[r][c] === '/') blocked[3 * r + k][3 * c + 2 - k] = true;\n                else if (grid[r][c] === '\\\\') blocked[3 * r + k][3 * c + k] = true;\n            }\n    let regions = 0;\n    for (let r0 = 0; r0 < size; r0++)\n        for (let c0 = 0; c0 < size; c0++) {\n            if (blocked[r0][c0]) continue;\n            regions++;\n            blocked[r0][c0] = true;\n            const queue = [[r0, c0]];\n            for (let h = 0; h < queue.length; h++) {\n                const [r1, c1] = queue[h];\n                for (const [r, c] of [[r1 + 1, c1], [r1 - 1, c1], [r1, c1 + 1], [r1, c1 - 1]]) {\n                    if (r >= 0 && c >= 0 && r < size && c < size && !blocked[r][c]) {\n                        blocked[r][c] = true;\n                        queue.push([r, c]);\n                    }\n                }\n            }\n        }\n    return regions;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union–Find over four triangles per cell",
+    "idea": "Split each cell into four triangles: top (0), right (1), bottom (2), left (3). A space joins all four; `/` joins top–left and right–bottom; `\\` joins top–right and bottom–left. Neighbouring cells always join along their shared edge. The number of distinct sets is the number of regions.",
+    "steps": [
+     "Create 4n² triangles in a Union–Find; `regions` starts at 4n² and drops by one per successful union.",
+     "Inside each cell, union according to its character.",
+     "Union the cell's bottom with the top of the cell below, and its right with the left of the cell to the right.",
+     "Return `regions`."
+    ],
+    "time": "O(n²·α(n))",
+    "space": "O(n²)",
+    "why": "A constant number of unions per cell. It uses 4n² entries instead of 9n² pixels, and needs no flood fill.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n    private int regions;\n\n    public int regionsBySlashes(String[] grid) {\n        int n = grid.length;\n        parent = new int[4 * n * n];\n        for (int i = 0; i < parent.length; i++) parent[i] = i;\n        regions = parent.length;\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++) {\n                int base = 4 * (r * n + c);\n                char ch = grid[r].charAt(c);\n                if (ch == ' ') { union(base, base + 1); union(base + 1, base + 2); union(base + 2, base + 3); }\n                else if (ch == '/') { union(base, base + 3); union(base + 1, base + 2); }\n                else { union(base, base + 1); union(base + 2, base + 3); }\n                if (r + 1 < n) union(base + 2, 4 * ((r + 1) * n + c));\n                if (c + 1 < n) union(base + 1, 4 * (r * n + c + 1) + 3);\n            }\n        return regions;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n\n    private void union(int a, int b) {\n        a = find(a); b = find(b);\n        if (a != b) { parent[a] = b; regions--; }\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int regions = 0;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n    void unite(int a, int b) {\n        a = find(a); b = find(b);\n        if (a != b) { parent[a] = b; regions--; }\n    }\npublic:\n    int regionsBySlashes(vector<string>& grid) {\n        int n = grid.size();\n        parent.resize(4 * n * n);\n        iota(parent.begin(), parent.end(), 0);\n        regions = parent.size();\n        for (int r = 0; r < n; r++)\n            for (int c = 0; c < n; c++) {\n                int base = 4 * (r * n + c);\n                char ch = grid[r][c];\n                if (ch == ' ') { unite(base, base + 1); unite(base + 1, base + 2); unite(base + 2, base + 3); }\n                else if (ch == '/') { unite(base, base + 3); unite(base + 1, base + 2); }\n                else { unite(base, base + 1); unite(base + 2, base + 3); }\n                if (r + 1 < n) unite(base + 2, 4 * ((r + 1) * n + c));\n                if (c + 1 < n) unite(base + 1, 4 * (r * n + c + 1) + 3);\n            }\n        return regions;\n    }\n};",
+     "python": "class Solution:\n    def regionsBySlashes(self, grid: List[str]) -> int:\n        n = len(grid)\n        parent = list(range(4 * n * n))\n        regions = len(parent)\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        def union(a, b):\n            nonlocal regions\n            a, b = find(a), find(b)\n            if a != b:\n                parent[a] = b\n                regions -= 1\n        for r in range(n):\n            for c in range(n):\n                base = 4 * (r * n + c)  # 0 top, 1 right, 2 bottom, 3 left\n                ch = grid[r][c]\n                if ch == \" \":\n                    union(base, base + 1)\n                    union(base + 1, base + 2)\n                    union(base + 2, base + 3)\n                elif ch == \"/\":\n                    union(base, base + 3)\n                    union(base + 1, base + 2)\n                else:\n                    union(base, base + 1)\n                    union(base + 2, base + 3)\n                if r + 1 < n:\n                    union(base + 2, 4 * ((r + 1) * n + c))\n                if c + 1 < n:\n                    union(base + 1, 4 * (r * n + c + 1) + 3)\n        return regions",
+     "javascript": "var regionsBySlashes = function(grid) {\n    const n = grid.length, parent = Array.from({ length: 4 * n * n }, (_, i) => i);\n    let regions = parent.length;\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    const union = (a, b) => {\n        a = find(a); b = find(b);\n        if (a !== b) { parent[a] = b; regions--; }\n    };\n    for (let r = 0; r < n; r++)\n        for (let c = 0; c < n; c++) {\n            const base = 4 * (r * n + c), ch = grid[r][c]; // 0 top, 1 right, 2 bottom, 3 left\n            if (ch === ' ') { union(base, base + 1); union(base + 1, base + 2); union(base + 2, base + 3); }\n            else if (ch === '/') { union(base, base + 3); union(base + 1, base + 2); }\n            else { union(base, base + 1); union(base + 2, base + 3); }\n            if (r + 1 < n) union(base + 2, 4 * ((r + 1) * n + c));\n            if (c + 1 < n) union(base + 1, 4 * (r * n + c + 1) + 3);\n        }\n    return regions;\n};"
+    }
+   }
+  ]
+ },
+ "largest-component-size-by-common-factor": {
+  "pattern": "Union–Find through prime factors (numbers sharing a prime join the same set)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Union every pair with a common factor",
+    "idea": "Check every pair of numbers with gcd; if it is greater than 1, union them. Then report the largest set.",
+    "steps": [
+     "For every pair `i < j`, if `gcd(nums[i], nums[j]) > 1`, union `i` and `j`.",
+     "Count the members of each root and return the largest count."
+    ],
+    "time": "O(n²·log M)",
+    "space": "O(n)",
+    "why": "n²/2 gcd computations of O(log M) each: 2·10⁸ gcds for n = 2·10⁴.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n\n    public int largestComponentSize(int[] nums) {\n        int n = nums.length;\n        parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                if (gcd(nums[i], nums[j]) > 1) parent[find(i)] = find(j);\n        int[] count = new int[n];\n        int best = 0;\n        for (int i = 0; i < n; i++) best = Math.max(best, ++count[find(i)]);\n        return best;\n    }\n\n    private int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    int largestComponentSize(vector<int>& nums) {\n        int n = nums.size();\n        parent.resize(n);\n        iota(parent.begin(), parent.end(), 0);\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                if (gcd(nums[i], nums[j]) > 1) parent[find(i)] = find(j);\n        vector<int> count(n, 0);\n        int best = 0;\n        for (int i = 0; i < n; i++) best = max(best, ++count[find(i)]);\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def largestComponentSize(self, nums: List[int]) -> int:\n        n = len(nums)\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for i in range(n):\n            for j in range(i + 1, n):\n                if gcd(nums[i], nums[j]) > 1:\n                    parent[find(i)] = find(j)\n        return max(Counter(find(i) for i in range(n)).values())",
+     "javascript": "var largestComponentSize = function(nums) {\n    const n = nums.length, parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));\n    for (let i = 0; i < n; i++)\n        for (let j = i + 1; j < n; j++)\n            if (gcd(nums[i], nums[j]) > 1) parent[find(i)] = find(j);\n    const count = new Map();\n    let best = 0;\n    for (let i = 0; i < n; i++) {\n        const root = find(i), c = (count.get(root) ?? 0) + 1;\n        count.set(root, c);\n        best = Math.max(best, c);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union each number with its prime factors",
+    "idea": "Two numbers share a factor > 1 exactly when they share a prime factor. Put numbers and primes in one Union–Find (indexed by value): union each number with each of its prime factors. Numbers sharing a prime end up together without ever comparing pairs.",
+    "steps": [
+     "Create a Union–Find over values `0 .. max(nums)`.",
+     "For each number, factor it by trial division up to its square root; union the number with every prime factor found (and with the leftover factor if it is greater than 1).",
+     "Count how many of the input numbers share each root; return the largest count."
+    ],
+    "time": "O(n·√M)",
+    "space": "O(M)",
+    "why": "Trial division takes at most √M ≈ 316 steps per number (M = 10⁵), with near-constant unions. The Union–Find covers every value up to M.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n\n    public int largestComponentSize(int[] nums) {\n        int max = 0;\n        for (int x : nums) max = Math.max(max, x);\n        parent = new int[max + 1];\n        for (int i = 0; i <= max; i++) parent[i] = i;\n        for (int x : nums) {\n            int v = x;\n            for (int p = 2; p * p <= v; p++) {\n                if (v % p != 0) continue;\n                parent[find(x)] = find(p);\n                while (v % p == 0) v /= p;\n            }\n            if (v > 1) parent[find(x)] = find(v);\n        }\n        Map<Integer, Integer> count = new HashMap<>();\n        int best = 0;\n        for (int x : nums) best = Math.max(best, count.merge(find(x), 1, Integer::sum));\n        return best;\n    }\n\n    private int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    }\npublic:\n    int largestComponentSize(vector<int>& nums) {\n        int mx = *max_element(nums.begin(), nums.end());\n        parent.resize(mx + 1);\n        iota(parent.begin(), parent.end(), 0);\n        for (int x : nums) {\n            int v = x;\n            for (int p = 2; p * p <= v; p++) {\n                if (v % p) continue;\n                parent[find(x)] = find(p);\n                while (v % p == 0) v /= p;\n            }\n            if (v > 1) parent[find(x)] = find(v);\n        }\n        unordered_map<int, int> count;\n        int best = 0;\n        for (int x : nums) best = max(best, ++count[find(x)]);\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def largestComponentSize(self, nums: List[int]) -> int:\n        parent = list(range(max(nums) + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for x in nums:\n            v, p = x, 2\n            while p * p <= v:\n                if v % p == 0:\n                    parent[find(x)] = find(p)\n                    while v % p == 0:\n                        v //= p\n                p += 1\n            if v > 1:\n                parent[find(x)] = find(v)\n        return max(Counter(find(x) for x in nums).values())",
+     "javascript": "var largestComponentSize = function(nums) {\n    const max = Math.max(...nums), parent = Array.from({ length: max + 1 }, (_, i) => i);\n    const find = (x) => {\n        while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }\n        return x;\n    };\n    for (const x of nums) {\n        let v = x;\n        for (let p = 2; p * p <= v; p++) {\n            if (v % p !== 0) continue;\n            parent[find(x)] = find(p);\n            while (v % p === 0) v /= p;\n        }\n        if (v > 1) parent[find(x)] = find(v);\n    }\n    const count = new Map();\n    let best = 0;\n    for (const x of nums) {\n        const root = find(x), c = (count.get(root) ?? 0) + 1;\n        count.set(root, c);\n        best = Math.max(best, c);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ }
+}
