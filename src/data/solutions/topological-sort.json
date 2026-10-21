@@ -1,0 +1,328 @@
+{
+ "course-schedule": {
+  "pattern": "Cycle detection in a directed graph (Kahn's algorithm or DFS colouring)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Repeatedly take any course whose prerequisites are done",
+    "idea": "Simulate a student: keep scanning for a course whose prerequisites are all already taken, take it, and repeat. If at some point no course can be taken but some remain, there is a cycle.",
+    "steps": [
+     "Keep a `taken` flag per course.",
+     "Repeat: scan all prerequisite pairs to find an untaken course with no untaken prerequisite; take it.",
+     "Stop when all are taken (true) or a full scan finds nothing to take (false)."
+    ],
+    "time": "O(V·(V + E))",
+    "space": "O(V)",
+    "why": "Up to V rounds, each checking all courses against all E prerequisite pairs.",
+    "code": {
+     "java": "class Solution {\n    public boolean canFinish(int numCourses, int[][] prerequisites) {\n        boolean[] taken = new boolean[numCourses];\n        for (int done = 0; done < numCourses; done++) {\n            boolean[] blocked = new boolean[numCourses];\n            for (int[] p : prerequisites) if (!taken[p[1]]) blocked[p[0]] = true;\n            int pick = -1;\n            for (int c = 0; c < numCourses && pick == -1; c++) if (!taken[c] && !blocked[c]) pick = c;\n            if (pick == -1) return false;\n            taken[pick] = true;\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<bool> taken(numCourses, false);\n        for (int done = 0; done < numCourses; done++) {\n            vector<bool> blocked(numCourses, false);\n            for (auto& p : prerequisites) if (!taken[p[1]]) blocked[p[0]] = true;\n            int pick = -1;\n            for (int c = 0; c < numCourses && pick == -1; c++) if (!taken[c] && !blocked[c]) pick = c;\n            if (pick == -1) return false;\n            taken[pick] = true;\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:\n        taken = [False] * numCourses\n        for _ in range(numCourses):\n            blocked = {a for a, b in prerequisites if not taken[b]}\n            pick = next((c for c in range(numCourses) if not taken[c] and c not in blocked), -1)\n            if pick == -1:\n                return False\n            taken[pick] = True\n        return True",
+     "javascript": "var canFinish = function(numCourses, prerequisites) {\n    const taken = new Array(numCourses).fill(false);\n    for (let done = 0; done < numCourses; done++) {\n        const blocked = new Array(numCourses).fill(false);\n        for (const [a, b] of prerequisites) if (!taken[b]) blocked[a] = true;\n        let pick = -1;\n        for (let c = 0; c < numCourses && pick === -1; c++) if (!taken[c] && !blocked[c]) pick = c;\n        if (pick === -1) return false;\n        taken[pick] = true;\n    }\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Kahn's algorithm (BFS on in-degrees)",
+    "idea": "Track how many unmet prerequisites each course has (its in-degree). Courses with 0 can be taken; taking one lowers the in-degree of the courses that depend on it. If every course is eventually taken, there is no cycle.",
+    "steps": [
+     "Build the graph `b → a` for each pair `[a, b]` and count in-degrees.",
+     "Queue every course with in-degree 0.",
+     "Pop a course, count it as taken, and decrement each dependent's in-degree, queuing those that reach 0.",
+     "Return whether the number taken equals `numCourses`."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each course is queued once and each edge relaxed once. Courses on a cycle never reach in-degree 0, so they are never counted.",
+    "code": {
+     "java": "class Solution {\n    public boolean canFinish(int numCourses, int[][] prerequisites) {\n        List<List<Integer>> next = new ArrayList<>();\n        for (int i = 0; i < numCourses; i++) next.add(new ArrayList<>());\n        int[] indeg = new int[numCourses];\n        for (int[] p : prerequisites) { next.get(p[1]).add(p[0]); indeg[p[0]]++; }\n        Deque<Integer> queue = new ArrayDeque<>();\n        for (int i = 0; i < numCourses; i++) if (indeg[i] == 0) queue.add(i);\n        int taken = 0;\n        while (!queue.isEmpty()) {\n            int c = queue.poll();\n            taken++;\n            for (int d : next.get(c)) if (--indeg[d] == 0) queue.add(d);\n        }\n        return taken == numCourses;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<vector<int>> next(numCourses);\n        vector<int> indeg(numCourses, 0);\n        for (auto& p : prerequisites) { next[p[1]].push_back(p[0]); indeg[p[0]]++; }\n        queue<int> q;\n        for (int i = 0; i < numCourses; i++) if (indeg[i] == 0) q.push(i);\n        int taken = 0;\n        while (!q.empty()) {\n            int c = q.front();\n            q.pop();\n            taken++;\n            for (int d : next[c]) if (--indeg[d] == 0) q.push(d);\n        }\n        return taken == numCourses;\n    }\n};",
+     "python": "class Solution:\n    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:\n        nxt = [[] for _ in range(numCourses)]\n        indeg = [0] * numCourses\n        for a, b in prerequisites:\n            nxt[b].append(a)\n            indeg[a] += 1\n        queue = deque(i for i in range(numCourses) if indeg[i] == 0)\n        taken = 0\n        while queue:\n            c = queue.popleft()\n            taken += 1\n            for d in nxt[c]:\n                indeg[d] -= 1\n                if indeg[d] == 0:\n                    queue.append(d)\n        return taken == numCourses",
+     "javascript": "var canFinish = function(numCourses, prerequisites) {\n    const next = Array.from({ length: numCourses }, () => []), indeg = new Array(numCourses).fill(0);\n    for (const [a, b] of prerequisites) { next[b].push(a); indeg[a]++; }\n    const queue = [];\n    for (let i = 0; i < numCourses; i++) if (indeg[i] === 0) queue.push(i);\n    for (let h = 0; h < queue.length; h++)\n        for (const d of next[queue[h]]) if (--indeg[d] === 0) queue.push(d);\n    return queue.length === numCourses;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS with three colours",
+    "idea": "Colour courses white (unvisited), grey (on the current DFS path) and black (finished). Reaching a grey course again means following edges led back into the current path: a cycle.",
+    "steps": [
+     "Build the graph `b → a`.",
+     "DFS from every white course: mark it grey, visit each neighbour; if a neighbour is grey, return \"cycle\"; after all neighbours, mark it black.",
+     "Return false if any DFS finds a cycle, else true."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each course is finished once and each edge explored once. Black courses are never re-explored. The recursion can be V deep.",
+    "code": {
+     "java": "class Solution {\n    private List<List<Integer>> next;\n    private int[] color;\n\n    public boolean canFinish(int numCourses, int[][] prerequisites) {\n        next = new ArrayList<>();\n        for (int i = 0; i < numCourses; i++) next.add(new ArrayList<>());\n        for (int[] p : prerequisites) next.get(p[1]).add(p[0]);\n        color = new int[numCourses]; // 0 white, 1 grey, 2 black\n        for (int i = 0; i < numCourses; i++) if (color[i] == 0 && hasCycle(i)) return false;\n        return true;\n    }\n\n    private boolean hasCycle(int u) {\n        color[u] = 1;\n        for (int v : next.get(u)) {\n            if (color[v] == 1) return true;\n            if (color[v] == 0 && hasCycle(v)) return true;\n        }\n        color[u] = 2;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> next;\n    vector<int> color; // 0 white, 1 grey, 2 black\n    bool hasCycle(int u) {\n        color[u] = 1;\n        for (int v : next[u]) {\n            if (color[v] == 1) return true;\n            if (color[v] == 0 && hasCycle(v)) return true;\n        }\n        color[u] = 2;\n        return false;\n    }\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        next.assign(numCourses, {});\n        color.assign(numCourses, 0);\n        for (auto& p : prerequisites) next[p[1]].push_back(p[0]);\n        for (int i = 0; i < numCourses; i++) if (color[i] == 0 && hasCycle(i)) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:\n        nxt = [[] for _ in range(numCourses)]\n        for a, b in prerequisites:\n            nxt[b].append(a)\n        color = [0] * numCourses  # 0 white, 1 grey, 2 black\n        def has_cycle(u):\n            color[u] = 1\n            for v in nxt[u]:\n                if color[v] == 1 or (color[v] == 0 and has_cycle(v)):\n                    return True\n            color[u] = 2\n            return False\n        return not any(color[i] == 0 and has_cycle(i) for i in range(numCourses))",
+     "javascript": "var canFinish = function(numCourses, prerequisites) {\n    const next = Array.from({ length: numCourses }, () => []);\n    for (const [a, b] of prerequisites) next[b].push(a);\n    const color = new Array(numCourses).fill(0); // 0 white, 1 grey, 2 black\n    const hasCycle = (u) => {\n        color[u] = 1;\n        for (const v of next[u]) {\n            if (color[v] === 1) return true;\n            if (color[v] === 0 && hasCycle(v)) return true;\n        }\n        color[u] = 2;\n        return false;\n    };\n    for (let i = 0; i < numCourses; i++) if (color[i] === 0 && hasCycle(i)) return false;\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "course-schedule-ii": {
+  "pattern": "Topological sort (Kahn's BFS, or reversed DFS post-order)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Kahn's algorithm: output courses as they become free",
+    "idea": "Take courses with no remaining prerequisites first. The order in which Kahn's algorithm removes courses is a valid order; if not all courses get removed, there is a cycle.",
+    "steps": [
+     "Build `b → a` edges and in-degrees.",
+     "Queue every course with in-degree 0.",
+     "Pop a course, append it to the order, and decrement its dependents' in-degrees, queuing those that reach 0.",
+     "Return the order if it has all courses, else an empty array."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each course and edge is handled once; the graph and queue take O(V + E).",
+    "code": {
+     "java": "class Solution {\n    public int[] findOrder(int numCourses, int[][] prerequisites) {\n        List<List<Integer>> next = new ArrayList<>();\n        for (int i = 0; i < numCourses; i++) next.add(new ArrayList<>());\n        int[] indeg = new int[numCourses];\n        for (int[] p : prerequisites) { next.get(p[1]).add(p[0]); indeg[p[0]]++; }\n        int[] order = new int[numCourses];\n        int head = 0, tail = 0;\n        for (int i = 0; i < numCourses; i++) if (indeg[i] == 0) order[tail++] = i;\n        while (head < tail) {\n            int c = order[head++];\n            for (int d : next.get(c)) if (--indeg[d] == 0) order[tail++] = d;\n        }\n        return tail == numCourses ? order : new int[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findOrder(int numCourses, vector<vector<int>>& prerequisites) {\n        vector<vector<int>> next(numCourses);\n        vector<int> indeg(numCourses, 0), order;\n        for (auto& p : prerequisites) { next[p[1]].push_back(p[0]); indeg[p[0]]++; }\n        for (int i = 0; i < numCourses; i++) if (indeg[i] == 0) order.push_back(i);\n        for (size_t h = 0; h < order.size(); h++)\n            for (int d : next[order[h]]) if (--indeg[d] == 0) order.push_back(d);\n        return (int) order.size() == numCourses ? order : vector<int>{};\n    }\n};",
+     "python": "class Solution:\n    def findOrder(self, numCourses: int, prerequisites: List[List[int]]) -> List[int]:\n        nxt = [[] for _ in range(numCourses)]\n        indeg = [0] * numCourses\n        for a, b in prerequisites:\n            nxt[b].append(a)\n            indeg[a] += 1\n        order = [i for i in range(numCourses) if indeg[i] == 0]\n        for c in order:  # order grows while we iterate: it doubles as the queue\n            for d in nxt[c]:\n                indeg[d] -= 1\n                if indeg[d] == 0:\n                    order.append(d)\n        return order if len(order) == numCourses else []",
+     "javascript": "var findOrder = function(numCourses, prerequisites) {\n    const next = Array.from({ length: numCourses }, () => []), indeg = new Array(numCourses).fill(0);\n    for (const [a, b] of prerequisites) { next[b].push(a); indeg[a]++; }\n    const order = [];\n    for (let i = 0; i < numCourses; i++) if (indeg[i] === 0) order.push(i);\n    for (let h = 0; h < order.length; h++)\n        for (const d of next[order[h]]) if (--indeg[d] === 0) order.push(d);\n    return order.length === numCourses ? order : [];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS post-order, reversed",
+    "idea": "In a DFS, a course finishes only after every course that depends on it has finished. So the finishing order lists dependents first; reversing it gives a valid schedule. A grey (in-progress) course met again means a cycle.",
+    "steps": [
+     "Build `b → a` edges; colour all courses white.",
+     "DFS from each white course: grey on entry; on meeting grey, report a cycle; after the neighbours, mark black and append the course to `post`.",
+     "If there was a cycle, return an empty array; otherwise return `post` reversed."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each course and edge is processed once; the recursion can be V deep.",
+    "code": {
+     "java": "class Solution {\n    private List<List<Integer>> next;\n    private int[] color;\n    private final List<Integer> post = new ArrayList<>();\n\n    public int[] findOrder(int numCourses, int[][] prerequisites) {\n        next = new ArrayList<>();\n        for (int i = 0; i < numCourses; i++) next.add(new ArrayList<>());\n        for (int[] p : prerequisites) next.get(p[1]).add(p[0]);\n        color = new int[numCourses];\n        for (int i = 0; i < numCourses; i++) if (color[i] == 0 && !dfs(i)) return new int[0];\n        int[] order = new int[numCourses];\n        for (int i = 0; i < numCourses; i++) order[i] = post.get(numCourses - 1 - i);\n        return order;\n    }\n\n    private boolean dfs(int u) {\n        color[u] = 1;\n        for (int v : next.get(u)) {\n            if (color[v] == 1) return false;\n            if (color[v] == 0 && !dfs(v)) return false;\n        }\n        color[u] = 2;\n        post.add(u);\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> next;\n    vector<int> color, post;\n    bool dfs(int u) {\n        color[u] = 1;\n        for (int v : next[u]) {\n            if (color[v] == 1) return false;\n            if (color[v] == 0 && !dfs(v)) return false;\n        }\n        color[u] = 2;\n        post.push_back(u);\n        return true;\n    }\npublic:\n    vector<int> findOrder(int numCourses, vector<vector<int>>& prerequisites) {\n        next.assign(numCourses, {});\n        color.assign(numCourses, 0);\n        for (auto& p : prerequisites) next[p[1]].push_back(p[0]);\n        for (int i = 0; i < numCourses; i++) if (color[i] == 0 && !dfs(i)) return {};\n        reverse(post.begin(), post.end());\n        return post;\n    }\n};",
+     "python": "class Solution:\n    def findOrder(self, numCourses: int, prerequisites: List[List[int]]) -> List[int]:\n        nxt = [[] for _ in range(numCourses)]\n        for a, b in prerequisites:\n            nxt[b].append(a)\n        color, post = [0] * numCourses, []\n        def dfs(u):\n            color[u] = 1\n            for v in nxt[u]:\n                if color[v] == 1 or (color[v] == 0 and not dfs(v)):\n                    return False\n            color[u] = 2\n            post.append(u)\n            return True\n        for i in range(numCourses):\n            if color[i] == 0 and not dfs(i):\n                return []\n        return post[::-1]",
+     "javascript": "var findOrder = function(numCourses, prerequisites) {\n    const next = Array.from({ length: numCourses }, () => []);\n    for (const [a, b] of prerequisites) next[b].push(a);\n    const color = new Array(numCourses).fill(0), post = [];\n    const dfs = (u) => {\n        color[u] = 1;\n        for (const v of next[u]) {\n            if (color[v] === 1) return false;\n            if (color[v] === 0 && !dfs(v)) return false;\n        }\n        color[u] = 2;\n        post.push(u);\n        return true;\n    };\n    for (let i = 0; i < numCourses; i++) if (color[i] === 0 && !dfs(i)) return [];\n    return post.reverse();\n};"
+    }
+   }
+  ]
+ },
+ "course-schedule-iv": {
+  "pattern": "Transitive closure (reachability for all pairs) in a DAG",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "A fresh search for every query",
+    "idea": "`u` is a prerequisite of `v` exactly when `v` is reachable from `u` along the edges `a → b`. Answer each query with its own BFS.",
+    "steps": [
+     "Build the graph `a → b` for every pair `[a, b]`.",
+     "For each query `[u, v]`, BFS from `u` and answer whether `v` is reached."
+    ],
+    "time": "O(Q·(V + E))",
+    "space": "O(V + E)",
+    "why": "Each of the Q queries (up to 10⁴) may explore the whole graph.",
+    "code": {
+     "java": "class Solution {\n    public List<Boolean> checkIfPrerequisite(int numCourses, int[][] prerequisites, int[][] queries) {\n        List<List<Integer>> next = new ArrayList<>();\n        for (int i = 0; i < numCourses; i++) next.add(new ArrayList<>());\n        for (int[] p : prerequisites) next.get(p[0]).add(p[1]);\n        List<Boolean> out = new ArrayList<>();\n        for (int[] q : queries) {\n            boolean[] seen = new boolean[numCourses];\n            Deque<Integer> queue = new ArrayDeque<>();\n            queue.add(q[0]);\n            seen[q[0]] = true;\n            while (!queue.isEmpty() && !seen[q[1]]) {\n                for (int v : next.get(queue.poll())) if (!seen[v]) { seen[v] = true; queue.add(v); }\n            }\n            out.add(seen[q[1]]);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<bool> checkIfPrerequisite(int numCourses, vector<vector<int>>& prerequisites, vector<vector<int>>& queries) {\n        vector<vector<int>> next(numCourses);\n        for (auto& p : prerequisites) next[p[0]].push_back(p[1]);\n        vector<bool> out;\n        for (auto& q : queries) {\n            vector<bool> seen(numCourses, false);\n            queue<int> bfs;\n            bfs.push(q[0]);\n            seen[q[0]] = true;\n            while (!bfs.empty() && !seen[q[1]]) {\n                int u = bfs.front();\n                bfs.pop();\n                for (int v : next[u]) if (!seen[v]) { seen[v] = true; bfs.push(v); }\n            }\n            out.push_back(seen[q[1]]);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def checkIfPrerequisite(self, numCourses: int, prerequisites: List[List[int]], queries: List[List[int]]) -> List[bool]:\n        nxt = [[] for _ in range(numCourses)]\n        for a, b in prerequisites:\n            nxt[a].append(b)\n        out = []\n        for u, v in queries:\n            seen, queue = {u}, deque([u])\n            while queue and v not in seen:\n                for w in nxt[queue.popleft()]:\n                    if w not in seen:\n                        seen.add(w)\n                        queue.append(w)\n            out.append(v in seen)\n        return out",
+     "javascript": "var checkIfPrerequisite = function(numCourses, prerequisites, queries) {\n    const next = Array.from({ length: numCourses }, () => []);\n    for (const [a, b] of prerequisites) next[a].push(b);\n    return queries.map(([u, v]) => {\n        const seen = new Array(numCourses).fill(false), queue = [u];\n        seen[u] = true;\n        for (let h = 0; h < queue.length && !seen[v]; h++)\n            for (const w of next[queue[h]]) if (!seen[w]) { seen[w] = true; queue.push(w); }\n        return seen[v];\n    });\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Precompute all reachability with Floyd–Warshall",
+    "idea": "With at most 100 courses, compute `reach[i][j]` for every pair once. `i` reaches `j` if it does directly, or via some middle course `k` that `i` reaches and that reaches `j`. Then every query is a table lookup.",
+    "steps": [
+     "Set `reach[a][b] = true` for every prerequisite pair.",
+     "For each middle course `k`, for each `i`, for each `j`: `reach[i][j] |= reach[i][k] && reach[k][j]`.",
+     "Answer each query `[u, v]` with `reach[u][v]`."
+    ],
+    "time": "O(V³ + Q)",
+    "space": "O(V²)",
+    "why": "V³ = 10⁶ steps once, then O(1) per query. Considering middle courses in the outer loop is what makes the triple loop correct.",
+    "code": {
+     "java": "class Solution {\n    public List<Boolean> checkIfPrerequisite(int numCourses, int[][] prerequisites, int[][] queries) {\n        int n = numCourses;\n        boolean[][] reach = new boolean[n][n];\n        for (int[] p : prerequisites) reach[p[0]][p[1]] = true;\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                if (reach[i][k])\n                    for (int j = 0; j < n; j++) if (reach[k][j]) reach[i][j] = true;\n        List<Boolean> out = new ArrayList<>();\n        for (int[] q : queries) out.add(reach[q[0]][q[1]]);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<bool> checkIfPrerequisite(int numCourses, vector<vector<int>>& prerequisites, vector<vector<int>>& queries) {\n        int n = numCourses;\n        vector<vector<bool>> reach(n, vector<bool>(n, false));\n        for (auto& p : prerequisites) reach[p[0]][p[1]] = true;\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                if (reach[i][k])\n                    for (int j = 0; j < n; j++) if (reach[k][j]) reach[i][j] = true;\n        vector<bool> out;\n        for (auto& q : queries) out.push_back(reach[q[0]][q[1]]);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def checkIfPrerequisite(self, numCourses: int, prerequisites: List[List[int]], queries: List[List[int]]) -> List[bool]:\n        n = numCourses\n        reach = [[False] * n for _ in range(n)]\n        for a, b in prerequisites:\n            reach[a][b] = True\n        for k in range(n):\n            for i in range(n):\n                if reach[i][k]:\n                    row_i, row_k = reach[i], reach[k]\n                    for j in range(n):\n                        if row_k[j]:\n                            row_i[j] = True\n        return [reach[u][v] for u, v in queries]",
+     "javascript": "var checkIfPrerequisite = function(numCourses, prerequisites, queries) {\n    const n = numCourses;\n    const reach = Array.from({ length: n }, () => new Array(n).fill(false));\n    for (const [a, b] of prerequisites) reach[a][b] = true;\n    for (let k = 0; k < n; k++)\n        for (let i = 0; i < n; i++)\n            if (reach[i][k])\n                for (let j = 0; j < n; j++) if (reach[k][j]) reach[i][j] = true;\n    return queries.map(([u, v]) => reach[u][v]);\n};"
+    }
+   }
+  ]
+ },
+ "minimum-height-trees": {
+  "pattern": "Peel leaves layer by layer (topological trimming) to find the tree's centre",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "BFS height from every node",
+    "idea": "Root the tree at each node in turn, measure the height with a BFS, and keep the nodes with the smallest height.",
+    "steps": [
+     "Build the adjacency lists.",
+     "For each node, BFS to find the number of levels below it (its height).",
+     "Return all nodes whose height equals the minimum."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n BFS runs of O(n) each; for n = 2·10⁴ that is 4·10⁸ steps.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findMinHeightTrees(int n, int[][] edges) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        int[] height = new int[n];\n        int best = Integer.MAX_VALUE;\n        for (int root = 0; root < n; root++) {\n            int[] dist = new int[n];\n            Arrays.fill(dist, -1);\n            dist[root] = 0;\n            Deque<Integer> queue = new ArrayDeque<>();\n            queue.add(root);\n            int h = 0;\n            while (!queue.isEmpty()) {\n                int u = queue.poll();\n                h = Math.max(h, dist[u]);\n                for (int v : adj.get(u)) if (dist[v] == -1) { dist[v] = dist[u] + 1; queue.add(v); }\n            }\n            height[root] = h;\n            best = Math.min(best, h);\n        }\n        List<Integer> out = new ArrayList<>();\n        for (int i = 0; i < n; i++) if (height[i] == best) out.add(i);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMinHeightTrees(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<int> height(n);\n        int best = INT_MAX;\n        for (int root = 0; root < n; root++) {\n            vector<int> dist(n, -1);\n            dist[root] = 0;\n            queue<int> q;\n            q.push(root);\n            int h = 0;\n            while (!q.empty()) {\n                int u = q.front();\n                q.pop();\n                h = max(h, dist[u]);\n                for (int v : adj[u]) if (dist[v] == -1) { dist[v] = dist[u] + 1; q.push(v); }\n            }\n            height[root] = h;\n            best = min(best, h);\n        }\n        vector<int> out;\n        for (int i = 0; i < n; i++) if (height[i] == best) out.push_back(i);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findMinHeightTrees(self, n: int, edges: List[List[int]]) -> List[int]:\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        def height(root):\n            dist = [-1] * n\n            dist[root] = 0\n            queue, h = deque([root]), 0\n            while queue:\n                u = queue.popleft()\n                h = max(h, dist[u])\n                for v in adj[u]:\n                    if dist[v] == -1:\n                        dist[v] = dist[u] + 1\n                        queue.append(v)\n            return h\n        heights = [height(i) for i in range(n)]\n        best = min(heights)\n        return [i for i in range(n) if heights[i] == best]",
+     "javascript": "var findMinHeightTrees = function(n, edges) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const height = (root) => {\n        const dist = new Array(n).fill(-1), queue = [root];\n        dist[root] = 0;\n        let h = 0;\n        for (let i = 0; i < queue.length; i++) {\n            const u = queue[i];\n            h = Math.max(h, dist[u]);\n            for (const v of adj[u]) if (dist[v] === -1) { dist[v] = dist[u] + 1; queue.push(v); }\n        }\n        return h;\n    };\n    const heights = Array.from({ length: n }, (_, i) => height(i)), best = Math.min(...heights);\n    return heights.flatMap((h, i) => (h === best ? [i] : []));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Trim leaves until one or two nodes remain",
+    "idea": "The best roots are the centre of the tree's longest path. Removing all current leaves shortens every longest path by 2 from both ends, so repeatedly peeling leaves leaves the centre: one node, or two adjacent nodes.",
+    "steps": [
+     "If `n <= 2`, return all nodes.",
+     "Compute degrees; queue every leaf (degree 1). Let `remaining = n`.",
+     "While `remaining > 2`: remove the whole current layer of leaves (`remaining −= layer size`); each removal lowers its neighbour's degree, and neighbours that become leaves form the next layer.",
+     "Return the nodes still in the queue."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node is removed once and each edge looked at twice — the same idea as Kahn's algorithm, applied from the outside in.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findMinHeightTrees(int n, int[][] edges) {\n        List<Integer> layer = new ArrayList<>();\n        if (n <= 2) { for (int i = 0; i < n; i++) layer.add(i); return layer; }\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        int[] degree = new int[n];\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); degree[e[0]]++; degree[e[1]]++; }\n        for (int i = 0; i < n; i++) if (degree[i] == 1) layer.add(i);\n        int remaining = n;\n        while (remaining > 2) {\n            remaining -= layer.size();\n            List<Integer> next = new ArrayList<>();\n            for (int leaf : layer)\n                for (int v : adj.get(leaf)) if (--degree[v] == 1) next.add(v);\n            layer = next;\n        }\n        return layer;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMinHeightTrees(int n, vector<vector<int>>& edges) {\n        vector<int> layer;\n        if (n <= 2) { for (int i = 0; i < n; i++) layer.push_back(i); return layer; }\n        vector<vector<int>> adj(n);\n        vector<int> degree(n, 0);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); degree[e[0]]++; degree[e[1]]++; }\n        for (int i = 0; i < n; i++) if (degree[i] == 1) layer.push_back(i);\n        int remaining = n;\n        while (remaining > 2) {\n            remaining -= layer.size();\n            vector<int> next;\n            for (int leaf : layer)\n                for (int v : adj[leaf]) if (--degree[v] == 1) next.push_back(v);\n            layer = next;\n        }\n        return layer;\n    }\n};",
+     "python": "class Solution:\n    def findMinHeightTrees(self, n: int, edges: List[List[int]]) -> List[int]:\n        if n <= 2:\n            return list(range(n))\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        degree = [len(a) for a in adj]\n        layer = [i for i in range(n) if degree[i] == 1]\n        remaining = n\n        while remaining > 2:\n            remaining -= len(layer)\n            nxt = []\n            for leaf in layer:\n                for v in adj[leaf]:\n                    degree[v] -= 1\n                    if degree[v] == 1:\n                        nxt.append(v)\n            layer = nxt\n        return layer",
+     "javascript": "var findMinHeightTrees = function(n, edges) {\n    if (n <= 2) return [...Array(n).keys()];\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const degree = adj.map((a) => a.length);\n    let layer = [];\n    for (let i = 0; i < n; i++) if (degree[i] === 1) layer.push(i);\n    let remaining = n;\n    while (remaining > 2) {\n        remaining -= layer.length;\n        const next = [];\n        for (const leaf of layer)\n            for (const v of adj[leaf]) if (--degree[v] === 1) next.push(v);\n        layer = next;\n    }\n    return layer;\n};"
+    }
+   }
+  ]
+ },
+ "find-eventual-safe-states": {
+  "pattern": "Nodes that cannot reach a cycle: DFS colouring, or Kahn's algorithm on the reversed graph",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every node, search for a reachable cycle",
+    "idea": "A node is unsafe exactly when some path from it reaches a cycle. For each node, run a fresh DFS with grey/black colours and see whether it finds a back edge.",
+    "steps": [
+     "For each node `s`: reset the colours and DFS from `s`.",
+     "If the DFS ever reaches a grey node, `s` can reach a cycle: it is unsafe.",
+     "Collect the nodes for which no cycle was found (in increasing order)."
+    ],
+    "time": "O(V·(V + E))",
+    "space": "O(V)",
+    "why": "Each of the V searches can explore the whole graph; nothing is reused between them.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> eventualSafeNodes(int[][] graph) {\n        int n = graph.length;\n        List<Integer> out = new ArrayList<>();\n        for (int s = 0; s < n; s++)\n            if (!reachesCycle(graph, s, new int[n])) out.add(s);\n        return out;\n    }\n\n    private boolean reachesCycle(int[][] g, int u, int[] color) {\n        color[u] = 1;\n        for (int v : g[u]) {\n            if (color[v] == 1) return true;\n            if (color[v] == 0 && reachesCycle(g, v, color)) return true;\n        }\n        color[u] = 2;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool reachesCycle(vector<vector<int>>& g, int u, vector<int>& color) {\n        color[u] = 1;\n        for (int v : g[u]) {\n            if (color[v] == 1) return true;\n            if (color[v] == 0 && reachesCycle(g, v, color)) return true;\n        }\n        color[u] = 2;\n        return false;\n    }\npublic:\n    vector<int> eventualSafeNodes(vector<vector<int>>& graph) {\n        int n = graph.size();\n        vector<int> out;\n        for (int s = 0; s < n; s++) {\n            vector<int> color(n, 0);\n            if (!reachesCycle(graph, s, color)) out.push_back(s);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def eventualSafeNodes(self, graph: List[List[int]]) -> List[int]:\n        n = len(graph)\n        def reaches_cycle(u, color):\n            color[u] = 1\n            for v in graph[u]:\n                if color[v] == 1 or (color[v] == 0 and reaches_cycle(v, color)):\n                    return True\n            color[u] = 2\n            return False\n        return [s for s in range(n) if not reaches_cycle(s, [0] * n)]",
+     "javascript": "var eventualSafeNodes = function(graph) {\n    const n = graph.length;\n    const reachesCycle = (u, color) => {\n        color[u] = 1;\n        for (const v of graph[u]) {\n            if (color[v] === 1) return true;\n            if (color[v] === 0 && reachesCycle(v, color)) return true;\n        }\n        color[u] = 2;\n        return false;\n    };\n    const out = [];\n    for (let s = 0; s < n; s++) if (!reachesCycle(s, new Array(n).fill(0))) out.push(s);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One DFS with colours shared by all nodes",
+    "idea": "Run the colour DFS once over the whole graph and keep the colours. A node that finishes (black) cannot reach a cycle, so it is safe; a node left grey when a cycle is found stays grey and is unsafe — and anything that later reaches it is unsafe too.",
+    "steps": [
+     "Colours: 0 unvisited, 1 visiting (or unsafe), 2 safe.",
+     "`safe(u)`: if coloured, return `color[u] == 2`. Otherwise set 1; if any neighbour is not safe, return false (leaving `u` at 1).",
+     "If all neighbours are safe, set `color[u] = 2` and return true.",
+     "Return every `u` with `safe(u)` true, in order."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V)",
+    "why": "Each node is fully processed once and each edge followed once, because results are remembered in the colours.",
+    "code": {
+     "java": "class Solution {\n    private int[] color;\n\n    public List<Integer> eventualSafeNodes(int[][] graph) {\n        color = new int[graph.length];\n        List<Integer> out = new ArrayList<>();\n        for (int u = 0; u < graph.length; u++) if (safe(graph, u)) out.add(u);\n        return out;\n    }\n\n    private boolean safe(int[][] g, int u) {\n        if (color[u] != 0) return color[u] == 2;\n        color[u] = 1;\n        for (int v : g[u]) if (!safe(g, v)) return false;\n        color[u] = 2;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> color;\n    bool safe(vector<vector<int>>& g, int u) {\n        if (color[u] != 0) return color[u] == 2;\n        color[u] = 1;\n        for (int v : g[u]) if (!safe(g, v)) return false;\n        color[u] = 2;\n        return true;\n    }\npublic:\n    vector<int> eventualSafeNodes(vector<vector<int>>& graph) {\n        color.assign(graph.size(), 0);\n        vector<int> out;\n        for (int u = 0; u < (int) graph.size(); u++) if (safe(graph, u)) out.push_back(u);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def eventualSafeNodes(self, graph: List[List[int]]) -> List[int]:\n        color = [0] * len(graph)  # 0 unvisited, 1 visiting/unsafe, 2 safe\n        def safe(u):\n            if color[u]:\n                return color[u] == 2\n            color[u] = 1\n            if any(not safe(v) for v in graph[u]):\n                return False\n            color[u] = 2\n            return True\n        return [u for u in range(len(graph)) if safe(u)]",
+     "javascript": "var eventualSafeNodes = function(graph) {\n    const color = new Array(graph.length).fill(0); // 0 unvisited, 1 visiting/unsafe, 2 safe\n    const safe = (u) => {\n        if (color[u] !== 0) return color[u] === 2;\n        color[u] = 1;\n        for (const v of graph[u]) if (!safe(v)) return false;\n        color[u] = 2;\n        return true;\n    };\n    const out = [];\n    for (let u = 0; u < graph.length; u++) if (safe(u)) out.push(u);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Kahn's algorithm on the reversed graph",
+    "idea": "Terminal nodes are safe. A node becomes safe once all of its outgoing edges lead to safe nodes. Reverse every edge and count each node's remaining unsafe outgoing edges; peeling from the terminals works exactly like Kahn's algorithm.",
+    "steps": [
+     "For each edge `u → v`, record `u` in `reverse[v]`; `out[u]` = number of outgoing edges of `u`.",
+     "Queue every node with `out == 0` (terminal).",
+     "Pop `v`, mark it safe; for each `u` in `reverse[v]`, decrease `out[u]` and queue `u` when it reaches 0.",
+     "Return the safe nodes in increasing order."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "Each node and edge is processed once; no recursion, so very deep graphs are no problem.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> eventualSafeNodes(int[][] graph) {\n        int n = graph.length;\n        List<List<Integer>> reverse = new ArrayList<>();\n        for (int i = 0; i < n; i++) reverse.add(new ArrayList<>());\n        int[] out = new int[n];\n        Deque<Integer> queue = new ArrayDeque<>();\n        for (int u = 0; u < n; u++) {\n            out[u] = graph[u].length;\n            for (int v : graph[u]) reverse.get(v).add(u);\n            if (out[u] == 0) queue.add(u);\n        }\n        boolean[] safe = new boolean[n];\n        while (!queue.isEmpty()) {\n            int v = queue.poll();\n            safe[v] = true;\n            for (int u : reverse.get(v)) if (--out[u] == 0) queue.add(u);\n        }\n        List<Integer> result = new ArrayList<>();\n        for (int i = 0; i < n; i++) if (safe[i]) result.add(i);\n        return result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> eventualSafeNodes(vector<vector<int>>& graph) {\n        int n = graph.size();\n        vector<vector<int>> reverse(n);\n        vector<int> out(n);\n        queue<int> q;\n        for (int u = 0; u < n; u++) {\n            out[u] = graph[u].size();\n            for (int v : graph[u]) reverse[v].push_back(u);\n            if (out[u] == 0) q.push(u);\n        }\n        vector<bool> safe(n, false);\n        while (!q.empty()) {\n            int v = q.front();\n            q.pop();\n            safe[v] = true;\n            for (int u : reverse[v]) if (--out[u] == 0) q.push(u);\n        }\n        vector<int> result;\n        for (int i = 0; i < n; i++) if (safe[i]) result.push_back(i);\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def eventualSafeNodes(self, graph: List[List[int]]) -> List[int]:\n        n = len(graph)\n        reverse = [[] for _ in range(n)]\n        out = [len(g) for g in graph]\n        for u in range(n):\n            for v in graph[u]:\n                reverse[v].append(u)\n        queue = deque(u for u in range(n) if out[u] == 0)\n        safe = [False] * n\n        while queue:\n            v = queue.popleft()\n            safe[v] = True\n            for u in reverse[v]:\n                out[u] -= 1\n                if out[u] == 0:\n                    queue.append(u)\n        return [i for i in range(n) if safe[i]]",
+     "javascript": "var eventualSafeNodes = function(graph) {\n    const n = graph.length, reverse = Array.from({ length: n }, () => []), out = graph.map((g) => g.length);\n    for (let u = 0; u < n; u++) for (const v of graph[u]) reverse[v].push(u);\n    const queue = [];\n    for (let u = 0; u < n; u++) if (out[u] === 0) queue.push(u);\n    const safe = new Array(n).fill(false);\n    for (let h = 0; h < queue.length; h++) {\n        const v = queue[h];\n        safe[v] = true;\n        for (const u of reverse[v]) if (--out[u] === 0) queue.push(u);\n    }\n    const result = [];\n    for (let i = 0; i < n; i++) if (safe[i]) result.push(i);\n    return result;\n};"
+    }
+   }
+  ]
+ },
+ "find-all-possible-recipes-from-given-supplies": {
+  "pattern": "Kahn's algorithm over ingredients → recipes",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Repeatedly make any recipe whose ingredients are all available",
+    "idea": "Keep a set of what you have. Scan the recipes again and again; whenever all of a recipe's ingredients are available, make it and add it to the set. Stop when a full scan makes nothing new.",
+    "steps": [
+     "Put the supplies in a set `have`.",
+     "Repeat: for each recipe not made yet, if all its ingredients are in `have`, add it to `have` and to the answer.",
+     "Stop after a pass that makes no new recipe."
+    ],
+    "time": "O(R²·I)",
+    "space": "O(R + S)",
+    "why": "Up to R passes (one new recipe per pass in the worst case), each checking every recipe's I ingredients.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findAllRecipes(String[] recipes, List<List<String>> ingredients, String[] supplies) {\n        Set<String> have = new HashSet<>(Arrays.asList(supplies));\n        boolean[] made = new boolean[recipes.length];\n        List<String> out = new ArrayList<>();\n        boolean changed = true;\n        while (changed) {\n            changed = false;\n            for (int i = 0; i < recipes.length; i++) {\n                if (made[i] || !have.containsAll(ingredients.get(i))) continue;\n                made[i] = true;\n                have.add(recipes[i]);\n                out.add(recipes[i]);\n                changed = true;\n            }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> findAllRecipes(vector<string>& recipes, vector<vector<string>>& ingredients, vector<string>& supplies) {\n        unordered_set<string> have(supplies.begin(), supplies.end());\n        vector<bool> made(recipes.size(), false);\n        vector<string> out;\n        bool changed = true;\n        while (changed) {\n            changed = false;\n            for (size_t i = 0; i < recipes.size(); i++) {\n                if (made[i]) continue;\n                bool ok = true;\n                for (auto& ing : ingredients[i]) if (!have.count(ing)) { ok = false; break; }\n                if (!ok) continue;\n                made[i] = true;\n                have.insert(recipes[i]);\n                out.push_back(recipes[i]);\n                changed = true;\n            }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findAllRecipes(self, recipes: List[str], ingredients: List[List[str]], supplies: List[str]) -> List[str]:\n        have, out = set(supplies), []\n        made = [False] * len(recipes)\n        changed = True\n        while changed:\n            changed = False\n            for i, recipe in enumerate(recipes):\n                if not made[i] and all(x in have for x in ingredients[i]):\n                    made[i] = True\n                    have.add(recipe)\n                    out.append(recipe)\n                    changed = True\n        return out",
+     "javascript": "var findAllRecipes = function(recipes, ingredients, supplies) {\n    const have = new Set(supplies), made = new Array(recipes.length).fill(false), out = [];\n    let changed = true;\n    while (changed) {\n        changed = false;\n        for (let i = 0; i < recipes.length; i++) {\n            if (made[i] || !ingredients[i].every((x) => have.has(x))) continue;\n            made[i] = true;\n            have.add(recipes[i]);\n            out.push(recipes[i]);\n            changed = true;\n        }\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Kahn's algorithm: supplies unlock recipes",
+    "idea": "Each recipe waits on a count of missing ingredients (its in-degree). Start a queue with the supplies; each item taken from the queue satisfies one need of every recipe that uses it. A recipe whose count reaches 0 can be made, and becomes an item itself.",
+    "steps": [
+     "For each recipe `i`, set `need[i] = ingredients[i].length`, and add `i` to `usedBy[ingredient]` for each ingredient.",
+     "Queue all supplies.",
+     "Pop an item; for each recipe in `usedBy[item]`, decrease its `need`; at 0, add the recipe to the answer and queue its name.",
+     "Return the answer. Recipes in a cycle, or needing something unavailable, never reach 0."
+    ],
+    "time": "O(S + R·I)",
+    "space": "O(S + R·I)",
+    "why": "Every supply and recipe is queued at most once, and every ingredient link is followed once.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findAllRecipes(String[] recipes, List<List<String>> ingredients, String[] supplies) {\n        Map<String, List<Integer>> usedBy = new HashMap<>();\n        int[] need = new int[recipes.length];\n        for (int i = 0; i < recipes.length; i++) {\n            need[i] = ingredients.get(i).size();\n            for (String ing : ingredients.get(i)) usedBy.computeIfAbsent(ing, k -> new ArrayList<>()).add(i);\n        }\n        Deque<String> queue = new ArrayDeque<>(Arrays.asList(supplies));\n        List<String> out = new ArrayList<>();\n        while (!queue.isEmpty()) {\n            for (int i : usedBy.getOrDefault(queue.poll(), List.of())) {\n                if (--need[i] == 0) { out.add(recipes[i]); queue.add(recipes[i]); }\n            }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> findAllRecipes(vector<string>& recipes, vector<vector<string>>& ingredients, vector<string>& supplies) {\n        unordered_map<string, vector<int>> usedBy;\n        vector<int> need(recipes.size());\n        for (size_t i = 0; i < recipes.size(); i++) {\n            need[i] = ingredients[i].size();\n            for (auto& ing : ingredients[i]) usedBy[ing].push_back(i);\n        }\n        queue<string> q;\n        for (auto& s : supplies) q.push(s);\n        vector<string> out;\n        while (!q.empty()) {\n            string item = q.front();\n            q.pop();\n            auto it = usedBy.find(item);\n            if (it == usedBy.end()) continue;\n            for (int i : it->second)\n                if (--need[i] == 0) { out.push_back(recipes[i]); q.push(recipes[i]); }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findAllRecipes(self, recipes: List[str], ingredients: List[List[str]], supplies: List[str]) -> List[str]:\n        used_by = defaultdict(list)\n        need = [len(ing) for ing in ingredients]\n        for i, ing in enumerate(ingredients):\n            for x in ing:\n                used_by[x].append(i)\n        queue, out = deque(supplies), []\n        while queue:\n            for i in used_by.get(queue.popleft(), []):\n                need[i] -= 1\n                if need[i] == 0:\n                    out.append(recipes[i])\n                    queue.append(recipes[i])\n        return out",
+     "javascript": "var findAllRecipes = function(recipes, ingredients, supplies) {\n    const usedBy = new Map(), need = ingredients.map((ing) => ing.length);\n    ingredients.forEach((ing, i) => {\n        for (const x of ing) {\n            if (!usedBy.has(x)) usedBy.set(x, []);\n            usedBy.get(x).push(i);\n        }\n    });\n    const queue = [...supplies], out = [];\n    for (let h = 0; h < queue.length; h++)\n        for (const i of usedBy.get(queue[h]) ?? [])\n            if (--need[i] === 0) { out.push(recipes[i]); queue.push(recipes[i]); }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "sort-items-by-groups-respecting-dependencies": {
+  "pattern": "Two-level topological sort: order the groups, then the items inside each group",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Topologically sort groups and items separately, then combine",
+    "idea": "Give every ungrouped item its own new group, so every item belongs to exactly one group. A dependency between items in different groups becomes an edge between their groups; one inside a group stays an item edge. Sort the groups topologically, sort the items topologically, then output each group's items (in item order) in group order.",
+    "steps": [
+     "Assign group ids `m, m + 1, …` to items with group −1.",
+     "For each `before → i`: add item edge `before → i`; if their groups differ, add group edge `group[before] → group[i]`.",
+     "Topologically sort items and groups with Kahn's algorithm; if either has a cycle, return `[]`.",
+     "Bucket the sorted items by group, then concatenate the buckets in the sorted group order."
+    ],
+    "time": "O(n + E)",
+    "space": "O(n + E)",
+    "why": "Two Kahn passes over at most n items/groups and E dependency edges, plus linear bucketing. Sorting items globally first keeps each group's items in a valid internal order.",
+    "code": {
+     "java": "class Solution {\n    public int[] sortItems(int n, int m, int[] group, List<List<Integer>> beforeItems) {\n        for (int i = 0; i < n; i++) if (group[i] == -1) group[i] = m++;\n        List<List<Integer>> itemNext = new ArrayList<>(), groupNext = new ArrayList<>();\n        for (int i = 0; i < n; i++) itemNext.add(new ArrayList<>());\n        for (int g = 0; g < m; g++) groupNext.add(new ArrayList<>());\n        int[] itemIn = new int[n], groupIn = new int[m];\n        for (int i = 0; i < n; i++)\n            for (int b : beforeItems.get(i)) {\n                itemNext.get(b).add(i);\n                itemIn[i]++;\n                if (group[b] != group[i]) { groupNext.get(group[b]).add(group[i]); groupIn[group[i]]++; }\n            }\n        List<Integer> items = topo(itemNext, itemIn), groups = topo(groupNext, groupIn);\n        if (items == null || groups == null) return new int[0];\n        List<List<Integer>> bucket = new ArrayList<>();\n        for (int g = 0; g < m; g++) bucket.add(new ArrayList<>());\n        for (int i : items) bucket.get(group[i]).add(i);\n        int[] out = new int[n];\n        int w = 0;\n        for (int g : groups) for (int i : bucket.get(g)) out[w++] = i;\n        return out;\n    }\n\n    private List<Integer> topo(List<List<Integer>> next, int[] indeg) {\n        List<Integer> order = new ArrayList<>();\n        for (int i = 0; i < indeg.length; i++) if (indeg[i] == 0) order.add(i);\n        for (int h = 0; h < order.size(); h++)\n            for (int v : next.get(order.get(h))) if (--indeg[v] == 0) order.add(v);\n        return order.size() == indeg.length ? order : null;\n    }\n}",
+     "cpp": "class Solution {\n    bool topo(vector<vector<int>>& next, vector<int>& indeg, vector<int>& order) {\n        for (int i = 0; i < (int) indeg.size(); i++) if (indeg[i] == 0) order.push_back(i);\n        for (size_t h = 0; h < order.size(); h++)\n            for (int v : next[order[h]]) if (--indeg[v] == 0) order.push_back(v);\n        return order.size() == indeg.size();\n    }\npublic:\n    vector<int> sortItems(int n, int m, vector<int>& group, vector<vector<int>>& beforeItems) {\n        for (int i = 0; i < n; i++) if (group[i] == -1) group[i] = m++;\n        vector<vector<int>> itemNext(n), groupNext(m);\n        vector<int> itemIn(n, 0), groupIn(m, 0);\n        for (int i = 0; i < n; i++)\n            for (int b : beforeItems[i]) {\n                itemNext[b].push_back(i);\n                itemIn[i]++;\n                if (group[b] != group[i]) { groupNext[group[b]].push_back(group[i]); groupIn[group[i]]++; }\n            }\n        vector<int> items, groups;\n        if (!topo(itemNext, itemIn, items) || !topo(groupNext, groupIn, groups)) return {};\n        vector<vector<int>> bucket(m);\n        for (int i : items) bucket[group[i]].push_back(i);\n        vector<int> out;\n        for (int g : groups) for (int i : bucket[g]) out.push_back(i);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def sortItems(self, n: int, m: int, group: List[int], beforeItems: List[List[int]]) -> List[int]:\n        for i in range(n):\n            if group[i] == -1:\n                group[i] = m\n                m += 1\n        item_next, group_next = [[] for _ in range(n)], [[] for _ in range(m)]\n        item_in, group_in = [0] * n, [0] * m\n        for i in range(n):\n            for b in beforeItems[i]:\n                item_next[b].append(i)\n                item_in[i] += 1\n                if group[b] != group[i]:\n                    group_next[group[b]].append(group[i])\n                    group_in[group[i]] += 1\n        def topo(nxt, indeg):\n            order = [i for i in range(len(indeg)) if indeg[i] == 0]\n            for u in order:\n                for v in nxt[u]:\n                    indeg[v] -= 1\n                    if indeg[v] == 0:\n                        order.append(v)\n            return order if len(order) == len(indeg) else None\n        items, groups = topo(item_next, item_in), topo(group_next, group_in)\n        if items is None or groups is None:\n            return []\n        bucket = [[] for _ in range(m)]\n        for i in items:\n            bucket[group[i]].append(i)\n        return [i for g in groups for i in bucket[g]]",
+     "javascript": "var sortItems = function(n, m, group, beforeItems) {\n    for (let i = 0; i < n; i++) if (group[i] === -1) group[i] = m++;\n    const itemNext = Array.from({ length: n }, () => []), groupNext = Array.from({ length: m }, () => []);\n    const itemIn = new Array(n).fill(0), groupIn = new Array(m).fill(0);\n    for (let i = 0; i < n; i++)\n        for (const b of beforeItems[i]) {\n            itemNext[b].push(i);\n            itemIn[i]++;\n            if (group[b] !== group[i]) { groupNext[group[b]].push(group[i]); groupIn[group[i]]++; }\n        }\n    const topo = (next, indeg) => {\n        const order = [];\n        for (let i = 0; i < indeg.length; i++) if (indeg[i] === 0) order.push(i);\n        for (let h = 0; h < order.length; h++)\n            for (const v of next[order[h]]) if (--indeg[v] === 0) order.push(v);\n        return order.length === indeg.length ? order : null;\n    };\n    const items = topo(itemNext, itemIn), groups = topo(groupNext, groupIn);\n    if (!items || !groups) return [];\n    const bucket = Array.from({ length: m }, () => []);\n    for (const i of items) bucket[group[i]].push(i);\n    return groups.flatMap((g) => bucket[g]);\n};"
+    }
+   }
+  ]
+ }
+}
