@@ -1,0 +1,547 @@
+{
+ "find-greatest-common-divisor-of-array": {
+  "pattern": "Euclid's algorithm: gcd(a, b) = gcd(b, a mod b)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every divisor from the smallest value down",
+    "idea": "Find the minimum and maximum, then test candidates from `min` downwards; the first that divides both is the GCD.",
+    "steps": [
+     "Find `lo = min(nums)` and `hi = max(nums)`.",
+     "For `d` from `lo` down to 1: if `lo % d == 0` and `hi % d == 0`, return `d`."
+    ],
+    "time": "O(n + min)",
+    "space": "O(1)",
+    "why": "One pass for min/max, then up to `min` trial divisions.",
+    "code": {
+     "java": "class Solution {\n    public int findGCD(int[] nums) {\n        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;\n        for (int x : nums) { lo = Math.min(lo, x); hi = Math.max(hi, x); }\n        for (int d = lo; ; d--)\n            if (lo % d == 0 && hi % d == 0) return d;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findGCD(vector<int>& nums) {\n        int lo = *min_element(nums.begin(), nums.end()), hi = *max_element(nums.begin(), nums.end());\n        for (int d = lo; ; d--)\n            if (lo % d == 0 && hi % d == 0) return d;\n    }\n};",
+     "python": "class Solution:\n    def findGCD(self, nums: List[int]) -> int:\n        lo, hi = min(nums), max(nums)\n        for d in range(lo, 0, -1):\n            if lo % d == 0 and hi % d == 0:\n                return d",
+     "javascript": "var findGCD = function(nums) {\n    const lo = Math.min(...nums), hi = Math.max(...nums);\n    for (let d = lo; ; d--) if (lo % d === 0 && hi % d === 0) return d;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Euclid on min and max",
+    "idea": "Any common divisor of `a` and `b` also divides `a mod b`, so `gcd(a, b) = gcd(b, a mod b)`, ending when the remainder is 0.",
+    "steps": [
+     "Find `a = max(nums)`, `b = min(nums)`.",
+     "While `b != 0`: `(a, b) = (b, a % b)`.",
+     "Return `a`."
+    ],
+    "time": "O(n + log(min))",
+    "space": "O(1)",
+    "why": "The remainders shrink at least as fast as Fibonacci numbers, so Euclid takes O(log) steps.",
+    "code": {
+     "java": "class Solution {\n    public int findGCD(int[] nums) {\n        int a = Integer.MIN_VALUE, b = Integer.MAX_VALUE;\n        for (int x : nums) { a = Math.max(a, x); b = Math.min(b, x); }\n        while (b != 0) {\n            int t = a % b;\n            a = b;\n            b = t;\n        }\n        return a;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findGCD(vector<int>& nums) {\n        int a = *max_element(nums.begin(), nums.end()), b = *min_element(nums.begin(), nums.end());\n        while (b != 0) {\n            int t = a % b;\n            a = b;\n            b = t;\n        }\n        return a;\n    }\n};",
+     "python": "class Solution:\n    def findGCD(self, nums: List[int]) -> int:\n        a, b = max(nums), min(nums)\n        while b:\n            a, b = b, a % b\n        return a",
+     "javascript": "var findGCD = function(nums) {\n    let a = Math.max(...nums), b = Math.min(...nums);\n    while (b !== 0) [a, b] = [b, a % b];\n    return a;\n};"
+    }
+   }
+  ]
+ },
+ "palindrome-number": {
+  "pattern": "Digit arithmetic: peel digits with % 10 and / 10, reversing only half",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare the decimal string with its reverse",
+    "idea": "Turn the number into a string and check that it equals its reverse. The minus sign makes every negative number fail automatically.",
+    "steps": [
+     "Convert `x` to a string `s`.",
+     "Return whether `s` equals `s` reversed."
+    ],
+    "time": "O(d)",
+    "space": "O(d)",
+    "why": "d = number of digits (≤ 10); the string costs O(d) memory, which the follow-up wants to avoid.",
+    "code": {
+     "java": "class Solution {\n    public boolean isPalindrome(int x) {\n        String s = String.valueOf(x);\n        return new StringBuilder(s).reverse().toString().equals(s);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        string s = to_string(x);\n        return equal(s.begin(), s.end(), s.rbegin());\n    }\n};",
+     "python": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        s = str(x)\n        return s == s[::-1]",
+     "javascript": "var isPalindrome = function(x) {\n    const s = String(x);\n    return s === s.split('').reverse().join('');\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Reverse the whole number",
+    "idea": "Build the reversed number digit by digit and compare it with the original. Use a 64-bit value, because reversing a large 32-bit number can exceed the 32-bit range.",
+    "steps": [
+     "If `x < 0`, return false.",
+     "Pop digits from a copy (`d = n % 10`, `n /= 10`) and push them onto `rev = rev·10 + d`.",
+     "Return `rev == x`."
+    ],
+    "time": "O(d)",
+    "space": "O(1)",
+    "why": "One pass over the digits, but it needs a wider integer type to be safe.",
+    "code": {
+     "java": "class Solution {\n    public boolean isPalindrome(int x) {\n        if (x < 0) return false;\n        long rev = 0;\n        for (int n = x; n > 0; n /= 10) rev = rev * 10 + n % 10;\n        return rev == x;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        if (x < 0) return false;\n        long long rev = 0;\n        for (int n = x; n > 0; n /= 10) rev = rev * 10 + n % 10;\n        return rev == x;\n    }\n};",
+     "python": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        if x < 0:\n            return False\n        rev, n = 0, x\n        while n:\n            rev, n = rev * 10 + n % 10, n // 10\n        return rev == x",
+     "javascript": "var isPalindrome = function(x) {\n    if (x < 0) return false;\n    let rev = 0;\n    for (let n = x; n > 0; n = Math.floor(n / 10)) rev = rev * 10 + (n % 10);\n    return rev === x;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Reverse only the second half",
+    "idea": "Pop digits from the end into `rev` until `rev` is at least the remaining front part. Then the halves can be compared directly; no overflow is possible because `rev` holds at most half the digits.",
+    "steps": [
+     "Negative numbers, and positive numbers ending in 0, are not palindromes (0 itself is).",
+     "While `x > rev`: `rev = rev·10 + x % 10`; `x /= 10`.",
+     "Return `x == rev` (even length) or `x == rev / 10` (odd length: drop the middle digit)."
+    ],
+    "time": "O(d)",
+    "space": "O(1)",
+    "why": "Only half the digits are processed, and everything stays inside 32 bits.",
+    "code": {
+     "java": "class Solution {\n    public boolean isPalindrome(int x) {\n        if (x < 0 || (x % 10 == 0 && x != 0)) return false;\n        int rev = 0;\n        while (x > rev) {\n            rev = rev * 10 + x % 10;\n            x /= 10;\n        }\n        return x == rev || x == rev / 10;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isPalindrome(int x) {\n        if (x < 0 || (x % 10 == 0 && x != 0)) return false;\n        int rev = 0;\n        while (x > rev) {\n            rev = rev * 10 + x % 10;\n            x /= 10;\n        }\n        return x == rev || x == rev / 10;\n    }\n};",
+     "python": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        if x < 0 or (x % 10 == 0 and x != 0):\n            return False\n        rev = 0\n        while x > rev:\n            rev = rev * 10 + x % 10\n            x //= 10\n        return x == rev or x == rev // 10",
+     "javascript": "var isPalindrome = function(x) {\n    if (x < 0 || (x % 10 === 0 && x !== 0)) return false;\n    let rev = 0;\n    while (x > rev) {\n        rev = rev * 10 + (x % 10);\n        x = Math.floor(x / 10);\n    }\n    return x === rev || x === Math.floor(rev / 10);\n};"
+    }
+   }
+  ]
+ },
+ "count-primes": {
+  "pattern": "Sieve of Eratosthenes",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Test every number against every smaller divisor",
+    "idea": "For each number from 2 to n − 1, check whether any number between 2 and itself divides it.",
+    "steps": [
+     "For each `i` in `[2, n)`: try every `j` in `[2, i)`; `i` is prime if none divides it.",
+     "Count the primes."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Each prime costs a full scan below it. Hopeless at n = 5·10⁶.",
+    "timesOut": [
+     5
+    ],
+    "code": {
+     "java": "class Solution {\n    public int countPrimes(int n) {\n        int count = 0;\n        for (int i = 2; i < n; i++) {\n            boolean prime = true;\n            for (int j = 2; j < i && prime; j++) if (i % j == 0) prime = false;\n            if (prime) count++;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countPrimes(int n) {\n        int count = 0;\n        for (int i = 2; i < n; i++) {\n            bool prime = true;\n            for (int j = 2; j < i && prime; j++) if (i % j == 0) prime = false;\n            if (prime) count++;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countPrimes(self, n: int) -> int:\n        return sum(all(i % j for j in range(2, i)) for i in range(2, n))",
+     "javascript": "var countPrimes = function(n) {\n    let count = 0;\n    for (let i = 2; i < n; i++) {\n        let prime = true;\n        for (let j = 2; j < i && prime; j++) if (i % j === 0) prime = false;\n        if (prime) count++;\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Trial division up to √i",
+    "idea": "If `i` has a divisor, it has one no larger than `√i`. So each number only needs divisors up to its square root.",
+    "steps": [
+     "For each `i` in `[2, n)`: try `j` while `j·j ≤ i`.",
+     "Count `i` if no such `j` divides it."
+    ],
+    "time": "O(n√n)",
+    "space": "O(1)",
+    "why": "Each prime costs √i divisions — still around 10⁹ operations for n = 5·10⁶.",
+    "timesOut": [
+     5
+    ],
+    "code": {
+     "java": "class Solution {\n    public int countPrimes(int n) {\n        int count = 0;\n        for (int i = 2; i < n; i++) {\n            boolean prime = true;\n            for (int j = 2; j * j <= i && prime; j++) if (i % j == 0) prime = false;\n            if (prime) count++;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countPrimes(int n) {\n        int count = 0;\n        for (int i = 2; i < n; i++) {\n            bool prime = true;\n            for (int j = 2; j * j <= i && prime; j++) if (i % j == 0) prime = false;\n            if (prime) count++;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countPrimes(self, n: int) -> int:\n        return sum(all(i % j for j in range(2, isqrt(i) + 1)) for i in range(2, n))",
+     "javascript": "var countPrimes = function(n) {\n    let count = 0;\n    for (let i = 2; i < n; i++) {\n        let prime = true;\n        for (let j = 2; j * j <= i && prime; j++) if (i % j === 0) prime = false;\n        if (prime) count++;\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sieve of Eratosthenes",
+    "idea": "Instead of testing numbers, cross out multiples. For each prime `p` (found in increasing order), mark `p², p² + p, …` as composite; smaller multiples were already crossed out by smaller primes.",
+    "steps": [
+     "Make a boolean array `composite[0..n)`.",
+     "For `p` from 2 while `p·p < n`: if `p` is not composite, mark every multiple from `p·p` with step `p`.",
+     "Count the unmarked numbers in `[2, n)`."
+    ],
+    "time": "O(n log log n)",
+    "space": "O(n)",
+    "why": "The marking work is n·(1/2 + 1/3 + 1/5 + …) over primes, which sums to n log log n.",
+    "code": {
+     "java": "class Solution {\n    public int countPrimes(int n) {\n        if (n < 3) return 0;\n        boolean[] composite = new boolean[n];\n        for (int p = 2; (long) p * p < n; p++)\n            if (!composite[p])\n                for (int m = p * p; m < n; m += p) composite[m] = true;\n        int count = 0;\n        for (int i = 2; i < n; i++) if (!composite[i]) count++;\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countPrimes(int n) {\n        if (n < 3) return 0;\n        vector<bool> composite(n, false);\n        for (long long p = 2; p * p < n; p++)\n            if (!composite[p])\n                for (long long m = p * p; m < n; m += p) composite[m] = true;\n        return count(composite.begin() + 2, composite.end(), false);\n    }\n};",
+     "python": "class Solution:\n    def countPrimes(self, n: int) -> int:\n        if n < 3:\n            return 0\n        prime = bytearray([1]) * n\n        prime[0] = prime[1] = 0\n        for p in range(2, isqrt(n - 1) + 1):\n            if prime[p]:\n                prime[p * p::p] = bytes(len(range(p * p, n, p)))\n        return sum(prime)",
+     "javascript": "var countPrimes = function(n) {\n    if (n < 3) return 0;\n    const composite = new Uint8Array(n);\n    for (let p = 2; p * p < n; p++)\n        if (!composite[p])\n            for (let m = p * p; m < n; m += p) composite[m] = 1;\n    let count = 0;\n    for (let i = 2; i < n; i++) if (!composite[i]) count++;\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "powx-n": {
+  "pattern": "Fast exponentiation by squaring",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Multiply |n| times",
+    "idea": "Multiply `x` by itself |n| times, and take the reciprocal when `n` is negative.",
+    "steps": [
+     "Let `m = |n|` as a 64-bit value (|−2³¹| does not fit in an int).",
+     "Multiply `result` by `x`, m times.",
+     "Return `result`, or `1 / result` if `n < 0`."
+    ],
+    "time": "O(|n|)",
+    "space": "O(1)",
+    "why": "Up to 2.1·10⁹ multiplications for the extreme exponents.",
+    "timesOut": [
+     3
+    ],
+    "code": {
+     "java": "class Solution {\n    public double myPow(double x, int n) {\n        long m = Math.abs((long) n);\n        double result = 1;\n        for (long i = 0; i < m; i++) result *= x;\n        return n < 0 ? 1 / result : result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double myPow(double x, int n) {\n        long long m = llabs((long long) n);\n        double result = 1;\n        for (long long i = 0; i < m; i++) result *= x;\n        return n < 0 ? 1 / result : result;\n    }\n};",
+     "python": "class Solution:\n    def myPow(self, x: float, n: int) -> float:\n        result = 1.0\n        for _ in range(abs(n)):\n            result *= x\n        return 1 / result if n < 0 else result",
+     "javascript": "var myPow = function(x, n) {\n    const m = Math.abs(n);\n    let result = 1;\n    for (let i = 0; i < m; i++) result *= x;\n    return n < 0 ? 1 / result : result;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Recursive halving",
+    "idea": "`xⁿ = (x^(n/2))²`, times one extra `x` when `n` is odd. Each call halves the exponent.",
+    "steps": [
+     "`power(x, m)`: 1 if `m == 0`.",
+     "`half = power(x, m / 2)`; return `half·half`, times `x` if `m` is odd.",
+     "Call it with `m = |n|` (64-bit) and take the reciprocal for negative `n`."
+    ],
+    "time": "O(log |n|)",
+    "space": "O(log |n|)",
+    "why": "About 31 levels of recursion for any 32-bit exponent.",
+    "code": {
+     "java": "class Solution {\n    public double myPow(double x, int n) {\n        double p = power(x, Math.abs((long) n));\n        return n < 0 ? 1 / p : p;\n    }\n\n    private double power(double x, long m) {\n        if (m == 0) return 1;\n        double half = power(x, m / 2);\n        return m % 2 == 0 ? half * half : half * half * x;\n    }\n}",
+     "cpp": "class Solution {\n    double power(double x, long long m) {\n        if (m == 0) return 1;\n        double half = power(x, m / 2);\n        return m % 2 == 0 ? half * half : half * half * x;\n    }\npublic:\n    double myPow(double x, int n) {\n        double p = power(x, llabs((long long) n));\n        return n < 0 ? 1 / p : p;\n    }\n};",
+     "python": "class Solution:\n    def myPow(self, x: float, n: int) -> float:\n        def power(m):\n            if m == 0:\n                return 1.0\n            half = power(m // 2)\n            return half * half * (x if m % 2 else 1)\n        p = power(abs(n))\n        return 1 / p if n < 0 else p",
+     "javascript": "var myPow = function(x, n) {\n    const power = (m) => {\n        if (m === 0) return 1;\n        const half = power(Math.floor(m / 2));\n        return m % 2 === 0 ? half * half : half * half * x;\n    };\n    const p = power(Math.abs(n));\n    return n < 0 ? 1 / p : p;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative binary exponentiation",
+    "idea": "Read the exponent in binary: keep squaring a running base, and multiply it into the result whenever the current bit of the exponent is 1.",
+    "steps": [
+     "`m = |n|` (64-bit); `result = 1`, `base = x`.",
+     "While `m > 0`: if `m` is odd, `result *= base`; then `base *= base`, `m /= 2`.",
+     "Return `result`, or `1 / result` if `n < 0`."
+    ],
+    "time": "O(log |n|)",
+    "space": "O(1)",
+    "why": "One squaring per bit of the exponent and no recursion.",
+    "code": {
+     "java": "class Solution {\n    public double myPow(double x, int n) {\n        long m = Math.abs((long) n);\n        double result = 1, base = x;\n        while (m > 0) {\n            if ((m & 1) == 1) result *= base;\n            base *= base;\n            m >>= 1;\n        }\n        return n < 0 ? 1 / result : result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double myPow(double x, int n) {\n        long long m = llabs((long long) n);\n        double result = 1, base = x;\n        while (m > 0) {\n            if (m & 1) result *= base;\n            base *= base;\n            m >>= 1;\n        }\n        return n < 0 ? 1 / result : result;\n    }\n};",
+     "python": "class Solution:\n    def myPow(self, x: float, n: int) -> float:\n        m, result, base = abs(n), 1.0, x\n        while m:\n            if m & 1:\n                result *= base\n            base *= base\n            m >>= 1\n        return 1 / result if n < 0 else result",
+     "javascript": "var myPow = function(x, n) {\n    let m = Math.abs(n), result = 1, base = x;\n    while (m > 0) {\n        if (m % 2 === 1) result *= base;\n        base *= base;\n        m = Math.floor(m / 2);\n    }\n    return n < 0 ? 1 / result : result;\n};"
+    }
+   }
+  ]
+ },
+ "reverse-integer": {
+  "pattern": "Digit popping with an overflow check before each push",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Reverse the digit string, check the range",
+    "idea": "Reverse the decimal string of |x|, parse it as a 64-bit number, restore the sign, and return 0 if it falls outside the 32-bit range.",
+    "steps": [
+     "Take the digits of |x| as a string (in 64-bit, since |−2³¹| overflows an int) and reverse it.",
+     "Parse, apply the sign, and return 0 if the result is outside `[−2³¹, 2³¹ − 1]`."
+    ],
+    "time": "O(d)",
+    "space": "O(d)",
+    "why": "d ≤ 10 digits. It breaks the \"no 64-bit integers\" rule, which is what the next approach fixes.",
+    "code": {
+     "java": "class Solution {\n    public int reverse(int x) {\n        String digits = new StringBuilder(String.valueOf(Math.abs((long) x))).reverse().toString();\n        long v = Long.parseLong(digits) * (x < 0 ? -1 : 1);\n        return v < Integer.MIN_VALUE || v > Integer.MAX_VALUE ? 0 : (int) v;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int reverse(int x) {\n        string digits = to_string(llabs((long long) x));\n        std::reverse(digits.begin(), digits.end());\n        long long v = stoll(digits) * (x < 0 ? -1 : 1);\n        return v < INT_MIN || v > INT_MAX ? 0 : (int) v;\n    }\n};",
+     "python": "class Solution:\n    def reverse(self, x: int) -> int:\n        v = int(str(abs(x))[::-1]) * (-1 if x < 0 else 1)\n        return v if -2**31 <= v <= 2**31 - 1 else 0",
+     "javascript": "var reverse = function(x) {\n    const v = Number(String(Math.abs(x)).split('').reverse().join('')) * (x < 0 ? -1 : 1);\n    return v < -(2 ** 31) || v > 2 ** 31 - 1 ? 0 : v;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Pop and push digits, checking before overflow",
+    "idea": "Pop the last digit with `% 10` and push it onto `rev` with `rev·10 + d`. Before pushing, check that `rev·10 + d` would still fit — using only 32-bit comparisons against `MAX / 10` and `MIN / 10`.",
+    "steps": [
+     "While `x != 0`: `d = x % 10` (it keeps the sign of `x`); `x /= 10`.",
+     "If `rev > MAX/10`, or `rev == MAX/10` and `d > 7`, return 0. Likewise if `rev < MIN/10`, or `rev == MIN/10` and `d < −8`.",
+     "`rev = rev·10 + d`. Return `rev` at the end."
+    ],
+    "time": "O(d)",
+    "space": "O(1)",
+    "why": "One step per digit and never a value outside 32 bits. Python and JavaScript have no 32-bit overflow, so the same checks are done against the explicit limits.",
+    "code": {
+     "java": "class Solution {\n    public int reverse(int x) {\n        int rev = 0;\n        while (x != 0) {\n            int d = x % 10;\n            x /= 10;\n            if (rev > Integer.MAX_VALUE / 10 || (rev == Integer.MAX_VALUE / 10 && d > 7)) return 0;\n            if (rev < Integer.MIN_VALUE / 10 || (rev == Integer.MIN_VALUE / 10 && d < -8)) return 0;\n            rev = rev * 10 + d;\n        }\n        return rev;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int reverse(int x) {\n        int rev = 0;\n        while (x != 0) {\n            int d = x % 10;\n            x /= 10;\n            if (rev > INT_MAX / 10 || (rev == INT_MAX / 10 && d > 7)) return 0;\n            if (rev < INT_MIN / 10 || (rev == INT_MIN / 10 && d < -8)) return 0;\n            rev = rev * 10 + d;\n        }\n        return rev;\n    }\n};",
+     "python": "class Solution:\n    def reverse(self, x: int) -> int:\n        MAX, MIN = 2**31 - 1, -2**31\n        sign, x, rev = (-1 if x < 0 else 1), abs(x), 0\n        while x:\n            d, x = x % 10, x // 10\n            if sign > 0 and (rev > MAX // 10 or (rev == MAX // 10 and d > 7)):\n                return 0\n            if sign < 0 and (rev > -(MIN // 10) or (rev == -(MIN // 10) and d > 8)):\n                return 0\n            rev = rev * 10 + d\n        return sign * rev",
+     "javascript": "var reverse = function(x) {\n    const MAX = 2 ** 31 - 1, MIN = -(2 ** 31);\n    let rev = 0;\n    while (x !== 0) {\n        const d = x % 10;\n        x = Math.trunc(x / 10);\n        if (rev > Math.trunc(MAX / 10) || (rev === Math.trunc(MAX / 10) && d > 7)) return 0;\n        if (rev < Math.trunc(MIN / 10) || (rev === Math.trunc(MIN / 10) && d < -8)) return 0;\n        rev = rev * 10 + d;\n    }\n    return rev;\n};"
+    }
+   }
+  ]
+ },
+ "factorial-trailing-zeroes": {
+  "pattern": "Legendre's formula: count factors of 5 via n/5 + n/25 + n/125 + …",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compute n! exactly and count zeros",
+    "idea": "Build n! as a big integer and count how many times it ends in 0.",
+    "steps": [
+     "Multiply 1 × 2 × … × n with arbitrary-precision arithmetic (C++: an array of base-10⁹ limbs).",
+     "Count trailing zero digits."
+    ],
+    "time": "O(n²·log n)",
+    "space": "O(n log n)",
+    "why": "n! has about n·log₁₀ n digits and every multiplication touches all of them.",
+    "code": {
+     "java": "import java.math.BigInteger;\n\nclass Solution {\n    public int trailingZeroes(int n) {\n        BigInteger f = BigInteger.ONE;\n        for (int i = 2; i <= n; i++) f = f.multiply(BigInteger.valueOf(i));\n        String s = f.toString();\n        int zeros = 0;\n        for (int i = s.length() - 1; i >= 0 && s.charAt(i) == '0'; i--) zeros++;\n        return zeros;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int trailingZeroes(int n) {\n        const uint32_t BASE = 1000000000;\n        vector<uint32_t> limbs{1}; // n! in base 10^9, least significant limb first\n        for (int i = 2; i <= n; i++) {\n            uint64_t carry = 0;\n            for (auto& limb : limbs) {\n                uint64_t cur = (uint64_t) limb * i + carry;\n                limb = cur % BASE;\n                carry = cur / BASE;\n            }\n            while (carry) { limbs.push_back(carry % BASE); carry /= BASE; }\n        }\n        int zeros = 0;\n        size_t k = 0;\n        while (limbs[k] == 0) { zeros += 9; k++; }\n        for (uint32_t v = limbs[k]; v % 10 == 0; v /= 10) zeros++;\n        return zeros;\n    }\n};",
+     "python": "class Solution:\n    def trailingZeroes(self, n: int) -> int:\n        f, zeros = factorial(n), 0\n        while f % 10 == 0:\n            f //= 10\n            zeros += 1\n        return zeros",
+     "javascript": "var trailingZeroes = function(n) {\n    let f = 1n;\n    for (let i = 2n; i <= BigInt(n); i++) f *= i;\n    const s = f.toString();\n    let zeros = 0;\n    for (let i = s.length - 1; i >= 0 && s[i] === '0'; i--) zeros++;\n    return zeros;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count factors of 5 in each number",
+    "idea": "Each trailing zero is a factor 10 = 2 × 5, and factors of 2 are always more plentiful. So count how many 5s divide each of 1..n.",
+    "steps": [
+     "For each `i` from 5 to n (step 5): while `i` is divisible by 5, divide and count.",
+     "Return the count."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "n/5 numbers, each divided by 5 at most log₅ n times — about n/4 divisions in total.",
+    "code": {
+     "java": "class Solution {\n    public int trailingZeroes(int n) {\n        int count = 0;\n        for (int i = 5; i <= n; i += 5)\n            for (int x = i; x % 5 == 0; x /= 5) count++;\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int trailingZeroes(int n) {\n        int count = 0;\n        for (int i = 5; i <= n; i += 5)\n            for (int x = i; x % 5 == 0; x /= 5) count++;\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def trailingZeroes(self, n: int) -> int:\n        count = 0\n        for i in range(5, n + 1, 5):\n            while i % 5 == 0:\n                i //= 5\n                count += 1\n        return count",
+     "javascript": "var trailingZeroes = function(n) {\n    let count = 0;\n    for (let i = 5; i <= n; i += 5)\n        for (let x = i; x % 5 === 0; x /= 5) count++;\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count multiples of 5, 25, 125, …",
+    "idea": "`n / 5` numbers contribute at least one 5, `n / 25` contribute a second, `n / 125` a third, and so on. Summing those counts gives every factor of 5 exactly once.",
+    "steps": [
+     "While `n > 0`: `n /= 5`; add `n` to the count.",
+     "Return the count."
+    ],
+    "time": "O(log n)",
+    "space": "O(1)",
+    "why": "The loop runs log₅ n times. Dividing `n` itself (instead of growing a power of 5) avoids overflow.",
+    "code": {
+     "java": "class Solution {\n    public int trailingZeroes(int n) {\n        int count = 0;\n        while (n > 0) {\n            n /= 5;\n            count += n;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int trailingZeroes(int n) {\n        int count = 0;\n        while (n > 0) {\n            n /= 5;\n            count += n;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def trailingZeroes(self, n: int) -> int:\n        count = 0\n        while n:\n            n //= 5\n            count += n\n        return count",
+     "javascript": "var trailingZeroes = function(n) {\n    let count = 0;\n    while (n > 0) {\n        n = Math.floor(n / 5);\n        count += n;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "count-good-numbers": {
+  "pattern": "Counting principle + fast modular exponentiation",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Multiply position by position",
+    "idea": "Each even index has 5 choices and each odd index has 4, independently. Multiply them one position at a time, modulo 10⁹ + 7.",
+    "steps": [
+     "For `i` from 0 to n − 1: multiply by 5 if `i` is even, otherwise by 4 (mod 10⁹ + 7).",
+     "Return the product."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "n can be 10¹⁵, so a loop over positions is far too slow.",
+    "timesOut": [
+     4
+    ],
+    "code": {
+     "java": "class Solution {\n    public int countGoodNumbers(long n) {\n        final long MOD = 1_000_000_007;\n        long result = 1;\n        for (long i = 0; i < n; i++) result = result * (i % 2 == 0 ? 5 : 4) % MOD;\n        return (int) result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countGoodNumbers(long long n) {\n        const long long MOD = 1'000'000'007;\n        long long result = 1;\n        for (long long i = 0; i < n; i++) result = result * (i % 2 == 0 ? 5 : 4) % MOD;\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def countGoodNumbers(self, n: int) -> int:\n        MOD = 10**9 + 7\n        result = 1\n        for i in range(n):\n            result = result * (5 if i % 2 == 0 else 4) % MOD\n        return result",
+     "javascript": "var countGoodNumbers = function(n) {\n    const MOD = 1e9 + 7;\n    let result = 1;\n    for (let i = 0; i < n; i++) result = (result * (i % 2 === 0 ? 5 : 4)) % MOD;\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "5^⌈n/2⌉ · 4^⌊n/2⌋ with fast power",
+    "idea": "There are ⌈n/2⌉ even indices and ⌊n/2⌋ odd ones, so the answer is `5^⌈n/2⌉ · 4^⌊n/2⌋ mod 10⁹ + 7`. Compute each power by repeated squaring.",
+    "steps": [
+     "`power(b, e)`: square-and-multiply on the bits of `e`, reducing mod 10⁹ + 7 each step.",
+     "Return `power(5, (n + 1) / 2) · power(4, n / 2) mod 10⁹ + 7`."
+    ],
+    "time": "O(log n)",
+    "space": "O(1)",
+    "why": "About 50 squarings for n = 10¹⁵. Products of two values below 10⁹ + 7 need 64 bits; JavaScript uses BigInt because they exceed 2⁵³.",
+    "code": {
+     "java": "class Solution {\n    private static final long MOD = 1_000_000_007;\n\n    public int countGoodNumbers(long n) {\n        return (int) (power(5, (n + 1) / 2) * power(4, n / 2) % MOD);\n    }\n\n    private long power(long base, long e) {\n        long result = 1;\n        base %= MOD;\n        while (e > 0) {\n            if ((e & 1) == 1) result = result * base % MOD;\n            base = base * base % MOD;\n            e >>= 1;\n        }\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    static const long long MOD = 1'000'000'007;\n    long long power(long long base, long long e) {\n        long long result = 1;\n        base %= MOD;\n        while (e > 0) {\n            if (e & 1) result = result * base % MOD;\n            base = base * base % MOD;\n            e >>= 1;\n        }\n        return result;\n    }\npublic:\n    int countGoodNumbers(long long n) {\n        return power(5, (n + 1) / 2) * power(4, n / 2) % MOD;\n    }\n};",
+     "python": "class Solution:\n    def countGoodNumbers(self, n: int) -> int:\n        MOD = 10**9 + 7\n        return pow(5, (n + 1) // 2, MOD) * pow(4, n // 2, MOD) % MOD",
+     "javascript": "var countGoodNumbers = function(n) {\n    const MOD = 1000000007n;\n    const power = (base, e) => {\n        let result = 1n;\n        base %= MOD;\n        while (e > 0n) {\n            if (e & 1n) result = (result * base) % MOD;\n            base = (base * base) % MOD;\n            e >>= 1n;\n        }\n        return result;\n    };\n    const big = BigInt(n);\n    return Number((power(5n, (big + 1n) / 2n) * power(4n, big / 2n)) % MOD);\n};"
+    }
+   }
+  ]
+ },
+ "shuffle-an-array": {
+  "pattern": "Fisher–Yates shuffle",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Draw from a shrinking pool",
+    "idea": "Copy the values into a pool. Repeatedly pick a random element of the pool, append it to the result and remove it. Every order is equally likely, but removing from the middle of a list costs O(n).",
+    "steps": [
+     "Keep the original array for `reset`.",
+     "`shuffle`: copy the array into a list; n times, remove a uniformly random index and append that value.",
+     "`reset`: return a copy of the original."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each shuffle does n removals, each shifting up to n elements.",
+    "code": {
+     "java": "class Solution {\n    private final int[] original;\n    private final Random rng = new Random();\n\n    public Solution(int[] nums) {\n        original = nums.clone();\n    }\n\n    public int[] reset() {\n        return original.clone();\n    }\n\n    public int[] shuffle() {\n        List<Integer> pool = new ArrayList<>();\n        for (int x : original) pool.add(x);\n        int[] result = new int[original.length];\n        for (int i = 0; i < result.length; i++) result[i] = pool.remove(rng.nextInt(pool.size()));\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> original;\n    mt19937 rng{random_device{}()};\npublic:\n    Solution(vector<int>& nums) : original(nums) {}\n\n    vector<int> reset() {\n        return original;\n    }\n\n    vector<int> shuffle() {\n        vector<int> pool = original, result;\n        while (!pool.empty()) {\n            int i = uniform_int_distribution<int>(0, pool.size() - 1)(rng);\n            result.push_back(pool[i]);\n            pool.erase(pool.begin() + i);\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def __init__(self, nums: List[int]):\n        self.original = list(nums)\n\n    def reset(self) -> List[int]:\n        return list(self.original)\n\n    def shuffle(self) -> List[int]:\n        pool = list(self.original)\n        return [pool.pop(random.randrange(len(pool))) for _ in range(len(self.original))]",
+     "javascript": "var Solution = function(nums) {\n    this.original = [...nums];\n};\n\nSolution.prototype.reset = function() {\n    return [...this.original];\n};\n\nSolution.prototype.shuffle = function() {\n    const pool = [...this.original], result = [];\n    while (pool.length) result.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Fisher–Yates (Knuth) shuffle",
+    "idea": "Shuffle a copy in place: for `i` from the end down to 1, swap position `i` with a uniformly random position `j` in `[0, i]`. Each value ends up in each slot with equal probability.",
+    "steps": [
+     "Keep the original array for `reset`.",
+     "`shuffle`: copy it; for `i` from n − 1 down to 1, pick `j` uniformly in `[0, i]` and swap `a[i]` with `a[j]`.",
+     "`reset`: return a copy of the original."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "n − 1 swaps per shuffle. There are n·(n − 1)·…·1 = n! equally likely choice sequences, one per permutation — so it is exactly uniform. (Picking `j` from the whole array instead is a classic bug that biases the result.)",
+    "code": {
+     "java": "class Solution {\n    private final int[] original;\n    private final Random rng = new Random();\n\n    public Solution(int[] nums) {\n        original = nums.clone();\n    }\n\n    public int[] reset() {\n        return original.clone();\n    }\n\n    public int[] shuffle() {\n        int[] a = original.clone();\n        for (int i = a.length - 1; i > 0; i--) {\n            int j = rng.nextInt(i + 1);\n            int t = a[i]; a[i] = a[j]; a[j] = t;\n        }\n        return a;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> original;\n    mt19937 rng{random_device{}()};\npublic:\n    Solution(vector<int>& nums) : original(nums) {}\n\n    vector<int> reset() {\n        return original;\n    }\n\n    vector<int> shuffle() {\n        vector<int> a = original;\n        for (int i = (int) a.size() - 1; i > 0; i--) {\n            int j = uniform_int_distribution<int>(0, i)(rng);\n            swap(a[i], a[j]);\n        }\n        return a;\n    }\n};",
+     "python": "class Solution:\n    def __init__(self, nums: List[int]):\n        self.original = list(nums)\n\n    def reset(self) -> List[int]:\n        return list(self.original)\n\n    def shuffle(self) -> List[int]:\n        a = list(self.original)\n        for i in range(len(a) - 1, 0, -1):\n            j = random.randint(0, i)\n            a[i], a[j] = a[j], a[i]\n        return a",
+     "javascript": "var Solution = function(nums) {\n    this.original = [...nums];\n};\n\nSolution.prototype.reset = function() {\n    return [...this.original];\n};\n\nSolution.prototype.shuffle = function() {\n    const a = [...this.original];\n    for (let i = a.length - 1; i > 0; i--) {\n        const j = Math.floor(Math.random() * (i + 1));\n        [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n};"
+    }
+   }
+  ]
+ },
+ "linked-list-random-node": {
+  "pattern": "Reservoir sampling (pick from a stream of unknown length)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the values into an array",
+    "idea": "Store every value in an array once; each call picks a random index.",
+    "steps": [
+     "Constructor: walk the list and append each value to an array.",
+     "`getRandom`: return the value at a uniformly random index."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "O(n) to build, then O(1) per call — but it keeps a full copy of the list, which the follow-up rules out.",
+    "code": {
+     "java": "class Solution {\n    private final List<Integer> values = new ArrayList<>();\n    private final Random rng = new Random();\n\n    public Solution(ListNode head) {\n        for (ListNode p = head; p != null; p = p.next) values.add(p.val);\n    }\n\n    public int getRandom() {\n        return values.get(rng.nextInt(values.size()));\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> values;\n    mt19937 rng{random_device{}()};\npublic:\n    Solution(ListNode* head) {\n        for (ListNode* p = head; p; p = p->next) values.push_back(p->val);\n    }\n\n    int getRandom() {\n        return values[uniform_int_distribution<int>(0, values.size() - 1)(rng)];\n    }\n};",
+     "python": "class Solution:\n    def __init__(self, head: Optional[ListNode]):\n        self.values = []\n        while head:\n            self.values.append(head.val)\n            head = head.next\n\n    def getRandom(self) -> int:\n        return random.choice(self.values)",
+     "javascript": "var Solution = function(head) {\n    this.values = [];\n    for (let p = head; p; p = p.next) this.values.push(p.val);\n};\n\nSolution.prototype.getRandom = function() {\n    return this.values[Math.floor(Math.random() * this.values.length)];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count once, then walk to a random index",
+    "idea": "Keep only the head and the length. Each call picks a random index and walks to it.",
+    "steps": [
+     "Constructor: store `head` and count the nodes.",
+     "`getRandom`: pick `k` uniformly in `[0, length)` and step `k` times from the head."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "O(n) per call and O(1) extra space — but it needs the length up front, which a true stream does not give you.",
+    "code": {
+     "java": "class Solution {\n    private final ListNode head;\n    private final int length;\n    private final Random rng = new Random();\n\n    public Solution(ListNode head) {\n        this.head = head;\n        int n = 0;\n        for (ListNode p = head; p != null; p = p.next) n++;\n        length = n;\n    }\n\n    public int getRandom() {\n        ListNode p = head;\n        for (int k = rng.nextInt(length); k > 0; k--) p = p.next;\n        return p.val;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* head;\n    int length = 0;\n    mt19937 rng{random_device{}()};\npublic:\n    Solution(ListNode* head) : head(head) {\n        for (ListNode* p = head; p; p = p->next) length++;\n    }\n\n    int getRandom() {\n        ListNode* p = head;\n        for (int k = uniform_int_distribution<int>(0, length - 1)(rng); k > 0; k--) p = p->next;\n        return p->val;\n    }\n};",
+     "python": "class Solution:\n    def __init__(self, head: Optional[ListNode]):\n        self.head, self.length = head, 0\n        while head:\n            self.length += 1\n            head = head.next\n\n    def getRandom(self) -> int:\n        p = self.head\n        for _ in range(random.randrange(self.length)):\n            p = p.next\n        return p.val",
+     "javascript": "var Solution = function(head) {\n    this.head = head;\n    this.length = 0;\n    for (let p = head; p; p = p.next) this.length++;\n};\n\nSolution.prototype.getRandom = function() {\n    let p = this.head;\n    for (let k = Math.floor(Math.random() * this.length); k > 0; k--) p = p.next;\n    return p.val;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Reservoir sampling",
+    "idea": "Walk the list once; when you reach the i-th node (1-based), make it the current pick with probability 1/i. Node i survives the later nodes with probability `i/(i+1) · (i+1)/(i+2) · … · (n−1)/n`, so every node ends up chosen with probability exactly 1/n.",
+    "steps": [
+     "Constructor: store `head` only.",
+     "`getRandom`: for `i = 1, 2, …` over the nodes, replace `result` with the node's value when `random(0..i−1) == 0`.",
+     "Return `result`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass per call, O(1) memory, and no need to know the length in advance — the setting the follow-up asks about.",
+    "code": {
+     "java": "class Solution {\n    private final ListNode head;\n    private final Random rng = new Random();\n\n    public Solution(ListNode head) {\n        this.head = head;\n    }\n\n    public int getRandom() {\n        int result = 0, i = 0;\n        for (ListNode p = head; p != null; p = p.next)\n            if (rng.nextInt(++i) == 0) result = p.val;\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* head;\n    mt19937 rng{random_device{}()};\npublic:\n    Solution(ListNode* head) : head(head) {}\n\n    int getRandom() {\n        int result = 0, i = 0;\n        for (ListNode* p = head; p; p = p->next)\n            if (uniform_int_distribution<int>(0, i++)(rng) == 0) result = p->val;\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def __init__(self, head: Optional[ListNode]):\n        self.head = head\n\n    def getRandom(self) -> int:\n        result, i, p = 0, 0, self.head\n        while p:\n            i += 1\n            if random.randrange(i) == 0:\n                result = p.val\n            p = p.next\n        return result",
+     "javascript": "var Solution = function(head) {\n    this.head = head;\n};\n\nSolution.prototype.getRandom = function() {\n    let result = 0, i = 0;\n    for (let p = this.head; p; p = p.next)\n        if (Math.floor(Math.random() * ++i) === 0) result = p.val;\n    return result;\n};"
+    }
+   }
+  ]
+ },
+ "implement-rand10-using-rand7": {
+  "pattern": "Rejection sampling (and recycling the rejected randomness)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "A uniform 1..5 and a fair coin",
+    "idea": "Reject 6 and 7 to get a uniform 1..5, and reject 7 to get a fair coin from 1..6 (odd/even). Together they give 10 equally likely outcomes.",
+    "steps": [
+     "Repeat `a = rand7()` until `a ≤ 5`.",
+     "Repeat `b = rand7()` until `b ≤ 6`.",
+     "Return `a` if `b` is odd, else `a + 5`."
+    ],
+    "time": "O(1)",
+    "space": "O(1)",
+    "why": "Expected calls to rand7: 7/5 + 7/6 ≈ 2.57. The number of calls is unbounded in the worst case, but each retry is independent, so it ends with probability 1.",
+    "code": {
+     "java": "class Solution extends SolBase {\n    public int rand10() {\n        int a, b;\n        do a = rand7(); while (a > 5);\n        do b = rand7(); while (b > 6);\n        return b % 2 == 1 ? a : a + 5;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int rand10() {\n        int a, b;\n        do a = rand7(); while (a > 5);\n        do b = rand7(); while (b > 6);\n        return b % 2 == 1 ? a : a + 5;\n    }\n};",
+     "python": "class Solution:\n    def rand10(self) -> int:\n        a = rand7()\n        while a > 5:\n            a = rand7()\n        b = rand7()\n        while b > 6:\n            b = rand7()\n        return a if b % 2 else a + 5",
+     "javascript": "var rand10 = function() {\n    let a, b;\n    do a = rand7(); while (a > 5);\n    do b = rand7(); while (b > 6);\n    return b % 2 === 1 ? a : a + 5;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "7 × 7 grid, keep the first 40",
+    "idea": "Two calls give a uniform number 1..49 via `(rand7() − 1)·7 + rand7()`. Keep 1..40 (four copies of 1..10) and retry on 41..49.",
+    "steps": [
+     "`v = (rand7() − 1)·7 + rand7()`; uniform in 1..49.",
+     "If `v > 40`, retry.",
+     "Return `(v − 1) % 10 + 1`."
+    ],
+    "time": "O(1)",
+    "space": "O(1)",
+    "why": "Each try uses 2 calls and succeeds with probability 40/49, so the expected cost is 2·49/40 ≈ 2.45 calls.",
+    "code": {
+     "java": "class Solution extends SolBase {\n    public int rand10() {\n        int v;\n        do v = (rand7() - 1) * 7 + rand7(); while (v > 40);\n        return (v - 1) % 10 + 1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int rand10() {\n        int v;\n        do v = (rand7() - 1) * 7 + rand7(); while (v > 40);\n        return (v - 1) % 10 + 1;\n    }\n};",
+     "python": "class Solution:\n    def rand10(self) -> int:\n        while True:\n            v = (rand7() - 1) * 7 + rand7()\n            if v <= 40:\n                return (v - 1) % 10 + 1",
+     "javascript": "var rand10 = function() {\n    let v;\n    do v = (rand7() - 1) * 7 + rand7(); while (v > 40);\n    return ((v - 1) % 10) + 1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Rejection sampling that recycles the leftover",
+    "idea": "A rejected value is still uniform over what was left: 41..49 is a uniform 1..9. Combine it with another rand7 to get 1..63 (keep 60), then the rejected 61..63 is a uniform 1..3; combine again for 1..21 (keep 20). Only 21 restarts from scratch.",
+    "steps": [
+     "`a = (rand7() − 1)·7 + rand7()` in 1..49; if `a ≤ 40`, return `(a − 1) % 10 + 1`.",
+     "`b = (a − 41)·7 + rand7()` in 1..63; if `b ≤ 60`, return `(b − 1) % 10 + 1`.",
+     "`c = (b − 61)·7 + rand7()` in 1..21; if `c ≤ 20`, return `(c − 1) % 10 + 1`.",
+     "Otherwise start again."
+    ],
+    "time": "O(1)",
+    "space": "O(1)",
+    "why": "Wasting less randomness lowers the expected cost to about 2.19 calls per result — the lowest of these three schemes.",
+    "code": {
+     "java": "class Solution extends SolBase {\n    public int rand10() {\n        while (true) {\n            int a = (rand7() - 1) * 7 + rand7();   // 1..49\n            if (a <= 40) return (a - 1) % 10 + 1;\n            int b = (a - 41) * 7 + rand7();       // 1..63\n            if (b <= 60) return (b - 1) % 10 + 1;\n            int c = (b - 61) * 7 + rand7();       // 1..21\n            if (c <= 20) return (c - 1) % 10 + 1;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int rand10() {\n        while (true) {\n            int a = (rand7() - 1) * 7 + rand7();   // 1..49\n            if (a <= 40) return (a - 1) % 10 + 1;\n            int b = (a - 41) * 7 + rand7();       // 1..63\n            if (b <= 60) return (b - 1) % 10 + 1;\n            int c = (b - 61) * 7 + rand7();       // 1..21\n            if (c <= 20) return (c - 1) % 10 + 1;\n        }\n    }\n};",
+     "python": "class Solution:\n    def rand10(self) -> int:\n        while True:\n            a = (rand7() - 1) * 7 + rand7()   # 1..49\n            if a <= 40:\n                return (a - 1) % 10 + 1\n            b = (a - 41) * 7 + rand7()       # 1..63\n            if b <= 60:\n                return (b - 1) % 10 + 1\n            c = (b - 61) * 7 + rand7()       # 1..21\n            if c <= 20:\n                return (c - 1) % 10 + 1",
+     "javascript": "var rand10 = function() {\n    while (true) {\n        const a = (rand7() - 1) * 7 + rand7();   // 1..49\n        if (a <= 40) return ((a - 1) % 10) + 1;\n        const b = (a - 41) * 7 + rand7();       // 1..63\n        if (b <= 60) return ((b - 1) % 10) + 1;\n        const c = (b - 61) * 7 + rand7();       // 1..21\n        if (c <= 20) return ((c - 1) % 10) + 1;\n    }\n};"
+    }
+   }
+  ]
+ }
+}
