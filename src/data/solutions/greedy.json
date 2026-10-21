@@ -1,0 +1,432 @@
+{
+ "assign-cookies": {
+  "pattern": "Greedy matching after sorting (smallest cookie that satisfies the least greedy child)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "For each child, search all cookies for the smallest that fits",
+    "idea": "Serve children from least to most greedy; give each the smallest unused cookie that satisfies them, found by scanning every cookie.",
+    "steps": [
+     "Sort `g`. Keep a `used` flag per cookie.",
+     "For each child, scan all cookies for the smallest unused `s[j] >= g[i]`.",
+     "If found, mark it used and count the child."
+    ],
+    "time": "O(n·m + n log n)",
+    "space": "O(m)",
+    "why": "Each of the n children scans m cookies. The flags take O(m).",
+    "code": {
+     "java": "class Solution {\n    public int findContentChildren(int[] g, int[] s) {\n        Arrays.sort(g);\n        boolean[] used = new boolean[s.length];\n        int content = 0;\n        for (int need : g) {\n            int best = -1;\n            for (int j = 0; j < s.length; j++)\n                if (!used[j] && s[j] >= need && (best == -1 || s[j] < s[best])) best = j;\n            if (best != -1) { used[best] = true; content++; }\n        }\n        return content;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findContentChildren(vector<int>& g, vector<int>& s) {\n        sort(g.begin(), g.end());\n        vector<bool> used(s.size(), false);\n        int content = 0;\n        for (int need : g) {\n            int best = -1;\n            for (int j = 0; j < (int) s.size(); j++)\n                if (!used[j] && s[j] >= need && (best == -1 || s[j] < s[best])) best = j;\n            if (best != -1) { used[best] = true; content++; }\n        }\n        return content;\n    }\n};",
+     "python": "class Solution:\n    def findContentChildren(self, g: List[int], s: List[int]) -> int:\n        used = [False] * len(s)\n        content = 0\n        for need in sorted(g):\n            best = -1\n            for j, size in enumerate(s):\n                if not used[j] and size >= need and (best == -1 or size < s[best]):\n                    best = j\n            if best != -1:\n                used[best] = True\n                content += 1\n        return content",
+     "javascript": "var findContentChildren = function(g, s) {\n    g.sort((a, b) => a - b);\n    const used = new Array(s.length).fill(false);\n    let content = 0;\n    for (const need of g) {\n        let best = -1;\n        for (let j = 0; j < s.length; j++)\n            if (!used[j] && s[j] >= need && (best === -1 || s[j] < s[best])) best = j;\n        if (best !== -1) { used[best] = true; content++; }\n    }\n    return content;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort both and match with two pointers",
+    "idea": "With both lists sorted, walk the cookies from small to large. Each cookie goes to the least greedy unserved child if it is big enough; otherwise it is too small for everyone left, so skip it.",
+    "steps": [
+     "Sort `g` and `s`. Set `child = 0`.",
+     "For each cookie in increasing size: if `child < g.length` and the cookie is `>= g[child]`, serve that child (`child++`).",
+     "Return `child`, the number of content children."
+    ],
+    "time": "O(n log n + m log m)",
+    "space": "O(1)",
+    "why": "Two sorts and one linear pass (aside from the sorts' own memory). Using the smallest cookie that works never hurts: any larger cookie saved is at least as useful later.",
+    "code": {
+     "java": "class Solution {\n    public int findContentChildren(int[] g, int[] s) {\n        Arrays.sort(g);\n        Arrays.sort(s);\n        int child = 0;\n        for (int cookie : s)\n            if (child < g.length && cookie >= g[child]) child++;\n        return child;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findContentChildren(vector<int>& g, vector<int>& s) {\n        sort(g.begin(), g.end());\n        sort(s.begin(), s.end());\n        int child = 0;\n        for (int cookie : s)\n            if (child < (int) g.size() && cookie >= g[child]) child++;\n        return child;\n    }\n};",
+     "python": "class Solution:\n    def findContentChildren(self, g: List[int], s: List[int]) -> int:\n        g.sort()\n        s.sort()\n        child = 0\n        for cookie in s:\n            if child < len(g) and cookie >= g[child]:\n                child += 1\n        return child",
+     "javascript": "var findContentChildren = function(g, s) {\n    g.sort((a, b) => a - b);\n    s.sort((a, b) => a - b);\n    let child = 0;\n    for (const cookie of s)\n        if (child < g.length && cookie >= g[child]) child++;\n    return child;\n};"
+    }
+   }
+  ]
+ },
+ "best-time-to-buy-and-sell-stock": {
+  "pattern": "One pass tracking the minimum so far (best sale = today − cheapest earlier day)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every buy day and sell day",
+    "idea": "Check every pair of days `i < j` and keep the largest `prices[j] − prices[i]`.",
+    "steps": [
+     "Set `best = 0`.",
+     "For each `i` and each `j > i`, update `best` with `prices[j] − prices[i]`.",
+     "Return `best`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n(n − 1)/2 pairs; for n = 10⁵ that is 5 × 10⁹.",
+    "code": {
+     "java": "class Solution {\n    public int maxProfit(int[] prices) {\n        int best = 0;\n        for (int i = 0; i < prices.length; i++)\n            for (int j = i + 1; j < prices.length; j++) best = Math.max(best, prices[j] - prices[i]);\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int best = 0, n = prices.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) best = max(best, prices[j] - prices[i]);\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        n, best = len(prices), 0\n        for i in range(n):\n            for j in range(i + 1, n):\n                best = max(best, prices[j] - prices[i])\n        return best",
+     "javascript": "var maxProfit = function(prices) {\n    let best = 0;\n    for (let i = 0; i < prices.length; i++)\n        for (let j = i + 1; j < prices.length; j++) best = Math.max(best, prices[j] - prices[i]);\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Track the cheapest price so far",
+    "idea": "If you sell on day `j`, the best buy day is the cheapest day before it. So scan once, remembering the lowest price seen, and check the profit of selling today.",
+    "steps": [
+     "Set `minPrice = ∞`, `best = 0`.",
+     "For each price: update `best` with `price − minPrice`, then update `minPrice`.",
+     "Return `best`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with two variables. Updating `best` before `minPrice` ensures you never sell on the day you buy (which would only give 0 anyway).",
+    "code": {
+     "java": "class Solution {\n    public int maxProfit(int[] prices) {\n        int minPrice = Integer.MAX_VALUE, best = 0;\n        for (int p : prices) {\n            best = Math.max(best, p - minPrice);\n            minPrice = Math.min(minPrice, p);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        int minPrice = INT_MAX, best = 0;\n        for (int p : prices) {\n            best = max(best, p - minPrice);\n            minPrice = min(minPrice, p);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        min_price, best = inf, 0\n        for p in prices:\n            best = max(best, p - min_price)\n            min_price = min(min_price, p)\n        return best",
+     "javascript": "var maxProfit = function(prices) {\n    let minPrice = Infinity, best = 0;\n    for (const p of prices) {\n        best = Math.max(best, p - minPrice);\n        minPrice = Math.min(minPrice, p);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "jump-game": {
+  "pattern": "Greedy farthest reach",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every jump recursively",
+    "idea": "From index `i`, try every jump length from 1 to `nums[i]` and see whether any of them leads to the end.",
+    "steps": [
+     "`canReach(i)`: if `i` is the last index, return true.",
+     "For each step from `min(nums[i], last − i)` down to 1, if `canReach(i + step)` is true, return true.",
+     "Return false. Answer `canReach(0)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "The same indices are explored again and again along different paths, which can be exponential; the recursion depth is up to n.",
+    "code": {
+     "java": "class Solution {\n    public boolean canJump(int[] nums) {\n        return canReach(nums, 0);\n    }\n\n    private boolean canReach(int[] nums, int i) {\n        int last = nums.length - 1;\n        if (i == last) return true;\n        for (int step = Math.min(nums[i], last - i); step >= 1; step--)\n            if (canReach(nums, i + step)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool canReach(vector<int>& nums, int i) {\n        int last = nums.size() - 1;\n        if (i == last) return true;\n        for (int step = min(nums[i], last - i); step >= 1; step--)\n            if (canReach(nums, i + step)) return true;\n        return false;\n    }\npublic:\n    bool canJump(vector<int>& nums) {\n        return canReach(nums, 0);\n    }\n};",
+     "python": "class Solution:\n    def canJump(self, nums: List[int]) -> bool:\n        last = len(nums) - 1\n        def can_reach(i):\n            if i == last:\n                return True\n            return any(can_reach(i + step) for step in range(min(nums[i], last - i), 0, -1))\n        return can_reach(0)",
+     "javascript": "var canJump = function(nums) {\n    const last = nums.length - 1;\n    const canReach = (i) => {\n        if (i === last) return true;\n        for (let step = Math.min(nums[i], last - i); step >= 1; step--)\n            if (canReach(i + step)) return true;\n        return false;\n    };\n    return canReach(0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "DP from the right: which indices are \"good\"?",
+    "idea": "An index is good if some jump from it lands on a good index; the last index is good. Fill this in from right to left so every answer it depends on is already known.",
+    "steps": [
+     "Mark the last index good.",
+     "For `i` from n − 2 down to 0: `i` is good if any `j` in `i + 1 .. min(i + nums[i], n − 1)` is good.",
+     "Return whether index 0 is good."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each index may check up to n later indices; the good/bad table is O(n).",
+    "code": {
+     "java": "class Solution {\n    public boolean canJump(int[] nums) {\n        int n = nums.length;\n        boolean[] good = new boolean[n];\n        good[n - 1] = true;\n        for (int i = n - 2; i >= 0; i--)\n            for (int j = i + 1; j <= Math.min(i + nums[i], n - 1) && !good[i]; j++)\n                if (good[j]) good[i] = true;\n        return good[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canJump(vector<int>& nums) {\n        int n = nums.size();\n        vector<bool> good(n, false);\n        good[n - 1] = true;\n        for (int i = n - 2; i >= 0; i--)\n            for (int j = i + 1; j <= min(i + nums[i], n - 1) && !good[i]; j++)\n                if (good[j]) good[i] = true;\n        return good[0];\n    }\n};",
+     "python": "class Solution:\n    def canJump(self, nums: List[int]) -> bool:\n        n = len(nums)\n        good = [False] * n\n        good[-1] = True\n        for i in range(n - 2, -1, -1):\n            good[i] = any(good[j] for j in range(i + 1, min(i + nums[i], n - 1) + 1))\n        return good[0]",
+     "javascript": "var canJump = function(nums) {\n    const n = nums.length, good = new Array(n).fill(false);\n    good[n - 1] = true;\n    for (let i = n - 2; i >= 0; i--)\n        for (let j = i + 1; j <= Math.min(i + nums[i], n - 1) && !good[i]; j++)\n            if (good[j]) good[i] = true;\n    return good[0];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Greedy: track the farthest reachable index",
+    "idea": "Every index up to the farthest point reached so far is reachable. Walk forward, extending that farthest point; if you ever stand beyond it, you are stuck.",
+    "steps": [
+     "Set `reach = 0`.",
+     "For each index `i`: if `i > reach`, return false.",
+     "Update `reach = max(reach, i + nums[i])`; if it reaches the last index, return true.",
+     "Return true after the loop."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with one variable. The reachable set is always a prefix of the array, so a single number describes it.",
+    "code": {
+     "java": "class Solution {\n    public boolean canJump(int[] nums) {\n        int reach = 0;\n        for (int i = 0; i < nums.length; i++) {\n            if (i > reach) return false;\n            reach = Math.max(reach, i + nums[i]);\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canJump(vector<int>& nums) {\n        int reach = 0;\n        for (int i = 0; i < (int) nums.size(); i++) {\n            if (i > reach) return false;\n            reach = max(reach, i + nums[i]);\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def canJump(self, nums: List[int]) -> bool:\n        reach = 0\n        for i, x in enumerate(nums):\n            if i > reach:\n                return False\n            reach = max(reach, i + x)\n        return True",
+     "javascript": "var canJump = function(nums) {\n    let reach = 0;\n    for (let i = 0; i < nums.length; i++) {\n        if (i > reach) return false;\n        reach = Math.max(reach, i + nums[i]);\n    }\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "jump-game-ii": {
+  "pattern": "Greedy BFS by levels (each jump count covers a window of indices)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "DP: fewest jumps to each index",
+    "idea": "`jumps[j]` = the fewest jumps to reach index `j`. From each index `i`, every index it can reach in one jump can be reached in `jumps[i] + 1`.",
+    "steps": [
+     "Set `jumps[0] = 0` and every other entry to ∞.",
+     "For each `i` in order, for each `j` in `i + 1 .. min(i + nums[i], n − 1)`, set `jumps[j] = min(jumps[j], jumps[i] + 1)`.",
+     "Return `jumps[n − 1]`."
+    ],
+    "time": "O(n·J)",
+    "space": "O(n)",
+    "why": "J = the largest jump (≤ 1000): each index relaxes up to J later indices. The table is O(n).",
+    "code": {
+     "java": "class Solution {\n    public int jump(int[] nums) {\n        int n = nums.length;\n        int[] jumps = new int[n];\n        Arrays.fill(jumps, Integer.MAX_VALUE);\n        jumps[0] = 0;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j <= Math.min(i + nums[i], n - 1); j++)\n                jumps[j] = Math.min(jumps[j], jumps[i] + 1);\n        return jumps[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int jump(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> jumps(n, INT_MAX);\n        jumps[0] = 0;\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j <= min(i + nums[i], n - 1); j++)\n                jumps[j] = min(jumps[j], jumps[i] + 1);\n        return jumps[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def jump(self, nums: List[int]) -> int:\n        n = len(nums)\n        jumps = [0] + [inf] * (n - 1)\n        for i in range(n):\n            for j in range(i + 1, min(i + nums[i], n - 1) + 1):\n                jumps[j] = min(jumps[j], jumps[i] + 1)\n        return jumps[-1]",
+     "javascript": "var jump = function(nums) {\n    const n = nums.length, jumps = new Array(n).fill(Infinity);\n    jumps[0] = 0;\n    for (let i = 0; i < n; i++)\n        for (let j = i + 1; j <= Math.min(i + nums[i], n - 1); j++)\n            jumps[j] = Math.min(jumps[j], jumps[i] + 1);\n    return jumps[n - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Greedy jump windows",
+    "idea": "Indices reachable with exactly `j` jumps form a contiguous window. Scanning the current window, track the farthest index the next jump could reach; when the scan reaches the window's end, take a jump and the next window ends at that farthest point.",
+    "steps": [
+     "Set `jumps = 0`, `end = 0` (end of the current window), `farthest = 0`.",
+     "For `i` from 0 to n − 2: `farthest = max(farthest, i + nums[i])`.",
+     "If `i == end`, the window is used up: `jumps++`, `end = farthest`.",
+     "Return `jumps`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with three variables — a breadth-first search over windows instead of single indices. The loop stops before the last index so no extra jump is counted from it.",
+    "code": {
+     "java": "class Solution {\n    public int jump(int[] nums) {\n        int jumps = 0, end = 0, farthest = 0;\n        for (int i = 0; i < nums.length - 1; i++) {\n            farthest = Math.max(farthest, i + nums[i]);\n            if (i == end) { jumps++; end = farthest; }\n        }\n        return jumps;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int jump(vector<int>& nums) {\n        int jumps = 0, end = 0, farthest = 0;\n        for (int i = 0; i + 1 < (int) nums.size(); i++) {\n            farthest = max(farthest, i + nums[i]);\n            if (i == end) { jumps++; end = farthest; }\n        }\n        return jumps;\n    }\n};",
+     "python": "class Solution:\n    def jump(self, nums: List[int]) -> int:\n        jumps = end = farthest = 0\n        for i in range(len(nums) - 1):\n            farthest = max(farthest, i + nums[i])\n            if i == end:\n                jumps += 1\n                end = farthest\n        return jumps",
+     "javascript": "var jump = function(nums) {\n    let jumps = 0, end = 0, farthest = 0;\n    for (let i = 0; i < nums.length - 1; i++) {\n        farthest = Math.max(farthest, i + nums[i]);\n        if (i === end) { jumps++; end = farthest; }\n    }\n    return jumps;\n};"
+    }
+   }
+  ]
+ },
+ "gas-station": {
+  "pattern": "Greedy with running sums (a failed stretch rules out every start inside it)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Simulate from every start",
+    "idea": "Try each station as the start and drive around, adding gas and subtracting cost; the first start whose tank never goes negative is the answer.",
+    "steps": [
+     "For each start `s`, set `tank = 0`.",
+     "For `k = 0 .. n − 1`, at station `(s + k) % n` add `gas − cost`; if the tank drops below 0, this start fails.",
+     "Return the first start that completes the loop, or −1."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n starts, each simulating up to n stations.",
+    "code": {
+     "java": "class Solution {\n    public int canCompleteCircuit(int[] gas, int[] cost) {\n        int n = gas.length;\n        for (int s = 0; s < n; s++) {\n            int tank = 0, k = 0;\n            for (; k < n; k++) {\n                int i = (s + k) % n;\n                tank += gas[i] - cost[i];\n                if (tank < 0) break;\n            }\n            if (k == n) return s;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int canCompleteCircuit(vector<int>& gas, vector<int>& cost) {\n        int n = gas.size();\n        for (int s = 0; s < n; s++) {\n            int tank = 0, k = 0;\n            for (; k < n; k++) {\n                int i = (s + k) % n;\n                tank += gas[i] - cost[i];\n                if (tank < 0) break;\n            }\n            if (k == n) return s;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def canCompleteCircuit(self, gas: List[int], cost: List[int]) -> int:\n        n = len(gas)\n        for s in range(n):\n            tank = 0\n            for k in range(n):\n                i = (s + k) % n\n                tank += gas[i] - cost[i]\n                if tank < 0:\n                    break\n            else:\n                return s\n        return -1",
+     "javascript": "var canCompleteCircuit = function(gas, cost) {\n    const n = gas.length;\n    for (let s = 0; s < n; s++) {\n        let tank = 0, k = 0;\n        for (; k < n; k++) {\n            const i = (s + k) % n;\n            tank += gas[i] - cost[i];\n            if (tank < 0) break;\n        }\n        if (k === n) return s;\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One pass: restart after the tank runs dry",
+    "idea": "If the total gas is less than the total cost, no start works. Otherwise drive from a candidate start; if the tank goes negative at station `i`, no station between the start and `i` can be the start either (each would arrive with even less fuel), so try `i + 1` next.",
+    "steps": [
+     "Keep `total` (sum of all `gas − cost`), `tank` and `start = 0`.",
+     "For each `i`: add `gas[i] − cost[i]` to both `total` and `tank`.",
+     "If `tank < 0`, set `start = i + 1` and `tank = 0`.",
+     "Return `start` if `total >= 0`, else −1."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass. When the total is non-negative, the final candidate makes it to the end, and the fuel left covers the deficit of the part before it, so it completes the circle.",
+    "code": {
+     "java": "class Solution {\n    public int canCompleteCircuit(int[] gas, int[] cost) {\n        int total = 0, tank = 0, start = 0;\n        for (int i = 0; i < gas.length; i++) {\n            total += gas[i] - cost[i];\n            tank += gas[i] - cost[i];\n            if (tank < 0) { start = i + 1; tank = 0; }\n        }\n        return total >= 0 ? start : -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int canCompleteCircuit(vector<int>& gas, vector<int>& cost) {\n        int total = 0, tank = 0, start = 0;\n        for (int i = 0; i < (int) gas.size(); i++) {\n            total += gas[i] - cost[i];\n            tank += gas[i] - cost[i];\n            if (tank < 0) { start = i + 1; tank = 0; }\n        }\n        return total >= 0 ? start : -1;\n    }\n};",
+     "python": "class Solution:\n    def canCompleteCircuit(self, gas: List[int], cost: List[int]) -> int:\n        total = tank = start = 0\n        for i in range(len(gas)):\n            total += gas[i] - cost[i]\n            tank += gas[i] - cost[i]\n            if tank < 0:\n                start, tank = i + 1, 0\n        return start if total >= 0 else -1",
+     "javascript": "var canCompleteCircuit = function(gas, cost) {\n    let total = 0, tank = 0, start = 0;\n    for (let i = 0; i < gas.length; i++) {\n        total += gas[i] - cost[i];\n        tank += gas[i] - cost[i];\n        if (tank < 0) { start = i + 1; tank = 0; }\n    }\n    return total >= 0 ? start : -1;\n};"
+    }
+   }
+  ]
+ },
+ "partition-labels": {
+  "pattern": "Greedy with last occurrences (extend the part to the furthest last index)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Find each letter's last position by scanning",
+    "idea": "A part that contains a letter must extend to that letter's last occurrence. Grow the current part, finding last occurrences by scanning the string from the end each time.",
+    "steps": [
+     "Start a part at `start = 0` with `end = 0`.",
+     "For each `i` in the part, find the last index of `s[i]` by scanning from the end of `s`, and set `end` to the larger of the two.",
+     "When `i == end`, the part is closed: record `end − start + 1` and start the next part at `i + 1`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Each of the n positions scans the string for its letter's last index (output aside).",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> partitionLabels(String s) {\n        List<Integer> out = new ArrayList<>();\n        int start = 0, end = 0;\n        for (int i = 0; i < s.length(); i++) {\n            end = Math.max(end, s.lastIndexOf(s.charAt(i)));\n            if (i == end) { out.add(end - start + 1); start = i + 1; }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> partitionLabels(string s) {\n        vector<int> out;\n        int start = 0, end = 0;\n        for (int i = 0; i < (int) s.size(); i++) {\n            end = max(end, (int) s.rfind(s[i]));\n            if (i == end) { out.push_back(end - start + 1); start = i + 1; }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        out, start, end = [], 0, 0\n        for i, c in enumerate(s):\n            end = max(end, s.rfind(c))\n            if i == end:\n                out.append(end - start + 1)\n                start = i + 1\n        return out",
+     "javascript": "var partitionLabels = function(s) {\n    const out = [];\n    let start = 0, end = 0;\n    for (let i = 0; i < s.length; i++) {\n        end = Math.max(end, s.lastIndexOf(s[i]));\n        if (i === end) { out.push(end - start + 1); start = i + 1; }\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Precompute last occurrences, then one sweep",
+    "idea": "Record the last index of every letter in one pass. Then sweep: the current part must reach at least the last index of every letter seen in it; once the sweep reaches that point, close the part.",
+    "steps": [
+     "Fill `last[c]` with the last index of each letter.",
+     "Sweep `i` with `start` and `end`: `end = max(end, last[s[i]])`.",
+     "When `i == end`, record `end − start + 1` and set `start = i + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two linear passes; the table has 26 entries. Closing a part as early as possible maximises the number of parts.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> partitionLabels(String s) {\n        int[] last = new int[26];\n        for (int i = 0; i < s.length(); i++) last[s.charAt(i) - 'a'] = i;\n        List<Integer> out = new ArrayList<>();\n        int start = 0, end = 0;\n        for (int i = 0; i < s.length(); i++) {\n            end = Math.max(end, last[s.charAt(i) - 'a']);\n            if (i == end) { out.add(end - start + 1); start = i + 1; }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> partitionLabels(string s) {\n        int last[26] = {0};\n        for (int i = 0; i < (int) s.size(); i++) last[s[i] - 'a'] = i;\n        vector<int> out;\n        int start = 0, end = 0;\n        for (int i = 0; i < (int) s.size(); i++) {\n            end = max(end, last[s[i] - 'a']);\n            if (i == end) { out.push_back(end - start + 1); start = i + 1; }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        last = {c: i for i, c in enumerate(s)}\n        out, start, end = [], 0, 0\n        for i, c in enumerate(s):\n            end = max(end, last[c])\n            if i == end:\n                out.append(end - start + 1)\n                start = i + 1\n        return out",
+     "javascript": "var partitionLabels = function(s) {\n    const last = new Array(26).fill(0);\n    for (let i = 0; i < s.length; i++) last[s.charCodeAt(i) - 97] = i;\n    const out = [];\n    let start = 0, end = 0;\n    for (let i = 0; i < s.length; i++) {\n        end = Math.max(end, last[s.charCodeAt(i) - 97]);\n        if (i === end) { out.push(end - start + 1); start = i + 1; }\n    }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "boats-to-save-people": {
+  "pattern": "Sort + two pointers (pair the heaviest with the lightest when possible)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Heaviest first, search for the heaviest partner that fits",
+    "idea": "Seat the heaviest unseated person; give them the heaviest remaining partner that still fits under the limit (found by scanning), or send them alone.",
+    "steps": [
+     "Sort weights descending; keep a `seated` flag per person.",
+     "For each unseated person (heaviest first): scan the remaining unseated people for the heaviest one with `weight + theirs <= limit`.",
+     "Seat both (or just the first) in one boat and count it."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each boat may scan all remaining people. The flags take O(n).",
+    "code": {
+     "java": "class Solution {\n    public int numRescueBoats(int[] people, int limit) {\n        Arrays.sort(people);\n        int n = people.length, boats = 0;\n        boolean[] seated = new boolean[n];\n        for (int i = n - 1; i >= 0; i--) {\n            if (seated[i]) continue;\n            seated[i] = true;\n            for (int j = i - 1; j >= 0; j--)\n                if (!seated[j] && people[i] + people[j] <= limit) { seated[j] = true; break; }\n            boats++;\n        }\n        return boats;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numRescueBoats(vector<int>& people, int limit) {\n        sort(people.begin(), people.end());\n        int n = people.size(), boats = 0;\n        vector<bool> seated(n, false);\n        for (int i = n - 1; i >= 0; i--) {\n            if (seated[i]) continue;\n            seated[i] = true;\n            for (int j = i - 1; j >= 0; j--)\n                if (!seated[j] && people[i] + people[j] <= limit) { seated[j] = true; break; }\n            boats++;\n        }\n        return boats;\n    }\n};",
+     "python": "class Solution:\n    def numRescueBoats(self, people: List[int], limit: int) -> int:\n        people.sort()\n        n, boats = len(people), 0\n        seated = [False] * n\n        for i in range(n - 1, -1, -1):\n            if seated[i]:\n                continue\n            seated[i] = True\n            for j in range(i - 1, -1, -1):\n                if not seated[j] and people[i] + people[j] <= limit:\n                    seated[j] = True\n                    break\n            boats += 1\n        return boats",
+     "javascript": "var numRescueBoats = function(people, limit) {\n    people.sort((a, b) => a - b);\n    const n = people.length, seated = new Array(n).fill(false);\n    let boats = 0;\n    for (let i = n - 1; i >= 0; i--) {\n        if (seated[i]) continue;\n        seated[i] = true;\n        for (let j = i - 1; j >= 0; j--)\n            if (!seated[j] && people[i] + people[j] <= limit) { seated[j] = true; break; }\n        boats++;\n    }\n    return boats;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort, then pair heaviest with lightest",
+    "idea": "The heaviest person needs a boat no matter what. If even the lightest person cannot share it, nobody can, so they go alone; otherwise pair them with the lightest. Two pointers do this in one pass.",
+    "steps": [
+     "Sort the weights; `i` at the lightest, `j` at the heaviest.",
+     "While `i <= j`: if `people[i] + people[j] <= limit`, the lightest joins (`i++`).",
+     "The heaviest always leaves in this boat (`j--`); count the boat."
+    ],
+    "time": "O(n log n)",
+    "space": "O(1)",
+    "why": "Sorting dominates; the two-pointer pass is O(n) (aside from the sort's own memory). Pairing with the lightest is safe: if the lightest does not fit with the heaviest, no one does.",
+    "code": {
+     "java": "class Solution {\n    public int numRescueBoats(int[] people, int limit) {\n        Arrays.sort(people);\n        int i = 0, j = people.length - 1, boats = 0;\n        while (i <= j) {\n            if (people[i] + people[j] <= limit) i++;\n            j--;\n            boats++;\n        }\n        return boats;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numRescueBoats(vector<int>& people, int limit) {\n        sort(people.begin(), people.end());\n        int i = 0, j = (int) people.size() - 1, boats = 0;\n        while (i <= j) {\n            if (people[i] + people[j] <= limit) i++;\n            j--;\n            boats++;\n        }\n        return boats;\n    }\n};",
+     "python": "class Solution:\n    def numRescueBoats(self, people: List[int], limit: int) -> int:\n        people.sort()\n        i, j, boats = 0, len(people) - 1, 0\n        while i <= j:\n            if people[i] + people[j] <= limit:\n                i += 1\n            j -= 1\n            boats += 1\n        return boats",
+     "javascript": "var numRescueBoats = function(people, limit) {\n    people.sort((a, b) => a - b);\n    let i = 0, j = people.length - 1, boats = 0;\n    while (i <= j) {\n        if (people[i] + people[j] <= limit) i++;\n        j--;\n        boats++;\n    }\n    return boats;\n};"
+    }
+   }
+  ]
+ },
+ "two-city-scheduling": {
+  "pattern": "Greedy by the difference aCost − bCost (or DP over how many went to A)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "DP over people and the number sent to A",
+    "idea": "`dp[i][a]` = the cheapest cost for the first `i` people with exactly `a` of them sent to city A. Each person goes to A or B.",
+    "steps": [
+     "`dp[0][0] = 0`, everything else ∞.",
+     "For person `i` (0-based) and each count `a`: `dp[i + 1][a] = min(dp[i][a] + bCost, dp[i][a − 1] + aCost)` (when `a >= 1`).",
+     "Return `dp[2n][n]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "2n people × up to n + 1 counts, O(1) each; the table has the same size.",
+    "code": {
+     "java": "class Solution {\n    public int twoCitySchedCost(int[][] costs) {\n        int m = costs.length, n = m / 2, INF = Integer.MAX_VALUE / 2;\n        int[][] dp = new int[m + 1][n + 1];\n        for (int[] row : dp) Arrays.fill(row, INF);\n        dp[0][0] = 0;\n        for (int i = 0; i < m; i++)\n            for (int a = 0; a <= n; a++) {\n                if (dp[i][a] == INF) continue;\n                dp[i + 1][a] = Math.min(dp[i + 1][a], dp[i][a] + costs[i][1]);\n                if (a < n) dp[i + 1][a + 1] = Math.min(dp[i + 1][a + 1], dp[i][a] + costs[i][0]);\n            }\n        return dp[m][n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int twoCitySchedCost(vector<vector<int>>& costs) {\n        int m = costs.size(), n = m / 2, INF = INT_MAX / 2;\n        vector<vector<int>> dp(m + 1, vector<int>(n + 1, INF));\n        dp[0][0] = 0;\n        for (int i = 0; i < m; i++)\n            for (int a = 0; a <= n; a++) {\n                if (dp[i][a] == INF) continue;\n                dp[i + 1][a] = min(dp[i + 1][a], dp[i][a] + costs[i][1]);\n                if (a < n) dp[i + 1][a + 1] = min(dp[i + 1][a + 1], dp[i][a] + costs[i][0]);\n            }\n        return dp[m][n];\n    }\n};",
+     "python": "class Solution:\n    def twoCitySchedCost(self, costs: List[List[int]]) -> int:\n        m = len(costs)\n        n = m // 2\n        dp = [[inf] * (n + 1) for _ in range(m + 1)]\n        dp[0][0] = 0\n        for i, (a_cost, b_cost) in enumerate(costs):\n            for a in range(n + 1):\n                if dp[i][a] == inf:\n                    continue\n                dp[i + 1][a] = min(dp[i + 1][a], dp[i][a] + b_cost)\n                if a < n:\n                    dp[i + 1][a + 1] = min(dp[i + 1][a + 1], dp[i][a] + a_cost)\n        return dp[m][n]",
+     "javascript": "var twoCitySchedCost = function(costs) {\n    const m = costs.length, n = m / 2;\n    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(Infinity));\n    dp[0][0] = 0;\n    for (let i = 0; i < m; i++)\n        for (let a = 0; a <= n; a++) {\n            if (dp[i][a] === Infinity) continue;\n            dp[i + 1][a] = Math.min(dp[i + 1][a], dp[i][a] + costs[i][1]);\n            if (a < n) dp[i + 1][a + 1] = Math.min(dp[i + 1][a + 1], dp[i][a] + costs[i][0]);\n        }\n    return dp[m][n];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort by aCost − bCost",
+    "idea": "Imagine first sending everyone to B. Moving a person to A changes the total by `aCost − bCost`. Exactly n people must move, so move the n with the smallest (most negative) change.",
+    "steps": [
+     "Sort people by `aCost − bCost`.",
+     "Send the first n to A and the remaining n to B.",
+     "Return the sum."
+    ],
+    "time": "O(n log n)",
+    "space": "O(1)",
+    "why": "One sort plus a linear sum (aside from the sort's own memory).",
+    "code": {
+     "java": "class Solution {\n    public int twoCitySchedCost(int[][] costs) {\n        Arrays.sort(costs, (x, y) -> Integer.compare(x[0] - x[1], y[0] - y[1]));\n        int n = costs.length / 2, total = 0;\n        for (int i = 0; i < costs.length; i++) total += i < n ? costs[i][0] : costs[i][1];\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int twoCitySchedCost(vector<vector<int>>& costs) {\n        sort(costs.begin(), costs.end(), [](auto& x, auto& y) { return x[0] - x[1] < y[0] - y[1]; });\n        int n = costs.size() / 2, total = 0;\n        for (int i = 0; i < (int) costs.size(); i++) total += i < n ? costs[i][0] : costs[i][1];\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def twoCitySchedCost(self, costs: List[List[int]]) -> int:\n        costs.sort(key=lambda c: c[0] - c[1])\n        n = len(costs) // 2\n        return sum(c[0] for c in costs[:n]) + sum(c[1] for c in costs[n:])",
+     "javascript": "var twoCitySchedCost = function(costs) {\n    costs.sort((x, y) => (x[0] - x[1]) - (y[0] - y[1]));\n    const n = costs.length / 2;\n    let total = 0;\n    for (let i = 0; i < costs.length; i++) total += i < n ? costs[i][0] : costs[i][1];\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "candy": {
+  "pattern": "Two greedy passes (left neighbours, then right neighbours), or counting slopes",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Fix violations until none remain",
+    "idea": "Start everyone at 1 candy. Repeatedly sweep the line; whenever a child has a higher rating than a neighbour but not more candies, raise them to one more than that neighbour. Stop when a sweep changes nothing.",
+    "steps": [
+     "Give every child 1 candy.",
+     "Sweep: for each `i`, if `ratings[i] > ratings[i − 1]` and `candy[i] <= candy[i − 1]`, set `candy[i] = candy[i − 1] + 1`; likewise for the right neighbour.",
+     "Repeat sweeps until nothing changes; return the sum."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "A long falling slope may need up to n sweeps of O(n) each. Raising only to the minimum needed keeps the total minimal.",
+    "code": {
+     "java": "class Solution {\n    public int candy(int[] ratings) {\n        int n = ratings.length;\n        int[] c = new int[n];\n        Arrays.fill(c, 1);\n        boolean changed = true;\n        while (changed) {\n            changed = false;\n            for (int i = 0; i < n; i++) {\n                if (i > 0 && ratings[i] > ratings[i - 1] && c[i] <= c[i - 1]) { c[i] = c[i - 1] + 1; changed = true; }\n                if (i + 1 < n && ratings[i] > ratings[i + 1] && c[i] <= c[i + 1]) { c[i] = c[i + 1] + 1; changed = true; }\n            }\n        }\n        int total = 0;\n        for (int x : c) total += x;\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int candy(vector<int>& ratings) {\n        int n = ratings.size();\n        vector<int> c(n, 1);\n        bool changed = true;\n        while (changed) {\n            changed = false;\n            for (int i = 0; i < n; i++) {\n                if (i > 0 && ratings[i] > ratings[i - 1] && c[i] <= c[i - 1]) { c[i] = c[i - 1] + 1; changed = true; }\n                if (i + 1 < n && ratings[i] > ratings[i + 1] && c[i] <= c[i + 1]) { c[i] = c[i + 1] + 1; changed = true; }\n            }\n        }\n        return accumulate(c.begin(), c.end(), 0);\n    }\n};",
+     "python": "class Solution:\n    def candy(self, ratings: List[int]) -> int:\n        n = len(ratings)\n        c = [1] * n\n        changed = True\n        while changed:\n            changed = False\n            for i in range(n):\n                if i > 0 and ratings[i] > ratings[i - 1] and c[i] <= c[i - 1]:\n                    c[i] = c[i - 1] + 1\n                    changed = True\n                if i + 1 < n and ratings[i] > ratings[i + 1] and c[i] <= c[i + 1]:\n                    c[i] = c[i + 1] + 1\n                    changed = True\n        return sum(c)",
+     "javascript": "var candy = function(ratings) {\n    const n = ratings.length, c = new Array(n).fill(1);\n    let changed = true;\n    while (changed) {\n        changed = false;\n        for (let i = 0; i < n; i++) {\n            if (i > 0 && ratings[i] > ratings[i - 1] && c[i] <= c[i - 1]) { c[i] = c[i - 1] + 1; changed = true; }\n            if (i + 1 < n && ratings[i] > ratings[i + 1] && c[i] <= c[i + 1]) { c[i] = c[i + 1] + 1; changed = true; }\n        }\n    }\n    return c.reduce((a, b) => a + b, 0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Two passes with one array",
+    "idea": "Satisfy the left-neighbour rule with a left-to-right pass, then the right-neighbour rule with a right-to-left pass, keeping the larger value so the first rule still holds.",
+    "steps": [
+     "Give every child 1 candy.",
+     "Left to right: if `ratings[i] > ratings[i − 1]`, set `c[i] = c[i − 1] + 1`.",
+     "Right to left: if `ratings[i] > ratings[i + 1]`, set `c[i] = max(c[i], c[i + 1] + 1)`.",
+     "Return the sum."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two linear passes and one array of n counts. Each value is the smallest that satisfies both directions, so the total is minimal.",
+    "code": {
+     "java": "class Solution {\n    public int candy(int[] ratings) {\n        int n = ratings.length;\n        int[] c = new int[n];\n        Arrays.fill(c, 1);\n        for (int i = 1; i < n; i++) if (ratings[i] > ratings[i - 1]) c[i] = c[i - 1] + 1;\n        for (int i = n - 2; i >= 0; i--) if (ratings[i] > ratings[i + 1]) c[i] = Math.max(c[i], c[i + 1] + 1);\n        int total = 0;\n        for (int x : c) total += x;\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int candy(vector<int>& ratings) {\n        int n = ratings.size();\n        vector<int> c(n, 1);\n        for (int i = 1; i < n; i++) if (ratings[i] > ratings[i - 1]) c[i] = c[i - 1] + 1;\n        for (int i = n - 2; i >= 0; i--) if (ratings[i] > ratings[i + 1]) c[i] = max(c[i], c[i + 1] + 1);\n        return accumulate(c.begin(), c.end(), 0);\n    }\n};",
+     "python": "class Solution:\n    def candy(self, ratings: List[int]) -> int:\n        n = len(ratings)\n        c = [1] * n\n        for i in range(1, n):\n            if ratings[i] > ratings[i - 1]:\n                c[i] = c[i - 1] + 1\n        for i in range(n - 2, -1, -1):\n            if ratings[i] > ratings[i + 1]:\n                c[i] = max(c[i], c[i + 1] + 1)\n        return sum(c)",
+     "javascript": "var candy = function(ratings) {\n    const n = ratings.length, c = new Array(n).fill(1);\n    for (let i = 1; i < n; i++) if (ratings[i] > ratings[i - 1]) c[i] = c[i - 1] + 1;\n    for (let i = n - 2; i >= 0; i--) if (ratings[i] > ratings[i + 1]) c[i] = Math.max(c[i], c[i + 1] + 1);\n    return c.reduce((a, b) => a + b, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One pass counting up and down slopes",
+    "idea": "Candies along a rising run go 1, 2, 3, …, and along a falling run the last child gets 1 and each one before it one more. Track the current rising length `up`, falling length `down`, and the height `peak` reached before the fall; add each child's candies as you go. When a fall gets as long as the rise before it, the peak itself must grow by one too.",
+    "steps": [
+     "Start with `total = 1` (the first child) and `up = down = peak = 0`.",
+     "Rising (`r[i] > r[i − 1]`): `up++`, `peak = up`, `down = 0`, add `up + 1`.",
+     "Equal: reset `up = down = peak = 0`, add 1.",
+     "Falling: `up = 0`, `down++`; add `down + 1` (each child in the fall shifts up by one, plus the new child), minus 1 if `peak >= down` (the peak is still tall enough)."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with four counters and no array. It produces the same totals as the two-pass method.",
+    "code": {
+     "java": "class Solution {\n    public int candy(int[] ratings) {\n        int total = 1, up = 0, down = 0, peak = 0;\n        for (int i = 1; i < ratings.length; i++) {\n            if (ratings[i] > ratings[i - 1]) { up++; peak = up; down = 0; total += up + 1; }\n            else if (ratings[i] == ratings[i - 1]) { up = down = peak = 0; total += 1; }\n            else { up = 0; down++; total += down + 1 - (peak >= down ? 1 : 0); }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int candy(vector<int>& ratings) {\n        int total = 1, up = 0, down = 0, peak = 0;\n        for (size_t i = 1; i < ratings.size(); i++) {\n            if (ratings[i] > ratings[i - 1]) { up++; peak = up; down = 0; total += up + 1; }\n            else if (ratings[i] == ratings[i - 1]) { up = down = peak = 0; total += 1; }\n            else { up = 0; down++; total += down + 1 - (peak >= down ? 1 : 0); }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def candy(self, ratings: List[int]) -> int:\n        total, up, down, peak = 1, 0, 0, 0\n        for i in range(1, len(ratings)):\n            if ratings[i] > ratings[i - 1]:\n                up += 1\n                peak, down = up, 0\n                total += up + 1\n            elif ratings[i] == ratings[i - 1]:\n                up = down = peak = 0\n                total += 1\n            else:\n                up = 0\n                down += 1\n                total += down + 1 - (1 if peak >= down else 0)\n        return total",
+     "javascript": "var candy = function(ratings) {\n    let total = 1, up = 0, down = 0, peak = 0;\n    for (let i = 1; i < ratings.length; i++) {\n        if (ratings[i] > ratings[i - 1]) { up++; peak = up; down = 0; total += up + 1; }\n        else if (ratings[i] === ratings[i - 1]) { up = down = peak = 0; total += 1; }\n        else { up = 0; down++; total += down + 1 - (peak >= down ? 1 : 0); }\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ }
+}
