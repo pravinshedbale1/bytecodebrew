@@ -1,0 +1,427 @@
+{
+ "search-in-a-binary-search-tree": {
+  "pattern": "BST descent: compare and go left or right (binary search on a tree)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Search the whole tree",
+    "idea": "Ignore the ordering and look at every node with a DFS until one has value `val`.",
+    "steps": [
+     "If `root` is null or holds `val`, return it.",
+     "Search the left subtree; if found, return that node.",
+     "Otherwise return the result of searching the right subtree."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "It may visit all n nodes; the stack is as deep as the tree.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode searchBST(TreeNode root, int val) {\n        if (root == null || root.val == val) return root;\n        TreeNode left = searchBST(root.left, val);\n        return left != null ? left : searchBST(root.right, val);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* searchBST(TreeNode* root, int val) {\n        if (!root || root->val == val) return root;\n        TreeNode* left = searchBST(root->left, val);\n        return left ? left : searchBST(root->right, val);\n    }\n};",
+     "python": "class Solution:\n    def searchBST(self, root: Optional[TreeNode], val: int) -> Optional[TreeNode]:\n        if not root or root.val == val:\n            return root\n        return self.searchBST(root.left, val) or self.searchBST(root.right, val)",
+     "javascript": "var searchBST = function(root, val) {\n    if (!root || root.val === val) return root;\n    return searchBST(root.left, val) ?? searchBST(root.right, val);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Walk down using the BST order",
+    "idea": "At each node the ordering tells you which side `val` must be on, so follow a single path from the root.",
+    "steps": [
+     "Start at `root`.",
+     "While the node is not null and its value is not `val`: go left if `val` is smaller, right otherwise.",
+     "Return the node (null if the walk fell off the tree)."
+    ],
+    "time": "O(h)",
+    "space": "O(1)",
+    "why": "One root-to-leaf path at most: O(log n) for a balanced tree, O(n) for a chain. The loop needs no stack.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode searchBST(TreeNode root, int val) {\n        while (root != null && root.val != val) root = val < root.val ? root.left : root.right;\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* searchBST(TreeNode* root, int val) {\n        while (root && root->val != val) root = val < root->val ? root->left : root->right;\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def searchBST(self, root: Optional[TreeNode], val: int) -> Optional[TreeNode]:\n        while root and root.val != val:\n            root = root.left if val < root.val else root.right\n        return root",
+     "javascript": "var searchBST = function(root, val) {\n    while (root && root.val !== val) root = val < root.val ? root.left : root.right;\n    return root;\n};"
+    }
+   }
+  ]
+ },
+ "convert-sorted-array-to-binary-search-tree": {
+  "pattern": "Divide and conquer: the middle element is the root",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursively take the middle as the root",
+    "idea": "Making the middle element the root puts (almost) the same number of values on each side; doing the same for each half keeps every subtree balanced, and the sorted order makes it a BST.",
+    "steps": [
+     "`build(lo, hi)`: if `lo > hi`, return null.",
+     "Take `mid = (lo + hi) / 2` as the root.",
+     "Set `root.left = build(lo, mid − 1)` and `root.right = build(mid + 1, hi)`; return `root`."
+    ],
+    "time": "O(n)",
+    "space": "O(log n)",
+    "why": "Each value becomes one node. The recursion depth is the height of the balanced tree, log n (the output tree itself aside). A simpler alternative — inserting the values one by one — would build a chain, since they arrive in sorted order.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode sortedArrayToBST(int[] nums) {\n        return build(nums, 0, nums.length - 1);\n    }\n\n    private TreeNode build(int[] nums, int lo, int hi) {\n        if (lo > hi) return null;\n        int mid = (lo + hi) >>> 1;\n        return new TreeNode(nums[mid], build(nums, lo, mid - 1), build(nums, mid + 1, hi));\n    }\n}",
+     "cpp": "class Solution {\n    TreeNode* build(vector<int>& nums, int lo, int hi) {\n        if (lo > hi) return nullptr;\n        int mid = (lo + hi) / 2;\n        return new TreeNode(nums[mid], build(nums, lo, mid - 1), build(nums, mid + 1, hi));\n    }\npublic:\n    TreeNode* sortedArrayToBST(vector<int>& nums) {\n        return build(nums, 0, (int) nums.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def sortedArrayToBST(self, nums: List[int]) -> Optional[TreeNode]:\n        def build(lo, hi):\n            if lo > hi:\n                return None\n            mid = (lo + hi) // 2\n            return TreeNode(nums[mid], build(lo, mid - 1), build(mid + 1, hi))\n        return build(0, len(nums) - 1)",
+     "javascript": "var sortedArrayToBST = function(nums) {\n    const build = (lo, hi) => {\n        if (lo > hi) return null;\n        const mid = (lo + hi) >> 1;\n        return new TreeNode(nums[mid], build(lo, mid - 1), build(mid + 1, hi));\n    };\n    return build(0, nums.length - 1);\n};"
+    }
+   }
+  ]
+ },
+ "lowest-common-ancestor-of-a-binary-search-tree": {
+  "pattern": "BST split point: the first node whose value lies between p and q",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Generic binary-tree LCA",
+    "idea": "Ignore the BST order and use the general method: a node whose left and right subtrees each contain one of the targets (or which is a target) is the answer.",
+    "steps": [
+     "If `root` is null, `p` or `q`, return `root`.",
+     "Recurse into both subtrees.",
+     "If both return a node, return `root`; otherwise return whichever is non-null."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "It may visit every node, because it never uses the values to choose a side.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {\n        if (root == null || root == p || root == q) return root;\n        TreeNode left = lowestCommonAncestor(root.left, p, q);\n        TreeNode right = lowestCommonAncestor(root.right, p, q);\n        if (left != null && right != null) return root;\n        return left != null ? left : right;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        if (!root || root == p || root == q) return root;\n        TreeNode* left = lowestCommonAncestor(root->left, p, q);\n        TreeNode* right = lowestCommonAncestor(root->right, p, q);\n        if (left && right) return root;\n        return left ? left : right;\n    }\n};",
+     "python": "class Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        if not root or root is p or root is q:\n            return root\n        left = self.lowestCommonAncestor(root.left, p, q)\n        right = self.lowestCommonAncestor(root.right, p, q)\n        if left and right:\n            return root\n        return left or right",
+     "javascript": "var lowestCommonAncestor = function(root, p, q) {\n    if (!root || root === p || root === q) return root;\n    const left = lowestCommonAncestor(root.left, p, q);\n    const right = lowestCommonAncestor(root.right, p, q);\n    if (left && right) return root;\n    return left ?? right;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Walk down until p and q split",
+    "idea": "If both values are smaller than the current node, both targets are in its left subtree, so the LCA is too; if both are larger, go right. Otherwise the node lies between them (or equals one), so it is the LCA.",
+    "steps": [
+     "Start at `root`.",
+     "If `p.val` and `q.val` are both less than the node's value, move left; if both greater, move right.",
+     "Otherwise return the current node."
+    ],
+    "time": "O(h)",
+    "space": "O(1)",
+    "why": "A single downward path with no recursion: O(log n) when balanced, O(n) for a chain.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {\n        while (true) {\n            if (p.val < root.val && q.val < root.val) root = root.left;\n            else if (p.val > root.val && q.val > root.val) root = root.right;\n            else return root;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        while (true) {\n            if (p->val < root->val && q->val < root->val) root = root->left;\n            else if (p->val > root->val && q->val > root->val) root = root->right;\n            else return root;\n        }\n    }\n};",
+     "python": "class Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        while True:\n            if p.val < root.val and q.val < root.val:\n                root = root.left\n            elif p.val > root.val and q.val > root.val:\n                root = root.right\n            else:\n                return root",
+     "javascript": "var lowestCommonAncestor = function(root, p, q) {\n    while (true) {\n        if (p.val < root.val && q.val < root.val) root = root.left;\n        else if (p.val > root.val && q.val > root.val) root = root.right;\n        else return root;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "validate-binary-search-tree": {
+  "pattern": "DFS with a valid (low, high) range per node, or an inorder walk that must strictly increase",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare every node with its whole subtrees",
+    "idea": "Apply the definition directly: at every node, check that the maximum of its left subtree is smaller and the minimum of its right subtree is larger, recomputing those with full subtree scans.",
+    "steps": [
+     "For a node, compute `max(left subtree)` and `min(right subtree)` by visiting those subtrees.",
+     "Fail if `max(left) >= node.val` or `min(right) <= node.val`.",
+     "Check both subtrees the same way."
+    ],
+    "time": "O(n²)",
+    "space": "O(h)",
+    "why": "Every node rescans its subtrees, so each node is visited once per ancestor: O(n·h), which is O(n²) for a chain.",
+    "code": {
+     "java": "class Solution {\n    public boolean isValidBST(TreeNode root) {\n        if (root == null) return true;\n        if (root.left != null && max(root.left) >= root.val) return false;\n        if (root.right != null && min(root.right) <= root.val) return false;\n        return isValidBST(root.left) && isValidBST(root.right);\n    }\n\n    private int max(TreeNode t) {\n        int m = t.val;\n        if (t.left != null) m = Math.max(m, max(t.left));\n        if (t.right != null) m = Math.max(m, max(t.right));\n        return m;\n    }\n\n    private int min(TreeNode t) {\n        int m = t.val;\n        if (t.left != null) m = Math.min(m, min(t.left));\n        if (t.right != null) m = Math.min(m, min(t.right));\n        return m;\n    }\n}",
+     "cpp": "class Solution {\n    int mx(TreeNode* t) {\n        int m = t->val;\n        if (t->left) m = max(m, mx(t->left));\n        if (t->right) m = max(m, mx(t->right));\n        return m;\n    }\n    int mn(TreeNode* t) {\n        int m = t->val;\n        if (t->left) m = min(m, mn(t->left));\n        if (t->right) m = min(m, mn(t->right));\n        return m;\n    }\npublic:\n    bool isValidBST(TreeNode* root) {\n        if (!root) return true;\n        if (root->left && mx(root->left) >= root->val) return false;\n        if (root->right && mn(root->right) <= root->val) return false;\n        return isValidBST(root->left) && isValidBST(root->right);\n    }\n};",
+     "python": "class Solution:\n    def isValidBST(self, root: Optional[TreeNode]) -> bool:\n        def values(t):\n            return [] if not t else values(t.left) + [t.val] + values(t.right)\n        if not root:\n            return True\n        if root.left and max(values(root.left)) >= root.val:\n            return False\n        if root.right and min(values(root.right)) <= root.val:\n            return False\n        return self.isValidBST(root.left) and self.isValidBST(root.right)",
+     "javascript": "var isValidBST = function(root) {\n    const values = (t) => (t ? [...values(t.left), t.val, ...values(t.right)] : []);\n    if (!root) return true;\n    if (root.left && Math.max(...values(root.left)) >= root.val) return false;\n    if (root.right && Math.min(...values(root.right)) <= root.val) return false;\n    return isValidBST(root.left) && isValidBST(root.right);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Inorder into a list, check it strictly increases",
+    "idea": "An inorder traversal of a BST lists its values in sorted order. Collect them and check every value is larger than the one before.",
+    "steps": [
+     "Collect the values with an inorder traversal (left, node, right).",
+     "Return false if any `vals[i] <= vals[i − 1]`; otherwise true."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One traversal and one scan; the list holds all n values.",
+    "code": {
+     "java": "class Solution {\n    public boolean isValidBST(TreeNode root) {\n        List<Integer> vals = new ArrayList<>();\n        inorder(root, vals);\n        for (int i = 1; i < vals.size(); i++) if (vals.get(i) <= vals.get(i - 1)) return false;\n        return true;\n    }\n\n    private void inorder(TreeNode t, List<Integer> vals) {\n        if (t == null) return;\n        inorder(t.left, vals);\n        vals.add(t.val);\n        inorder(t.right, vals);\n    }\n}",
+     "cpp": "class Solution {\n    void inorder(TreeNode* t, vector<int>& vals) {\n        if (!t) return;\n        inorder(t->left, vals);\n        vals.push_back(t->val);\n        inorder(t->right, vals);\n    }\npublic:\n    bool isValidBST(TreeNode* root) {\n        vector<int> vals;\n        inorder(root, vals);\n        for (size_t i = 1; i < vals.size(); i++) if (vals[i] <= vals[i - 1]) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def isValidBST(self, root: Optional[TreeNode]) -> bool:\n        vals = []\n        def inorder(t):\n            if t:\n                inorder(t.left)\n                vals.append(t.val)\n                inorder(t.right)\n        inorder(root)\n        return all(a < b for a, b in zip(vals, vals[1:]))",
+     "javascript": "var isValidBST = function(root) {\n    const vals = [];\n    const inorder = (t) => {\n        if (!t) return;\n        inorder(t.left);\n        vals.push(t.val);\n        inorder(t.right);\n    };\n    inorder(root);\n    for (let i = 1; i < vals.length; i++) if (vals[i] <= vals[i - 1]) return false;\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS with value bounds",
+    "idea": "Every node must lie strictly inside a range set by its ancestors: going left lowers the upper bound to the parent's value, going right raises the lower bound. Checking each node against its range checks the whole definition.",
+    "steps": [
+     "`valid(node, low, high)`: true for null.",
+     "If `node.val <= low` or `node.val >= high`, return false.",
+     "Return `valid(left, low, node.val) && valid(right, node.val, high)`.",
+     "Start with bounds −∞ and +∞ (64-bit, or null), since values reach ±2³¹."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is checked once against two numbers. Comparing only with the parent is the classic bug: `[5,4,6,null,null,3,7]` passes a parent check but 3 is in 5's right subtree.",
+    "code": {
+     "java": "class Solution {\n    public boolean isValidBST(TreeNode root) {\n        return valid(root, Long.MIN_VALUE, Long.MAX_VALUE);\n    }\n\n    private boolean valid(TreeNode t, long low, long high) {\n        if (t == null) return true;\n        if (t.val <= low || t.val >= high) return false;\n        return valid(t.left, low, t.val) && valid(t.right, t.val, high);\n    }\n}",
+     "cpp": "class Solution {\n    bool valid(TreeNode* t, long long low, long long high) {\n        if (!t) return true;\n        if (t->val <= low || t->val >= high) return false;\n        return valid(t->left, low, t->val) && valid(t->right, t->val, high);\n    }\npublic:\n    bool isValidBST(TreeNode* root) {\n        return valid(root, LLONG_MIN, LLONG_MAX);\n    }\n};",
+     "python": "class Solution:\n    def isValidBST(self, root: Optional[TreeNode]) -> bool:\n        def valid(t, low, high):\n            if not t:\n                return True\n            if not low < t.val < high:\n                return False\n            return valid(t.left, low, t.val) and valid(t.right, t.val, high)\n        return valid(root, -inf, inf)",
+     "javascript": "var isValidBST = function(root) {\n    const valid = (t, low, high) => {\n        if (!t) return true;\n        if (t.val <= low || t.val >= high) return false;\n        return valid(t.left, low, t.val) && valid(t.right, t.val, high);\n    };\n    return valid(root, -Infinity, Infinity);\n};"
+    }
+   }
+  ]
+ },
+ "kth-smallest-element-in-a-bst": {
+  "pattern": "Inorder traversal of a BST visits values in sorted order (stop at the k-th)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Collect all values and sort",
+    "idea": "Ignore the BST property: gather every value, sort, and take index `k − 1`.",
+    "steps": [
+     "Collect all values with any traversal.",
+     "Sort them and return the one at index `k − 1`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "The sort dominates; the list holds n values.",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(TreeNode root, int k) {\n        List<Integer> vals = new ArrayList<>();\n        collect(root, vals);\n        Collections.sort(vals);\n        return vals.get(k - 1);\n    }\n\n    private void collect(TreeNode t, List<Integer> vals) {\n        if (t == null) return;\n        vals.add(t.val);\n        collect(t.left, vals);\n        collect(t.right, vals);\n    }\n}",
+     "cpp": "class Solution {\n    void collect(TreeNode* t, vector<int>& vals) {\n        if (!t) return;\n        vals.push_back(t->val);\n        collect(t->left, vals);\n        collect(t->right, vals);\n    }\npublic:\n    int kthSmallest(TreeNode* root, int k) {\n        vector<int> vals;\n        collect(root, vals);\n        sort(vals.begin(), vals.end());\n        return vals[k - 1];\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        vals = []\n        def collect(t):\n            if t:\n                vals.append(t.val)\n                collect(t.left)\n                collect(t.right)\n        collect(root)\n        return sorted(vals)[k - 1]",
+     "javascript": "var kthSmallest = function(root, k) {\n    const vals = [];\n    const collect = (t) => {\n        if (!t) return;\n        vals.push(t.val);\n        collect(t.left);\n        collect(t.right);\n    };\n    collect(root);\n    return vals.sort((a, b) => a - b)[k - 1];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Full inorder traversal",
+    "idea": "Inorder visits a BST in sorted order, so the list it produces needs no sorting.",
+    "steps": [
+     "Collect values with an inorder traversal (left, node, right).",
+     "Return `vals[k − 1]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "It still walks the whole tree and stores every value even when k is small.",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(TreeNode root, int k) {\n        List<Integer> vals = new ArrayList<>();\n        inorder(root, vals);\n        return vals.get(k - 1);\n    }\n\n    private void inorder(TreeNode t, List<Integer> vals) {\n        if (t == null) return;\n        inorder(t.left, vals);\n        vals.add(t.val);\n        inorder(t.right, vals);\n    }\n}",
+     "cpp": "class Solution {\n    void inorder(TreeNode* t, vector<int>& vals) {\n        if (!t) return;\n        inorder(t->left, vals);\n        vals.push_back(t->val);\n        inorder(t->right, vals);\n    }\npublic:\n    int kthSmallest(TreeNode* root, int k) {\n        vector<int> vals;\n        inorder(root, vals);\n        return vals[k - 1];\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        vals = []\n        def inorder(t):\n            if t:\n                inorder(t.left)\n                vals.append(t.val)\n                inorder(t.right)\n        inorder(root)\n        return vals[k - 1]",
+     "javascript": "var kthSmallest = function(root, k) {\n    const vals = [];\n    const inorder = (t) => {\n        if (!t) return;\n        inorder(t.left);\n        vals.push(t.val);\n        inorder(t.right);\n    };\n    inorder(root);\n    return vals[k - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative inorder that stops at the k-th node",
+    "idea": "Run inorder with an explicit stack and count nodes as they are visited; stop the moment the k-th is reached.",
+    "steps": [
+     "Push the path down the left spine onto a stack.",
+     "Pop a node: it is the next smallest. Decrease `k`; if it hits 0, return the value.",
+     "Move to the popped node's right child and push its left spine; repeat."
+    ],
+    "time": "O(h + k)",
+    "space": "O(h)",
+    "why": "It walks down to the minimum (h steps) and then visits only k nodes. The stack never holds more than one root-to-leaf path. (If the tree changed often, storing subtree sizes in each node would allow O(h) queries.)",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(TreeNode root, int k) {\n        Deque<TreeNode> stack = new ArrayDeque<>();\n        TreeNode node = root;\n        while (true) {\n            while (node != null) { stack.push(node); node = node.left; }\n            node = stack.pop();\n            if (--k == 0) return node.val;\n            node = node.right;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int kthSmallest(TreeNode* root, int k) {\n        vector<TreeNode*> st;\n        TreeNode* node = root;\n        while (true) {\n            while (node) { st.push_back(node); node = node->left; }\n            node = st.back();\n            st.pop_back();\n            if (--k == 0) return node->val;\n            node = node->right;\n        }\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        stack, node = [], root\n        while True:\n            while node:\n                stack.append(node)\n                node = node.left\n            node = stack.pop()\n            k -= 1\n            if k == 0:\n                return node.val\n            node = node.right",
+     "javascript": "var kthSmallest = function(root, k) {\n    const stack = [];\n    let node = root;\n    while (true) {\n        while (node) { stack.push(node); node = node.left; }\n        node = stack.pop();\n        if (--k === 0) return node.val;\n        node = node.right;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "insert-into-a-binary-search-tree": {
+  "pattern": "BST descent to the empty spot where the value belongs",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursive insert",
+    "idea": "A new value always becomes a leaf. Follow the BST order down; the first null child on that path is where it goes.",
+    "steps": [
+     "If `root` is null, return a new node with `val`.",
+     "If `val < root.val`, set `root.left = insert(root.left, val)`; otherwise `root.right = insert(root.right, val)`.",
+     "Return `root`."
+    ],
+    "time": "O(h)",
+    "space": "O(h)",
+    "why": "One root-to-leaf path; the recursion uses a stack frame per level.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode insertIntoBST(TreeNode root, int val) {\n        if (root == null) return new TreeNode(val);\n        if (val < root.val) root.left = insertIntoBST(root.left, val);\n        else root.right = insertIntoBST(root.right, val);\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* insertIntoBST(TreeNode* root, int val) {\n        if (!root) return new TreeNode(val);\n        if (val < root->val) root->left = insertIntoBST(root->left, val);\n        else root->right = insertIntoBST(root->right, val);\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def insertIntoBST(self, root: Optional[TreeNode], val: int) -> Optional[TreeNode]:\n        if not root:\n            return TreeNode(val)\n        if val < root.val:\n            root.left = self.insertIntoBST(root.left, val)\n        else:\n            root.right = self.insertIntoBST(root.right, val)\n        return root",
+     "javascript": "var insertIntoBST = function(root, val) {\n    if (!root) return new TreeNode(val);\n    if (val < root.val) root.left = insertIntoBST(root.left, val);\n    else root.right = insertIntoBST(root.right, val);\n    return root;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative insert",
+    "idea": "The same walk with a loop: move down until the side you need is empty, then attach the new node there.",
+    "steps": [
+     "If `root` is null, return a new node.",
+     "From `root`, go left if `val` is smaller, right otherwise; when that child is null, attach the new node there and stop.",
+     "Return `root`."
+    ],
+    "time": "O(h)",
+    "space": "O(1)",
+    "why": "The same path as the recursive version, with constant extra memory.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode insertIntoBST(TreeNode root, int val) {\n        if (root == null) return new TreeNode(val);\n        TreeNode node = root;\n        while (true) {\n            if (val < node.val) {\n                if (node.left == null) { node.left = new TreeNode(val); break; }\n                node = node.left;\n            } else {\n                if (node.right == null) { node.right = new TreeNode(val); break; }\n                node = node.right;\n            }\n        }\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* insertIntoBST(TreeNode* root, int val) {\n        if (!root) return new TreeNode(val);\n        TreeNode* node = root;\n        while (true) {\n            TreeNode*& next = val < node->val ? node->left : node->right;\n            if (!next) { next = new TreeNode(val); break; }\n            node = next;\n        }\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def insertIntoBST(self, root: Optional[TreeNode], val: int) -> Optional[TreeNode]:\n        if not root:\n            return TreeNode(val)\n        node = root\n        while True:\n            if val < node.val:\n                if not node.left:\n                    node.left = TreeNode(val)\n                    break\n                node = node.left\n            else:\n                if not node.right:\n                    node.right = TreeNode(val)\n                    break\n                node = node.right\n        return root",
+     "javascript": "var insertIntoBST = function(root, val) {\n    if (!root) return new TreeNode(val);\n    let node = root;\n    while (true) {\n        const side = val < node.val ? 'left' : 'right';\n        if (!node[side]) { node[side] = new TreeNode(val); break; }\n        node = node[side];\n    }\n    return root;\n};"
+    }
+   }
+  ]
+ },
+ "delete-node-in-a-bst": {
+  "pattern": "BST delete: replace a two-child node by its inorder successor",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Rebuild the tree without the key",
+    "idea": "Read all values in sorted order (inorder), drop `key`, and build a fresh balanced BST from what is left.",
+    "steps": [
+     "Collect the values with an inorder traversal, skipping `key`.",
+     "Build a balanced BST from the sorted list by taking the middle as the root recursively.",
+     "Return the new root."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every node is read and rebuilt, even though deleting one value only needs to touch a single path.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode deleteNode(TreeNode root, int key) {\n        List<Integer> vals = new ArrayList<>();\n        inorder(root, key, vals);\n        return build(vals, 0, vals.size() - 1);\n    }\n\n    private void inorder(TreeNode t, int key, List<Integer> vals) {\n        if (t == null) return;\n        inorder(t.left, key, vals);\n        if (t.val != key) vals.add(t.val);\n        inorder(t.right, key, vals);\n    }\n\n    private TreeNode build(List<Integer> vals, int lo, int hi) {\n        if (lo > hi) return null;\n        int mid = (lo + hi) >>> 1;\n        return new TreeNode(vals.get(mid), build(vals, lo, mid - 1), build(vals, mid + 1, hi));\n    }\n}",
+     "cpp": "class Solution {\n    void inorder(TreeNode* t, int key, vector<int>& vals) {\n        if (!t) return;\n        inorder(t->left, key, vals);\n        if (t->val != key) vals.push_back(t->val);\n        inorder(t->right, key, vals);\n    }\n    TreeNode* build(vector<int>& vals, int lo, int hi) {\n        if (lo > hi) return nullptr;\n        int mid = (lo + hi) / 2;\n        return new TreeNode(vals[mid], build(vals, lo, mid - 1), build(vals, mid + 1, hi));\n    }\npublic:\n    TreeNode* deleteNode(TreeNode* root, int key) {\n        vector<int> vals;\n        inorder(root, key, vals);\n        return build(vals, 0, (int) vals.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def deleteNode(self, root: Optional[TreeNode], key: int) -> Optional[TreeNode]:\n        vals = []\n        def inorder(t):\n            if t:\n                inorder(t.left)\n                if t.val != key:\n                    vals.append(t.val)\n                inorder(t.right)\n        def build(lo, hi):\n            if lo > hi:\n                return None\n            mid = (lo + hi) // 2\n            return TreeNode(vals[mid], build(lo, mid - 1), build(mid + 1, hi))\n        inorder(root)\n        return build(0, len(vals) - 1)",
+     "javascript": "var deleteNode = function(root, key) {\n    const vals = [];\n    const inorder = (t) => {\n        if (!t) return;\n        inorder(t.left);\n        if (t.val !== key) vals.push(t.val);\n        inorder(t.right);\n    };\n    const build = (lo, hi) => {\n        if (lo > hi) return null;\n        const mid = (lo + hi) >> 1;\n        return new TreeNode(vals[mid], build(lo, mid - 1), build(mid + 1, hi));\n    };\n    inorder(root);\n    return build(0, vals.length - 1);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Find the node and splice it out",
+    "idea": "Search for `key` using the BST order. A node with at most one child is replaced by that child. A node with two children takes the value of its inorder successor (the smallest value in its right subtree), and that successor is then deleted from the right subtree.",
+    "steps": [
+     "If `root` is null, return null. If `key < root.val`, delete from the left subtree; if greater, from the right.",
+     "Found it: if it has no left child, return its right child; if no right child, return its left child.",
+     "Two children: find the leftmost node of the right subtree, copy its value into `root`, and delete that value from the right subtree.",
+     "Return `root`."
+    ],
+    "time": "O(h)",
+    "space": "O(h)",
+    "why": "The search and the successor's removal each follow one downward path. The successor has no left child, so removing it is the simple case.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode deleteNode(TreeNode root, int key) {\n        if (root == null) return null;\n        if (key < root.val) root.left = deleteNode(root.left, key);\n        else if (key > root.val) root.right = deleteNode(root.right, key);\n        else {\n            if (root.left == null) return root.right;\n            if (root.right == null) return root.left;\n            TreeNode succ = root.right;\n            while (succ.left != null) succ = succ.left;\n            root.val = succ.val;\n            root.right = deleteNode(root.right, succ.val);\n        }\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* deleteNode(TreeNode* root, int key) {\n        if (!root) return nullptr;\n        if (key < root->val) root->left = deleteNode(root->left, key);\n        else if (key > root->val) root->right = deleteNode(root->right, key);\n        else {\n            if (!root->left) return root->right;\n            if (!root->right) return root->left;\n            TreeNode* succ = root->right;\n            while (succ->left) succ = succ->left;\n            root->val = succ->val;\n            root->right = deleteNode(root->right, succ->val);\n        }\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def deleteNode(self, root: Optional[TreeNode], key: int) -> Optional[TreeNode]:\n        if not root:\n            return None\n        if key < root.val:\n            root.left = self.deleteNode(root.left, key)\n        elif key > root.val:\n            root.right = self.deleteNode(root.right, key)\n        else:\n            if not root.left:\n                return root.right\n            if not root.right:\n                return root.left\n            succ = root.right\n            while succ.left:\n                succ = succ.left\n            root.val = succ.val\n            root.right = self.deleteNode(root.right, succ.val)\n        return root",
+     "javascript": "var deleteNode = function(root, key) {\n    if (!root) return null;\n    if (key < root.val) root.left = deleteNode(root.left, key);\n    else if (key > root.val) root.right = deleteNode(root.right, key);\n    else {\n        if (!root.left) return root.right;\n        if (!root.right) return root.left;\n        let succ = root.right;\n        while (succ.left) succ = succ.left;\n        root.val = succ.val;\n        root.right = deleteNode(root.right, succ.val);\n    }\n    return root;\n};"
+    }
+   }
+  ]
+ },
+ "binary-search-tree-iterator": {
+  "pattern": "Controlled inorder traversal with an explicit stack (left spine)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Flatten the tree up front",
+    "idea": "Do a full inorder traversal in the constructor and store the values; `next` and `hasNext` just walk the list.",
+    "steps": [
+     "Constructor: inorder traversal into a list; set an index to 0.",
+     "`next()`: return `list[index++]`.",
+     "`hasNext()`: return `index < list.size()`."
+    ],
+    "time": "O(1) per call",
+    "space": "O(n)",
+    "why": "O(n) work once in the constructor, then O(1) calls — but it stores all n values instead of the O(h) the problem asks for.",
+    "code": {
+     "java": "class BSTIterator {\n    private final List<Integer> vals = new ArrayList<>();\n    private int index = 0;\n\n    public BSTIterator(TreeNode root) {\n        inorder(root);\n    }\n\n    private void inorder(TreeNode t) {\n        if (t == null) return;\n        inorder(t.left);\n        vals.add(t.val);\n        inorder(t.right);\n    }\n\n    public int next() {\n        return vals.get(index++);\n    }\n\n    public boolean hasNext() {\n        return index < vals.size();\n    }\n}",
+     "cpp": "class BSTIterator {\n    vector<int> vals;\n    size_t index = 0;\n    void inorder(TreeNode* t) {\n        if (!t) return;\n        inorder(t->left);\n        vals.push_back(t->val);\n        inorder(t->right);\n    }\npublic:\n    BSTIterator(TreeNode* root) {\n        inorder(root);\n    }\n\n    int next() {\n        return vals[index++];\n    }\n\n    bool hasNext() {\n        return index < vals.size();\n    }\n};",
+     "python": "class BSTIterator:\n\n    def __init__(self, root: Optional[TreeNode]):\n        self.vals, self.index = [], 0\n        def inorder(t):\n            if t:\n                inorder(t.left)\n                self.vals.append(t.val)\n                inorder(t.right)\n        inorder(root)\n\n    def next(self) -> int:\n        self.index += 1\n        return self.vals[self.index - 1]\n\n    def hasNext(self) -> bool:\n        return self.index < len(self.vals)",
+     "javascript": "var BSTIterator = function(root) {\n    this.vals = [];\n    this.index = 0;\n    const inorder = (t) => {\n        if (!t) return;\n        inorder(t.left);\n        this.vals.push(t.val);\n        inorder(t.right);\n    };\n    inorder(root);\n};\n\nBSTIterator.prototype.next = function() {\n    return this.vals[this.index++];\n};\n\nBSTIterator.prototype.hasNext = function() {\n    return this.index < this.vals.length;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack of the pending left spine",
+    "idea": "Pause an iterative inorder traversal between calls. The stack holds the nodes whose left side is done but which have not been returned yet; the top is always the next smallest.",
+    "steps": [
+     "Constructor: push `root` and all its left descendants.",
+     "`next()`: pop the top node; push its right child and that child's left descendants; return the popped value.",
+     "`hasNext()`: return whether the stack is non-empty."
+    ],
+    "time": "O(1) amortised per call",
+    "space": "O(h)",
+    "why": "Each node is pushed and popped exactly once over the whole iteration, so n calls cost O(n). The stack holds at most one root-to-leaf path.",
+    "code": {
+     "java": "class BSTIterator {\n    private final Deque<TreeNode> stack = new ArrayDeque<>();\n\n    public BSTIterator(TreeNode root) {\n        pushLeft(root);\n    }\n\n    private void pushLeft(TreeNode node) {\n        for (; node != null; node = node.left) stack.push(node);\n    }\n\n    public int next() {\n        TreeNode node = stack.pop();\n        pushLeft(node.right);\n        return node.val;\n    }\n\n    public boolean hasNext() {\n        return !stack.isEmpty();\n    }\n}",
+     "cpp": "class BSTIterator {\n    vector<TreeNode*> st;\n    void pushLeft(TreeNode* node) {\n        for (; node; node = node->left) st.push_back(node);\n    }\npublic:\n    BSTIterator(TreeNode* root) {\n        pushLeft(root);\n    }\n\n    int next() {\n        TreeNode* node = st.back();\n        st.pop_back();\n        pushLeft(node->right);\n        return node->val;\n    }\n\n    bool hasNext() {\n        return !st.empty();\n    }\n};",
+     "python": "class BSTIterator:\n\n    def __init__(self, root: Optional[TreeNode]):\n        self.stack = []\n        self._push_left(root)\n\n    def _push_left(self, node):\n        while node:\n            self.stack.append(node)\n            node = node.left\n\n    def next(self) -> int:\n        node = self.stack.pop()\n        self._push_left(node.right)\n        return node.val\n\n    def hasNext(self) -> bool:\n        return bool(self.stack)",
+     "javascript": "var BSTIterator = function(root) {\n    this.stack = [];\n    this.pushLeft(root);\n};\n\nBSTIterator.prototype.pushLeft = function(node) {\n    for (; node; node = node.left) this.stack.push(node);\n};\n\nBSTIterator.prototype.next = function() {\n    const node = this.stack.pop();\n    this.pushLeft(node.right);\n    return node.val;\n};\n\nBSTIterator.prototype.hasNext = function() {\n    return this.stack.length > 0;\n};"
+    }
+   }
+  ]
+ },
+ "recover-binary-search-tree": {
+  "pattern": "Inorder should be increasing: find the two places it goes down (Morris traversal for O(1) space)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort the inorder values and write them back",
+    "idea": "Collect the values inorder, sort them, and write them back into the nodes in inorder. Sorted values in inorder positions are exactly a valid BST.",
+    "steps": [
+     "Collect the nodes in inorder.",
+     "Sort their values.",
+     "Assign the k-th sorted value to the k-th inorder node."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "The sort dominates; the node list and value list take O(n). It ignores the fact that only two values are wrong.",
+    "code": {
+     "java": "class Solution {\n    public void recoverTree(TreeNode root) {\n        List<TreeNode> nodes = new ArrayList<>();\n        inorder(root, nodes);\n        int[] vals = nodes.stream().mapToInt(t -> t.val).sorted().toArray();\n        for (int i = 0; i < vals.length; i++) nodes.get(i).val = vals[i];\n    }\n\n    private void inorder(TreeNode t, List<TreeNode> nodes) {\n        if (t == null) return;\n        inorder(t.left, nodes);\n        nodes.add(t);\n        inorder(t.right, nodes);\n    }\n}",
+     "cpp": "class Solution {\n    void inorder(TreeNode* t, vector<TreeNode*>& nodes) {\n        if (!t) return;\n        inorder(t->left, nodes);\n        nodes.push_back(t);\n        inorder(t->right, nodes);\n    }\npublic:\n    void recoverTree(TreeNode* root) {\n        vector<TreeNode*> nodes;\n        inorder(root, nodes);\n        vector<int> vals;\n        for (auto* t : nodes) vals.push_back(t->val);\n        sort(vals.begin(), vals.end());\n        for (size_t i = 0; i < vals.size(); i++) nodes[i]->val = vals[i];\n    }\n};",
+     "python": "class Solution:\n    def recoverTree(self, root: Optional[TreeNode]) -> None:\n        nodes = []\n        def inorder(t):\n            if t:\n                inorder(t.left)\n                nodes.append(t)\n                inorder(t.right)\n        inorder(root)\n        for node, v in zip(nodes, sorted(t.val for t in nodes)):\n            node.val = v",
+     "javascript": "var recoverTree = function(root) {\n    const nodes = [];\n    const inorder = (t) => {\n        if (!t) return;\n        inorder(t.left);\n        nodes.push(t);\n        inorder(t.right);\n    };\n    inorder(root);\n    const vals = nodes.map((t) => t.val).sort((a, b) => a - b);\n    nodes.forEach((t, i) => { t.val = vals[i]; });\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Inorder with a previous pointer, find the two misplaced nodes",
+    "idea": "In the inorder sequence, a swap creates one or two \"drops\" where `prev.val > cur.val`. The first misplaced node is `prev` at the first drop; the second is `cur` at the last drop. Swap their values.",
+    "steps": [
+     "Do an inorder traversal keeping `prev`.",
+     "At each drop (`prev.val > cur.val`): if `first` is unset, set `first = prev`; always set `second = cur`.",
+     "After the traversal, swap `first.val` and `second.val`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "One traversal with O(1) work per node; the recursion stack is h deep. Adjacent swapped nodes give a single drop, which the \"always set second\" rule still handles.",
+    "code": {
+     "java": "class Solution {\n    private TreeNode prev, first, second;\n\n    public void recoverTree(TreeNode root) {\n        inorder(root);\n        int t = first.val; first.val = second.val; second.val = t;\n    }\n\n    private void inorder(TreeNode cur) {\n        if (cur == null) return;\n        inorder(cur.left);\n        if (prev != null && prev.val > cur.val) {\n            if (first == null) first = prev;\n            second = cur;\n        }\n        prev = cur;\n        inorder(cur.right);\n    }\n}",
+     "cpp": "class Solution {\n    TreeNode *prev = nullptr, *first = nullptr, *second = nullptr;\n    void inorder(TreeNode* cur) {\n        if (!cur) return;\n        inorder(cur->left);\n        if (prev && prev->val > cur->val) {\n            if (!first) first = prev;\n            second = cur;\n        }\n        prev = cur;\n        inorder(cur->right);\n    }\npublic:\n    void recoverTree(TreeNode* root) {\n        inorder(root);\n        swap(first->val, second->val);\n    }\n};",
+     "python": "class Solution:\n    def recoverTree(self, root: Optional[TreeNode]) -> None:\n        prev = first = second = None\n        def inorder(cur):\n            nonlocal prev, first, second\n            if not cur:\n                return\n            inorder(cur.left)\n            if prev and prev.val > cur.val:\n                if not first:\n                    first = prev\n                second = cur\n            prev = cur\n            inorder(cur.right)\n        inorder(root)\n        first.val, second.val = second.val, first.val",
+     "javascript": "var recoverTree = function(root) {\n    let prev = null, first = null, second = null;\n    const inorder = (cur) => {\n        if (!cur) return;\n        inorder(cur.left);\n        if (prev && prev.val > cur.val) {\n            if (!first) first = prev;\n            second = cur;\n        }\n        prev = cur;\n        inorder(cur.right);\n    };\n    inorder(root);\n    [first.val, second.val] = [second.val, first.val];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Morris inorder traversal (no stack)",
+    "idea": "Morris traversal walks inorder without recursion or a stack by temporarily linking each node's inorder predecessor back to it, then removing that link on the way back. Run the same drop detection along the way.",
+    "steps": [
+     "Set `cur = root`. If `cur` has no left child, visit it and go right.",
+     "Otherwise find its predecessor (rightmost node of the left subtree). If the predecessor's right is null, link it to `cur` and go left.",
+     "If the predecessor already links to `cur`, remove the link, visit `cur`, and go right.",
+     "\"Visit\" means the drop check with `prev`; at the end swap `first.val` and `second.val`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each edge is walked a constant number of times (predecessor searches add up to O(n) in total), and only a few pointers are used. All temporary links are removed, so the tree shape is restored.",
+    "code": {
+     "java": "class Solution {\n    public void recoverTree(TreeNode root) {\n        TreeNode cur = root, prev = null, first = null, second = null;\n        while (cur != null) {\n            if (cur.left != null) {\n                TreeNode pred = cur.left;\n                while (pred.right != null && pred.right != cur) pred = pred.right;\n                if (pred.right == null) { pred.right = cur; cur = cur.left; continue; }\n                pred.right = null;\n            }\n            if (prev != null && prev.val > cur.val) {\n                if (first == null) first = prev;\n                second = cur;\n            }\n            prev = cur;\n            cur = cur.right;\n        }\n        int t = first.val; first.val = second.val; second.val = t;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    void recoverTree(TreeNode* root) {\n        TreeNode *cur = root, *prev = nullptr, *first = nullptr, *second = nullptr;\n        while (cur) {\n            if (cur->left) {\n                TreeNode* pred = cur->left;\n                while (pred->right && pred->right != cur) pred = pred->right;\n                if (!pred->right) { pred->right = cur; cur = cur->left; continue; }\n                pred->right = nullptr;\n            }\n            if (prev && prev->val > cur->val) {\n                if (!first) first = prev;\n                second = cur;\n            }\n            prev = cur;\n            cur = cur->right;\n        }\n        swap(first->val, second->val);\n    }\n};",
+     "python": "class Solution:\n    def recoverTree(self, root: Optional[TreeNode]) -> None:\n        cur, prev, first, second = root, None, None, None\n        while cur:\n            if cur.left:\n                pred = cur.left\n                while pred.right and pred.right is not cur:\n                    pred = pred.right\n                if not pred.right:\n                    pred.right = cur\n                    cur = cur.left\n                    continue\n                pred.right = None\n            if prev and prev.val > cur.val:\n                if not first:\n                    first = prev\n                second = cur\n            prev = cur\n            cur = cur.right\n        first.val, second.val = second.val, first.val",
+     "javascript": "var recoverTree = function(root) {\n    let cur = root, prev = null, first = null, second = null;\n    while (cur) {\n        if (cur.left) {\n            let pred = cur.left;\n            while (pred.right && pred.right !== cur) pred = pred.right;\n            if (!pred.right) { pred.right = cur; cur = cur.left; continue; }\n            pred.right = null;\n        }\n        if (prev && prev.val > cur.val) {\n            if (!first) first = prev;\n            second = cur;\n        }\n        prev = cur;\n        cur = cur.right;\n    }\n    [first.val, second.val] = [second.val, first.val];\n};"
+    }
+   }
+  ]
+ }
+}

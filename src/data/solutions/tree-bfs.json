@@ -1,0 +1,348 @@
+{
+ "binary-tree-level-order-traversal": {
+  "pattern": "BFS with a queue, one level at a time (take queue.size() nodes per level)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS, level by level",
+    "idea": "A queue visits nodes in level order. Taking exactly the number of nodes in the queue at the start of a round gives one complete level.",
+    "steps": [
+     "If `root` is null, return an empty list. Put `root` in a queue.",
+     "While the queue is not empty: let `size` be its length; pop `size` nodes, recording their values and enqueuing their children.",
+     "Append that level's values to the answer."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node is enqueued and dequeued once. Besides the output, the queue holds at most one level (width w, up to about n/2).",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> levelOrder(TreeNode root) {\n        List<List<Integer>> out = new ArrayList<>();\n        if (root == null) return out;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            List<Integer> level = new ArrayList<>();\n            for (int k = queue.size(); k > 0; k--) {\n                TreeNode node = queue.poll();\n                level.add(node.val);\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            out.add(level);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        vector<vector<int>> out;\n        if (!root) return out;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            vector<int> level;\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                level.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            out.push_back(level);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        out = []\n        queue = deque([root] if root else [])\n        while queue:\n            level = []\n            for _ in range(len(queue)):\n                node = queue.popleft()\n                level.append(node.val)\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n            out.append(level)\n        return out",
+     "javascript": "var levelOrder = function(root) {\n    const out = [];\n    let level = root ? [root] : [];\n    while (level.length) {\n        out.push(level.map((node) => node.val));\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS that files each value under its depth",
+    "idea": "A preorder DFS (left before right) reaches the nodes of every level from left to right, so appending each value to the list for its depth produces the same answer.",
+    "steps": [
+     "`dfs(node, depth)`: if null, return.",
+     "If the answer has no list for `depth` yet, add one.",
+     "Append the value to `out[depth]`; recurse left, then right, with `depth + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is visited once; besides the output only the recursion stack (height h) is used.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> levelOrder(TreeNode root) {\n        List<List<Integer>> out = new ArrayList<>();\n        dfs(root, 0, out);\n        return out;\n    }\n\n    private void dfs(TreeNode node, int depth, List<List<Integer>> out) {\n        if (node == null) return;\n        if (out.size() == depth) out.add(new ArrayList<>());\n        out.get(depth).add(node.val);\n        dfs(node.left, depth + 1, out);\n        dfs(node.right, depth + 1, out);\n    }\n}",
+     "cpp": "class Solution {\n    void dfs(TreeNode* node, int depth, vector<vector<int>>& out) {\n        if (!node) return;\n        if ((int) out.size() == depth) out.push_back({});\n        out[depth].push_back(node->val);\n        dfs(node->left, depth + 1, out);\n        dfs(node->right, depth + 1, out);\n    }\npublic:\n    vector<vector<int>> levelOrder(TreeNode* root) {\n        vector<vector<int>> out;\n        dfs(root, 0, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        out = []\n        def dfs(node, depth):\n            if not node:\n                return\n            if len(out) == depth:\n                out.append([])\n            out[depth].append(node.val)\n            dfs(node.left, depth + 1)\n            dfs(node.right, depth + 1)\n        dfs(root, 0)\n        return out",
+     "javascript": "var levelOrder = function(root) {\n    const out = [];\n    const dfs = (node, depth) => {\n        if (!node) return;\n        if (out.length === depth) out.push([]);\n        out[depth].push(node.val);\n        dfs(node.left, depth + 1);\n        dfs(node.right, depth + 1);\n    };\n    dfs(root, 0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "average-of-levels-in-binary-tree": {
+  "pattern": "Level-order BFS with a per-level aggregate (sum and count)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS, summing each level",
+    "idea": "Process one level at a time; add up its values in a 64-bit (or floating) sum and divide by the number of nodes on it.",
+    "steps": [
+     "Put `root` in a queue.",
+     "For each level: pop its `size` nodes, adding their values to `sum` and enqueuing children.",
+     "Append `sum / size` to the answer."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node once; the queue holds one level. Values reach ±2³¹, so a 32-bit sum would overflow — use `long` / `long long`.",
+    "code": {
+     "java": "class Solution {\n    public List<Double> averageOfLevels(TreeNode root) {\n        List<Double> out = new ArrayList<>();\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            int size = queue.size();\n            long sum = 0;\n            for (int k = 0; k < size; k++) {\n                TreeNode node = queue.poll();\n                sum += node.val;\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            out.add((double) sum / size);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<double> averageOfLevels(TreeNode* root) {\n        vector<double> out;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int size = q.size();\n            long long sum = 0;\n            for (int k = 0; k < size; k++) {\n                TreeNode* node = q.front();\n                q.pop();\n                sum += node->val;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            out.push_back((double) sum / size);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def averageOfLevels(self, root: Optional[TreeNode]) -> List[float]:\n        out, queue = [], deque([root])\n        while queue:\n            size, total = len(queue), 0\n            for _ in range(size):\n                node = queue.popleft()\n                total += node.val\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n            out.append(total / size)\n        return out",
+     "javascript": "var averageOfLevels = function(root) {\n    const out = [];\n    let level = [root];\n    while (level.length) {\n        let sum = 0;\n        const next = [];\n        for (const node of level) {\n            sum += node.val;\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        out.push(sum / level.length);\n        level = next;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS collecting sum and count per depth",
+    "idea": "Any traversal works if every node adds its value to the sum for its depth and bumps that depth's count. Divide at the end.",
+    "steps": [
+     "`dfs(node, depth)`: if `depth` is new, add a sum of 0 and a count of 0.",
+     "Add `node.val` to `sum[depth]`, increase `count[depth]`, and recurse into both children.",
+     "Return `sum[d] / count[d]` for every depth."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node once; the per-depth arrays have h entries and the recursion is h deep.",
+    "code": {
+     "java": "class Solution {\n    private final List<Long> sum = new ArrayList<>();\n    private final List<Integer> count = new ArrayList<>();\n\n    public List<Double> averageOfLevels(TreeNode root) {\n        dfs(root, 0);\n        List<Double> out = new ArrayList<>();\n        for (int d = 0; d < sum.size(); d++) out.add((double) sum.get(d) / count.get(d));\n        return out;\n    }\n\n    private void dfs(TreeNode node, int depth) {\n        if (node == null) return;\n        if (sum.size() == depth) { sum.add(0L); count.add(0); }\n        sum.set(depth, sum.get(depth) + node.val);\n        count.set(depth, count.get(depth) + 1);\n        dfs(node.left, depth + 1);\n        dfs(node.right, depth + 1);\n    }\n}",
+     "cpp": "class Solution {\n    vector<long long> sum;\n    vector<int> count;\n    void dfs(TreeNode* node, int depth) {\n        if (!node) return;\n        if ((int) sum.size() == depth) { sum.push_back(0); count.push_back(0); }\n        sum[depth] += node->val;\n        count[depth]++;\n        dfs(node->left, depth + 1);\n        dfs(node->right, depth + 1);\n    }\npublic:\n    vector<double> averageOfLevels(TreeNode* root) {\n        dfs(root, 0);\n        vector<double> out;\n        for (size_t d = 0; d < sum.size(); d++) out.push_back((double) sum[d] / count[d]);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def averageOfLevels(self, root: Optional[TreeNode]) -> List[float]:\n        total, count = [], []\n        def dfs(node, depth):\n            if not node:\n                return\n            if len(total) == depth:\n                total.append(0)\n                count.append(0)\n            total[depth] += node.val\n            count[depth] += 1\n            dfs(node.left, depth + 1)\n            dfs(node.right, depth + 1)\n        dfs(root, 0)\n        return [t / c for t, c in zip(total, count)]",
+     "javascript": "var averageOfLevels = function(root) {\n    const sum = [], count = [];\n    const dfs = (node, depth) => {\n        if (!node) return;\n        if (sum.length === depth) { sum.push(0); count.push(0); }\n        sum[depth] += node.val;\n        count[depth]++;\n        dfs(node.left, depth + 1);\n        dfs(node.right, depth + 1);\n    };\n    dfs(root, 0);\n    return sum.map((s, d) => s / count[d]);\n};"
+    }
+   }
+  ]
+ },
+ "minimum-depth-of-binary-tree": {
+  "pattern": "BFS stops at the first leaf (shortest path in an unweighted tree)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Recursive DFS, careful with one-child nodes",
+    "idea": "For a node with two children, the answer is 1 + the smaller child depth. But a node with one child is not a leaf, so its depth comes from that child only — taking the min with the missing side (0) would be wrong.",
+    "steps": [
+     "If `root` is null, return 0.",
+     "If one child is missing, return `1 + minDepth(otherChild)`.",
+     "Otherwise return `1 + min(minDepth(left), minDepth(right))`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "It always explores the whole tree, even when a leaf sits right below the root.",
+    "code": {
+     "java": "class Solution {\n    public int minDepth(TreeNode root) {\n        if (root == null) return 0;\n        if (root.left == null) return 1 + minDepth(root.right);\n        if (root.right == null) return 1 + minDepth(root.left);\n        return 1 + Math.min(minDepth(root.left), minDepth(root.right));\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minDepth(TreeNode* root) {\n        if (!root) return 0;\n        if (!root->left) return 1 + minDepth(root->right);\n        if (!root->right) return 1 + minDepth(root->left);\n        return 1 + min(minDepth(root->left), minDepth(root->right));\n    }\n};",
+     "python": "class Solution:\n    def minDepth(self, root: Optional[TreeNode]) -> int:\n        if not root:\n            return 0\n        if not root.left:\n            return 1 + self.minDepth(root.right)\n        if not root.right:\n            return 1 + self.minDepth(root.left)\n        return 1 + min(self.minDepth(root.left), self.minDepth(root.right))",
+     "javascript": "var minDepth = function(root) {\n    if (!root) return 0;\n    if (!root.left) return 1 + minDepth(root.right);\n    if (!root.right) return 1 + minDepth(root.left);\n    return 1 + Math.min(minDepth(root.left), minDepth(root.right));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS that stops at the first leaf",
+    "idea": "Level order visits shallower nodes first, so the first leaf found is on the shallowest level. Return its depth immediately.",
+    "steps": [
+     "If `root` is null, return 0. Queue `root`; `depth = 1`.",
+     "For each level, pop its nodes; if a node has no children, return `depth`.",
+     "Otherwise enqueue its children; after the level, increase `depth`."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Worst case it still visits every node, but it stops at the first leaf, which on unbalanced trees can be far earlier than the DFS. No recursion.",
+    "code": {
+     "java": "class Solution {\n    public int minDepth(TreeNode root) {\n        if (root == null) return 0;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        for (int depth = 1; ; depth++) {\n            for (int k = queue.size(); k > 0; k--) {\n                TreeNode node = queue.poll();\n                if (node.left == null && node.right == null) return depth;\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minDepth(TreeNode* root) {\n        if (!root) return 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        for (int depth = 1; ; depth++) {\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (!node->left && !node->right) return depth;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n        }\n    }\n};",
+     "python": "class Solution:\n    def minDepth(self, root: Optional[TreeNode]) -> int:\n        if not root:\n            return 0\n        queue, depth = deque([root]), 1\n        while True:\n            for _ in range(len(queue)):\n                node = queue.popleft()\n                if not node.left and not node.right:\n                    return depth\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n            depth += 1",
+     "javascript": "var minDepth = function(root) {\n    if (!root) return 0;\n    let level = [root];\n    for (let depth = 1; ; depth++) {\n        const next = [];\n        for (const node of level) {\n            if (!node.left && !node.right) return depth;\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "binary-tree-right-side-view": {
+  "pattern": "Level-order BFS keeping the last node of each level (or right-first DFS)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS: the last node of every level",
+    "idea": "Visiting each level left to right, the last node processed on a level is the one seen from the right.",
+    "steps": [
+     "Queue `root` (if any).",
+     "For each level, pop its `size` nodes, enqueuing children; record the value of the last one popped.",
+     "Return the recorded values."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node once; the queue holds one level at a time.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> rightSideView(TreeNode root) {\n        List<Integer> out = new ArrayList<>();\n        if (root == null) return out;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            int size = queue.size();\n            for (int k = 0; k < size; k++) {\n                TreeNode node = queue.poll();\n                if (k == size - 1) out.add(node.val);\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> rightSideView(TreeNode* root) {\n        vector<int> out;\n        if (!root) return out;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int size = q.size();\n            for (int k = 0; k < size; k++) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (k == size - 1) out.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        out = []\n        queue = deque([root] if root else [])\n        while queue:\n            size = len(queue)\n            for k in range(size):\n                node = queue.popleft()\n                if k == size - 1:\n                    out.append(node.val)\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n        return out",
+     "javascript": "var rightSideView = function(root) {\n    const out = [];\n    let level = root ? [root] : [];\n    while (level.length) {\n        out.push(level[level.length - 1].val);\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS visiting the right child first",
+    "idea": "If the DFS goes right before left, the first node it reaches at each new depth is the rightmost one on that level.",
+    "steps": [
+     "`dfs(node, depth)`: if null, return.",
+     "If `depth == out.size()`, this is the first node seen at this depth: append its value.",
+     "Recurse into the right child, then the left, with `depth + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node once; the recursion is as deep as the tree.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> rightSideView(TreeNode root) {\n        List<Integer> out = new ArrayList<>();\n        dfs(root, 0, out);\n        return out;\n    }\n\n    private void dfs(TreeNode node, int depth, List<Integer> out) {\n        if (node == null) return;\n        if (depth == out.size()) out.add(node.val);\n        dfs(node.right, depth + 1, out);\n        dfs(node.left, depth + 1, out);\n    }\n}",
+     "cpp": "class Solution {\n    void dfs(TreeNode* node, int depth, vector<int>& out) {\n        if (!node) return;\n        if (depth == (int) out.size()) out.push_back(node->val);\n        dfs(node->right, depth + 1, out);\n        dfs(node->left, depth + 1, out);\n    }\npublic:\n    vector<int> rightSideView(TreeNode* root) {\n        vector<int> out;\n        dfs(root, 0, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        out = []\n        def dfs(node, depth):\n            if not node:\n                return\n            if depth == len(out):\n                out.append(node.val)\n            dfs(node.right, depth + 1)\n            dfs(node.left, depth + 1)\n        dfs(root, 0)\n        return out",
+     "javascript": "var rightSideView = function(root) {\n    const out = [];\n    const dfs = (node, depth) => {\n        if (!node) return;\n        if (depth === out.length) out.push(node.val);\n        dfs(node.right, depth + 1);\n        dfs(node.left, depth + 1);\n    };\n    dfs(root, 0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "binary-tree-zigzag-level-order-traversal": {
+  "pattern": "Level-order BFS, reversing the direction on alternate levels",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS, filling each level from the correct end",
+    "idea": "Do a normal level-order traversal. On even levels place values left to right; on odd levels write them into the level's array from the back, so it reads right to left.",
+    "steps": [
+     "Queue `root`; `leftToRight = true`.",
+     "For each level of `size` nodes, make an array of that size; the k-th node popped goes to index `k` or `size − 1 − k` depending on the direction.",
+     "Enqueue children as usual (always left then right), add the array to the answer, and flip the direction."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node once; writing into a pre-sized array avoids a separate reverse.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> zigzagLevelOrder(TreeNode root) {\n        List<List<Integer>> out = new ArrayList<>();\n        if (root == null) return out;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        boolean leftToRight = true;\n        while (!queue.isEmpty()) {\n            int size = queue.size();\n            Integer[] level = new Integer[size];\n            for (int k = 0; k < size; k++) {\n                TreeNode node = queue.poll();\n                level[leftToRight ? k : size - 1 - k] = node.val;\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            out.add(Arrays.asList(level));\n            leftToRight = !leftToRight;\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> zigzagLevelOrder(TreeNode* root) {\n        vector<vector<int>> out;\n        if (!root) return out;\n        queue<TreeNode*> q;\n        q.push(root);\n        bool leftToRight = true;\n        while (!q.empty()) {\n            int size = q.size();\n            vector<int> level(size);\n            for (int k = 0; k < size; k++) {\n                TreeNode* node = q.front();\n                q.pop();\n                level[leftToRight ? k : size - 1 - k] = node->val;\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            out.push_back(level);\n            leftToRight = !leftToRight;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def zigzagLevelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        out = []\n        queue = deque([root] if root else [])\n        left_to_right = True\n        while queue:\n            level = []\n            for _ in range(len(queue)):\n                node = queue.popleft()\n                level.append(node.val)\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n            out.append(level if left_to_right else level[::-1])\n            left_to_right = not left_to_right\n        return out",
+     "javascript": "var zigzagLevelOrder = function(root) {\n    const out = [];\n    let level = root ? [root] : [], leftToRight = true;\n    while (level.length) {\n        const vals = level.map((node) => node.val);\n        out.push(leftToRight ? vals : vals.reverse());\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n        leftToRight = !leftToRight;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS by depth, then reverse the odd levels",
+    "idea": "Collect plain level order with a DFS (left before right, appending to the list for each depth), then reverse every odd-numbered level.",
+    "steps": [
+     "DFS with depth: append each value to `out[depth]`, left child before right.",
+     "Reverse `out[d]` for every odd `d`.",
+     "Return `out`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "One DFS plus reversals that touch each value once; besides the output, the recursion stack is h deep.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> zigzagLevelOrder(TreeNode root) {\n        List<List<Integer>> out = new ArrayList<>();\n        dfs(root, 0, out);\n        for (int d = 1; d < out.size(); d += 2) Collections.reverse(out.get(d));\n        return out;\n    }\n\n    private void dfs(TreeNode node, int depth, List<List<Integer>> out) {\n        if (node == null) return;\n        if (out.size() == depth) out.add(new ArrayList<>());\n        out.get(depth).add(node.val);\n        dfs(node.left, depth + 1, out);\n        dfs(node.right, depth + 1, out);\n    }\n}",
+     "cpp": "class Solution {\n    void dfs(TreeNode* node, int depth, vector<vector<int>>& out) {\n        if (!node) return;\n        if ((int) out.size() == depth) out.push_back({});\n        out[depth].push_back(node->val);\n        dfs(node->left, depth + 1, out);\n        dfs(node->right, depth + 1, out);\n    }\npublic:\n    vector<vector<int>> zigzagLevelOrder(TreeNode* root) {\n        vector<vector<int>> out;\n        dfs(root, 0, out);\n        for (size_t d = 1; d < out.size(); d += 2) reverse(out[d].begin(), out[d].end());\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def zigzagLevelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        out = []\n        def dfs(node, depth):\n            if not node:\n                return\n            if len(out) == depth:\n                out.append([])\n            out[depth].append(node.val)\n            dfs(node.left, depth + 1)\n            dfs(node.right, depth + 1)\n        dfs(root, 0)\n        return [level if d % 2 == 0 else level[::-1] for d, level in enumerate(out)]",
+     "javascript": "var zigzagLevelOrder = function(root) {\n    const out = [];\n    const dfs = (node, depth) => {\n        if (!node) return;\n        if (out.length === depth) out.push([]);\n        out[depth].push(node.val);\n        dfs(node.left, depth + 1);\n        dfs(node.right, depth + 1);\n    };\n    dfs(root, 0);\n    return out.map((level, d) => (d % 2 ? level.reverse() : level));\n};"
+    }
+   }
+  ]
+ },
+ "find-largest-value-in-each-tree-row": {
+  "pattern": "Level-order BFS with a per-level maximum (or DFS by depth)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS, maximum of each level",
+    "idea": "Process one level at a time and keep the largest value on it, starting from the level's first node (values can be negative, even −2³¹).",
+    "steps": [
+     "Queue `root` (if any).",
+     "For each level, set `best` to the smallest possible value (or the first node's value), then take the max over the level's nodes while enqueuing children.",
+     "Append `best`."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node once; the queue holds one level.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> largestValues(TreeNode root) {\n        List<Integer> out = new ArrayList<>();\n        if (root == null) return out;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            int best = Integer.MIN_VALUE;\n            for (int k = queue.size(); k > 0; k--) {\n                TreeNode node = queue.poll();\n                best = Math.max(best, node.val);\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            out.add(best);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> largestValues(TreeNode* root) {\n        vector<int> out;\n        if (!root) return out;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            int best = INT_MIN;\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                best = max(best, node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            out.push_back(best);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def largestValues(self, root: Optional[TreeNode]) -> List[int]:\n        out = []\n        level = [root] if root else []\n        while level:\n            out.append(max(node.val for node in level))\n            level = [c for node in level for c in (node.left, node.right) if c]\n        return out",
+     "javascript": "var largestValues = function(root) {\n    const out = [];\n    let level = root ? [root] : [];\n    while (level.length) {\n        let best = -Infinity;\n        const next = [];\n        for (const node of level) {\n            best = Math.max(best, node.val);\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        out.push(best);\n        level = next;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS keeping the maximum per depth",
+    "idea": "Visit nodes in any order; the first node at a new depth starts that depth's entry, and later nodes at that depth update it with the larger value.",
+    "steps": [
+     "`dfs(node, depth)`: if null, return.",
+     "If `depth == out.size()`, append `node.val`; otherwise set `out[depth] = max(out[depth], node.val)`.",
+     "Recurse into both children with `depth + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node once; the recursion stack is h deep.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> largestValues(TreeNode root) {\n        List<Integer> out = new ArrayList<>();\n        dfs(root, 0, out);\n        return out;\n    }\n\n    private void dfs(TreeNode node, int depth, List<Integer> out) {\n        if (node == null) return;\n        if (depth == out.size()) out.add(node.val);\n        else out.set(depth, Math.max(out.get(depth), node.val));\n        dfs(node.left, depth + 1, out);\n        dfs(node.right, depth + 1, out);\n    }\n}",
+     "cpp": "class Solution {\n    void dfs(TreeNode* node, int depth, vector<int>& out) {\n        if (!node) return;\n        if (depth == (int) out.size()) out.push_back(node->val);\n        else out[depth] = max(out[depth], node->val);\n        dfs(node->left, depth + 1, out);\n        dfs(node->right, depth + 1, out);\n    }\npublic:\n    vector<int> largestValues(TreeNode* root) {\n        vector<int> out;\n        dfs(root, 0, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def largestValues(self, root: Optional[TreeNode]) -> List[int]:\n        out = []\n        def dfs(node, depth):\n            if not node:\n                return\n            if depth == len(out):\n                out.append(node.val)\n            else:\n                out[depth] = max(out[depth], node.val)\n            dfs(node.left, depth + 1)\n            dfs(node.right, depth + 1)\n        dfs(root, 0)\n        return out",
+     "javascript": "var largestValues = function(root) {\n    const out = [];\n    const dfs = (node, depth) => {\n        if (!node) return;\n        if (depth === out.length) out.push(node.val);\n        else out[depth] = Math.max(out[depth], node.val);\n        dfs(node.left, depth + 1);\n        dfs(node.right, depth + 1);\n    };\n    dfs(root, 0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "populating-next-right-pointers-in-each-node": {
+  "pattern": "Level linking: use the next pointers of the level above to wire the level below",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "BFS with a queue",
+    "idea": "Walk each level left to right with a queue and point every node at the next node popped on the same level.",
+    "steps": [
+     "Queue `root` (if any).",
+     "For each level of `size` nodes: pop them in order; set `node.next` to the queue's front unless it is the level's last node (then null).",
+     "Enqueue children as you go; return `root`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node once. The queue holds a whole level, which in a perfect tree is about n/2 nodes — the follow-up asks for O(1) extra space.",
+    "code": {
+     "java": "class Solution {\n    public Node connect(Node root) {\n        if (root == null) return null;\n        Deque<Node> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            for (int k = queue.size(); k > 0; k--) {\n                Node node = queue.poll();\n                node.next = k > 1 ? queue.peek() : null;\n                if (node.left != null) { queue.add(node.left); queue.add(node.right); }\n            }\n        }\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* connect(Node* root) {\n        if (!root) return nullptr;\n        queue<Node*> q;\n        q.push(root);\n        while (!q.empty()) {\n            for (int k = q.size(); k > 0; k--) {\n                Node* node = q.front();\n                q.pop();\n                node->next = k > 1 ? q.front() : nullptr;\n                if (node->left) { q.push(node->left); q.push(node->right); }\n            }\n        }\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def connect(self, root: Optional['Node']) -> Optional['Node']:\n        level = [root] if root else []\n        while level:\n            for a, b in zip(level, level[1:]):\n                a.next = b\n            level = [c for node in level for c in (node.left, node.right) if c]\n        return root",
+     "javascript": "var connect = function(root) {\n    let level = root ? [root] : [];\n    while (level.length) {\n        for (let i = 0; i + 1 < level.length; i++) level[i].next = level[i + 1];\n        const next = [];\n        for (const node of level) if (node.left) next.push(node.left, node.right);\n        level = next;\n    }\n    return root;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Walk each level through its next pointers",
+    "idea": "Once a level is linked, you can walk it like a linked list. While walking it, wire its children: a node's left child points to its right child, and its right child points to the left child of the node's `next`.",
+    "steps": [
+     "Start with `leftmost = root`.",
+     "While `leftmost` has children: walk `node` along the current level using `next`.",
+     "For each `node`: `node.left.next = node.right`; if `node.next` exists, `node.right.next = node.next.left`.",
+     "Move down: `leftmost = leftmost.left`. Return `root`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each node is visited once as part of its level's walk, and only two pointers are used. It relies on the tree being perfect, so every internal node has both children.",
+    "code": {
+     "java": "class Solution {\n    public Node connect(Node root) {\n        for (Node leftmost = root; leftmost != null && leftmost.left != null; leftmost = leftmost.left) {\n            for (Node node = leftmost; node != null; node = node.next) {\n                node.left.next = node.right;\n                if (node.next != null) node.right.next = node.next.left;\n            }\n        }\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* connect(Node* root) {\n        for (Node* leftmost = root; leftmost && leftmost->left; leftmost = leftmost->left) {\n            for (Node* node = leftmost; node; node = node->next) {\n                node->left->next = node->right;\n                if (node->next) node->right->next = node->next->left;\n            }\n        }\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def connect(self, root: Optional['Node']) -> Optional['Node']:\n        leftmost = root\n        while leftmost and leftmost.left:\n            node = leftmost\n            while node:\n                node.left.next = node.right\n                if node.next:\n                    node.right.next = node.next.left\n                node = node.next\n            leftmost = leftmost.left\n        return root",
+     "javascript": "var connect = function(root) {\n    for (let leftmost = root; leftmost && leftmost.left; leftmost = leftmost.left) {\n        for (let node = leftmost; node; node = node.next) {\n            node.left.next = node.right;\n            if (node.next) node.right.next = node.next.left;\n        }\n    }\n    return root;\n};"
+    }
+   }
+  ]
+ },
+ "maximum-width-of-binary-tree": {
+  "pattern": "BFS with heap-style positions (children of i are 2i and 2i + 1), normalised per level",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "BFS with positions, re-based on every level",
+    "idea": "Number positions as in an array heap: the root is 0 and a node at `i` has children `2i` and `2i + 1`. The width of a level is `last − first + 1`. Positions double every level and would overflow on deep trees, so subtract the level's first position before computing children.",
+    "steps": [
+     "Queue `(root, 0)`.",
+     "For each level: note the first position `first`; for each node `(node, pos)`, let `p = pos − first`, and enqueue its children at `2p` and `2p + 1`.",
+     "The level's width is the last `p` + 1; keep the maximum."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node once; the queue holds one level. After re-basing, positions on a level stay below twice the width, which the problem guarantees fits in 32 bits — use 64-bit integers for the doubling step.",
+    "code": {
+     "java": "class Solution {\n    public int widthOfBinaryTree(TreeNode root) {\n        Deque<TreeNode> nodes = new ArrayDeque<>();\n        Deque<Long> pos = new ArrayDeque<>();\n        nodes.add(root);\n        pos.add(0L);\n        long best = 0;\n        while (!nodes.isEmpty()) {\n            long first = pos.peek(), last = 0;\n            for (int k = nodes.size(); k > 0; k--) {\n                TreeNode node = nodes.poll();\n                long p = pos.poll() - first;\n                last = p;\n                if (node.left != null) { nodes.add(node.left); pos.add(2 * p); }\n                if (node.right != null) { nodes.add(node.right); pos.add(2 * p + 1); }\n            }\n            best = Math.max(best, last + 1);\n        }\n        return (int) best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int widthOfBinaryTree(TreeNode* root) {\n        queue<pair<TreeNode*, unsigned long long>> q;\n        q.push({root, 0});\n        unsigned long long best = 0;\n        while (!q.empty()) {\n            unsigned long long first = q.front().second, last = 0;\n            for (int k = q.size(); k > 0; k--) {\n                auto [node, pos] = q.front();\n                q.pop();\n                unsigned long long p = pos - first;\n                last = p;\n                if (node->left) q.push({node->left, 2 * p});\n                if (node->right) q.push({node->right, 2 * p + 1});\n            }\n            best = max(best, last + 1);\n        }\n        return (int) best;\n    }\n};",
+     "python": "class Solution:\n    def widthOfBinaryTree(self, root: Optional[TreeNode]) -> int:\n        level, best = [(root, 0)], 0\n        while level:\n            first = level[0][1]\n            best = max(best, level[-1][1] - first + 1)\n            nxt = []\n            for node, pos in level:\n                p = pos - first\n                if node.left:\n                    nxt.append((node.left, 2 * p))\n                if node.right:\n                    nxt.append((node.right, 2 * p + 1))\n            level = nxt\n        return best",
+     "javascript": "var widthOfBinaryTree = function(root) {\n    let level = [[root, 0]], best = 0;\n    while (level.length) {\n        const first = level[0][1];\n        best = Math.max(best, level[level.length - 1][1] - first + 1);\n        const next = [];\n        for (const [node, pos] of level) {\n            const p = pos - first;\n            if (node.left) next.push([node.left, 2 * p]);\n            if (node.right) next.push([node.right, 2 * p + 1]);\n        }\n        level = next;\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS remembering the first position of each depth",
+    "idea": "The same positions, found with a DFS that goes left first: the first node reached at each depth is the leftmost, so record its position. Every later node at that depth measures its distance from it. Children are numbered relative to that leftmost position to keep the numbers small.",
+    "steps": [
+     "`dfs(node, depth, pos)`: if null, return.",
+     "If this depth is new, record `first[depth] = pos`.",
+     "Update the best width with `pos − first[depth] + 1`.",
+     "Let `p = pos − first[depth]`; recurse left with `2p`, right with `2p + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node once; `first` and the recursion stack are h long. Re-basing on `first[depth]` keeps positions bounded just like the BFS version.",
+    "code": {
+     "java": "class Solution {\n    private final List<Long> first = new ArrayList<>();\n    private long best = 0;\n\n    public int widthOfBinaryTree(TreeNode root) {\n        dfs(root, 0, 0);\n        return (int) best;\n    }\n\n    private void dfs(TreeNode node, int depth, long pos) {\n        if (node == null) return;\n        if (first.size() == depth) first.add(pos);\n        long p = pos - first.get(depth);\n        best = Math.max(best, p + 1);\n        dfs(node.left, depth + 1, 2 * p);\n        dfs(node.right, depth + 1, 2 * p + 1);\n    }\n}",
+     "cpp": "class Solution {\n    vector<unsigned long long> first;\n    unsigned long long best = 0;\n    void dfs(TreeNode* node, int depth, unsigned long long pos) {\n        if (!node) return;\n        if ((int) first.size() == depth) first.push_back(pos);\n        unsigned long long p = pos - first[depth];\n        best = max(best, p + 1);\n        dfs(node->left, depth + 1, 2 * p);\n        dfs(node->right, depth + 1, 2 * p + 1);\n    }\npublic:\n    int widthOfBinaryTree(TreeNode* root) {\n        dfs(root, 0, 0);\n        return (int) best;\n    }\n};",
+     "python": "class Solution:\n    def widthOfBinaryTree(self, root: Optional[TreeNode]) -> int:\n        first, best = [], 0\n        def dfs(node, depth, pos):\n            nonlocal best\n            if not node:\n                return\n            if len(first) == depth:\n                first.append(pos)\n            p = pos - first[depth]\n            best = max(best, p + 1)\n            dfs(node.left, depth + 1, 2 * p)\n            dfs(node.right, depth + 1, 2 * p + 1)\n        dfs(root, 0, 0)\n        return best",
+     "javascript": "var widthOfBinaryTree = function(root) {\n    const first = [];\n    let best = 0;\n    const dfs = (node, depth, pos) => {\n        if (!node) return;\n        if (first.length === depth) first.push(pos);\n        const p = pos - first[depth];\n        best = Math.max(best, p + 1);\n        dfs(node.left, depth + 1, 2 * p);\n        dfs(node.right, depth + 1, 2 * p + 1);\n    };\n    dfs(root, 0, 0);\n    return best;\n};"
+    }
+   }
+  ]
+ }
+}
