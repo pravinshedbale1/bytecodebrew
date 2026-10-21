@@ -1,0 +1,462 @@
+{
+ "partition-equal-subset-sum": {
+  "pattern": "0/1 knapsack (subset sum): can some subset reach total / 2?",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion: include or exclude each number",
+    "idea": "An equal split exists exactly when some subset sums to half the total. Try including or excluding each number.",
+    "steps": [
+     "If the total is odd, return false; `target = total / 2`.",
+     "`can(i, remaining)`: true if `remaining == 0`; false if `i == n` or `remaining < 0`.",
+     "Return `can(i + 1, remaining − nums[i]) || can(i + 1, remaining)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Every subset may be tried.",
+    "code": {
+     "java": "class Solution {\n    public boolean canPartition(int[] nums) {\n        int total = 0;\n        for (int x : nums) total += x;\n        return total % 2 == 0 && can(nums, 0, total / 2);\n    }\n\n    private boolean can(int[] nums, int i, int remaining) {\n        if (remaining == 0) return true;\n        if (i == nums.length || remaining < 0) return false;\n        return can(nums, i + 1, remaining - nums[i]) || can(nums, i + 1, remaining);\n    }\n}",
+     "cpp": "class Solution {\n    bool can(vector<int>& nums, size_t i, int remaining) {\n        if (remaining == 0) return true;\n        if (i == nums.size() || remaining < 0) return false;\n        return can(nums, i + 1, remaining - nums[i]) || can(nums, i + 1, remaining);\n    }\npublic:\n    bool canPartition(vector<int>& nums) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        return total % 2 == 0 && can(nums, 0, total / 2);\n    }\n};",
+     "python": "class Solution:\n    def canPartition(self, nums: List[int]) -> bool:\n        total = sum(nums)\n        def can(i, remaining):\n            if remaining == 0:\n                return True\n            if i == len(nums) or remaining < 0:\n                return False\n            return can(i + 1, remaining - nums[i]) or can(i + 1, remaining)\n        return total % 2 == 0 and can(0, total // 2)",
+     "javascript": "var canPartition = function(nums) {\n    const total = nums.reduce((a, b) => a + b, 0);\n    const can = (i, remaining) => {\n        if (remaining === 0) return true;\n        if (i === nums.length || remaining < 0) return false;\n        return can(i + 1, remaining - nums[i]) || can(i + 1, remaining);\n    };\n    return total % 2 === 0 && can(0, total / 2);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoisation on (index, remaining)",
+    "idea": "The answer for the rest depends only on the index and the remaining sum, so cache it.",
+    "steps": [
+     "Same recursion, but remember `can(i, remaining)` in a table of size n × (target + 1).",
+     "Return the cached result when a state repeats."
+    ],
+    "time": "O(n·S)",
+    "space": "O(n·S)",
+    "why": "S = total / 2 ≤ 10⁴; there are at most n·(S + 1) states with O(1) work each.",
+    "code": {
+     "java": "class Solution {\n    private Boolean[][] memo;\n\n    public boolean canPartition(int[] nums) {\n        int total = 0;\n        for (int x : nums) total += x;\n        if (total % 2 != 0) return false;\n        memo = new Boolean[nums.length][total / 2 + 1];\n        return can(nums, 0, total / 2);\n    }\n\n    private boolean can(int[] nums, int i, int remaining) {\n        if (remaining == 0) return true;\n        if (i == nums.length || remaining < 0) return false;\n        if (memo[i][remaining] != null) return memo[i][remaining];\n        return memo[i][remaining] = can(nums, i + 1, remaining - nums[i]) || can(nums, i + 1, remaining);\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> memo; // -1 unknown\n    bool can(vector<int>& nums, size_t i, int remaining) {\n        if (remaining == 0) return true;\n        if (i == nums.size() || remaining < 0) return false;\n        if (memo[i][remaining] != -1) return memo[i][remaining];\n        return memo[i][remaining] = can(nums, i + 1, remaining - nums[i]) || can(nums, i + 1, remaining);\n    }\npublic:\n    bool canPartition(vector<int>& nums) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        if (total % 2) return false;\n        memo.assign(nums.size(), vector<int>(total / 2 + 1, -1));\n        return can(nums, 0, total / 2);\n    }\n};",
+     "python": "class Solution:\n    def canPartition(self, nums: List[int]) -> bool:\n        total = sum(nums)\n        if total % 2:\n            return False\n        @cache\n        def can(i, remaining):\n            if remaining == 0:\n                return True\n            if i == len(nums) or remaining < 0:\n                return False\n            return can(i + 1, remaining - nums[i]) or can(i + 1, remaining)\n        return can(0, total // 2)",
+     "javascript": "var canPartition = function(nums) {\n    const total = nums.reduce((a, b) => a + b, 0);\n    if (total % 2) return false;\n    const target = total / 2, memo = new Map();\n    const can = (i, remaining) => {\n        if (remaining === 0) return true;\n        if (i === nums.length || remaining < 0) return false;\n        const key = i * (target + 1) + remaining;\n        if (!memo.has(key)) memo.set(key, can(i + 1, remaining - nums[i]) || can(i + 1, remaining));\n        return memo.get(key);\n    };\n    return can(0, target);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "1-D reachable-sums table, iterated backwards",
+    "idea": "`reach[s]` says whether some subset of the numbers seen so far sums to `s`. Adding a number `x` makes `s` reachable if `s − x` was. Looping `s` downwards ensures each number is used at most once.",
+    "steps": [
+     "If the total is odd, return false; `target = total / 2`; `reach[0] = true`.",
+     "For each `x`, for `s` from `target` down to `x`: `reach[s] |= reach[s − x]`.",
+     "Return `reach[target]`."
+    ],
+    "time": "O(n·S)",
+    "space": "O(S)",
+    "why": "n numbers × S sums; one boolean row. Going upwards instead would let one number count twice (that is the unbounded knapsack).",
+    "code": {
+     "java": "class Solution {\n    public boolean canPartition(int[] nums) {\n        int total = 0;\n        for (int x : nums) total += x;\n        if (total % 2 != 0) return false;\n        int target = total / 2;\n        boolean[] reach = new boolean[target + 1];\n        reach[0] = true;\n        for (int x : nums)\n            for (int s = target; s >= x; s--) reach[s] |= reach[s - x];\n        return reach[target];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canPartition(vector<int>& nums) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        if (total % 2) return false;\n        int target = total / 2;\n        vector<bool> reach(target + 1, false);\n        reach[0] = true;\n        for (int x : nums)\n            for (int s = target; s >= x; s--) reach[s] = reach[s] || reach[s - x];\n        return reach[target];\n    }\n};",
+     "python": "class Solution:\n    def canPartition(self, nums: List[int]) -> bool:\n        total = sum(nums)\n        if total % 2:\n            return False\n        target = total // 2\n        reach = [True] + [False] * target\n        for x in nums:\n            for s in range(target, x - 1, -1):\n                if reach[s - x]:\n                    reach[s] = True\n        return reach[target]",
+     "javascript": "var canPartition = function(nums) {\n    const total = nums.reduce((a, b) => a + b, 0);\n    if (total % 2) return false;\n    const target = total / 2, reach = new Array(target + 1).fill(false);\n    reach[0] = true;\n    for (const x of nums)\n        for (let s = target; s >= x; s--) if (reach[s - x]) reach[s] = true;\n    return reach[target];\n};"
+    }
+   }
+  ]
+ },
+ "target-sum": {
+  "pattern": "Reduce to counting subsets with sum (total + target) / 2 (0/1 knapsack count)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every sign assignment",
+    "idea": "Recursively give each number a `+` or a `−` and count the assignments whose total equals `target`.",
+    "steps": [
+     "`count(i, sum)`: at `i == n`, return 1 if `sum == target`, else 0.",
+     "Return `count(i + 1, sum + nums[i]) + count(i + 1, sum − nums[i])`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Every one of the 2ⁿ sign patterns is evaluated (about a million for n = 20).",
+    "code": {
+     "java": "class Solution {\n    public int findTargetSumWays(int[] nums, int target) {\n        return count(nums, 0, 0, target);\n    }\n\n    private int count(int[] nums, int i, int sum, int target) {\n        if (i == nums.length) return sum == target ? 1 : 0;\n        return count(nums, i + 1, sum + nums[i], target) + count(nums, i + 1, sum - nums[i], target);\n    }\n}",
+     "cpp": "class Solution {\n    int count(vector<int>& nums, size_t i, int sum, int target) {\n        if (i == nums.size()) return sum == target ? 1 : 0;\n        return count(nums, i + 1, sum + nums[i], target) + count(nums, i + 1, sum - nums[i], target);\n    }\npublic:\n    int findTargetSumWays(vector<int>& nums, int target) {\n        return count(nums, 0, 0, target);\n    }\n};",
+     "python": "class Solution:\n    def findTargetSumWays(self, nums: List[int], target: int) -> int:\n        def count(i, s):\n            if i == len(nums):\n                return 1 if s == target else 0\n            return count(i + 1, s + nums[i]) + count(i + 1, s - nums[i])\n        return count(0, 0)",
+     "javascript": "var findTargetSumWays = function(nums, target) {\n    const count = (i, sum) => {\n        if (i === nums.length) return sum === target ? 1 : 0;\n        return count(i + 1, sum + nums[i]) + count(i + 1, sum - nums[i]);\n    };\n    return count(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoisation on (index, running sum)",
+    "idea": "Running sums stay within `[−total, total]`, so the state `(i, sum)` repeats often. Cache it.",
+    "steps": [
+     "Same recursion as the brute force.",
+     "Cache `count(i, sum)` (offset `sum` by `total` to use an array)."
+    ],
+    "time": "O(n·S)",
+    "space": "O(n·S)",
+    "why": "n × (2·total + 1) states, total ≤ 1000.",
+    "code": {
+     "java": "class Solution {\n    private Integer[][] memo;\n    private int total;\n\n    public int findTargetSumWays(int[] nums, int target) {\n        for (int x : nums) total += x;\n        memo = new Integer[nums.length][2 * total + 1];\n        return count(nums, 0, 0, target);\n    }\n\n    private int count(int[] nums, int i, int sum, int target) {\n        if (i == nums.length) return sum == target ? 1 : 0;\n        if (memo[i][sum + total] != null) return memo[i][sum + total];\n        return memo[i][sum + total] = count(nums, i + 1, sum + nums[i], target) + count(nums, i + 1, sum - nums[i], target);\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> memo;\n    int total = 0;\n    int count(vector<int>& nums, size_t i, int sum, int target) {\n        if (i == nums.size()) return sum == target ? 1 : 0;\n        int& slot = memo[i][sum + total];\n        if (slot != -1) return slot;\n        return slot = count(nums, i + 1, sum + nums[i], target) + count(nums, i + 1, sum - nums[i], target);\n    }\npublic:\n    int findTargetSumWays(vector<int>& nums, int target) {\n        total = accumulate(nums.begin(), nums.end(), 0);\n        memo.assign(nums.size(), vector<int>(2 * total + 1, -1));\n        return count(nums, 0, 0, target);\n    }\n};",
+     "python": "class Solution:\n    def findTargetSumWays(self, nums: List[int], target: int) -> int:\n        @cache\n        def count(i, s):\n            if i == len(nums):\n                return 1 if s == target else 0\n            return count(i + 1, s + nums[i]) + count(i + 1, s - nums[i])\n        return count(0, 0)",
+     "javascript": "var findTargetSumWays = function(nums, target) {\n    const memo = new Map();\n    const count = (i, sum) => {\n        if (i === nums.length) return sum === target ? 1 : 0;\n        const key = i + ',' + sum;\n        if (!memo.has(key)) memo.set(key, count(i + 1, sum + nums[i]) + count(i + 1, sum - nums[i]));\n        return memo.get(key);\n    };\n    return count(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count subsets with sum (total + target) / 2",
+    "idea": "Call the numbers with `+` the set P. Then `sum(P) − (total − sum(P)) = target`, so `sum(P) = (total + target) / 2`. Count the subsets with that sum using a 1-D counting DP.",
+    "steps": [
+     "If `|target| > total` or `total + target` is odd, return 0. Let `want = (total + target) / 2`.",
+     "`ways[0] = 1`.",
+     "For each `x`, for `s` from `want` down to `x`: `ways[s] += ways[s − x]`.",
+     "Return `ways[want]`."
+    ],
+    "time": "O(n·S)",
+    "space": "O(S)",
+    "why": "n numbers × up to S = total sums, one counting row. Zeros work automatically: each doubles the counts, matching ±0.",
+    "code": {
+     "java": "class Solution {\n    public int findTargetSumWays(int[] nums, int target) {\n        int total = 0;\n        for (int x : nums) total += x;\n        if (Math.abs(target) > total || (total + target) % 2 != 0) return 0;\n        int want = (total + target) / 2;\n        int[] ways = new int[want + 1];\n        ways[0] = 1;\n        for (int x : nums)\n            for (int s = want; s >= x; s--) ways[s] += ways[s - x];\n        return ways[want];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findTargetSumWays(vector<int>& nums, int target) {\n        int total = accumulate(nums.begin(), nums.end(), 0);\n        if (abs(target) > total || (total + target) % 2) return 0;\n        int want = (total + target) / 2;\n        vector<int> ways(want + 1, 0);\n        ways[0] = 1;\n        for (int x : nums)\n            for (int s = want; s >= x; s--) ways[s] += ways[s - x];\n        return ways[want];\n    }\n};",
+     "python": "class Solution:\n    def findTargetSumWays(self, nums: List[int], target: int) -> int:\n        total = sum(nums)\n        if abs(target) > total or (total + target) % 2:\n            return 0\n        want = (total + target) // 2\n        ways = [1] + [0] * want\n        for x in nums:\n            for s in range(want, x - 1, -1):\n                ways[s] += ways[s - x]\n        return ways[want]",
+     "javascript": "var findTargetSumWays = function(nums, target) {\n    const total = nums.reduce((a, b) => a + b, 0);\n    if (Math.abs(target) > total || (total + target) % 2 !== 0) return 0;\n    const want = (total + target) / 2, ways = new Array(want + 1).fill(0);\n    ways[0] = 1;\n    for (const x of nums)\n        for (let s = want; s >= x; s--) ways[s] += ways[s - x];\n    return ways[want];\n};"
+    }
+   }
+  ]
+ },
+ "last-stone-weight-ii": {
+  "pattern": "Split into two groups with sums as close as possible (subset sum up to total / 2)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every + / − sign",
+    "idea": "Whatever the order of smashes, the final weight is `|sum of one group − sum of the other|` for some split of the stones into two groups, and every split is achievable. Try every split.",
+    "steps": [
+     "Recursively give each stone a `+` or `−` sign.",
+     "At the end, the candidate answer is `|signed sum|`.",
+     "Return the smallest candidate."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "All 2ⁿ sign patterns are tried.",
+    "code": {
+     "java": "class Solution {\n    public int lastStoneWeightII(int[] stones) {\n        return best(stones, 0, 0);\n    }\n\n    private int best(int[] s, int i, int sum) {\n        if (i == s.length) return Math.abs(sum);\n        return Math.min(best(s, i + 1, sum + s[i]), best(s, i + 1, sum - s[i]));\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& s, size_t i, int sum) {\n        if (i == s.size()) return abs(sum);\n        return min(best(s, i + 1, sum + s[i]), best(s, i + 1, sum - s[i]));\n    }\npublic:\n    int lastStoneWeightII(vector<int>& stones) {\n        return best(stones, 0, 0);\n    }\n};",
+     "python": "class Solution:\n    def lastStoneWeightII(self, stones: List[int]) -> int:\n        def best(i, s):\n            if i == len(stones):\n                return abs(s)\n            return min(best(i + 1, s + stones[i]), best(i + 1, s - stones[i]))\n        return best(0, 0)",
+     "javascript": "var lastStoneWeightII = function(stones) {\n    const best = (i, sum) => {\n        if (i === stones.length) return Math.abs(sum);\n        return Math.min(best(i + 1, sum + stones[i]), best(i + 1, sum - stones[i]));\n    };\n    return best(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Subset sum: the largest reachable sum ≤ total / 2",
+    "idea": "To make the two groups as even as possible, find the largest subset sum `best` that does not exceed `total / 2`; the other group has `total − best`, and the leftover stone weighs `total − 2·best`.",
+    "steps": [
+     "`reach[0] = true`; `half = total / 2`.",
+     "For each stone `x`, for `s` from `half` down to `x`: `reach[s] |= reach[s − x]`.",
+     "Find the largest `s <= half` with `reach[s]`; return `total − 2s`."
+    ],
+    "time": "O(n·S)",
+    "space": "O(S)",
+    "why": "n stones × S = total / 2 ≤ 1500 sums; one boolean row.",
+    "code": {
+     "java": "class Solution {\n    public int lastStoneWeightII(int[] stones) {\n        int total = 0;\n        for (int x : stones) total += x;\n        int half = total / 2;\n        boolean[] reach = new boolean[half + 1];\n        reach[0] = true;\n        for (int x : stones)\n            for (int s = half; s >= x; s--) reach[s] |= reach[s - x];\n        for (int s = half; ; s--) if (reach[s]) return total - 2 * s;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lastStoneWeightII(vector<int>& stones) {\n        int total = accumulate(stones.begin(), stones.end(), 0), half = total / 2;\n        vector<bool> reach(half + 1, false);\n        reach[0] = true;\n        for (int x : stones)\n            for (int s = half; s >= x; s--) reach[s] = reach[s] || reach[s - x];\n        for (int s = half; ; s--) if (reach[s]) return total - 2 * s;\n    }\n};",
+     "python": "class Solution:\n    def lastStoneWeightII(self, stones: List[int]) -> int:\n        total = sum(stones)\n        half = total // 2\n        reach = [True] + [False] * half\n        for x in stones:\n            for s in range(half, x - 1, -1):\n                if reach[s - x]:\n                    reach[s] = True\n        best = max(s for s in range(half + 1) if reach[s])\n        return total - 2 * best",
+     "javascript": "var lastStoneWeightII = function(stones) {\n    const total = stones.reduce((a, b) => a + b, 0), half = Math.floor(total / 2);\n    const reach = new Array(half + 1).fill(false);\n    reach[0] = true;\n    for (const x of stones)\n        for (let s = half; s >= x; s--) if (reach[s - x]) reach[s] = true;\n    for (let s = half; ; s--) if (reach[s]) return total - 2 * s;\n};"
+    }
+   }
+  ]
+ },
+ "coin-change": {
+  "pattern": "Unbounded knapsack (minimum count): best(a) = 1 + min over coins of best(a − coin)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the last coin",
+    "idea": "The fewest coins for `amount` is 1 plus the fewest for `amount − c`, minimised over every coin `c` that fits.",
+    "steps": [
+     "`fewest(a)`: 0 if `a == 0`.",
+     "Try each coin `c <= a`; take `1 + fewest(a − c)` when that is possible.",
+     "Return the minimum (or \"impossible\"); map impossible to −1 at the end."
+    ],
+    "time": "O(kᵃ)",
+    "space": "O(a)",
+    "why": "k branches per level and up to a levels deep (a = amount); amounts repeat endlessly.",
+    "timesOut": [
+     4
+    ],
+    "code": {
+     "java": "class Solution {\n    public int coinChange(int[] coins, int amount) {\n        int best = fewest(coins, amount);\n        return best == Integer.MAX_VALUE ? -1 : best;\n    }\n\n    private int fewest(int[] coins, int a) {\n        if (a == 0) return 0;\n        int best = Integer.MAX_VALUE;\n        for (int c : coins) {\n            if (c > a) continue;\n            int sub = fewest(coins, a - c);\n            if (sub != Integer.MAX_VALUE) best = Math.min(best, sub + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\n    int fewest(vector<int>& coins, int a) {\n        if (a == 0) return 0;\n        int best = INT_MAX;\n        for (int c : coins) {\n            if (c > a) continue;\n            int sub = fewest(coins, a - c);\n            if (sub != INT_MAX) best = min(best, sub + 1);\n        }\n        return best;\n    }\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        int best = fewest(coins, amount);\n        return best == INT_MAX ? -1 : best;\n    }\n};",
+     "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        def fewest(a):\n            if a == 0:\n                return 0\n            return min((fewest(a - c) + 1 for c in coins if c <= a), default=inf)\n        best = fewest(amount)\n        return -1 if best == inf else best",
+     "javascript": "var coinChange = function(coins, amount) {\n    const fewest = (a) => {\n        if (a === 0) return 0;\n        let best = Infinity;\n        for (const c of coins) if (c <= a) best = Math.min(best, fewest(a - c) + 1);\n        return best;\n    };\n    const best = fewest(amount);\n    return best === Infinity ? -1 : best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoisation on the amount",
+    "idea": "The answer for an amount never changes, so compute it once per amount.",
+    "steps": [
+     "Same recurrence as the brute force.",
+     "Cache `fewest(a)` (including \"impossible\") the first time it is computed, and reuse it for every later call with the same amount."
+    ],
+    "time": "O(a·k)",
+    "space": "O(a)",
+    "why": "a + 1 amounts, each trying k coins once; the recursion can be a levels deep.",
+    "code": {
+     "java": "class Solution {\n    private int[] memo;\n\n    public int coinChange(int[] coins, int amount) {\n        memo = new int[amount + 1];\n        Arrays.fill(memo, -2); // -2 = not computed yet, -1 = impossible\n        return fewest(coins, amount);\n    }\n\n    private int fewest(int[] coins, int a) {\n        if (a == 0) return 0;\n        if (memo[a] != -2) return memo[a];\n        int best = Integer.MAX_VALUE;\n        for (int c : coins) {\n            if (c > a) continue;\n            int sub = fewest(coins, a - c);\n            if (sub >= 0) best = Math.min(best, sub + 1);\n        }\n        return memo[a] = best == Integer.MAX_VALUE ? -1 : best;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> memo;\n    int fewest(vector<int>& coins, int a) {\n        if (a == 0) return 0;\n        if (memo[a] != -2) return memo[a];\n        int best = INT_MAX;\n        for (int c : coins) {\n            if (c > a) continue;\n            int sub = fewest(coins, a - c);\n            if (sub >= 0) best = min(best, sub + 1);\n        }\n        return memo[a] = best == INT_MAX ? -1 : best;\n    }\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        memo.assign(amount + 1, -2); // -2 = not computed yet, -1 = impossible\n        return fewest(coins, amount);\n    }\n};",
+     "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        @cache\n        def fewest(a):\n            if a == 0:\n                return 0\n            return min((fewest(a - c) + 1 for c in coins if c <= a), default=inf)\n        best = fewest(amount)\n        return -1 if best == inf else best",
+     "javascript": "var coinChange = function(coins, amount) {\n    const memo = new Map();\n    const fewest = (a) => {\n        if (a === 0) return 0;\n        if (memo.has(a)) return memo.get(a);\n        let best = Infinity;\n        for (const c of coins) if (c <= a) best = Math.min(best, fewest(a - c) + 1);\n        memo.set(a, best);\n        return best;\n    };\n    const best = fewest(amount);\n    return best === Infinity ? -1 : best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up table over amounts",
+    "idea": "Fill `dp[a]` for `a = 1..amount` from smaller amounts: `dp[a] = 1 + min(dp[a − c])` over coins `c <= a`. No recursion.",
+    "steps": [
+     "Set `dp[0] = 0` and every other entry to \"infinity\" (`amount + 1` works, since no answer can exceed `amount`).",
+     "For each `a` from 1 to `amount`, for each coin `c <= a`: `dp[a] = min(dp[a], dp[a − c] + 1)`.",
+     "Return `dp[amount]`, or −1 if it is still `amount + 1`."
+    ],
+    "time": "O(a·k)",
+    "space": "O(a)",
+    "why": "a amounts × k coins. Coin values reach 2³¹ − 1, so compare `c <= a` before subtracting rather than computing `a − c` blindly.",
+    "code": {
+     "java": "class Solution {\n    public int coinChange(int[] coins, int amount) {\n        int[] dp = new int[amount + 1];\n        Arrays.fill(dp, amount + 1);\n        dp[0] = 0;\n        for (int a = 1; a <= amount; a++)\n            for (int c : coins)\n                if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);\n        return dp[amount] > amount ? -1 : dp[amount];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        vector<int> dp(amount + 1, amount + 1);\n        dp[0] = 0;\n        for (int a = 1; a <= amount; a++)\n            for (int c : coins)\n                if (c <= a) dp[a] = min(dp[a], dp[a - c] + 1);\n        return dp[amount] > amount ? -1 : dp[amount];\n    }\n};",
+     "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        dp = [0] + [amount + 1] * amount\n        for a in range(1, amount + 1):\n            for c in coins:\n                if c <= a and dp[a - c] + 1 < dp[a]:\n                    dp[a] = dp[a - c] + 1\n        return -1 if dp[amount] > amount else dp[amount]",
+     "javascript": "var coinChange = function(coins, amount) {\n    const dp = new Array(amount + 1).fill(amount + 1);\n    dp[0] = 0;\n    for (let a = 1; a <= amount; a++)\n        for (const c of coins)\n            if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);\n    return dp[amount] > amount ? -1 : dp[amount];\n};"
+    }
+   }
+  ]
+ },
+ "coin-change-ii": {
+  "pattern": "Unbounded knapsack (count combinations): coins in the outer loop so order does not matter",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over coins in a fixed order",
+    "idea": "To count combinations (not orders), decide coin by coin: use coin `i` again, or move on to the next coin for good.",
+    "steps": [
+     "`ways(i, a)`: 1 if `a == 0`; 0 if `i == coins.length` or `a < 0`.",
+     "Return `ways(i, a − coins[i]) + ways(i + 1, a)`."
+    ],
+    "time": "O(2^(n + a))",
+    "space": "O(n + a)",
+    "why": "Each call branches into two, with heavy repetition of the same `(i, a)` states.",
+    "code": {
+     "java": "class Solution {\n    public int change(int amount, int[] coins) {\n        return ways(coins, 0, amount);\n    }\n\n    private int ways(int[] coins, int i, int a) {\n        if (a == 0) return 1;\n        if (i == coins.length || a < 0) return 0;\n        return ways(coins, i, a - coins[i]) + ways(coins, i + 1, a);\n    }\n}",
+     "cpp": "class Solution {\n    int ways(vector<int>& coins, size_t i, int a) {\n        if (a == 0) return 1;\n        if (i == coins.size() || a < 0) return 0;\n        return ways(coins, i, a - coins[i]) + ways(coins, i + 1, a);\n    }\npublic:\n    int change(int amount, vector<int>& coins) {\n        return ways(coins, 0, amount);\n    }\n};",
+     "python": "class Solution:\n    def change(self, amount: int, coins: List[int]) -> int:\n        def ways(i, a):\n            if a == 0:\n                return 1\n            if i == len(coins) or a < 0:\n                return 0\n            return ways(i, a - coins[i]) + ways(i + 1, a)\n        return ways(0, amount)",
+     "javascript": "var change = function(amount, coins) {\n    const ways = (i, a) => {\n        if (a === 0) return 1;\n        if (i === coins.length || a < 0) return 0;\n        return ways(i, a - coins[i]) + ways(i + 1, a);\n    };\n    return ways(0, amount);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "2-D table over (coins used, amount)",
+    "idea": "`dp[i][a]` = combinations of the first `i` coin types that make `a`. Either coin `i − 1` is not used (`dp[i − 1][a]`), or it is used at least once (`dp[i][a − coin]`).",
+    "steps": [
+     "`dp[i][0] = 1` for all `i`.",
+     "`dp[i][a] = dp[i − 1][a] + (a >= coin ? dp[i][a − coin] : 0)`.",
+     "Return `dp[n][amount]`."
+    ],
+    "time": "O(n·a)",
+    "space": "O(n·a)",
+    "why": "n coin types × a amounts.",
+    "code": {
+     "java": "class Solution {\n    public int change(int amount, int[] coins) {\n        int n = coins.length;\n        int[][] dp = new int[n + 1][amount + 1];\n        for (int i = 0; i <= n; i++) dp[i][0] = 1;\n        for (int i = 1; i <= n; i++)\n            for (int a = 1; a <= amount; a++)\n                dp[i][a] = dp[i - 1][a] + (a >= coins[i - 1] ? dp[i][a - coins[i - 1]] : 0);\n        return dp[n][amount];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int change(int amount, vector<int>& coins) {\n        int n = coins.size();\n        vector<vector<unsigned>> dp(n + 1, vector<unsigned>(amount + 1, 0));\n        for (int i = 0; i <= n; i++) dp[i][0] = 1;\n        for (int i = 1; i <= n; i++)\n            for (int a = 1; a <= amount; a++)\n                dp[i][a] = dp[i - 1][a] + (a >= coins[i - 1] ? dp[i][a - coins[i - 1]] : 0u);\n        return (int) dp[n][amount];\n    }\n};",
+     "python": "class Solution:\n    def change(self, amount: int, coins: List[int]) -> int:\n        n = len(coins)\n        dp = [[1] + [0] * amount for _ in range(n + 1)]\n        for i in range(1, n + 1):\n            c = coins[i - 1]\n            for a in range(1, amount + 1):\n                dp[i][a] = dp[i - 1][a] + (dp[i][a - c] if a >= c else 0)\n        return dp[n][amount]",
+     "javascript": "var change = function(amount, coins) {\n    const n = coins.length;\n    const dp = Array.from({ length: n + 1 }, () => { const row = new Array(amount + 1).fill(0); row[0] = 1; return row; });\n    for (let i = 1; i <= n; i++)\n        for (let a = 1; a <= amount; a++)\n            dp[i][a] = (dp[i - 1][a] + (a >= coins[i - 1] ? dp[i][a - coins[i - 1]] : 0)) >>> 0;\n    return dp[n][amount];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "1-D table, coins in the outer loop",
+    "idea": "Process one coin type at a time. Looping amounts upwards lets a coin be reused; putting coins in the outer loop means each combination is built in one fixed coin order, so it is counted once.",
+    "steps": [
+     "`ways[0] = 1`.",
+     "For each coin `c`, for `a` from `c` to `amount`: `ways[a] += ways[a − c]`.",
+     "Return `ways[amount]`."
+    ],
+    "time": "O(n·a)",
+    "space": "O(a)",
+    "why": "Same work in one row. Swapping the loops (amount outside, coins inside) would count orderings instead — that is Combination Sum IV. Middle values can exceed 32 bits even when the answer does not, so the sums wrap on purpose (Java `int`, C++ `unsigned`, JS `>>> 0`).",
+    "code": {
+     "java": "class Solution {\n    public int change(int amount, int[] coins) {\n        int[] ways = new int[amount + 1];\n        ways[0] = 1;\n        for (int c : coins)\n            for (int a = c; a <= amount; a++) ways[a] += ways[a - c];\n        return ways[amount];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int change(int amount, vector<int>& coins) {\n        vector<unsigned> ways(amount + 1, 0);\n        ways[0] = 1;\n        for (int c : coins)\n            for (int a = c; a <= amount; a++) ways[a] += ways[a - c];\n        return (int) ways[amount];\n    }\n};",
+     "python": "class Solution:\n    def change(self, amount: int, coins: List[int]) -> int:\n        ways = [1] + [0] * amount\n        for c in coins:\n            for a in range(c, amount + 1):\n                ways[a] += ways[a - c]\n        return ways[amount]",
+     "javascript": "var change = function(amount, coins) {\n    const ways = new Array(amount + 1).fill(0);\n    ways[0] = 1;\n    for (const c of coins)\n        for (let a = c; a <= amount; a++) ways[a] = (ways[a] + ways[a - c]) >>> 0;\n    return ways[amount];\n};"
+    }
+   }
+  ]
+ },
+ "combination-sum-iv": {
+  "pattern": "Count ordered sequences: dp(t) = Σ dp(t − x) with the target in the outer loop",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the first number",
+    "idea": "An ordered sequence summing to `t` starts with some `x`; the rest is any sequence summing to `t − x`.",
+    "steps": [
+     "`count(t)`: 1 if `t == 0`.",
+     "Return the sum of `count(t − x)` over every `x <= t`."
+    ],
+    "time": "O(kᵗ)",
+    "space": "O(t)",
+    "why": "It visits every sequence one by one, so the work is at least the answer (over a billion for one test).",
+    "timesOut": [
+     3
+    ],
+    "code": {
+     "java": "class Solution {\n    public int combinationSum4(int[] nums, int target) {\n        if (target == 0) return 1;\n        int total = 0;\n        for (int x : nums) if (x <= target) total += combinationSum4(nums, target - x);\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int combinationSum4(vector<int>& nums, int target) {\n        if (target == 0) return 1;\n        unsigned total = 0;\n        for (int x : nums) if (x <= target) total += combinationSum4(nums, target - x);\n        return (int) total;\n    }\n};",
+     "python": "class Solution:\n    def combinationSum4(self, nums: List[int], target: int) -> int:\n        if target == 0:\n            return 1\n        return sum(self.combinationSum4(nums, target - x) for x in nums if x <= target)",
+     "javascript": "var combinationSum4 = function(nums, target) {\n    if (target === 0) return 1;\n    let total = 0;\n    for (const x of nums) if (x <= target) total += combinationSum4(nums, target - x);\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Memoisation on the remaining target",
+    "idea": "The count for a remaining target never changes, so compute each once.",
+    "steps": [
+     "Same recurrence as the brute force.",
+     "Cache `count(t)` the first time it is computed and reuse it for every later call with the same remaining target."
+    ],
+    "time": "O(t·k)",
+    "space": "O(t)",
+    "why": "t + 1 values, each summing over k numbers; the recursion can be t deep.",
+    "code": {
+     "java": "class Solution {\n    private int[] memo;\n\n    public int combinationSum4(int[] nums, int target) {\n        memo = new int[target + 1];\n        Arrays.fill(memo, -1);\n        return count(nums, target);\n    }\n\n    private int count(int[] nums, int t) {\n        if (t == 0) return 1;\n        if (memo[t] != -1) return memo[t];\n        int total = 0;\n        for (int x : nums) if (x <= t) total += count(nums, t - x);\n        return memo[t] = total;\n    }\n}",
+     "cpp": "class Solution {\n    vector<long long> memo; // -1 unknown; values kept modulo 2^32\n    unsigned count(vector<int>& nums, int t) {\n        if (t == 0) return 1;\n        if (memo[t] != -1) return (unsigned) memo[t];\n        unsigned total = 0;\n        for (int x : nums) if (x <= t) total += count(nums, t - x);\n        memo[t] = total;\n        return total;\n    }\npublic:\n    int combinationSum4(vector<int>& nums, int target) {\n        memo.assign(target + 1, -1);\n        return (int) count(nums, target);\n    }\n};",
+     "python": "class Solution:\n    def combinationSum4(self, nums: List[int], target: int) -> int:\n        @cache\n        def count(t):\n            if t == 0:\n                return 1\n            return sum(count(t - x) for x in nums if x <= t)\n        return count(target)",
+     "javascript": "var combinationSum4 = function(nums, target) {\n    const memo = new Map();\n    const count = (t) => {\n        if (t === 0) return 1;\n        if (memo.has(t)) return memo.get(t);\n        let total = 0;\n        for (const x of nums) if (x <= t) total = (total + count(t - x)) >>> 0;\n        memo.set(t, total);\n        return total;\n    };\n    return count(target);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up table, target in the outer loop",
+    "idea": "Fill `dp[t]` for `t = 1..target`. Putting the target in the outer loop and the numbers in the inner loop counts every order separately — the opposite loop order from Coin Change II.",
+    "steps": [
+     "`dp[0] = 1`.",
+     "For `t` from 1 to `target`, for each `x <= t`: `dp[t] += dp[t − x]`.",
+     "Return `dp[target]`."
+    ],
+    "time": "O(t·k)",
+    "space": "O(t)",
+    "why": "target × k additions. Middle values can exceed 32 (or even 64) bits although the answer fits, so the sums wrap modulo 2³² on purpose: Java `int`, C++ `unsigned`, JS `>>> 0`; the final value is still exact because it is below 2³¹.",
+    "code": {
+     "java": "class Solution {\n    public int combinationSum4(int[] nums, int target) {\n        int[] dp = new int[target + 1];\n        dp[0] = 1;\n        for (int t = 1; t <= target; t++)\n            for (int x : nums)\n                if (x <= t) dp[t] += dp[t - x];\n        return dp[target];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int combinationSum4(vector<int>& nums, int target) {\n        vector<unsigned> dp(target + 1, 0);\n        dp[0] = 1;\n        for (int t = 1; t <= target; t++)\n            for (int x : nums)\n                if (x <= t) dp[t] += dp[t - x];\n        return (int) dp[target];\n    }\n};",
+     "python": "class Solution:\n    def combinationSum4(self, nums: List[int], target: int) -> int:\n        dp = [1] + [0] * target\n        for t in range(1, target + 1):\n            dp[t] = sum(dp[t - x] for x in nums if x <= t)\n        return dp[target]",
+     "javascript": "var combinationSum4 = function(nums, target) {\n    const dp = new Array(target + 1).fill(0);\n    dp[0] = 1;\n    for (let t = 1; t <= target; t++)\n        for (const x of nums)\n            if (x <= t) dp[t] = (dp[t] + dp[t - x]) >>> 0;\n    return dp[target];\n};"
+    }
+   }
+  ]
+ },
+ "perfect-squares": {
+  "pattern": "Unbounded knapsack over square numbers (or number theory: the four-square theorem)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion over the largest square used",
+    "idea": "The fewest squares summing to `n` is 1 plus the fewest for `n − k²`, minimised over every square `k² <= n`.",
+    "steps": [
+     "`fewest(0) = 0`.",
+     "`fewest(n) = 1 + min(fewest(n − k²))` over `k = 1, 2, …` with `k² <= n`."
+    ],
+    "time": "O(√n^n)",
+    "space": "O(n)",
+    "why": "Branching by up to √n at every level with no reuse — hopeless beyond tiny n.",
+    "timesOut": [
+     4
+    ],
+    "code": {
+     "java": "class Solution {\n    public int numSquares(int n) {\n        if (n == 0) return 0;\n        int best = Integer.MAX_VALUE;\n        for (int k = 1; k * k <= n; k++) best = Math.min(best, 1 + numSquares(n - k * k));\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numSquares(int n) {\n        if (n == 0) return 0;\n        int best = INT_MAX;\n        for (int k = 1; k * k <= n; k++) best = min(best, 1 + numSquares(n - k * k));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def numSquares(self, n: int) -> int:\n        if n == 0:\n            return 0\n        return 1 + min(self.numSquares(n - k * k) for k in range(1, isqrt(n) + 1))",
+     "javascript": "var numSquares = function(n) {\n    if (n === 0) return 0;\n    let best = Infinity;\n    for (let k = 1; k * k <= n; k++) best = Math.min(best, 1 + numSquares(n - k * k));\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Bottom-up DP over 0..n",
+    "idea": "Fill `dp[i]` = fewest squares summing to `i`, for every `i` up to `n`, from the same recurrence.",
+    "steps": [
+     "`dp[0] = 0`.",
+     "For each `i` from 1 to n: `dp[i] = 1 + min(dp[i − k²])` over `k² <= i`.",
+     "Return `dp[n]`."
+    ],
+    "time": "O(n·√n)",
+    "space": "O(n)",
+    "why": "n values, each trying up to √n squares: about 10⁶ steps for n = 10⁴.",
+    "code": {
+     "java": "class Solution {\n    public int numSquares(int n) {\n        int[] dp = new int[n + 1];\n        for (int i = 1; i <= n; i++) {\n            dp[i] = Integer.MAX_VALUE;\n            for (int k = 1; k * k <= i; k++) dp[i] = Math.min(dp[i], dp[i - k * k] + 1);\n        }\n        return dp[n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numSquares(int n) {\n        vector<int> dp(n + 1, INT_MAX);\n        dp[0] = 0;\n        for (int i = 1; i <= n; i++)\n            for (int k = 1; k * k <= i; k++) dp[i] = min(dp[i], dp[i - k * k] + 1);\n        return dp[n];\n    }\n};",
+     "python": "class Solution:\n    def numSquares(self, n: int) -> int:\n        squares = [k * k for k in range(1, isqrt(n) + 1)]\n        dp = [0] + [inf] * n\n        for i in range(1, n + 1):\n            for sq in squares:\n                if sq > i:\n                    break\n                if dp[i - sq] + 1 < dp[i]:\n                    dp[i] = dp[i - sq] + 1\n        return dp[n]",
+     "javascript": "var numSquares = function(n) {\n    const dp = new Array(n + 1).fill(Infinity);\n    dp[0] = 0;\n    for (let i = 1; i <= n; i++)\n        for (let k = 1; k * k <= i; k++) dp[i] = Math.min(dp[i], dp[i - k * k] + 1);\n    return dp[n];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Number theory: the answer is always 1, 2, 3 or 4",
+    "idea": "Lagrange's four-square theorem says every number is a sum of at most 4 squares, and Legendre's three-square theorem says it needs exactly 4 precisely when it has the form `4ᵃ·(8b + 7)`. So test for 1, then 4, then 2; otherwise the answer is 3.",
+    "steps": [
+     "If `n` is a perfect square, return 1.",
+     "Divide out factors of 4; if what remains is `7 mod 8`, return 4.",
+     "If `n = i² + j²` for some `i` (check whether `n − i²` is a square), return 2.",
+     "Otherwise return 3."
+    ],
+    "time": "O(√n)",
+    "space": "O(1)",
+    "why": "Only the \"two squares\" check loops, over at most √n values of `i`. Worth knowing; in an interview the DP is usually what is expected, with this as a follow-up.",
+    "code": {
+     "java": "class Solution {\n    public int numSquares(int n) {\n        if (isSquare(n)) return 1;\n        int m = n;\n        while (m % 4 == 0) m /= 4;\n        if (m % 8 == 7) return 4;\n        for (int i = 1; i * i <= n; i++) if (isSquare(n - i * i)) return 2;\n        return 3;\n    }\n\n    private boolean isSquare(int x) {\n        int r = (int) Math.sqrt(x);\n        return r * r == x;\n    }\n}",
+     "cpp": "class Solution {\n    bool isSquare(int x) {\n        int r = (int) sqrt((double) x);\n        while (r * r > x) r--;\n        while ((r + 1) * (r + 1) <= x) r++;\n        return r * r == x;\n    }\npublic:\n    int numSquares(int n) {\n        if (isSquare(n)) return 1;\n        int m = n;\n        while (m % 4 == 0) m /= 4;\n        if (m % 8 == 7) return 4;\n        for (int i = 1; i * i <= n; i++) if (isSquare(n - i * i)) return 2;\n        return 3;\n    }\n};",
+     "python": "class Solution:\n    def numSquares(self, n: int) -> int:\n        def is_square(x):\n            return isqrt(x) ** 2 == x\n        if is_square(n):\n            return 1\n        m = n\n        while m % 4 == 0:\n            m //= 4\n        if m % 8 == 7:\n            return 4\n        if any(is_square(n - i * i) for i in range(1, isqrt(n) + 1)):\n            return 2\n        return 3",
+     "javascript": "var numSquares = function(n) {\n    const isSquare = (x) => { const r = Math.round(Math.sqrt(x)); return r * r === x; };\n    if (isSquare(n)) return 1;\n    let m = n;\n    while (m % 4 === 0) m /= 4;\n    if (m % 8 === 7) return 4;\n    for (let i = 1; i * i <= n; i++) if (isSquare(n - i * i)) return 2;\n    return 3;\n};"
+    }
+   }
+  ]
+ },
+ "ones-and-zeroes": {
+  "pattern": "0/1 knapsack with two capacities (zeros and ones)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion: take or skip each string",
+    "idea": "For each string, either skip it or take it (if its zeros and ones still fit); return the largest number of strings taken.",
+    "steps": [
+     "Count zeros and ones of each string.",
+     "`best(i, m, n)`: 0 if `i == len`; otherwise the max of skipping and (if it fits) `1 + best(i + 1, m − zeros, n − ones)`."
+    ],
+    "time": "O(2ᴸ)",
+    "space": "O(L)",
+    "why": "L strings, two choices each, no reuse.",
+    "code": {
+     "java": "class Solution {\n    private int[][] counts;\n\n    public int findMaxForm(String[] strs, int m, int n) {\n        counts = new int[strs.length][2];\n        for (int i = 0; i < strs.length; i++)\n            for (char c : strs[i].toCharArray()) counts[i][c - '0']++;\n        return best(0, m, n);\n    }\n\n    private int best(int i, int m, int n) {\n        if (i == counts.length) return 0;\n        int result = best(i + 1, m, n);\n        if (counts[i][0] <= m && counts[i][1] <= n) result = Math.max(result, 1 + best(i + 1, m - counts[i][0], n - counts[i][1]));\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    vector<pair<int, int>> counts;\n    int best(size_t i, int m, int n) {\n        if (i == counts.size()) return 0;\n        int result = best(i + 1, m, n);\n        auto [z, o] = counts[i];\n        if (z <= m && o <= n) result = max(result, 1 + best(i + 1, m - z, n - o));\n        return result;\n    }\npublic:\n    int findMaxForm(vector<string>& strs, int m, int n) {\n        for (auto& s : strs) {\n            int z = count(s.begin(), s.end(), '0');\n            counts.push_back({z, (int) s.size() - z});\n        }\n        return best(0, m, n);\n    }\n};",
+     "python": "class Solution:\n    def findMaxForm(self, strs: List[str], m: int, n: int) -> int:\n        counts = [(s.count(\"0\"), s.count(\"1\")) for s in strs]\n        def best(i, m, n):\n            if i == len(counts):\n                return 0\n            result = best(i + 1, m, n)\n            z, o = counts[i]\n            if z <= m and o <= n:\n                result = max(result, 1 + best(i + 1, m - z, n - o))\n            return result\n        return best(0, m, n)",
+     "javascript": "var findMaxForm = function(strs, m, n) {\n    const counts = strs.map((s) => { const z = s.split('0').length - 1; return [z, s.length - z]; });\n    const best = (i, m, n) => {\n        if (i === counts.length) return 0;\n        let result = best(i + 1, m, n);\n        const [z, o] = counts[i];\n        if (z <= m && o <= n) result = Math.max(result, 1 + best(i + 1, m - z, n - o));\n        return result;\n    };\n    return best(0, m, n);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "2-D knapsack table, both capacities iterated backwards",
+    "idea": "`dp[z][o]` = most strings that fit in `z` zeros and `o` ones using the strings processed so far. For each string, update the table from the largest capacities down so each string is used at most once.",
+    "steps": [
+     "`dp` is (m + 1) × (n + 1) of zeros.",
+     "For each string with `zeros`, `ones`: for `z` from m down to `zeros`, `o` from n down to `ones`: `dp[z][o] = max(dp[z][o], dp[z − zeros][o − ones] + 1)`.",
+     "Return `dp[m][n]`."
+    ],
+    "time": "O(L·m·n + S)",
+    "space": "O(m·n)",
+    "why": "L strings × (m + 1)(n + 1) cells, plus S to count characters. It is the 0/1 knapsack with a 2-D capacity, already compressed from three dimensions to two.",
+    "code": {
+     "java": "class Solution {\n    public int findMaxForm(String[] strs, int m, int n) {\n        int[][] dp = new int[m + 1][n + 1];\n        for (String s : strs) {\n            int zeros = 0;\n            for (char c : s.toCharArray()) if (c == '0') zeros++;\n            int ones = s.length() - zeros;\n            for (int z = m; z >= zeros; z--)\n                for (int o = n; o >= ones; o--) dp[z][o] = Math.max(dp[z][o], dp[z - zeros][o - ones] + 1);\n        }\n        return dp[m][n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findMaxForm(vector<string>& strs, int m, int n) {\n        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));\n        for (auto& s : strs) {\n            int zeros = count(s.begin(), s.end(), '0'), ones = s.size() - zeros;\n            for (int z = m; z >= zeros; z--)\n                for (int o = n; o >= ones; o--) dp[z][o] = max(dp[z][o], dp[z - zeros][o - ones] + 1);\n        }\n        return dp[m][n];\n    }\n};",
+     "python": "class Solution:\n    def findMaxForm(self, strs: List[str], m: int, n: int) -> int:\n        dp = [[0] * (n + 1) for _ in range(m + 1)]\n        for s in strs:\n            zeros = s.count(\"0\")\n            ones = len(s) - zeros\n            for z in range(m, zeros - 1, -1):\n                row, src = dp[z], dp[z - zeros]\n                for o in range(n, ones - 1, -1):\n                    if src[o - ones] + 1 > row[o]:\n                        row[o] = src[o - ones] + 1\n        return dp[m][n]",
+     "javascript": "var findMaxForm = function(strs, m, n) {\n    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));\n    for (const s of strs) {\n        const zeros = s.split('0').length - 1, ones = s.length - zeros;\n        for (let z = m; z >= zeros; z--)\n            for (let o = n; o >= ones; o--) dp[z][o] = Math.max(dp[z][o], dp[z - zeros][o - ones] + 1);\n    }\n    return dp[m][n];\n};"
+    }
+   }
+  ]
+ }
+}
