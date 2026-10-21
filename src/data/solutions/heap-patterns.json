@@ -1,0 +1,546 @@
+{
+ "last-stone-weight": {
+  "pattern": "Max-heap simulation (always take the two largest)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort before every smash",
+    "idea": "Simulate directly: sort the stones, smash the two heaviest, put the remainder back, and repeat.",
+    "steps": [
+     "While at least two stones remain: sort them.",
+     "Remove the two heaviest `y >= x`; if `y > x`, add a stone of weight `y − x`.",
+     "Return the last stone's weight, or 0."
+    ],
+    "time": "O(n² log n)",
+    "space": "O(n)",
+    "why": "Up to n − 1 rounds, each sorting up to n stones.",
+    "code": {
+     "java": "class Solution {\n    public int lastStoneWeight(int[] stones) {\n        List<Integer> s = new ArrayList<>();\n        for (int x : stones) s.add(x);\n        while (s.size() > 1) {\n            Collections.sort(s);\n            int y = s.remove(s.size() - 1), x = s.remove(s.size() - 1);\n            if (y > x) s.add(y - x);\n        }\n        return s.isEmpty() ? 0 : s.get(0);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lastStoneWeight(vector<int>& stones) {\n        vector<int> s = stones;\n        while (s.size() > 1) {\n            sort(s.begin(), s.end());\n            int y = s.back(); s.pop_back();\n            int x = s.back(); s.pop_back();\n            if (y > x) s.push_back(y - x);\n        }\n        return s.empty() ? 0 : s[0];\n    }\n};",
+     "python": "class Solution:\n    def lastStoneWeight(self, stones: List[int]) -> int:\n        s = list(stones)\n        while len(s) > 1:\n            s.sort()\n            y, x = s.pop(), s.pop()\n            if y > x:\n                s.append(y - x)\n        return s[0] if s else 0",
+     "javascript": "var lastStoneWeight = function(stones) {\n    const s = [...stones];\n    while (s.length > 1) {\n        s.sort((a, b) => a - b);\n        const y = s.pop(), x = s.pop();\n        if (y > x) s.push(y - x);\n    }\n    return s.length ? s[0] : 0;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Max-heap",
+    "idea": "A max-heap gives the heaviest stone in O(log n) without re-sorting everything each round.",
+    "steps": [
+     "Put all stones in a max-heap.",
+     "While the heap has at least two stones: pop `y`, pop `x`; if `y > x`, push `y − x`.",
+     "Return the remaining stone, or 0."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "At most n − 1 rounds, each with O(log n) heap operations.",
+    "code": {
+     "java": "class Solution {\n    public int lastStoneWeight(int[] stones) {\n        PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder());\n        for (int x : stones) heap.add(x);\n        while (heap.size() > 1) {\n            int y = heap.poll(), x = heap.poll();\n            if (y > x) heap.add(y - x);\n        }\n        return heap.isEmpty() ? 0 : heap.peek();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lastStoneWeight(vector<int>& stones) {\n        priority_queue<int> heap(stones.begin(), stones.end());\n        while (heap.size() > 1) {\n            int y = heap.top(); heap.pop();\n            int x = heap.top(); heap.pop();\n            if (y > x) heap.push(y - x);\n        }\n        return heap.empty() ? 0 : heap.top();\n    }\n};",
+     "python": "class Solution:\n    def lastStoneWeight(self, stones: List[int]) -> int:\n        heap = [-x for x in stones]  # heapq is a min-heap: store negatives\n        heapify(heap)\n        while len(heap) > 1:\n            y, x = -heappop(heap), -heappop(heap)\n            if y > x:\n                heappush(heap, x - y)\n        return -heap[0] if heap else 0",
+     "javascript": "var lastStoneWeight = function(stones) {\n    const heap = new MaxPriorityQueue();\n    for (const x of stones) heap.enqueue(x);\n    while (heap.size() > 1) {\n        const y = heap.dequeue(), x = heap.dequeue();\n        if (y > x) heap.enqueue(y - x);\n    }\n    return heap.size() ? heap.front() : 0;\n};"
+    }
+   }
+  ]
+ },
+ "kth-largest-element-in-a-stream": {
+  "pattern": "Min-heap of size k (its top is the k-th largest)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep every value in a sorted list",
+    "idea": "Keep all values sorted. Insert each new value at its place, and read the k-th largest from the end.",
+    "steps": [
+     "In the constructor, sort `nums` into a list.",
+     "`add(val)`: binary search the insert position and insert `val` there.",
+     "Return the element at index `size − k`."
+    ],
+    "time": "O(n) per add",
+    "space": "O(n)",
+    "why": "Finding the position is O(log n), but inserting into the middle of an array shifts up to n elements. Every value is stored.",
+    "code": {
+     "java": "class KthLargest {\n    private final List<Integer> sorted = new ArrayList<>();\n    private final int k;\n\n    public KthLargest(int k, int[] nums) {\n        this.k = k;\n        for (int x : nums) sorted.add(x);\n        Collections.sort(sorted);\n    }\n\n    public int add(int val) {\n        int pos = Collections.binarySearch(sorted, val);\n        sorted.add(pos >= 0 ? pos : -pos - 1, val);\n        return sorted.get(sorted.size() - k);\n    }\n}",
+     "cpp": "class KthLargest {\n    vector<int> sorted;\n    int k;\npublic:\n    KthLargest(int k, vector<int>& nums) : sorted(nums), k(k) {\n        sort(sorted.begin(), sorted.end());\n    }\n\n    int add(int val) {\n        sorted.insert(lower_bound(sorted.begin(), sorted.end(), val), val);\n        return sorted[sorted.size() - k];\n    }\n};",
+     "python": "class KthLargest:\n\n    def __init__(self, k: int, nums: List[int]):\n        self.k = k\n        self.sorted = sorted(nums)\n\n    def add(self, val: int) -> int:\n        insort(self.sorted, val)\n        return self.sorted[-self.k]",
+     "javascript": "var KthLargest = function(k, nums) {\n    this.k = k;\n    this.sorted = [...nums].sort((a, b) => a - b);\n};\n\nKthLargest.prototype.add = function(val) {\n    const a = this.sorted;\n    let lo = 0, hi = a.length;\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (a[mid] < val) lo = mid + 1; else hi = mid;\n    }\n    a.splice(lo, 0, val);\n    return a[a.length - this.k];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Min-heap holding the k largest values",
+    "idea": "Only the k largest values matter. Keep them in a min-heap: its smallest element is exactly the k-th largest. A new value either beats that smallest one (replace it) or is irrelevant.",
+    "steps": [
+     "Push every initial value, popping whenever the heap grows past `k`.",
+     "`add(val)`: push `val`; if the size exceeds `k`, pop the smallest.",
+     "Return the heap's top."
+    ],
+    "time": "O(log k) per add",
+    "space": "O(k)",
+    "why": "The heap never holds more than k + 1 values. Building it costs O(n log k) once.",
+    "code": {
+     "java": "class KthLargest {\n    private final PriorityQueue<Integer> heap = new PriorityQueue<>();\n    private final int k;\n\n    public KthLargest(int k, int[] nums) {\n        this.k = k;\n        for (int x : nums) add(x);\n    }\n\n    public int add(int val) {\n        heap.add(val);\n        if (heap.size() > k) heap.poll();\n        return heap.peek();\n    }\n}",
+     "cpp": "class KthLargest {\n    priority_queue<int, vector<int>, greater<int>> heap;\n    int k;\npublic:\n    KthLargest(int k, vector<int>& nums) : k(k) {\n        for (int x : nums) add(x);\n    }\n\n    int add(int val) {\n        heap.push(val);\n        if ((int) heap.size() > k) heap.pop();\n        return heap.top();\n    }\n};",
+     "python": "class KthLargest:\n\n    def __init__(self, k: int, nums: List[int]):\n        self.k = k\n        self.heap = []\n        for x in nums:\n            self.add(x)\n\n    def add(self, val: int) -> int:\n        heappush(self.heap, val)\n        if len(self.heap) > self.k:\n            heappop(self.heap)\n        return self.heap[0]",
+     "javascript": "var KthLargest = function(k, nums) {\n    this.k = k;\n    this.heap = new MinPriorityQueue();\n    for (const x of nums) this.add(x);\n};\n\nKthLargest.prototype.add = function(val) {\n    this.heap.enqueue(val);\n    if (this.heap.size() > this.k) this.heap.dequeue();\n    return this.heap.front();\n};"
+    }
+   }
+  ]
+ },
+ "kth-largest-element-in-an-array": {
+  "pattern": "Selection: min-heap of size k, or quickselect (partition around a pivot)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort and index",
+    "idea": "Sort the array; the k-th largest is at index `n − k`.",
+    "steps": [
+     "Sort `nums` ascending.",
+     "Return `nums[n − k]`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(log n)",
+    "why": "A full sort when only one position is needed.",
+    "code": {
+     "java": "class Solution {\n    public int findKthLargest(int[] nums, int k) {\n        Arrays.sort(nums);\n        return nums[nums.length - k];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        return nums[nums.size() - k];\n    }\n};",
+     "python": "class Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        return sorted(nums)[-k]",
+     "javascript": "var findKthLargest = function(nums, k) {\n    nums.sort((a, b) => a - b);\n    return nums[nums.length - k];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Min-heap of the k largest",
+    "idea": "Scan the array keeping the k largest values seen so far in a min-heap; at the end its top is the k-th largest.",
+    "steps": [
+     "For each value, push it into a min-heap.",
+     "If the heap holds more than `k` values, pop the smallest.",
+     "Return the heap's top."
+    ],
+    "time": "O(n log k)",
+    "space": "O(k)",
+    "why": "n pushes (and pops) on a heap of size at most k + 1.",
+    "code": {
+     "java": "class Solution {\n    public int findKthLargest(int[] nums, int k) {\n        PriorityQueue<Integer> heap = new PriorityQueue<>();\n        for (int x : nums) {\n            heap.add(x);\n            if (heap.size() > k) heap.poll();\n        }\n        return heap.peek();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        priority_queue<int, vector<int>, greater<int>> heap;\n        for (int x : nums) {\n            heap.push(x);\n            if ((int) heap.size() > k) heap.pop();\n        }\n        return heap.top();\n    }\n};",
+     "python": "class Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        heap = []\n        for x in nums:\n            heappush(heap, x)\n            if len(heap) > k:\n                heappop(heap)\n        return heap[0]",
+     "javascript": "var findKthLargest = function(nums, k) {\n    const heap = new MinPriorityQueue();\n    for (const x of nums) {\n        heap.enqueue(x);\n        if (heap.size() > k) heap.dequeue();\n    }\n    return heap.front();\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Quickselect with a three-way partition",
+    "idea": "Partition around a random pivot into values less than, equal to, and greater than it (like quicksort). Then the answer's position `n − k` falls into exactly one of the three parts; continue only in that part.",
+    "steps": [
+     "The target index in sorted order is `t = n − k`. Search the range `[lo, hi] = [0, n − 1]`.",
+     "Pick a random pivot and partition the range into `< pivot`, `== pivot` and `> pivot` (Dutch national flag), giving the boundaries `lt` and `gt` of the equal block.",
+     "If `t < lt`, continue on the left part; if `t > gt`, on the right part; otherwise return the pivot."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Expected O(n): a random pivot discards a constant fraction on average, so the work is n + n/2 + n/4 + … (the worst case is O(n²) but very unlikely). The three-way split keeps it fast with many duplicates, which a two-way partition would not.",
+    "code": {
+     "java": "class Solution {\n    public int findKthLargest(int[] nums, int k) {\n        Random rnd = new Random(7);\n        int t = nums.length - k, lo = 0, hi = nums.length - 1;\n        while (true) {\n            int pivot = nums[lo + rnd.nextInt(hi - lo + 1)], lt = lo, i = lo, gt = hi;\n            while (i <= gt) {\n                if (nums[i] < pivot) swap(nums, lt++, i++);\n                else if (nums[i] > pivot) swap(nums, i, gt--);\n                else i++;\n            }\n            if (t < lt) hi = lt - 1;\n            else if (t > gt) lo = gt + 1;\n            else return pivot;\n        }\n    }\n\n    private void swap(int[] a, int i, int j) {\n        int x = a[i]; a[i] = a[j]; a[j] = x;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        mt19937 rnd(7);\n        int t = nums.size() - k, lo = 0, hi = (int) nums.size() - 1;\n        while (true) {\n            int pivot = nums[lo + rnd() % (hi - lo + 1)], lt = lo, i = lo, gt = hi;\n            while (i <= gt) {\n                if (nums[i] < pivot) swap(nums[lt++], nums[i++]);\n                else if (nums[i] > pivot) swap(nums[i], nums[gt--]);\n                else i++;\n            }\n            if (t < lt) hi = lt - 1;\n            else if (t > gt) lo = gt + 1;\n            else return pivot;\n        }\n    }\n};",
+     "python": "class Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        t, lo, hi = len(nums) - k, 0, len(nums) - 1\n        while True:\n            pivot = nums[random.randint(lo, hi)]\n            lt, i, gt = lo, lo, hi\n            while i <= gt:\n                if nums[i] < pivot:\n                    nums[lt], nums[i] = nums[i], nums[lt]\n                    lt += 1\n                    i += 1\n                elif nums[i] > pivot:\n                    nums[i], nums[gt] = nums[gt], nums[i]\n                    gt -= 1\n                else:\n                    i += 1\n            if t < lt:\n                hi = lt - 1\n            elif t > gt:\n                lo = gt + 1\n            else:\n                return pivot",
+     "javascript": "var findKthLargest = function(nums, k) {\n    const t = nums.length - k;\n    let lo = 0, hi = nums.length - 1;\n    while (true) {\n        const pivot = nums[lo + Math.floor(Math.random() * (hi - lo + 1))];\n        let lt = lo, i = lo, gt = hi;\n        while (i <= gt) {\n            if (nums[i] < pivot) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; }\n            else if (nums[i] > pivot) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; }\n            else i++;\n        }\n        if (t < lt) hi = lt - 1;\n        else if (t > gt) lo = gt + 1;\n        else return pivot;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "top-k-frequent-elements": {
+  "pattern": "Count with a hash map, then bucket sort by frequency (or a size-k heap)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count, then sort values by count",
+    "idea": "Count each value, sort the distinct values by count (highest first), and take the first k.",
+    "steps": [
+     "Count occurrences in a hash map.",
+     "Sort the distinct values by count, descending.",
+     "Return the first `k`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Counting is O(n); sorting up to n distinct values is O(n log n).",
+    "code": {
+     "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        Map<Integer, Integer> count = new HashMap<>();\n        for (int x : nums) count.merge(x, 1, Integer::sum);\n        List<Integer> vals = new ArrayList<>(count.keySet());\n        vals.sort((a, b) -> count.get(b) - count.get(a));\n        int[] out = new int[k];\n        for (int i = 0; i < k; i++) out[i] = vals.get(i);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        unordered_map<int, int> count;\n        for (int x : nums) count[x]++;\n        vector<pair<int, int>> vals;\n        for (auto& [v, c] : count) vals.push_back({c, v});\n        sort(vals.rbegin(), vals.rend());\n        vector<int> out;\n        for (int i = 0; i < k; i++) out.push_back(vals[i].second);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        count = Counter(nums)\n        return sorted(count, key=lambda v: -count[v])[:k]",
+     "javascript": "var topKFrequent = function(nums, k) {\n    const count = new Map();\n    for (const x of nums) count.set(x, (count.get(x) ?? 0) + 1);\n    return [...count.keys()].sort((a, b) => count.get(b) - count.get(a)).slice(0, k);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count, then a min-heap of size k",
+    "idea": "Keep the k most frequent values in a min-heap keyed by count; a value with a higher count pushes out the least frequent of them.",
+    "steps": [
+     "Count occurrences.",
+     "For each distinct value, push `(count, value)`; if the heap exceeds `k`, pop the smallest count.",
+     "Return the values left in the heap."
+    ],
+    "time": "O(n log k)",
+    "space": "O(n)",
+    "why": "Up to n distinct values pass through a heap of size k. The count map holds up to n entries.",
+    "code": {
+     "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        Map<Integer, Integer> count = new HashMap<>();\n        for (int x : nums) count.merge(x, 1, Integer::sum);\n        PriorityQueue<Integer> heap = new PriorityQueue<>((a, b) -> count.get(a) - count.get(b));\n        for (int v : count.keySet()) {\n            heap.add(v);\n            if (heap.size() > k) heap.poll();\n        }\n        int[] out = new int[k];\n        for (int i = 0; i < k; i++) out[i] = heap.poll();\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        unordered_map<int, int> count;\n        for (int x : nums) count[x]++;\n        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;\n        for (auto& [v, c] : count) {\n            heap.push({c, v});\n            if ((int) heap.size() > k) heap.pop();\n        }\n        vector<int> out;\n        while (!heap.empty()) { out.push_back(heap.top().second); heap.pop(); }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        heap = []\n        for v, c in Counter(nums).items():\n            heappush(heap, (c, v))\n            if len(heap) > k:\n                heappop(heap)\n        return [v for _, v in heap]",
+     "javascript": "var topKFrequent = function(nums, k) {\n    const count = new Map();\n    for (const x of nums) count.set(x, (count.get(x) ?? 0) + 1);\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    for (const [v, c] of count) {\n        heap.enqueue([c, v]);\n        if (heap.size() > k) heap.dequeue();\n    }\n    return heap.toArray().map(([, v]) => v);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bucket sort by frequency",
+    "idea": "A count is between 1 and n, so put each value into bucket `count`. Reading buckets from n down to 1 lists values from most to least frequent, with no comparison sort.",
+    "steps": [
+     "Count occurrences.",
+     "Create n + 1 buckets; add each value to `bucket[count]`.",
+     "Walk the buckets from n down to 1, collecting values until you have `k`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Counting, filling buckets and the final walk are all linear. The answer is unique, so stopping at exactly k values is safe.",
+    "code": {
+     "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        Map<Integer, Integer> count = new HashMap<>();\n        for (int x : nums) count.merge(x, 1, Integer::sum);\n        List<List<Integer>> bucket = new ArrayList<>();\n        for (int i = 0; i <= nums.length; i++) bucket.add(new ArrayList<>());\n        for (Map.Entry<Integer, Integer> e : count.entrySet()) bucket.get(e.getValue()).add(e.getKey());\n        int[] out = new int[k];\n        int w = 0;\n        for (int c = nums.length; c >= 1 && w < k; c--)\n            for (int v : bucket.get(c)) if (w < k) out[w++] = v;\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        unordered_map<int, int> count;\n        for (int x : nums) count[x]++;\n        vector<vector<int>> bucket(nums.size() + 1);\n        for (auto& [v, c] : count) bucket[c].push_back(v);\n        vector<int> out;\n        for (int c = nums.size(); c >= 1 && (int) out.size() < k; c--)\n            for (int v : bucket[c]) if ((int) out.size() < k) out.push_back(v);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        bucket = [[] for _ in range(len(nums) + 1)]\n        for v, c in Counter(nums).items():\n            bucket[c].append(v)\n        out = []\n        for c in range(len(nums), 0, -1):\n            for v in bucket[c]:\n                if len(out) < k:\n                    out.append(v)\n        return out",
+     "javascript": "var topKFrequent = function(nums, k) {\n    const count = new Map();\n    for (const x of nums) count.set(x, (count.get(x) ?? 0) + 1);\n    const bucket = Array.from({ length: nums.length + 1 }, () => []);\n    for (const [v, c] of count) bucket[c].push(v);\n    const out = [];\n    for (let c = nums.length; c >= 1 && out.length < k; c--)\n        for (const v of bucket[c]) if (out.length < k) out.push(v);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "k-closest-points-to-origin": {
+  "pattern": "Top-k selection by squared distance: max-heap of size k, or quickselect",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort by distance",
+    "idea": "Sort all points by `x² + y²` and return the first k.",
+    "steps": [
+     "Sort points by squared distance (no square root needed: it keeps the order).",
+     "Return the first `k`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "A full sort when only the k smallest are needed.",
+    "code": {
+     "java": "class Solution {\n    public int[][] kClosest(int[][] points, int k) {\n        Arrays.sort(points, (a, b) -> Integer.compare(a[0] * a[0] + a[1] * a[1], b[0] * b[0] + b[1] * b[1]));\n        return Arrays.copyOf(points, k);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> kClosest(vector<vector<int>>& points, int k) {\n        sort(points.begin(), points.end(), [](auto& a, auto& b) {\n            return a[0] * a[0] + a[1] * a[1] < b[0] * b[0] + b[1] * b[1];\n        });\n        return vector<vector<int>>(points.begin(), points.begin() + k);\n    }\n};",
+     "python": "class Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:\n        return sorted(points, key=lambda p: p[0] * p[0] + p[1] * p[1])[:k]",
+     "javascript": "var kClosest = function(points, k) {\n    const d = (p) => p[0] * p[0] + p[1] * p[1];\n    return points.sort((a, b) => d(a) - d(b)).slice(0, k);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Max-heap of the k closest so far",
+    "idea": "Keep the k closest points in a max-heap by distance; when a new point is closer than the farthest of them, it replaces it.",
+    "steps": [
+     "For each point, push it with its squared distance.",
+     "If the heap holds more than `k` points, pop the farthest.",
+     "Return the points left in the heap."
+    ],
+    "time": "O(n log k)",
+    "space": "O(k)",
+    "why": "n operations on a heap of size at most k + 1.",
+    "code": {
+     "java": "class Solution {\n    public int[][] kClosest(int[][] points, int k) {\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(b[0] * b[0] + b[1] * b[1], a[0] * a[0] + a[1] * a[1]));\n        for (int[] p : points) {\n            heap.add(p);\n            if (heap.size() > k) heap.poll();\n        }\n        return heap.toArray(new int[0][]);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> kClosest(vector<vector<int>>& points, int k) {\n        priority_queue<pair<int, int>> heap; // (distance, index), largest distance on top\n        for (int i = 0; i < (int) points.size(); i++) {\n            heap.push({points[i][0] * points[i][0] + points[i][1] * points[i][1], i});\n            if ((int) heap.size() > k) heap.pop();\n        }\n        vector<vector<int>> out;\n        while (!heap.empty()) { out.push_back(points[heap.top().second]); heap.pop(); }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:\n        heap = []\n        for i, (x, y) in enumerate(points):\n            heappush(heap, (-(x * x + y * y), i))  # negate for a max-heap\n            if len(heap) > k:\n                heappop(heap)\n        return [points[i] for _, i in heap]",
+     "javascript": "var kClosest = function(points, k) {\n    const d = (p) => p[0] * p[0] + p[1] * p[1];\n    const heap = new PriorityQueue((a, b) => d(b) - d(a));\n    for (const p of points) {\n        heap.enqueue(p);\n        if (heap.size() > k) heap.dequeue();\n    }\n    return heap.toArray();\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Quickselect on distance",
+    "idea": "Partition the points around a random pivot distance so the k closest end up in the first k slots (in any order), recursing only into the side that contains position k.",
+    "steps": [
+     "Search the range `[lo, hi]` for the boundary at index `k`.",
+     "Pick a random pivot point, partition the range into distances `<` pivot, `==` pivot and `>` pivot.",
+     "If `k` falls inside the left part, continue there; if after the equal block, continue on the right; otherwise the first k slots are the k closest.",
+     "Return the first `k` points."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Expected linear time with a random pivot (worst case O(n²), very unlikely); partitioning is done in place (the returned copy of k points aside).",
+    "code": {
+     "java": "class Solution {\n    public int[][] kClosest(int[][] points, int k) {\n        Random rnd = new Random(7);\n        int lo = 0, hi = points.length - 1;\n        while (lo < hi) {\n            int pivot = dist(points[lo + rnd.nextInt(hi - lo + 1)]), lt = lo, i = lo, gt = hi;\n            while (i <= gt) {\n                int d = dist(points[i]);\n                if (d < pivot) swap(points, lt++, i++);\n                else if (d > pivot) swap(points, i, gt--);\n                else i++;\n            }\n            if (k < lt) hi = lt - 1;\n            else if (k > gt + 1) lo = gt + 1;\n            else break;\n        }\n        return Arrays.copyOf(points, k);\n    }\n\n    private int dist(int[] p) { return p[0] * p[0] + p[1] * p[1]; }\n\n    private void swap(int[][] a, int i, int j) { int[] t = a[i]; a[i] = a[j]; a[j] = t; }\n}",
+     "cpp": "class Solution {\n    static int dist(const vector<int>& p) { return p[0] * p[0] + p[1] * p[1]; }\npublic:\n    vector<vector<int>> kClosest(vector<vector<int>>& points, int k) {\n        mt19937 rnd(7);\n        int lo = 0, hi = (int) points.size() - 1;\n        while (lo < hi) {\n            int pivot = dist(points[lo + rnd() % (hi - lo + 1)]), lt = lo, i = lo, gt = hi;\n            while (i <= gt) {\n                int d = dist(points[i]);\n                if (d < pivot) swap(points[lt++], points[i++]);\n                else if (d > pivot) swap(points[i], points[gt--]);\n                else i++;\n            }\n            if (k < lt) hi = lt - 1;\n            else if (k > gt + 1) lo = gt + 1;\n            else break;\n        }\n        return vector<vector<int>>(points.begin(), points.begin() + k);\n    }\n};",
+     "python": "class Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:\n        dist = lambda p: p[0] * p[0] + p[1] * p[1]\n        lo, hi = 0, len(points) - 1\n        while lo < hi:\n            pivot = dist(points[random.randint(lo, hi)])\n            lt, i, gt = lo, lo, hi\n            while i <= gt:\n                d = dist(points[i])\n                if d < pivot:\n                    points[lt], points[i] = points[i], points[lt]\n                    lt += 1\n                    i += 1\n                elif d > pivot:\n                    points[i], points[gt] = points[gt], points[i]\n                    gt -= 1\n                else:\n                    i += 1\n            if k < lt:\n                hi = lt - 1\n            elif k > gt + 1:\n                lo = gt + 1\n            else:\n                break\n        return points[:k]",
+     "javascript": "var kClosest = function(points, k) {\n    const dist = (p) => p[0] * p[0] + p[1] * p[1];\n    let lo = 0, hi = points.length - 1;\n    while (lo < hi) {\n        const pivot = dist(points[lo + Math.floor(Math.random() * (hi - lo + 1))]);\n        let lt = lo, i = lo, gt = hi;\n        while (i <= gt) {\n            const d = dist(points[i]);\n            if (d < pivot) { [points[lt], points[i]] = [points[i], points[lt]]; lt++; i++; }\n            else if (d > pivot) { [points[i], points[gt]] = [points[gt], points[i]]; gt--; }\n            else i++;\n        }\n        if (k < lt) hi = lt - 1;\n        else if (k > gt + 1) lo = gt + 1;\n        else break;\n    }\n    return points.slice(0, k);\n};"
+    }
+   }
+  ]
+ },
+ "task-scheduler": {
+  "pattern": "Greedy: schedule around the most frequent task (heap simulation or a counting formula)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Simulate with a max-heap and a cooldown queue",
+    "idea": "At each time step, run the available task with the most remaining copies (it is the hardest to fit). A task that just ran waits in a queue until its cooldown ends.",
+    "steps": [
+     "Push the count of each task into a max-heap; keep a queue of `(remaining, readyTime)`.",
+     "Each step `t`: if the queue front is ready (`readyTime == t`), move it back into the heap.",
+     "If the heap is non-empty, pop the largest count, decrease it, and if copies remain, queue it with `readyTime = t + n + 1`. Otherwise the CPU idles.",
+     "Stop when both are empty; the answer is the number of steps."
+    ],
+    "time": "O(T·log 26)",
+    "space": "O(26)",
+    "why": "T is the answer (tasks plus idles, at most about (n + 1)·tasks); each step does O(log 26) heap work. Only 26 task types exist.",
+    "code": {
+     "java": "class Solution {\n    public int leastInterval(char[] tasks, int n) {\n        int[] count = new int[26];\n        for (char c : tasks) count[c - 'A']++;\n        PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder());\n        for (int c : count) if (c > 0) heap.add(c);\n        Deque<int[]> cooling = new ArrayDeque<>();\n        int t = 0;\n        while (!heap.isEmpty() || !cooling.isEmpty()) {\n            if (!cooling.isEmpty() && cooling.peek()[1] == t) heap.add(cooling.poll()[0]);\n            if (!heap.isEmpty()) {\n                int left = heap.poll() - 1;\n                if (left > 0) cooling.add(new int[] { left, t + n + 1 });\n            }\n            t++;\n        }\n        return t;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int leastInterval(vector<char>& tasks, int n) {\n        int count[26] = {0};\n        for (char c : tasks) count[c - 'A']++;\n        priority_queue<int> heap;\n        for (int c : count) if (c > 0) heap.push(c);\n        queue<pair<int, int>> cooling;\n        int t = 0;\n        while (!heap.empty() || !cooling.empty()) {\n            if (!cooling.empty() && cooling.front().second == t) { heap.push(cooling.front().first); cooling.pop(); }\n            if (!heap.empty()) {\n                int left = heap.top() - 1;\n                heap.pop();\n                if (left > 0) cooling.push({left, t + n + 1});\n            }\n            t++;\n        }\n        return t;\n    }\n};",
+     "python": "class Solution:\n    def leastInterval(self, tasks: List[str], n: int) -> int:\n        heap = [-c for c in Counter(tasks).values()]\n        heapify(heap)\n        cooling = deque()\n        t = 0\n        while heap or cooling:\n            if cooling and cooling[0][1] == t:\n                heappush(heap, cooling.popleft()[0])\n            if heap:\n                left = heappop(heap) + 1  # counts are stored negated\n                if left < 0:\n                    cooling.append((left, t + n + 1))\n            t += 1\n        return t",
+     "javascript": "var leastInterval = function(tasks, n) {\n    const count = new Map();\n    for (const c of tasks) count.set(c, (count.get(c) ?? 0) + 1);\n    const heap = new MaxPriorityQueue();\n    for (const c of count.values()) heap.enqueue(c);\n    const cooling = new Queue();\n    let t = 0;\n    while (heap.size() || cooling.size()) {\n        if (cooling.size() && cooling.front()[1] === t) heap.enqueue(cooling.dequeue()[0]);\n        if (heap.size()) {\n            const left = heap.dequeue() - 1;\n            if (left > 0) cooling.enqueue([left, t + n + 1]);\n        }\n        t++;\n    }\n    return t;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count the frames of the most frequent task",
+    "idea": "Let the most frequent task appear `maxCount` times. Its runs split the timeline into `maxCount − 1` frames of length `n + 1`, plus a final frame holding every task that also appears `maxCount` times. Other tasks fill the gaps; if there are more tasks than gaps, no idling is needed and the answer is just the number of tasks.",
+    "steps": [
+     "Count each task; find `maxCount` and `tied`, the number of tasks with that count.",
+     "The frame layout needs `(maxCount − 1) × (n + 1) + tied` intervals.",
+     "Return the larger of that and `tasks.length`."
+    ],
+    "time": "O(T)",
+    "space": "O(1)",
+    "why": "One counting pass over T tasks plus 26 counts. The layout is a lower bound (copies of the top task must be n apart) and it is always achievable; when gaps overflow, every interval runs a task.",
+    "code": {
+     "java": "class Solution {\n    public int leastInterval(char[] tasks, int n) {\n        int[] count = new int[26];\n        for (char c : tasks) count[c - 'A']++;\n        int maxCount = 0, tied = 0;\n        for (int c : count) maxCount = Math.max(maxCount, c);\n        for (int c : count) if (c == maxCount) tied++;\n        return Math.max(tasks.length, (maxCount - 1) * (n + 1) + tied);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int leastInterval(vector<char>& tasks, int n) {\n        int count[26] = {0};\n        for (char c : tasks) count[c - 'A']++;\n        int maxCount = *max_element(count, count + 26), tied = 0;\n        for (int c : count) if (c == maxCount) tied++;\n        return max((int) tasks.size(), (maxCount - 1) * (n + 1) + tied);\n    }\n};",
+     "python": "class Solution:\n    def leastInterval(self, tasks: List[str], n: int) -> int:\n        counts = Counter(tasks).values()\n        max_count = max(counts)\n        tied = sum(1 for c in counts if c == max_count)\n        return max(len(tasks), (max_count - 1) * (n + 1) + tied)",
+     "javascript": "var leastInterval = function(tasks, n) {\n    const count = new Map();\n    for (const c of tasks) count.set(c, (count.get(c) ?? 0) + 1);\n    const counts = [...count.values()], maxCount = Math.max(...counts);\n    const tied = counts.filter((c) => c === maxCount).length;\n    return Math.max(tasks.length, (maxCount - 1) * (n + 1) + tied);\n};"
+    }
+   }
+  ]
+ },
+ "kth-smallest-element-in-a-sorted-matrix": {
+  "pattern": "K-way merge with a min-heap, or binary search on the value with a staircase count",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Flatten and sort",
+    "idea": "Copy every value into one array, sort it, and take index `k − 1`.",
+    "steps": [
+     "Copy all n² values into an array.",
+     "Sort it and return the element at `k − 1`."
+    ],
+    "time": "O(n² log n)",
+    "space": "O(n²)",
+    "why": "Sorting n² values costs O(n² log n²) = O(n² log n), and the copy uses O(n²) memory, which the problem asks to avoid.",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(int[][] matrix, int k) {\n        int n = matrix.length, w = 0;\n        int[] all = new int[n * n];\n        for (int[] row : matrix) for (int v : row) all[w++] = v;\n        Arrays.sort(all);\n        return all[k - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int kthSmallest(vector<vector<int>>& matrix, int k) {\n        vector<int> all;\n        for (auto& row : matrix) all.insert(all.end(), row.begin(), row.end());\n        sort(all.begin(), all.end());\n        return all[k - 1];\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, matrix: List[List[int]], k: int) -> int:\n        return sorted(v for row in matrix for v in row)[k - 1]",
+     "javascript": "var kthSmallest = function(matrix, k) {\n    return matrix.flat().sort((a, b) => a - b)[k - 1];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Min-heap merge of the rows",
+    "idea": "Each row is a sorted list. Put the first element of each row in a min-heap; popping the smallest and pushing the next element of its row produces values in sorted order. The k-th pop is the answer.",
+    "steps": [
+     "Push `(matrix[r][0], r, 0)` for each row (only the first `min(n, k)` rows can matter).",
+     "Pop k − 1 times; after popping `(v, r, c)`, push `(matrix[r][c + 1], r, c + 1)` if it exists.",
+     "The top of the heap is the k-th smallest."
+    ],
+    "time": "O(k log n)",
+    "space": "O(n)",
+    "why": "k heap operations on a heap of at most n entries.",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(int[][] matrix, int k) {\n        int n = matrix.length;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(matrix[a[0]][a[1]], matrix[b[0]][b[1]]));\n        for (int r = 0; r < Math.min(n, k); r++) heap.add(new int[] { r, 0 });\n        for (int i = 0; i < k - 1; i++) {\n            int[] cell = heap.poll();\n            if (cell[1] + 1 < n) heap.add(new int[] { cell[0], cell[1] + 1 });\n        }\n        int[] top = heap.peek();\n        return matrix[top[0]][top[1]];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int kthSmallest(vector<vector<int>>& matrix, int k) {\n        int n = matrix.size();\n        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<>> heap;\n        for (int r = 0; r < min(n, k); r++) heap.push({matrix[r][0], r, 0});\n        for (int i = 0; i < k - 1; i++) {\n            auto [v, r, c] = heap.top();\n            heap.pop();\n            if (c + 1 < n) heap.push({matrix[r][c + 1], r, c + 1});\n        }\n        return get<0>(heap.top());\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, matrix: List[List[int]], k: int) -> int:\n        n = len(matrix)\n        heap = [(matrix[r][0], r, 0) for r in range(min(n, k))]\n        heapify(heap)\n        for _ in range(k - 1):\n            _, r, c = heappop(heap)\n            if c + 1 < n:\n                heappush(heap, (matrix[r][c + 1], r, c + 1))\n        return heap[0][0]",
+     "javascript": "var kthSmallest = function(matrix, k) {\n    const n = matrix.length, heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    for (let r = 0; r < Math.min(n, k); r++) heap.enqueue([matrix[r][0], r, 0]);\n    for (let i = 0; i < k - 1; i++) {\n        const [, r, c] = heap.dequeue();\n        if (c + 1 < n) heap.enqueue([matrix[r][c + 1], r, c + 1]);\n    }\n    return heap.front()[0];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search on the value, counting with a staircase",
+    "idea": "For a value `x`, count how many cells are `<= x` by walking from the bottom-left corner (O(n), thanks to sorted rows and columns). The answer is the smallest `x` with count `>= k`.",
+    "steps": [
+     "Search `x` in `[matrix[0][0], matrix[n − 1][n − 1]]` (use 64-bit arithmetic for the middle).",
+     "Count cells `<= mid`: start at row n − 1, column 0; if the cell is `<= mid`, add `row + 1` and move right; otherwise move up.",
+     "If the count is `>= k`, set `hi = mid`; else `lo = mid + 1`.",
+     "Return `lo` — it is always a value in the matrix."
+    ],
+    "time": "O(n log R)",
+    "space": "O(1)",
+    "why": "R = max − min ≤ 2·10⁹, so about 31 counting passes of O(n) each. The smallest x with count ≥ k must be present in the matrix, since the count only changes at matrix values.",
+    "code": {
+     "java": "class Solution {\n    public int kthSmallest(int[][] matrix, int k) {\n        int n = matrix.length;\n        long lo = matrix[0][0], hi = matrix[n - 1][n - 1];\n        while (lo < hi) {\n            long mid = lo + (hi - lo) / 2;\n            int count = 0;\n            for (int r = n - 1, c = 0; r >= 0 && c < n; ) {\n                if (matrix[r][c] <= mid) { count += r + 1; c++; }\n                else r--;\n            }\n            if (count >= k) hi = mid; else lo = mid + 1;\n        }\n        return (int) lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int kthSmallest(vector<vector<int>>& matrix, int k) {\n        int n = matrix.size();\n        long long lo = matrix[0][0], hi = matrix[n - 1][n - 1];\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2;\n            int count = 0;\n            for (int r = n - 1, c = 0; r >= 0 && c < n; ) {\n                if (matrix[r][c] <= mid) { count += r + 1; c++; }\n                else r--;\n            }\n            if (count >= k) hi = mid; else lo = mid + 1;\n        }\n        return (int) lo;\n    }\n};",
+     "python": "class Solution:\n    def kthSmallest(self, matrix: List[List[int]], k: int) -> int:\n        n = len(matrix)\n        lo, hi = matrix[0][0], matrix[-1][-1]\n        while lo < hi:\n            mid = (lo + hi) // 2\n            count, r, c = 0, n - 1, 0\n            while r >= 0 and c < n:\n                if matrix[r][c] <= mid:\n                    count += r + 1\n                    c += 1\n                else:\n                    r -= 1\n            if count >= k:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var kthSmallest = function(matrix, k) {\n    const n = matrix.length;\n    let lo = matrix[0][0], hi = matrix[n - 1][n - 1];\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let count = 0;\n        for (let r = n - 1, c = 0; r >= 0 && c < n; ) {\n            if (matrix[r][c] <= mid) { count += r + 1; c++; }\n            else r--;\n        }\n        if (count >= k) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "merge-k-sorted-lists": {
+  "pattern": "K-way merge with a min-heap of list heads (or divide and conquer pairwise merges)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Collect all values, sort, rebuild",
+    "idea": "Ignore the existing order: gather every value, sort, and build a new list.",
+    "steps": [
+     "Walk every list and collect all N values.",
+     "Sort them.",
+     "Build a new linked list from the sorted values."
+    ],
+    "time": "O(N log N)",
+    "space": "O(N)",
+    "why": "N is the total number of nodes. Sorting throws away the fact that each list is already sorted, and new nodes are created.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeKLists(ListNode[] lists) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode l : lists) for (ListNode p = l; p != null; p = p.next) vals.add(p.val);\n        Collections.sort(vals);\n        ListNode dummy = new ListNode(), tail = dummy;\n        for (int v : vals) tail = tail.next = new ListNode(v);\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        vector<int> vals;\n        for (ListNode* l : lists) for (ListNode* p = l; p; p = p->next) vals.push_back(p->val);\n        sort(vals.begin(), vals.end());\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        for (int v : vals) tail = tail->next = new ListNode(v);\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        vals = []\n        for p in lists:\n            while p:\n                vals.append(p.val)\n                p = p.next\n        dummy = tail = ListNode()\n        for v in sorted(vals):\n            tail.next = ListNode(v)\n            tail = tail.next\n        return dummy.next",
+     "javascript": "var mergeKLists = function(lists) {\n    const vals = [];\n    for (const l of lists) for (let p = l; p; p = p.next) vals.push(p.val);\n    vals.sort((a, b) => a - b);\n    const dummy = new ListNode();\n    let tail = dummy;\n    for (const v of vals) tail = tail.next = new ListNode(v);\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Merge the lists into the result one at a time",
+    "idea": "Merge list 1 with list 2, then the result with list 3, and so on, using the two-list merge.",
+    "steps": [
+     "Set `result = null`.",
+     "For each list, `result = mergeTwo(result, list)` (the iterative dummy-node merge).",
+     "Return `result`."
+    ],
+    "time": "O(k·N)",
+    "space": "O(1)",
+    "why": "The growing result is walked again for every one of the k lists, so early nodes are touched up to k times.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeKLists(ListNode[] lists) {\n        ListNode result = null;\n        for (ListNode l : lists) result = mergeTwo(result, l);\n        return result;\n    }\n\n    private ListNode mergeTwo(ListNode a, ListNode b) {\n        ListNode dummy = new ListNode(), tail = dummy;\n        while (a != null && b != null) {\n            if (a.val <= b.val) { tail.next = a; a = a.next; }\n            else { tail.next = b; b = b.next; }\n            tail = tail.next;\n        }\n        tail.next = a != null ? a : b;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* mergeTwo(ListNode* a, ListNode* b) {\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        while (a && b) {\n            if (a->val <= b->val) { tail->next = a; a = a->next; }\n            else { tail->next = b; b = b->next; }\n            tail = tail->next;\n        }\n        tail->next = a ? a : b;\n        return dummy.next;\n    }\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        ListNode* result = nullptr;\n        for (ListNode* l : lists) result = mergeTwo(result, l);\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        def merge_two(a, b):\n            dummy = tail = ListNode()\n            while a and b:\n                if a.val <= b.val:\n                    tail.next, a = a, a.next\n                else:\n                    tail.next, b = b, b.next\n                tail = tail.next\n            tail.next = a or b\n            return dummy.next\n        result = None\n        for l in lists:\n            result = merge_two(result, l)\n        return result",
+     "javascript": "var mergeKLists = function(lists) {\n    const mergeTwo = (a, b) => {\n        const dummy = new ListNode();\n        let tail = dummy;\n        while (a && b) {\n            if (a.val <= b.val) { tail.next = a; a = a.next; }\n            else { tail.next = b; b = b.next; }\n            tail = tail.next;\n        }\n        tail.next = a ?? b;\n        return dummy.next;\n    };\n    let result = null;\n    for (const l of lists) result = mergeTwo(result, l);\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Min-heap of the current heads",
+    "idea": "The next node of the merged list is the smallest among the k current heads. A min-heap of the heads finds it in O(log k); after taking a node, push its successor.",
+    "steps": [
+     "Push every non-empty head into a min-heap keyed by value.",
+     "Pop the smallest node, append it to the result, and push its `next` if any.",
+     "Repeat until the heap is empty; return `dummy.next`."
+    ],
+    "time": "O(N log k)",
+    "space": "O(k)",
+    "why": "Each of the N nodes is pushed and popped once on a heap of at most k entries. Nodes are relinked, not copied.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeKLists(ListNode[] lists) {\n        PriorityQueue<ListNode> heap = new PriorityQueue<>((a, b) -> Integer.compare(a.val, b.val));\n        for (ListNode l : lists) if (l != null) heap.add(l);\n        ListNode dummy = new ListNode(), tail = dummy;\n        while (!heap.isEmpty()) {\n            ListNode node = heap.poll();\n            tail = tail.next = node;\n            if (node.next != null) heap.add(node.next);\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        auto cmp = [](ListNode* a, ListNode* b) { return a->val > b->val; };\n        priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> heap(cmp);\n        for (ListNode* l : lists) if (l) heap.push(l);\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        while (!heap.empty()) {\n            ListNode* node = heap.top();\n            heap.pop();\n            tail = tail->next = node;\n            if (node->next) heap.push(node->next);\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        # the index breaks ties, so nodes themselves are never compared\n        heap = [(l.val, i, l) for i, l in enumerate(lists) if l]\n        heapify(heap)\n        dummy = tail = ListNode()\n        while heap:\n            _, i, node = heappop(heap)\n            tail.next = node\n            tail = node\n            if node.next:\n                heappush(heap, (node.next.val, i, node.next))\n        return dummy.next",
+     "javascript": "var mergeKLists = function(lists) {\n    const heap = new PriorityQueue((a, b) => a.val - b.val);\n    for (const l of lists) if (l) heap.enqueue(l);\n    const dummy = new ListNode();\n    let tail = dummy;\n    while (heap.size()) {\n        const node = heap.dequeue();\n        tail = tail.next = node;\n        if (node.next) heap.enqueue(node.next);\n    }\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Divide and conquer: merge in pairs",
+    "idea": "Merge the lists pairwise like merge sort: k lists become k/2, then k/4, … until one remains. Each round touches every node once, and there are log k rounds.",
+    "steps": [
+     "While more than one list remains: merge lists `i` and `i + step` for every `i` in steps of `2·step`.",
+     "Double `step` each round.",
+     "Return `lists[0]` (or null if there were no lists)."
+    ],
+    "time": "O(N log k)",
+    "space": "O(1)",
+    "why": "log k rounds of merging that each pass over all N nodes; done iteratively, it needs no heap and no recursion.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeKLists(ListNode[] lists) {\n        if (lists.length == 0) return null;\n        for (int step = 1; step < lists.length; step *= 2)\n            for (int i = 0; i + step < lists.length; i += 2 * step)\n                lists[i] = mergeTwo(lists[i], lists[i + step]);\n        return lists[0];\n    }\n\n    private ListNode mergeTwo(ListNode a, ListNode b) {\n        ListNode dummy = new ListNode(), tail = dummy;\n        while (a != null && b != null) {\n            if (a.val <= b.val) { tail.next = a; a = a.next; }\n            else { tail.next = b; b = b.next; }\n            tail = tail.next;\n        }\n        tail.next = a != null ? a : b;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* mergeTwo(ListNode* a, ListNode* b) {\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        while (a && b) {\n            if (a->val <= b->val) { tail->next = a; a = a->next; }\n            else { tail->next = b; b = b->next; }\n            tail = tail->next;\n        }\n        tail->next = a ? a : b;\n        return dummy.next;\n    }\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        if (lists.empty()) return nullptr;\n        for (size_t step = 1; step < lists.size(); step *= 2)\n            for (size_t i = 0; i + step < lists.size(); i += 2 * step)\n                lists[i] = mergeTwo(lists[i], lists[i + step]);\n        return lists[0];\n    }\n};",
+     "python": "class Solution:\n    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:\n        def merge_two(a, b):\n            dummy = tail = ListNode()\n            while a and b:\n                if a.val <= b.val:\n                    tail.next, a = a, a.next\n                else:\n                    tail.next, b = b, b.next\n                tail = tail.next\n            tail.next = a or b\n            return dummy.next\n        if not lists:\n            return None\n        step = 1\n        while step < len(lists):\n            for i in range(0, len(lists) - step, 2 * step):\n                lists[i] = merge_two(lists[i], lists[i + step])\n            step *= 2\n        return lists[0]",
+     "javascript": "var mergeKLists = function(lists) {\n    const mergeTwo = (a, b) => {\n        const dummy = new ListNode();\n        let tail = dummy;\n        while (a && b) {\n            if (a.val <= b.val) { tail.next = a; a = a.next; }\n            else { tail.next = b; b = b.next; }\n            tail = tail.next;\n        }\n        tail.next = a ?? b;\n        return dummy.next;\n    };\n    if (lists.length === 0) return null;\n    for (let step = 1; step < lists.length; step *= 2)\n        for (let i = 0; i + step < lists.length; i += 2 * step)\n            lists[i] = mergeTwo(lists[i], lists[i + step]);\n    return lists[0];\n};"
+    }
+   }
+  ]
+ },
+ "find-median-from-data-stream": {
+  "pattern": "Two heaps: a max-heap for the lower half and a min-heap for the upper half",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep a sorted list",
+    "idea": "Insert each number into its sorted position; the median is read from the middle.",
+    "steps": [
+     "`addNum`: binary search the position and insert there.",
+     "`findMedian`: with `n` values, return the middle one, or the mean of the two middle ones if `n` is even."
+    ],
+    "time": "O(n) per add",
+    "space": "O(n)",
+    "why": "Inserting into an array shifts up to n elements; `findMedian` is O(1). Over 10⁵ calls this is up to about 5 × 10⁹ moves.",
+    "code": {
+     "java": "class MedianFinder {\n    private final List<Integer> sorted = new ArrayList<>();\n\n    public MedianFinder() {\n    }\n\n    public void addNum(int num) {\n        int pos = Collections.binarySearch(sorted, num);\n        sorted.add(pos >= 0 ? pos : -pos - 1, num);\n    }\n\n    public double findMedian() {\n        int n = sorted.size();\n        return n % 2 == 1 ? sorted.get(n / 2) : (sorted.get(n / 2 - 1) + sorted.get(n / 2)) / 2.0;\n    }\n}",
+     "cpp": "class MedianFinder {\n    vector<int> sorted;\npublic:\n    MedianFinder() {}\n\n    void addNum(int num) {\n        sorted.insert(lower_bound(sorted.begin(), sorted.end(), num), num);\n    }\n\n    double findMedian() {\n        int n = sorted.size();\n        return n % 2 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0;\n    }\n};",
+     "python": "class MedianFinder:\n\n    def __init__(self):\n        self.sorted = []\n\n    def addNum(self, num: int) -> None:\n        insort(self.sorted, num)\n\n    def findMedian(self) -> float:\n        a, n = self.sorted, len(self.sorted)\n        return float(a[n // 2]) if n % 2 else (a[n // 2 - 1] + a[n // 2]) / 2",
+     "javascript": "var MedianFinder = function() {\n    this.sorted = [];\n};\n\nMedianFinder.prototype.addNum = function(num) {\n    const a = this.sorted;\n    let lo = 0, hi = a.length;\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (a[mid] < num) lo = mid + 1; else hi = mid;\n    }\n    a.splice(lo, 0, num);\n};\n\nMedianFinder.prototype.findMedian = function() {\n    const a = this.sorted, n = a.length;\n    return n % 2 ? a[n >> 1] : (a[n / 2 - 1] + a[n / 2]) / 2;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two balanced heaps",
+    "idea": "Split the numbers into a lower half (max-heap `lo`) and an upper half (min-heap `hi`), with `lo` holding the same number of values or one more. The median is then at the heap tops.",
+    "steps": [
+     "`addNum`: push into `lo`, then move `lo`'s largest into `hi` (so every value in `lo` is ≤ every value in `hi`).",
+     "If `hi` now has more values than `lo`, move `hi`'s smallest back into `lo`.",
+     "`findMedian`: if `lo` is larger, return its top; otherwise return the mean of both tops."
+    ],
+    "time": "O(log n) per add",
+    "space": "O(n)",
+    "why": "Each add does a constant number of heap operations; `findMedian` is O(1). All values are stored once across the two heaps.",
+    "code": {
+     "java": "class MedianFinder {\n    private final PriorityQueue<Integer> lo = new PriorityQueue<>(Collections.reverseOrder());\n    private final PriorityQueue<Integer> hi = new PriorityQueue<>();\n\n    public MedianFinder() {\n    }\n\n    public void addNum(int num) {\n        lo.add(num);\n        hi.add(lo.poll());\n        if (hi.size() > lo.size()) lo.add(hi.poll());\n    }\n\n    public double findMedian() {\n        return lo.size() > hi.size() ? lo.peek() : (lo.peek() + hi.peek()) / 2.0;\n    }\n}",
+     "cpp": "class MedianFinder {\n    priority_queue<int> lo;\n    priority_queue<int, vector<int>, greater<int>> hi;\npublic:\n    MedianFinder() {}\n\n    void addNum(int num) {\n        lo.push(num);\n        hi.push(lo.top());\n        lo.pop();\n        if (hi.size() > lo.size()) { lo.push(hi.top()); hi.pop(); }\n    }\n\n    double findMedian() {\n        return lo.size() > hi.size() ? lo.top() : (lo.top() + hi.top()) / 2.0;\n    }\n};",
+     "python": "class MedianFinder:\n\n    def __init__(self):\n        self.lo, self.hi = [], []  # lo stores negatives (a max-heap)\n\n    def addNum(self, num: int) -> None:\n        heappush(self.hi, -heappushpop(self.lo, -num))\n        if len(self.hi) > len(self.lo):\n            heappush(self.lo, -heappop(self.hi))\n\n    def findMedian(self) -> float:\n        if len(self.lo) > len(self.hi):\n            return float(-self.lo[0])\n        return (self.hi[0] - self.lo[0]) / 2",
+     "javascript": "var MedianFinder = function() {\n    this.lo = new MaxPriorityQueue();\n    this.hi = new MinPriorityQueue();\n};\n\nMedianFinder.prototype.addNum = function(num) {\n    this.lo.enqueue(num);\n    this.hi.enqueue(this.lo.dequeue());\n    if (this.hi.size() > this.lo.size()) this.lo.enqueue(this.hi.dequeue());\n};\n\nMedianFinder.prototype.findMedian = function() {\n    return this.lo.size() > this.hi.size() ? this.lo.front() : (this.lo.front() + this.hi.front()) / 2;\n};"
+    }
+   }
+  ]
+ },
+ "ipo": {
+  "pattern": "Two-stage greedy: sort by capital, max-heap of affordable profits",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Each round, scan for the best affordable project",
+    "idea": "Greedy choice: with the current capital, the best next project is the most profitable one you can afford (profits are never negative, so capital only grows). Find it by scanning.",
+    "steps": [
+     "Repeat up to `k` times: scan every unused project with `capital[i] <= w` and pick the one with the largest profit.",
+     "If none is affordable, stop.",
+     "Mark it used and add its profit to `w`. Return `w`."
+    ],
+    "time": "O(k·n)",
+    "space": "O(n)",
+    "why": "k rounds, each scanning n projects; a \"used\" flag per project.",
+    "code": {
+     "java": "class Solution {\n    public int findMaximizedCapital(int k, int w, int[] profits, int[] capital) {\n        int n = profits.length;\n        boolean[] used = new boolean[n];\n        long cap = w;\n        for (int round = 0; round < k; round++) {\n            int best = -1;\n            for (int i = 0; i < n; i++)\n                if (!used[i] && capital[i] <= cap && (best == -1 || profits[i] > profits[best])) best = i;\n            if (best == -1) break;\n            used[best] = true;\n            cap += profits[best];\n        }\n        return (int) cap;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findMaximizedCapital(int k, int w, vector<int>& profits, vector<int>& capital) {\n        int n = profits.size();\n        vector<bool> used(n, false);\n        long long cap = w;\n        for (int round = 0; round < k; round++) {\n            int best = -1;\n            for (int i = 0; i < n; i++)\n                if (!used[i] && capital[i] <= cap && (best == -1 || profits[i] > profits[best])) best = i;\n            if (best == -1) break;\n            used[best] = true;\n            cap += profits[best];\n        }\n        return (int) cap;\n    }\n};",
+     "python": "class Solution:\n    def findMaximizedCapital(self, k: int, w: int, profits: List[int], capital: List[int]) -> int:\n        used = [False] * len(profits)\n        for _ in range(k):\n            best = -1\n            for i in range(len(profits)):\n                if not used[i] and capital[i] <= w and (best == -1 or profits[i] > profits[best]):\n                    best = i\n            if best == -1:\n                break\n            used[best] = True\n            w += profits[best]\n        return w",
+     "javascript": "var findMaximizedCapital = function(k, w, profits, capital) {\n    const n = profits.length, used = new Array(n).fill(false);\n    for (let round = 0; round < k; round++) {\n        let best = -1;\n        for (let i = 0; i < n; i++)\n            if (!used[i] && capital[i] <= w && (best === -1 || profits[i] > profits[best])) best = i;\n        if (best === -1) break;\n        used[best] = true;\n        w += profits[best];\n    }\n    return w;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort by capital, push affordable profits into a max-heap",
+    "idea": "Sort projects by required capital. As capital grows, unlock projects in that order and push their profits into a max-heap; each round take the heap's best. A project once affordable stays affordable, so nothing is pushed twice.",
+    "steps": [
+     "Sort project indices by `capital`.",
+     "Repeat up to `k` times: push the profit of every not-yet-unlocked project with `capital <= w`.",
+     "If the heap is empty, stop; otherwise pop the largest profit and add it to `w`.",
+     "Return `w`."
+    ],
+    "time": "O((n + k) log n)",
+    "space": "O(n)",
+    "why": "Sorting is O(n log n); each project is pushed once and each of the k rounds pops once.",
+    "code": {
+     "java": "class Solution {\n    public int findMaximizedCapital(int k, int w, int[] profits, int[] capital) {\n        int n = profits.length;\n        Integer[] order = new Integer[n];\n        for (int i = 0; i < n; i++) order[i] = i;\n        Arrays.sort(order, (a, b) -> Integer.compare(capital[a], capital[b]));\n        PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder());\n        long cap = w;\n        int next = 0;\n        for (int round = 0; round < k; round++) {\n            while (next < n && capital[order[next]] <= cap) heap.add(profits[order[next++]]);\n            if (heap.isEmpty()) break;\n            cap += heap.poll();\n        }\n        return (int) cap;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findMaximizedCapital(int k, int w, vector<int>& profits, vector<int>& capital) {\n        int n = profits.size();\n        vector<int> order(n);\n        iota(order.begin(), order.end(), 0);\n        sort(order.begin(), order.end(), [&](int a, int b) { return capital[a] < capital[b]; });\n        priority_queue<int> heap;\n        long long cap = w;\n        int next = 0;\n        for (int round = 0; round < k; round++) {\n            while (next < n && capital[order[next]] <= cap) heap.push(profits[order[next++]]);\n            if (heap.empty()) break;\n            cap += heap.top();\n            heap.pop();\n        }\n        return (int) cap;\n    }\n};",
+     "python": "class Solution:\n    def findMaximizedCapital(self, k: int, w: int, profits: List[int], capital: List[int]) -> int:\n        projects = sorted(zip(capital, profits))\n        heap, nxt = [], 0\n        for _ in range(k):\n            while nxt < len(projects) and projects[nxt][0] <= w:\n                heappush(heap, -projects[nxt][1])\n                nxt += 1\n            if not heap:\n                break\n            w -= heappop(heap)\n        return w",
+     "javascript": "var findMaximizedCapital = function(k, w, profits, capital) {\n    const n = profits.length;\n    const order = profits.map((_, i) => i).sort((a, b) => capital[a] - capital[b]);\n    const heap = new MaxPriorityQueue();\n    let next = 0;\n    for (let round = 0; round < k; round++) {\n        while (next < n && capital[order[next]] <= w) heap.enqueue(profits[order[next++]]);\n        if (heap.size() === 0) break;\n        w += heap.dequeue();\n    }\n    return w;\n};"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,336 @@
+{
+ "koko-eating-bananas": {
+  "pattern": "Binary search on the answer (smallest speed for which a monotone check passes)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every speed from 1 upwards",
+    "idea": "At speed `k`, pile `p` takes `ceil(p / k)` hours. Try k = 1, 2, 3, … and return the first speed whose total hours fit in `h`.",
+    "steps": [
+     "For `k = 1, 2, …` up to the largest pile:",
+     "Add up `ceil(p / k)` over all piles (as a 64-bit number).",
+     "Return the first `k` whose total is at most `h` (the largest pile always works, since then every pile takes 1 hour and `h >= piles.length`)."
+    ],
+    "time": "O(n·M)",
+    "space": "O(1)",
+    "why": "M is the largest pile (up to 10⁹); each speed costs a pass over the n piles.",
+    "timesOut": [
+     3
+    ],
+    "code": {
+     "java": "class Solution {\n    public int minEatingSpeed(int[] piles, int h) {\n        for (int k = 1; ; k++) {\n            long hours = 0;\n            for (int p : piles) hours += (p + k - 1) / k;\n            if (hours <= h) return k;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minEatingSpeed(vector<int>& piles, int h) {\n        for (long long k = 1; ; k++) {\n            long long hours = 0;\n            for (int p : piles) hours += (p + k - 1) / k;\n            if (hours <= h) return (int) k;\n        }\n    }\n};",
+     "python": "class Solution:\n    def minEatingSpeed(self, piles: List[int], h: int) -> int:\n        k = 1\n        while sum((p + k - 1) // k for p in piles) > h:\n            k += 1\n        return k",
+     "javascript": "var minEatingSpeed = function(piles, h) {\n    for (let k = 1; ; k++) {\n        let hours = 0;\n        for (const p of piles) hours += Math.ceil(p / k);\n        if (hours <= h) return k;\n    }\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the speed",
+    "idea": "A faster speed never needs more hours, so \"can finish within h\" is false for small speeds and true from some speed on. Binary search for the first speed where it is true.",
+    "steps": [
+     "Search `k` in `[1, max(piles)]`.",
+     "`mid` is feasible if `sum(ceil(p / mid)) <= h`.",
+     "If feasible, the answer is `mid` or smaller: `hi = mid`; otherwise `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log M)",
+    "space": "O(1)",
+    "why": "About log₂(10⁹) ≈ 30 checks, each a pass over n piles. `ceil(p / k)` is computed as `(p + k − 1) / k` in integers; the hour total needs 64 bits.",
+    "code": {
+     "java": "class Solution {\n    public int minEatingSpeed(int[] piles, int h) {\n        int lo = 1, hi = 0;\n        for (int p : piles) hi = Math.max(hi, p);\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long hours = 0;\n            for (int p : piles) hours += (p + (long) mid - 1) / mid;\n            if (hours <= h) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minEatingSpeed(vector<int>& piles, int h) {\n        int lo = 1, hi = *max_element(piles.begin(), piles.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long hours = 0;\n            for (int p : piles) hours += (p + (long long) mid - 1) / mid;\n            if (hours <= h) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def minEatingSpeed(self, piles: List[int], h: int) -> int:\n        lo, hi = 1, max(piles)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if sum((p + mid - 1) // mid for p in piles) <= h:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var minEatingSpeed = function(piles, h) {\n    let lo = 1, hi = Math.max(...piles);\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let hours = 0;\n        for (const p of piles) hours += Math.ceil(p / mid);\n        if (hours <= h) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "find-the-smallest-divisor-given-a-threshold": {
+  "pattern": "Binary search on the answer (the rounded-up sum only shrinks as the divisor grows)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every divisor from 1 upwards",
+    "idea": "Compute the rounded-up sum for d = 1, 2, 3, … and return the first d whose sum is within the threshold.",
+    "steps": [
+     "For `d = 1, 2, …`: compute `sum(ceil(x / d))`.",
+     "Return the first `d` with sum `<= threshold`.",
+     "It stops by `d = max(nums)` at the latest, where every term is 1 and the sum is `n <= threshold`."
+    ],
+    "time": "O(n·M)",
+    "space": "O(1)",
+    "why": "M = max(nums) candidates (up to 10⁶), each costing a pass over n values.",
+    "code": {
+     "java": "class Solution {\n    public int smallestDivisor(int[] nums, int threshold) {\n        for (int d = 1; ; d++) {\n            long sum = 0;\n            for (int x : nums) sum += (x + d - 1) / d;\n            if (sum <= threshold) return d;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int smallestDivisor(vector<int>& nums, int threshold) {\n        for (int d = 1; ; d++) {\n            long long sum = 0;\n            for (int x : nums) sum += (x + d - 1) / d;\n            if (sum <= threshold) return d;\n        }\n    }\n};",
+     "python": "class Solution:\n    def smallestDivisor(self, nums: List[int], threshold: int) -> int:\n        d = 1\n        while sum((x + d - 1) // d for x in nums) > threshold:\n            d += 1\n        return d",
+     "javascript": "var smallestDivisor = function(nums, threshold) {\n    for (let d = 1; ; d++) {\n        let sum = 0;\n        for (const x of nums) sum += Math.ceil(x / d);\n        if (sum <= threshold) return d;\n    }\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the divisor",
+    "idea": "A larger divisor never increases the rounded-up sum, so \"sum ≤ threshold\" flips from false to true exactly once. Binary search for that point.",
+    "steps": [
+     "Search `d` in `[1, max(nums)]`.",
+     "If `sum(ceil(x / mid)) <= threshold`, set `hi = mid`; else `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log M)",
+    "space": "O(1)",
+    "why": "About 20 checks for M = 10⁶, each O(n).",
+    "code": {
+     "java": "class Solution {\n    public int smallestDivisor(int[] nums, int threshold) {\n        int lo = 1, hi = 0;\n        for (int x : nums) hi = Math.max(hi, x);\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long sum = 0;\n            for (int x : nums) sum += (x + mid - 1) / mid;\n            if (sum <= threshold) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int smallestDivisor(vector<int>& nums, int threshold) {\n        int lo = 1, hi = *max_element(nums.begin(), nums.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long long sum = 0;\n            for (int x : nums) sum += (x + mid - 1) / mid;\n            if (sum <= threshold) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def smallestDivisor(self, nums: List[int], threshold: int) -> int:\n        lo, hi = 1, max(nums)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if sum((x + mid - 1) // mid for x in nums) <= threshold:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var smallestDivisor = function(nums, threshold) {\n    let lo = 1, hi = Math.max(...nums);\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let sum = 0;\n        for (const x of nums) sum += Math.ceil(x / mid);\n        if (sum <= threshold) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "capacity-to-ship-packages-within-d-days": {
+  "pattern": "Binary search on the answer with a greedy feasibility check",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every capacity from the heaviest package up",
+    "idea": "The capacity must be at least the heaviest package. Try each capacity from there and simulate loading greedily; the first that ships in time is the answer.",
+    "steps": [
+     "For `cap` from `max(weights)` up to `sum(weights)`:",
+     "Simulate: fill the current day until the next package would exceed `cap`, then start a new day; count the days.",
+     "Return the first `cap` needing at most `days` days."
+    ],
+    "time": "O(n·S)",
+    "space": "O(1)",
+    "why": "Up to S = sum(weights) capacities (about 2.5 × 10⁷ here), each simulated in O(n).",
+    "code": {
+     "java": "class Solution {\n    public int shipWithinDays(int[] weights, int days) {\n        int max = 0;\n        for (int w : weights) max = Math.max(max, w);\n        for (int cap = max; ; cap++) if (daysNeeded(weights, cap) <= days) return cap;\n    }\n\n    private int daysNeeded(int[] weights, int cap) {\n        int d = 1, load = 0;\n        for (int w : weights) {\n            if (load + w > cap) { d++; load = 0; }\n            load += w;\n        }\n        return d;\n    }\n}",
+     "cpp": "class Solution {\n    int daysNeeded(vector<int>& weights, int cap) {\n        int d = 1, load = 0;\n        for (int w : weights) {\n            if (load + w > cap) { d++; load = 0; }\n            load += w;\n        }\n        return d;\n    }\npublic:\n    int shipWithinDays(vector<int>& weights, int days) {\n        for (int cap = *max_element(weights.begin(), weights.end()); ; cap++)\n            if (daysNeeded(weights, cap) <= days) return cap;\n    }\n};",
+     "python": "class Solution:\n    def shipWithinDays(self, weights: List[int], days: int) -> int:\n        def days_needed(cap):\n            d, load = 1, 0\n            for w in weights:\n                if load + w > cap:\n                    d += 1\n                    load = 0\n                load += w\n            return d\n        cap = max(weights)\n        while days_needed(cap) > days:\n            cap += 1\n        return cap",
+     "javascript": "var shipWithinDays = function(weights, days) {\n    const daysNeeded = (cap) => {\n        let d = 1, load = 0;\n        for (const w of weights) {\n            if (load + w > cap) { d++; load = 0; }\n            load += w;\n        }\n        return d;\n    };\n    let cap = Math.max(...weights);\n    while (daysNeeded(cap) > days) cap++;\n    return cap;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the capacity",
+    "idea": "More capacity never needs more days, so the check flips once. Search between the heaviest package (smallest possible) and the total weight (ships everything in one day).",
+    "steps": [
+     "Set `lo = max(weights)`, `hi = sum(weights)`.",
+     "For `mid`, count the days the greedy loading needs.",
+     "If that is `<= days`, set `hi = mid`; otherwise `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log S)",
+    "space": "O(1)",
+    "why": "About log₂(S) ≈ 25 simulations of O(n) each. Greedy loading is optimal for a fixed capacity: sailing later can never help, since order is fixed.",
+    "code": {
+     "java": "class Solution {\n    public int shipWithinDays(int[] weights, int days) {\n        int lo = 0, hi = 0;\n        for (int w : weights) { lo = Math.max(lo, w); hi += w; }\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2, d = 1, load = 0;\n            for (int w : weights) {\n                if (load + w > mid) { d++; load = 0; }\n                load += w;\n            }\n            if (d <= days) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int shipWithinDays(vector<int>& weights, int days) {\n        int lo = 0, hi = 0;\n        for (int w : weights) { lo = max(lo, w); hi += w; }\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2, d = 1, load = 0;\n            for (int w : weights) {\n                if (load + w > mid) { d++; load = 0; }\n                load += w;\n            }\n            if (d <= days) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def shipWithinDays(self, weights: List[int], days: int) -> int:\n        lo, hi = max(weights), sum(weights)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            d, load = 1, 0\n            for w in weights:\n                if load + w > mid:\n                    d += 1\n                    load = 0\n                load += w\n            if d <= days:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var shipWithinDays = function(weights, days) {\n    let lo = 0, hi = 0;\n    for (const w of weights) { lo = Math.max(lo, w); hi += w; }\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let d = 1, load = 0;\n        for (const w of weights) {\n            if (load + w > mid) { d++; load = 0; }\n            load += w;\n        }\n        if (d <= days) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-number-of-days-to-make-m-bouquets": {
+  "pattern": "Binary search on the day with a greedy count of adjacent bloomed runs",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try each bloom day as the answer, earliest first",
+    "idea": "The answer is always one of the bloom days (nothing new blooms between them). Sort the distinct bloom days and test each in turn by counting bouquets.",
+    "steps": [
+     "If `m × k > n`, return −1: there are not enough flowers (compute in 64 bits).",
+     "Sort the distinct values of `bloomDay`.",
+     "For each day `d` in increasing order, walk the flowers counting runs of bloomed (`<= d`) flowers; every `k` in a row make a bouquet.",
+     "Return the first `d` that gives at least `m` bouquets."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Up to n distinct days, each checked in O(n), after an O(n log n) sort. The sorted list of days takes O(n).",
+    "code": {
+     "java": "class Solution {\n    public int minDays(int[] bloomDay, int m, int k) {\n        if ((long) m * k > bloomDay.length) return -1;\n        int[] days = Arrays.stream(bloomDay).distinct().sorted().toArray();\n        for (int d : days) if (bouquets(bloomDay, d, k) >= m) return d;\n        return -1;\n    }\n\n    private int bouquets(int[] bloomDay, int day, int k) {\n        int made = 0, run = 0;\n        for (int b : bloomDay) {\n            run = b <= day ? run + 1 : 0;\n            if (run == k) { made++; run = 0; }\n        }\n        return made;\n    }\n}",
+     "cpp": "class Solution {\n    int bouquets(vector<int>& bloomDay, int day, int k) {\n        int made = 0, run = 0;\n        for (int b : bloomDay) {\n            run = b <= day ? run + 1 : 0;\n            if (run == k) { made++; run = 0; }\n        }\n        return made;\n    }\npublic:\n    int minDays(vector<int>& bloomDay, int m, int k) {\n        if ((long long) m * k > (long long) bloomDay.size()) return -1;\n        vector<int> days(bloomDay);\n        sort(days.begin(), days.end());\n        days.erase(unique(days.begin(), days.end()), days.end());\n        for (int d : days) if (bouquets(bloomDay, d, k) >= m) return d;\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def minDays(self, bloomDay: List[int], m: int, k: int) -> int:\n        if m * k > len(bloomDay):\n            return -1\n        def bouquets(day):\n            made = run = 0\n            for b in bloomDay:\n                run = run + 1 if b <= day else 0\n                if run == k:\n                    made += 1\n                    run = 0\n            return made\n        for d in sorted(set(bloomDay)):\n            if bouquets(d) >= m:\n                return d\n        return -1",
+     "javascript": "var minDays = function(bloomDay, m, k) {\n    if (m * k > bloomDay.length) return -1;\n    const bouquets = (day) => {\n        let made = 0, run = 0;\n        for (const b of bloomDay) {\n            run = b <= day ? run + 1 : 0;\n            if (run === k) { made++; run = 0; }\n        }\n        return made;\n    };\n    for (const d of [...new Set(bloomDay)].sort((a, b) => a - b)) if (bouquets(d) >= m) return d;\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the day",
+    "idea": "Waiting longer never gives fewer bouquets, so \"at least m bouquets by day d\" flips from false to true once. Binary search the day between the earliest and latest bloom.",
+    "steps": [
+     "If `m × k > n`, return −1 (64-bit multiply).",
+     "Search `d` in `[min(bloomDay), max(bloomDay)]`.",
+     "Count bouquets on day `mid` greedily (runs of `k` bloomed neighbours). If at least `m`, set `hi = mid`; else `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log D)",
+    "space": "O(1)",
+    "why": "D is the range of bloom days (up to 10⁹), so about 30 passes of O(n). Taking a bouquet as soon as a run reaches k is optimal: using the leftmost flowers never blocks a later bouquet.",
+    "code": {
+     "java": "class Solution {\n    public int minDays(int[] bloomDay, int m, int k) {\n        if ((long) m * k > bloomDay.length) return -1;\n        int lo = Integer.MAX_VALUE, hi = 0;\n        for (int b : bloomDay) { lo = Math.min(lo, b); hi = Math.max(hi, b); }\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2, made = 0, run = 0;\n            for (int b : bloomDay) {\n                run = b <= mid ? run + 1 : 0;\n                if (run == k) { made++; run = 0; }\n            }\n            if (made >= m) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minDays(vector<int>& bloomDay, int m, int k) {\n        if ((long long) m * k > (long long) bloomDay.size()) return -1;\n        int lo = *min_element(bloomDay.begin(), bloomDay.end()), hi = *max_element(bloomDay.begin(), bloomDay.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2, made = 0, run = 0;\n            for (int b : bloomDay) {\n                run = b <= mid ? run + 1 : 0;\n                if (run == k) { made++; run = 0; }\n            }\n            if (made >= m) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def minDays(self, bloomDay: List[int], m: int, k: int) -> int:\n        if m * k > len(bloomDay):\n            return -1\n        lo, hi = min(bloomDay), max(bloomDay)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            made = run = 0\n            for b in bloomDay:\n                run = run + 1 if b <= mid else 0\n                if run == k:\n                    made += 1\n                    run = 0\n            if made >= m:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var minDays = function(bloomDay, m, k) {\n    if (m * k > bloomDay.length) return -1;\n    let lo = Infinity, hi = 0;\n    for (const b of bloomDay) { lo = Math.min(lo, b); hi = Math.max(hi, b); }\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let made = 0, run = 0;\n        for (const b of bloomDay) {\n            run = b <= mid ? run + 1 : 0;\n            if (run === k) { made++; run = 0; }\n        }\n        if (made >= m) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-time-to-complete-trips": {
+  "pattern": "Binary search on time (trips completed by time t = Σ ⌊t / time[i]⌋ only grows)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Advance the clock one unit at a time",
+    "idea": "By time `t`, bus `i` has finished `t / time[i]` trips (rounded down). Increase `t` from 1 until the total reaches `totalTrips`.",
+    "steps": [
+     "For `t = 1, 2, 3, …`:",
+     "Add up `t / time[i]` over all buses, stopping early once it reaches `totalTrips`.",
+     "Return the first `t` whose total is at least `totalTrips`."
+    ],
+    "time": "O(n·T)",
+    "space": "O(1)",
+    "why": "T is the answer itself, which can reach 10¹⁴ (one slow bus making 10⁷ trips).",
+    "timesOut": [
+     3
+    ],
+    "code": {
+     "java": "class Solution {\n    public long minimumTime(int[] time, int totalTrips) {\n        for (long t = 1; ; t++) {\n            long trips = 0;\n            for (int x : time) {\n                trips += t / x;\n                if (trips >= totalTrips) return t;\n            }\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long minimumTime(vector<int>& time, int totalTrips) {\n        for (long long t = 1; ; t++) {\n            long long trips = 0;\n            for (int x : time) {\n                trips += t / x;\n                if (trips >= totalTrips) return t;\n            }\n        }\n    }\n};",
+     "python": "class Solution:\n    def minimumTime(self, time: List[int], totalTrips: int) -> int:\n        t = 1\n        while sum(t // x for x in time) < totalTrips:\n            t += 1\n        return t",
+     "javascript": "var minimumTime = function(time, totalTrips) {\n    for (let t = 1; ; t++) {\n        let trips = 0;\n        for (const x of time) {\n            trips += Math.floor(t / x);\n            if (trips >= totalTrips) return t;\n        }\n    }\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the time",
+    "idea": "More time never means fewer trips, so binary search the first `t` with enough trips. The fastest bus alone finishes `totalTrips` trips by `min(time) × totalTrips`, which bounds the search.",
+    "steps": [
+     "Set `lo = 1`, `hi = min(time) × totalTrips` (64-bit).",
+     "For `mid`, add up `mid / time[i]`, stopping once it reaches `totalTrips` (this also prevents overflow).",
+     "If enough, `hi = mid`; else `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log T)",
+    "space": "O(1)",
+    "why": "T ≤ 10¹⁴, so about 47 checks, each O(n). Stopping the sum early keeps it below 2·10⁷ + 10¹⁴, far from overflow.",
+    "code": {
+     "java": "class Solution {\n    public long minimumTime(int[] time, int totalTrips) {\n        int fastest = Integer.MAX_VALUE;\n        for (int x : time) fastest = Math.min(fastest, x);\n        long lo = 1, hi = (long) fastest * totalTrips;\n        while (lo < hi) {\n            long mid = lo + (hi - lo) / 2, trips = 0;\n            for (int x : time) {\n                trips += mid / x;\n                if (trips >= totalTrips) break;\n            }\n            if (trips >= totalTrips) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long minimumTime(vector<int>& time, int totalTrips) {\n        long long lo = 1, hi = (long long) *min_element(time.begin(), time.end()) * totalTrips;\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2, trips = 0;\n            for (int x : time) {\n                trips += mid / x;\n                if (trips >= totalTrips) break;\n            }\n            if (trips >= totalTrips) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def minimumTime(self, time: List[int], totalTrips: int) -> int:\n        lo, hi = 1, min(time) * totalTrips\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if sum(mid // x for x in time) >= totalTrips:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var minimumTime = function(time, totalTrips) {\n    let lo = 1, hi = Math.min(...time) * totalTrips;\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let trips = 0;\n        for (const x of time) {\n            trips += Math.floor(mid / x);\n            if (trips >= totalTrips) break;\n        }\n        if (trips >= totalTrips) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "magnetic-force-between-two-balls": {
+  "pattern": "Binary search on the answer (largest gap for which greedy placement fits m balls)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every distance from the largest possible down",
+    "idea": "After sorting, a minimum gap `d` is possible if placing balls greedily (first basket, then the next basket at least `d` further) fits `m` balls. The gap can be at most `(last − first) / (m − 1)`; try every value from there downwards.",
+    "steps": [
+     "Sort the positions.",
+     "For `d` from `(pos[n − 1] − pos[0]) / (m − 1)` down to 1:",
+     "Place greedily and count the balls; return the first `d` that fits `m` balls."
+    ],
+    "time": "O(n·R)",
+    "space": "O(1)",
+    "why": "R = (largest − smallest) / (m − 1) candidates, each checked in O(n), plus the sort. When the answer is far below R this is far too slow.",
+    "code": {
+     "java": "class Solution {\n    public int maxDistance(int[] position, int m) {\n        Arrays.sort(position);\n        int n = position.length;\n        for (int d = (position[n - 1] - position[0]) / (m - 1); d > 1; d--)\n            if (fits(position, d, m)) return d;\n        return 1;\n    }\n\n    private boolean fits(int[] pos, int d, int m) {\n        int placed = 1, last = pos[0];\n        for (int p : pos) if (p - last >= d) { placed++; last = p; }\n        return placed >= m;\n    }\n}",
+     "cpp": "class Solution {\n    bool fits(vector<int>& pos, int d, int m) {\n        int placed = 1, last = pos[0];\n        for (int p : pos) if (p - last >= d) { placed++; last = p; }\n        return placed >= m;\n    }\npublic:\n    int maxDistance(vector<int>& position, int m) {\n        sort(position.begin(), position.end());\n        for (int d = (position.back() - position[0]) / (m - 1); d > 1; d--)\n            if (fits(position, d, m)) return d;\n        return 1;\n    }\n};",
+     "python": "class Solution:\n    def maxDistance(self, position: List[int], m: int) -> int:\n        position.sort()\n        def fits(d):\n            placed, last = 1, position[0]\n            for p in position:\n                if p - last >= d:\n                    placed += 1\n                    last = p\n            return placed >= m\n        d = (position[-1] - position[0]) // (m - 1)\n        while d > 1 and not fits(d):\n            d -= 1\n        return d",
+     "javascript": "var maxDistance = function(position, m) {\n    position.sort((a, b) => a - b);\n    const fits = (d) => {\n        let placed = 1, last = position[0];\n        for (const p of position) if (p - last >= d) { placed++; last = p; }\n        return placed >= m;\n    };\n    let d = Math.floor((position[position.length - 1] - position[0]) / (m - 1));\n    while (d > 1 && !fits(d)) d--;\n    return d;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the largest feasible gap",
+    "idea": "If gap `d` is achievable, every smaller gap is too. So \"fits m balls\" is true up to some `d` and false after: binary search the last true value.",
+    "steps": [
+     "Sort the positions. Search `d` in `[1, (pos[n − 1] − pos[0]) / (m − 1)]`.",
+     "Use the upper middle `mid = lo + (hi − lo + 1) / 2`; check by greedy placement.",
+     "If it fits, `lo = mid`; else `hi = mid − 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log n + n log R)",
+    "space": "O(1)",
+    "why": "Sorting costs O(n log n) (plus its own stack); then about 30 greedy checks of O(n). Greedy placement is optimal for a fixed gap: putting each ball as far left as allowed leaves the most room for the rest.",
+    "code": {
+     "java": "class Solution {\n    public int maxDistance(int[] position, int m) {\n        Arrays.sort(position);\n        int n = position.length, lo = 1, hi = (position[n - 1] - position[0]) / (m - 1);\n        while (lo < hi) {\n            int mid = lo + (hi - lo + 1) / 2, placed = 1, last = position[0];\n            for (int p : position) if (p - last >= mid) { placed++; last = p; }\n            if (placed >= m) lo = mid; else hi = mid - 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxDistance(vector<int>& position, int m) {\n        sort(position.begin(), position.end());\n        int lo = 1, hi = (position.back() - position[0]) / (m - 1);\n        while (lo < hi) {\n            int mid = lo + (hi - lo + 1) / 2, placed = 1, last = position[0];\n            for (int p : position) if (p - last >= mid) { placed++; last = p; }\n            if (placed >= m) lo = mid; else hi = mid - 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def maxDistance(self, position: List[int], m: int) -> int:\n        position.sort()\n        lo, hi = 1, (position[-1] - position[0]) // (m - 1)\n        while lo < hi:\n            mid = (lo + hi + 1) // 2\n            placed, last = 1, position[0]\n            for p in position:\n                if p - last >= mid:\n                    placed += 1\n                    last = p\n            if placed >= m:\n                lo = mid\n            else:\n                hi = mid - 1\n        return lo",
+     "javascript": "var maxDistance = function(position, m) {\n    position.sort((a, b) => a - b);\n    let lo = 1, hi = Math.floor((position[position.length - 1] - position[0]) / (m - 1));\n    while (lo < hi) {\n        const mid = lo + Math.floor((hi - lo + 1) / 2);\n        let placed = 1, last = position[0];\n        for (const p of position) if (p - last >= mid) { placed++; last = p; }\n        if (placed >= m) lo = mid; else hi = mid - 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ },
+ "split-array-largest-sum": {
+  "pattern": "Binary search on the answer with a greedy \"how many parts?\" check (or DP over split points)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every way to place the k − 1 cuts",
+    "idea": "Recursively choose where the first part ends, and solve the rest with one part fewer. The cost of a split is its largest part; keep the smallest cost.",
+    "steps": [
+     "`best(i, parts)` = the smallest possible largest sum for `nums[i..]` cut into `parts` pieces.",
+     "If `parts == 1`, it is the sum of `nums[i..]`.",
+     "Otherwise try every end `j` for the first piece (leaving at least `parts − 1` elements), cost `max(sum(i..j), best(j + 1, parts − 1))`; take the minimum."
+    ],
+    "time": "O(C(n − 1, k − 1)·n)",
+    "space": "O(k)",
+    "why": "There are C(n − 1, k − 1) ways to place the cuts and each is explored separately. Recursion depth is k.",
+    "code": {
+     "java": "class Solution {\n    public int splitArray(int[] nums, int k) {\n        return best(nums, 0, k);\n    }\n\n    private int best(int[] nums, int i, int parts) {\n        if (parts == 1) {\n            int s = 0;\n            for (int j = i; j < nums.length; j++) s += nums[j];\n            return s;\n        }\n        int result = Integer.MAX_VALUE, first = 0;\n        for (int j = i; j <= nums.length - parts; j++) {\n            first += nums[j];\n            result = Math.min(result, Math.max(first, best(nums, j + 1, parts - 1)));\n        }\n        return result;\n    }\n}",
+     "cpp": "class Solution {\n    int best(vector<int>& nums, int i, int parts) {\n        if (parts == 1) {\n            int s = 0;\n            for (int j = i; j < (int) nums.size(); j++) s += nums[j];\n            return s;\n        }\n        int result = INT_MAX, first = 0;\n        for (int j = i; j <= (int) nums.size() - parts; j++) {\n            first += nums[j];\n            result = min(result, max(first, best(nums, j + 1, parts - 1)));\n        }\n        return result;\n    }\npublic:\n    int splitArray(vector<int>& nums, int k) {\n        return best(nums, 0, k);\n    }\n};",
+     "python": "class Solution:\n    def splitArray(self, nums: List[int], k: int) -> int:\n        n = len(nums)\n        def best(i, parts):\n            if parts == 1:\n                return sum(nums[i:])\n            result, first = inf, 0\n            for j in range(i, n - parts + 1):\n                first += nums[j]\n                result = min(result, max(first, best(j + 1, parts - 1)))\n            return result\n        return best(0, k)",
+     "javascript": "var splitArray = function(nums, k) {\n    const n = nums.length;\n    const best = (i, parts) => {\n        if (parts === 1) {\n            let s = 0;\n            for (let j = i; j < n; j++) s += nums[j];\n            return s;\n        }\n        let result = Infinity, first = 0;\n        for (let j = i; j <= n - parts; j++) {\n            first += nums[j];\n            result = Math.min(result, Math.max(first, best(j + 1, parts - 1)));\n        }\n        return result;\n    };\n    return best(0, k);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Dynamic programming over (prefix, parts)",
+    "idea": "The brute force solves the same subproblems many times. Let `dp[p][i]` = the best largest sum for the first `i` elements in `p` parts; the last part is `nums[j..i − 1]` for some `j`.",
+    "steps": [
+     "Build prefix sums so any part sum is O(1).",
+     "`dp[1][i] = prefix[i]`.",
+     "For `p` from 2 to k and `i` from p to n: `dp[p][i] = min over j in [p − 1, i − 1] of max(dp[p − 1][j], prefix[i] − prefix[j])`.",
+     "Return `dp[k][n]`."
+    ],
+    "time": "O(k·n²)",
+    "space": "O(k·n)",
+    "why": "k·n states, each trying up to n split points: 50 × 10⁶ = 5 × 10⁷ steps at most here. Part sums reach 10⁹, so they fit in a 32-bit int, but prefix sums are kept in 64 bits for safety.",
+    "code": {
+     "java": "class Solution {\n    public int splitArray(int[] nums, int k) {\n        int n = nums.length;\n        long[] prefix = new long[n + 1];\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        long[][] dp = new long[k + 1][n + 1];\n        for (int i = 1; i <= n; i++) dp[1][i] = prefix[i];\n        for (int p = 2; p <= k; p++)\n            for (int i = p; i <= n; i++) {\n                dp[p][i] = Long.MAX_VALUE;\n                for (int j = p - 1; j < i; j++)\n                    dp[p][i] = Math.min(dp[p][i], Math.max(dp[p - 1][j], prefix[i] - prefix[j]));\n            }\n        return (int) dp[k][n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int splitArray(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        vector<vector<long long>> dp(k + 1, vector<long long>(n + 1, LLONG_MAX));\n        for (int i = 1; i <= n; i++) dp[1][i] = prefix[i];\n        for (int p = 2; p <= k; p++)\n            for (int i = p; i <= n; i++)\n                for (int j = p - 1; j < i; j++)\n                    dp[p][i] = min(dp[p][i], max(dp[p - 1][j], prefix[i] - prefix[j]));\n        return (int) dp[k][n];\n    }\n};",
+     "python": "class Solution:\n    def splitArray(self, nums: List[int], k: int) -> int:\n        n = len(nums)\n        prefix = [0]\n        for x in nums:\n            prefix.append(prefix[-1] + x)\n        prev = prefix[:]  # one part: the whole prefix\n        for p in range(2, k + 1):\n            cur = [inf] * (n + 1)\n            for i in range(p, n + 1):\n                cur[i] = min(max(prev[j], prefix[i] - prefix[j]) for j in range(p - 1, i))\n            prev = cur\n        return prev[n]",
+     "javascript": "var splitArray = function(nums, k) {\n    const n = nums.length, prefix = [0];\n    for (const x of nums) prefix.push(prefix[prefix.length - 1] + x);\n    let prev = prefix.slice();\n    for (let p = 2; p <= k; p++) {\n        const cur = new Array(n + 1).fill(Infinity);\n        for (let i = p; i <= n; i++)\n            for (let j = p - 1; j < i; j++)\n                cur[i] = Math.min(cur[i], Math.max(prev[j], prefix[i] - prefix[j]));\n        prev = cur;\n    }\n    return prev[n];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the largest sum",
+    "idea": "Turn it around: for a limit `L`, the fewest parts needed (cutting greedily whenever the next value would push the part over `L`) only goes down as `L` grows. Find the smallest `L` that needs at most `k` parts.",
+    "steps": [
+     "Search `L` in `[max(nums), sum(nums)]`.",
+     "Count parts greedily for `mid`: start a new part whenever the running sum would exceed `mid`.",
+     "If at most `k` parts, `hi = mid`; else `lo = mid + 1`.",
+     "Return `lo`. (Needing fewer than `k` parts is fine: a part can always be split further without raising the largest sum.)"
+    ],
+    "time": "O(n log S)",
+    "space": "O(1)",
+    "why": "S = sum(nums) ≤ 10⁹, so about 30 greedy passes of O(n).",
+    "code": {
+     "java": "class Solution {\n    public int splitArray(int[] nums, int k) {\n        long lo = 0, hi = 0;\n        for (int x : nums) { lo = Math.max(lo, x); hi += x; }\n        while (lo < hi) {\n            long mid = lo + (hi - lo) / 2, sum = 0;\n            int parts = 1;\n            for (int x : nums) {\n                if (sum + x > mid) { parts++; sum = 0; }\n                sum += x;\n            }\n            if (parts <= k) hi = mid; else lo = mid + 1;\n        }\n        return (int) lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int splitArray(vector<int>& nums, int k) {\n        long long lo = 0, hi = 0;\n        for (int x : nums) { lo = max(lo, (long long) x); hi += x; }\n        while (lo < hi) {\n            long long mid = lo + (hi - lo) / 2, sum = 0;\n            int parts = 1;\n            for (int x : nums) {\n                if (sum + x > mid) { parts++; sum = 0; }\n                sum += x;\n            }\n            if (parts <= k) hi = mid; else lo = mid + 1;\n        }\n        return (int) lo;\n    }\n};",
+     "python": "class Solution:\n    def splitArray(self, nums: List[int], k: int) -> int:\n        lo, hi = max(nums), sum(nums)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            parts, s = 1, 0\n            for x in nums:\n                if s + x > mid:\n                    parts += 1\n                    s = 0\n                s += x\n            if parts <= k:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var splitArray = function(nums, k) {\n    let lo = 0, hi = 0;\n    for (const x of nums) { lo = Math.max(lo, x); hi += x; }\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        let parts = 1, sum = 0;\n        for (const x of nums) {\n            if (sum + x > mid) { parts++; sum = 0; }\n            sum += x;\n        }\n        if (parts <= k) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   }
+  ]
+ }
+}

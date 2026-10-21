@@ -85,7 +85,7 @@ export default [
       { in: [[[1, 3], [-2, 2]], 1], out: [[-2, 2]] },
       { in: [[[3, 3], [5, -1], [-2, 4]], 2], out: [[3, 3], [-2, 4]] },
       { in: [[[0, 1], [1, 0]], 2] },
-      { in: [[[1, 1], [2, 2], [3, 3], [-1, -1]], 1] },
+      { in: [[[1, 1], [2, 2], [3, 3], [-1, -1]], 2] }, // two points tie at distance √2; k = 2 keeps the answer unique
     ],
     ref: `class Solution {
     public int[][] kClosest(int[][] points, int k) {
