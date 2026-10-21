@@ -1,0 +1,408 @@
+{
+ "car-pooling": {
+  "pattern": "Difference array (sweep line): +p at pickup, −p at drop-off, then a running sum",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check the load at every kilometre",
+    "idea": "For each kilometre point, add up the passengers of every trip that is in the car there (`from ≤ x < to`).",
+    "steps": [
+     "Let `K` be the largest drop-off point.",
+     "For each `x` in `[0, K)`: sum `passengers` over trips with `from ≤ x < to`.",
+     "If any sum exceeds `capacity`, return false."
+    ],
+    "time": "O(n·K)",
+    "space": "O(1)",
+    "why": "K ≤ 1000 points × n trips. The half-open `to` means people leave before others board at the same point.",
+    "code": {
+     "java": "class Solution {\n    public boolean carPooling(int[][] trips, int capacity) {\n        int end = 0;\n        for (int[] t : trips) end = Math.max(end, t[2]);\n        for (int x = 0; x < end; x++) {\n            int load = 0;\n            for (int[] t : trips) if (t[1] <= x && x < t[2]) load += t[0];\n            if (load > capacity) return false;\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool carPooling(vector<vector<int>>& trips, int capacity) {\n        int end = 0;\n        for (auto& t : trips) end = max(end, t[2]);\n        for (int x = 0; x < end; x++) {\n            int load = 0;\n            for (auto& t : trips) if (t[1] <= x && x < t[2]) load += t[0];\n            if (load > capacity) return false;\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def carPooling(self, trips: List[List[int]], capacity: int) -> bool:\n        end = max(t[2] for t in trips)\n        return all(sum(p for p, a, b in trips if a <= x < b) <= capacity for x in range(end))",
+     "javascript": "var carPooling = function(trips, capacity) {\n    const end = Math.max(...trips.map((t) => t[2]));\n    for (let x = 0; x < end; x++) {\n        let load = 0;\n        for (const [p, a, b] of trips) if (a <= x && x < b) load += p;\n        if (load > capacity) return false;\n    }\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sort pickup and drop-off events",
+    "idea": "Turn each trip into two events, `(from, +p)` and `(to, −p)`. Sort by position, with drop-offs before pickups at the same point, and keep a running load.",
+    "steps": [
+     "Create 2n events and sort by position, then by delta (negative first).",
+     "Walk the events adding the delta; if the load ever exceeds `capacity`, return false."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Dominated by sorting; works for any coordinate range.",
+    "code": {
+     "java": "class Solution {\n    public boolean carPooling(int[][] trips, int capacity) {\n        int[][] events = new int[trips.length * 2][];\n        int k = 0;\n        for (int[] t : trips) {\n            events[k++] = new int[] { t[1], t[0] };\n            events[k++] = new int[] { t[2], -t[0] };\n        }\n        Arrays.sort(events, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));\n        int load = 0;\n        for (int[] e : events)\n            if ((load += e[1]) > capacity) return false;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool carPooling(vector<vector<int>>& trips, int capacity) {\n        vector<pair<int, int>> events;\n        for (auto& t : trips) {\n            events.push_back({t[1], t[0]});\n            events.push_back({t[2], -t[0]});\n        }\n        sort(events.begin(), events.end());\n        int load = 0;\n        for (auto& [x, d] : events)\n            if ((load += d) > capacity) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def carPooling(self, trips: List[List[int]], capacity: int) -> bool:\n        events = sorted([(a, p) for p, a, b in trips] + [(b, -p) for p, a, b in trips])\n        load = 0\n        for _, d in events:\n            load += d\n            if load > capacity:\n                return False\n        return True",
+     "javascript": "var carPooling = function(trips, capacity) {\n    const events = [];\n    for (const [p, a, b] of trips) events.push([a, p], [b, -p]);\n    events.sort((x, y) => x[0] - y[0] || x[1] - y[1]);\n    let load = 0;\n    for (const [, d] of events) if ((load += d) > capacity) return false;\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Difference array over the kilometres",
+    "idea": "Since positions are at most 1000, record `+p` at `from` and `−p` at `to` in an array; the prefix sum at each point is the load there.",
+    "steps": [
+     "`diff[from] += p`, `diff[to] −= p` for every trip.",
+     "Walk `diff` with a running sum; if it exceeds `capacity`, return false."
+    ],
+    "time": "O(n + K)",
+    "space": "O(K)",
+    "why": "K = 1001 positions; no sorting. At a shared point the drop-off and pickup cancel within the same cell, matching the rules.",
+    "code": {
+     "java": "class Solution {\n    public boolean carPooling(int[][] trips, int capacity) {\n        int[] diff = new int[1001];\n        for (int[] t : trips) {\n            diff[t[1]] += t[0];\n            diff[t[2]] -= t[0];\n        }\n        int load = 0;\n        for (int d : diff)\n            if ((load += d) > capacity) return false;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool carPooling(vector<vector<int>>& trips, int capacity) {\n        int diff[1001] = {};\n        for (auto& t : trips) {\n            diff[t[1]] += t[0];\n            diff[t[2]] -= t[0];\n        }\n        int load = 0;\n        for (int d : diff)\n            if ((load += d) > capacity) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def carPooling(self, trips: List[List[int]], capacity: int) -> bool:\n        diff = [0] * 1001\n        for p, a, b in trips:\n            diff[a] += p\n            diff[b] -= p\n        load = 0\n        for d in diff:\n            load += d\n            if load > capacity:\n                return False\n        return True",
+     "javascript": "var carPooling = function(trips, capacity) {\n    const diff = new Array(1001).fill(0);\n    for (const [p, a, b] of trips) {\n        diff[a] += p;\n        diff[b] -= p;\n    }\n    let load = 0;\n    for (const d of diff) if ((load += d) > capacity) return false;\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "range-sum-query-mutable": {
+  "pattern": "Fenwick tree (binary indexed tree): point update + prefix sum in O(log n)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Plain array",
+    "idea": "Store the array; update writes one cell, and a range sum loops over the range.",
+    "steps": [
+     "`update(i, v)`: `nums[i] = v`.",
+     "`sumRange(l, r)`: add `nums[l..r]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "O(1) updates but O(n) per query, so 10⁵ queries on 10⁵ elements is 10¹⁰ steps.",
+    "code": {
+     "java": "class NumArray {\n    private final int[] nums;\n\n    public NumArray(int[] nums) {\n        this.nums = nums.clone();\n    }\n\n    public void update(int index, int val) {\n        nums[index] = val;\n    }\n\n    public int sumRange(int left, int right) {\n        int sum = 0;\n        for (int i = left; i <= right; i++) sum += nums[i];\n        return sum;\n    }\n}",
+     "cpp": "class NumArray {\n    vector<int> nums;\npublic:\n    NumArray(vector<int>& nums) : nums(nums) {}\n\n    void update(int index, int val) {\n        nums[index] = val;\n    }\n\n    int sumRange(int left, int right) {\n        int sum = 0;\n        for (int i = left; i <= right; i++) sum += nums[i];\n        return sum;\n    }\n};",
+     "python": "class NumArray:\n    def __init__(self, nums: List[int]):\n        self.nums = list(nums)\n\n    def update(self, index: int, val: int) -> None:\n        self.nums[index] = val\n\n    def sumRange(self, left: int, right: int) -> int:\n        return sum(self.nums[left:right + 1])",
+     "javascript": "var NumArray = function(nums) {\n    this.nums = [...nums];\n};\n\nNumArray.prototype.update = function(index, val) {\n    this.nums[index] = val;\n};\n\nNumArray.prototype.sumRange = function(left, right) {\n    let sum = 0;\n    for (let i = left; i <= right; i++) sum += this.nums[i];\n    return sum;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Square-root decomposition",
+    "idea": "Split the array into blocks of about √n elements and keep each block's sum. A query adds whole blocks in the middle and single elements at the two ragged ends.",
+    "steps": [
+     "Block size `b = ⌈√n⌉`; `blocks[k]` = sum of block k.",
+     "`update(i, v)`: adjust `blocks[i / b]` by `v − nums[i]`, then set `nums[i]`.",
+     "`sumRange(l, r)`: while `l ≤ r`, add a whole block when `l` starts one that fits, otherwise add `nums[l]` and step by one."
+    ],
+    "time": "O(√n)",
+    "space": "O(n)",
+    "why": "O(1) updates and O(√n) queries: at most 2√n single elements plus √n blocks.",
+    "code": {
+     "java": "class NumArray {\n    private final int[] nums, blocks;\n    private final int b;\n\n    public NumArray(int[] nums) {\n        this.nums = nums.clone();\n        b = (int) Math.ceil(Math.sqrt(nums.length));\n        blocks = new int[(nums.length + b - 1) / b];\n        for (int i = 0; i < nums.length; i++) blocks[i / b] += nums[i];\n    }\n\n    public void update(int index, int val) {\n        blocks[index / b] += val - nums[index];\n        nums[index] = val;\n    }\n\n    public int sumRange(int left, int right) {\n        int sum = 0;\n        while (left <= right) {\n            if (left % b == 0 && left + b - 1 <= right) {\n                sum += blocks[left / b];\n                left += b;\n            } else {\n                sum += nums[left++];\n            }\n        }\n        return sum;\n    }\n}",
+     "cpp": "class NumArray {\n    vector<int> nums, blocks;\n    int b;\npublic:\n    NumArray(vector<int>& nums) : nums(nums) {\n        b = ceil(sqrt((double) nums.size()));\n        blocks.assign((nums.size() + b - 1) / b, 0);\n        for (size_t i = 0; i < nums.size(); i++) blocks[i / b] += nums[i];\n    }\n\n    void update(int index, int val) {\n        blocks[index / b] += val - nums[index];\n        nums[index] = val;\n    }\n\n    int sumRange(int left, int right) {\n        int sum = 0;\n        while (left <= right) {\n            if (left % b == 0 && left + b - 1 <= right) {\n                sum += blocks[left / b];\n                left += b;\n            } else {\n                sum += nums[left++];\n            }\n        }\n        return sum;\n    }\n};",
+     "python": "class NumArray:\n    def __init__(self, nums: List[int]):\n        self.nums = list(nums)\n        self.b = max(1, isqrt(len(nums) - 1) + 1)\n        self.blocks = [0] * ((len(nums) + self.b - 1) // self.b)\n        for i, x in enumerate(nums):\n            self.blocks[i // self.b] += x\n\n    def update(self, index: int, val: int) -> None:\n        self.blocks[index // self.b] += val - self.nums[index]\n        self.nums[index] = val\n\n    def sumRange(self, left: int, right: int) -> int:\n        total, b = 0, self.b\n        while left <= right:\n            if left % b == 0 and left + b - 1 <= right:\n                total += self.blocks[left // b]\n                left += b\n            else:\n                total += self.nums[left]\n                left += 1\n        return total",
+     "javascript": "var NumArray = function(nums) {\n    this.nums = [...nums];\n    this.b = Math.ceil(Math.sqrt(nums.length));\n    this.blocks = new Array(Math.ceil(nums.length / this.b)).fill(0);\n    nums.forEach((x, i) => (this.blocks[Math.floor(i / this.b)] += x));\n};\n\nNumArray.prototype.update = function(index, val) {\n    this.blocks[Math.floor(index / this.b)] += val - this.nums[index];\n    this.nums[index] = val;\n};\n\nNumArray.prototype.sumRange = function(left, right) {\n    const b = this.b;\n    let sum = 0;\n    while (left <= right) {\n        if (left % b === 0 && left + b - 1 <= right) {\n            sum += this.blocks[left / b];\n            left += b;\n        } else {\n            sum += this.nums[left++];\n        }\n    }\n    return sum;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Fenwick tree",
+    "idea": "A Fenwick tree stores partial sums so that both \"add to one position\" and \"sum of a prefix\" touch only O(log n) cells, by jumping along the lowest set bit (`i & −i`). A range sum is the difference of two prefix sums.",
+    "steps": [
+     "Build: for each `i` (1-based), add `tree[i]` into `tree[i + (i & −i)]` — O(n).",
+     "`update(i, v)`: `delta = v − nums[i]`; for `j = i + 1` while `j ≤ n`: `tree[j] += delta`, `j += j & −j`.",
+     "`prefix(k)`: for `j = k` while `j > 0`: add `tree[j]`, `j −= j & −j`.",
+     "`sumRange(l, r) = prefix(r + 1) − prefix(l)`."
+    ],
+    "time": "O(log n)",
+    "space": "O(n)",
+    "why": "Both operations walk at most log₂ n levels. A segment tree achieves the same bounds with more code.",
+    "code": {
+     "java": "class NumArray {\n    private final int[] nums, tree;\n\n    public NumArray(int[] nums) {\n        int n = nums.length;\n        this.nums = nums.clone();\n        tree = new int[n + 1];\n        for (int i = 1; i <= n; i++) {\n            tree[i] += nums[i - 1];\n            int parent = i + (i & -i);\n            if (parent <= n) tree[parent] += tree[i];\n        }\n    }\n\n    public void update(int index, int val) {\n        int delta = val - nums[index];\n        nums[index] = val;\n        for (int j = index + 1; j < tree.length; j += j & -j) tree[j] += delta;\n    }\n\n    public int sumRange(int left, int right) {\n        return prefix(right + 1) - prefix(left);\n    }\n\n    private int prefix(int k) {\n        int sum = 0;\n        for (int j = k; j > 0; j -= j & -j) sum += tree[j];\n        return sum;\n    }\n}",
+     "cpp": "class NumArray {\n    vector<int> nums, tree;\n    int prefix(int k) {\n        int sum = 0;\n        for (int j = k; j > 0; j -= j & -j) sum += tree[j];\n        return sum;\n    }\npublic:\n    NumArray(vector<int>& nums) : nums(nums), tree(nums.size() + 1, 0) {\n        int n = nums.size();\n        for (int i = 1; i <= n; i++) {\n            tree[i] += nums[i - 1];\n            int parent = i + (i & -i);\n            if (parent <= n) tree[parent] += tree[i];\n        }\n    }\n\n    void update(int index, int val) {\n        int delta = val - nums[index];\n        nums[index] = val;\n        for (int j = index + 1; j < (int) tree.size(); j += j & -j) tree[j] += delta;\n    }\n\n    int sumRange(int left, int right) {\n        return prefix(right + 1) - prefix(left);\n    }\n};",
+     "python": "class NumArray:\n    def __init__(self, nums: List[int]):\n        n = len(nums)\n        self.nums = list(nums)\n        self.tree = [0] * (n + 1)\n        for i in range(1, n + 1):\n            self.tree[i] += nums[i - 1]\n            parent = i + (i & -i)\n            if parent <= n:\n                self.tree[parent] += self.tree[i]\n\n    def update(self, index: int, val: int) -> None:\n        delta = val - self.nums[index]\n        self.nums[index] = val\n        j = index + 1\n        while j < len(self.tree):\n            self.tree[j] += delta\n            j += j & -j\n\n    def _prefix(self, k: int) -> int:\n        total = 0\n        while k > 0:\n            total += self.tree[k]\n            k -= k & -k\n        return total\n\n    def sumRange(self, left: int, right: int) -> int:\n        return self._prefix(right + 1) - self._prefix(left)",
+     "javascript": "var NumArray = function(nums) {\n    const n = nums.length;\n    this.nums = [...nums];\n    this.tree = new Array(n + 1).fill(0);\n    for (let i = 1; i <= n; i++) {\n        this.tree[i] += nums[i - 1];\n        const parent = i + (i & -i);\n        if (parent <= n) this.tree[parent] += this.tree[i];\n    }\n};\n\nNumArray.prototype.update = function(index, val) {\n    const delta = val - this.nums[index];\n    this.nums[index] = val;\n    for (let j = index + 1; j < this.tree.length; j += j & -j) this.tree[j] += delta;\n};\n\nNumArray.prototype.prefix = function(k) {\n    let sum = 0;\n    for (let j = k; j > 0; j -= j & -j) sum += this.tree[j];\n    return sum;\n};\n\nNumArray.prototype.sumRange = function(left, right) {\n    return this.prefix(right + 1) - this.prefix(left);\n};"
+    }
+   }
+  ]
+ },
+ "count-of-smaller-numbers-after-self": {
+  "pattern": "Scan from the right with a Fenwick tree over values (or merge-sort counting)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count to the right of each element",
+    "idea": "For each element, scan everything after it and count the smaller values.",
+    "steps": [
+     "For each `i`, count `j > i` with `nums[j] < nums[i]`.",
+     "Store the count in `result[i]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About n²/2 comparisons — 5·10⁹ for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> countSmaller(int[] nums) {\n        List<Integer> result = new ArrayList<>();\n        for (int i = 0; i < nums.length; i++) {\n            int count = 0;\n            for (int j = i + 1; j < nums.length; j++) if (nums[j] < nums[i]) count++;\n            result.add(count);\n        }\n        return result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> countSmaller(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> result(n, 0);\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) if (nums[j] < nums[i]) result[i]++;\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def countSmaller(self, nums: List[int]) -> List[int]:\n        return [sum(nums[j] < x for j in range(i + 1, len(nums))) for i, x in enumerate(nums)]",
+     "javascript": "var countSmaller = function(nums) {\n    const n = nums.length, result = new Array(n).fill(0);\n    for (let i = 0; i < n; i++)\n        for (let j = i + 1; j < n; j++) if (nums[j] < nums[i]) result[i]++;\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sorted list built from the right",
+    "idea": "Walk from right to left keeping the values seen so far in sorted order. The number of smaller values to the right is the insertion position of the current value, found by binary search.",
+    "steps": [
+     "For `i` from n − 1 down to 0: `pos` = first index in `sorted` with value ≥ `nums[i]`.",
+     "`result[i] = pos`; insert `nums[i]` at `pos`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "The binary search is O(log n) but inserting into an array shifts up to n elements. It is fast in practice (a memory move), yet the worst case stays quadratic.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> countSmaller(int[] nums) {\n        int n = nums.length;\n        Integer[] result = new Integer[n];\n        List<Integer> sorted = new ArrayList<>();\n        for (int i = n - 1; i >= 0; i--) {\n            int lo = 0, hi = sorted.size();\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (sorted.get(mid) < nums[i]) lo = mid + 1;\n                else hi = mid;\n            }\n            result[i] = lo;\n            sorted.add(lo, nums[i]);\n        }\n        return Arrays.asList(result);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> countSmaller(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> result(n), sorted;\n        for (int i = n - 1; i >= 0; i--) {\n            auto it = lower_bound(sorted.begin(), sorted.end(), nums[i]);\n            result[i] = it - sorted.begin();\n            sorted.insert(it, nums[i]);\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def countSmaller(self, nums: List[int]) -> List[int]:\n        result, seen = [0] * len(nums), []\n        for i in range(len(nums) - 1, -1, -1):\n            pos = bisect_left(seen, nums[i])\n            result[i] = pos\n            seen.insert(pos, nums[i])\n        return result",
+     "javascript": "var countSmaller = function(nums) {\n    const n = nums.length, result = new Array(n), sorted = [];\n    for (let i = n - 1; i >= 0; i--) {\n        let lo = 0, hi = sorted.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (sorted[mid] < nums[i]) lo = mid + 1;\n            else hi = mid;\n        }\n        result[i] = lo;\n        sorted.splice(lo, 0, nums[i]);\n    }\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Fenwick tree over values, scanning from the right",
+    "idea": "Shift values into 1..20001 (they lie in −10⁴..10⁴). Walking right to left, the Fenwick tree holds counts of values already seen; the answer for `nums[i]` is the prefix count of strictly smaller values.",
+    "steps": [
+     "`OFFSET = 10001`, so `v = nums[i] + OFFSET` is in `[1, 20001]`.",
+     "For `i` from n − 1 down to 0: `result[i] = prefix(v − 1)`; then `add(v, 1)`."
+    ],
+    "time": "O(n log V)",
+    "space": "O(V)",
+    "why": "V = 20001 possible values, so each step is about 15 tree hops. For unbounded values, compress coordinates first; merge sort that counts right-half elements overtaking each left element also gives O(n log n).",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> countSmaller(int[] nums) {\n        final int OFFSET = 10001, SIZE = 20002;\n        int[] tree = new int[SIZE + 1];\n        Integer[] result = new Integer[nums.length];\n        for (int i = nums.length - 1; i >= 0; i--) {\n            int v = nums[i] + OFFSET, count = 0;\n            for (int j = v - 1; j > 0; j -= j & -j) count += tree[j];\n            result[i] = count;\n            for (int j = v; j <= SIZE; j += j & -j) tree[j]++;\n        }\n        return Arrays.asList(result);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> countSmaller(vector<int>& nums) {\n        const int OFFSET = 10001, SIZE = 20002;\n        vector<int> tree(SIZE + 1, 0), result(nums.size());\n        for (int i = nums.size() - 1; i >= 0; i--) {\n            int v = nums[i] + OFFSET, count = 0;\n            for (int j = v - 1; j > 0; j -= j & -j) count += tree[j];\n            result[i] = count;\n            for (int j = v; j <= SIZE; j += j & -j) tree[j]++;\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def countSmaller(self, nums: List[int]) -> List[int]:\n        OFFSET, SIZE = 10001, 20002\n        tree, result = [0] * (SIZE + 1), [0] * len(nums)\n        for i in range(len(nums) - 1, -1, -1):\n            v = nums[i] + OFFSET\n            j, count = v - 1, 0\n            while j > 0:\n                count += tree[j]\n                j -= j & -j\n            result[i] = count\n            j = v\n            while j <= SIZE:\n                tree[j] += 1\n                j += j & -j\n        return result",
+     "javascript": "var countSmaller = function(nums) {\n    const OFFSET = 10001, SIZE = 20002, tree = new Int32Array(SIZE + 1), result = new Array(nums.length);\n    for (let i = nums.length - 1; i >= 0; i--) {\n        const v = nums[i] + OFFSET;\n        let count = 0;\n        for (let j = v - 1; j > 0; j -= j & -j) count += tree[j];\n        result[i] = count;\n        for (let j = v; j <= SIZE; j += j & -j) tree[j]++;\n    }\n    return result;\n};"
+    }
+   }
+  ]
+ },
+ "reverse-pairs": {
+  "pattern": "Merge-sort counting: count cross pairs between two sorted halves with a moving pointer",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check every pair",
+    "idea": "Test `nums[i] > 2·nums[j]` for every `i < j`, in 64-bit arithmetic.",
+    "steps": [
+     "For every `i < j`: if `nums[i] > 2·nums[j]` (as a 64-bit value), count it.",
+     "Return the count."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About 1.25·10⁹ pairs for n = 5·10⁴.",
+    "code": {
+     "java": "class Solution {\n    public int reversePairs(int[] nums) {\n        int count = 0;\n        for (int i = 0; i < nums.length; i++)\n            for (int j = i + 1; j < nums.length; j++)\n                if (nums[i] > 2L * nums[j]) count++;\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int reversePairs(vector<int>& nums) {\n        int count = 0, n = nums.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                if (nums[i] > 2LL * nums[j]) count++;\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def reversePairs(self, nums: List[int]) -> int:\n        n = len(nums)\n        return sum(nums[i] > 2 * nums[j] for i in range(n) for j in range(i + 1, n))",
+     "javascript": "var reversePairs = function(nums) {\n    let count = 0;\n    for (let i = 0; i < nums.length; i++)\n        for (let j = i + 1; j < nums.length; j++)\n            if (nums[i] > 2 * nums[j]) count++;\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sorted list of earlier values + binary search",
+    "idea": "Walk left to right keeping earlier values sorted. For `nums[j]`, the earlier values greater than `2·nums[j]` are everything after its upper bound.",
+    "steps": [
+     "For each `j`: `count += size − upperBound(sorted, 2·nums[j])`.",
+     "Insert `nums[j]` at its sorted position."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Searches are O(log n), but each array insertion can shift O(n) elements.",
+    "code": {
+     "java": "class Solution {\n    public int reversePairs(int[] nums) {\n        List<Integer> sorted = new ArrayList<>();\n        int count = 0;\n        for (int x : nums) {\n            long limit = 2L * x;\n            int lo = 0, hi = sorted.size();\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (sorted.get(mid) <= limit) lo = mid + 1;\n                else hi = mid;\n            }\n            count += sorted.size() - lo;\n            lo = 0;\n            hi = sorted.size();\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (sorted.get(mid) < x) lo = mid + 1;\n                else hi = mid;\n            }\n            sorted.add(lo, x);\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int reversePairs(vector<int>& nums) {\n        vector<long long> sorted;\n        int count = 0;\n        for (int x : nums) {\n            count += sorted.end() - upper_bound(sorted.begin(), sorted.end(), 2LL * x);\n            sorted.insert(lower_bound(sorted.begin(), sorted.end(), (long long) x), x);\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def reversePairs(self, nums: List[int]) -> int:\n        seen, count = [], 0\n        for x in nums:\n            count += len(seen) - bisect_right(seen, 2 * x)\n            insort(seen, x)\n        return count",
+     "javascript": "var reversePairs = function(nums) {\n    const sorted = [];\n    const firstAbove = (limit, strict) => {\n        let lo = 0, hi = sorted.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (strict ? sorted[mid] <= limit : sorted[mid] < limit) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    };\n    let count = 0;\n    for (const x of nums) {\n        count += sorted.length - firstAbove(2 * x, true);\n        sorted.splice(firstAbove(x, false), 0, x);\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Merge sort with a counting pass",
+    "idea": "Sort recursively. Before merging two sorted halves, count pairs with `i` in the left half and `j` in the right: as `nums[i]` grows, the set of `j` with `nums[i] > 2·nums[j]` only grows, so one forward pointer counts them all.",
+    "steps": [
+     "Recursively sort and count each half.",
+     "For each `i` in the left half, advance `j` in the right half while `nums[i] > 2·nums[j]`; add `j − (mid + 1)`.",
+     "Merge the two halves as usual."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Each level does a linear count plus a linear merge, over log n levels. `2L·nums[j]` (64-bit) avoids overflow at the int extremes.",
+    "code": {
+     "java": "class Solution {\n    public int reversePairs(int[] nums) {\n        int[] a = nums.clone();\n        return (int) sort(a, 0, a.length - 1, new int[a.length]);\n    }\n\n    private long sort(int[] a, int lo, int hi, int[] tmp) {\n        if (lo >= hi) return 0;\n        int mid = (lo + hi) >>> 1;\n        long count = sort(a, lo, mid, tmp) + sort(a, mid + 1, hi, tmp);\n        for (int i = lo, j = mid + 1; i <= mid; i++) {\n            while (j <= hi && a[i] > 2L * a[j]) j++;\n            count += j - (mid + 1);\n        }\n        int i = lo, j = mid + 1, k = lo;\n        while (i <= mid && j <= hi) tmp[k++] = a[i] <= a[j] ? a[i++] : a[j++];\n        while (i <= mid) tmp[k++] = a[i++];\n        while (j <= hi) tmp[k++] = a[j++];\n        System.arraycopy(tmp, lo, a, lo, hi - lo + 1);\n        return count;\n    }\n}",
+     "cpp": "class Solution {\n    long long sort(vector<int>& a, int lo, int hi, vector<int>& tmp) {\n        if (lo >= hi) return 0;\n        int mid = (lo + hi) / 2;\n        long long count = sort(a, lo, mid, tmp) + sort(a, mid + 1, hi, tmp);\n        for (int i = lo, j = mid + 1; i <= mid; i++) {\n            while (j <= hi && a[i] > 2LL * a[j]) j++;\n            count += j - (mid + 1);\n        }\n        merge(a.begin() + lo, a.begin() + mid + 1, a.begin() + mid + 1, a.begin() + hi + 1, tmp.begin() + lo);\n        copy(tmp.begin() + lo, tmp.begin() + hi + 1, a.begin() + lo);\n        return count;\n    }\npublic:\n    int reversePairs(vector<int>& nums) {\n        vector<int> a = nums, tmp(nums.size());\n        return sort(a, 0, (int) a.size() - 1, tmp);\n    }\n};",
+     "python": "class Solution:\n    def reversePairs(self, nums: List[int]) -> int:\n        def sort(a):\n            if len(a) <= 1:\n                return a, 0\n            mid = len(a) // 2\n            left, c1 = sort(a[:mid])\n            right, c2 = sort(a[mid:])\n            count, j = c1 + c2, 0\n            for x in left:\n                while j < len(right) and x > 2 * right[j]:\n                    j += 1\n                count += j\n            merged, i, j = [], 0, 0\n            while i < len(left) and j < len(right):\n                if left[i] <= right[j]:\n                    merged.append(left[i])\n                    i += 1\n                else:\n                    merged.append(right[j])\n                    j += 1\n            merged.extend(left[i:])\n            merged.extend(right[j:])\n            return merged, count\n        return sort(nums)[1]",
+     "javascript": "var reversePairs = function(nums) {\n    const a = [...nums], tmp = new Array(a.length);\n    const sort = (lo, hi) => {\n        if (lo >= hi) return 0;\n        const mid = (lo + hi) >> 1;\n        let count = sort(lo, mid) + sort(mid + 1, hi);\n        for (let i = lo, j = mid + 1; i <= mid; i++) {\n            while (j <= hi && a[i] > 2 * a[j]) j++;\n            count += j - (mid + 1);\n        }\n        let i = lo, j = mid + 1, k = lo;\n        while (i <= mid && j <= hi) tmp[k++] = a[i] <= a[j] ? a[i++] : a[j++];\n        while (i <= mid) tmp[k++] = a[i++];\n        while (j <= hi) tmp[k++] = a[j++];\n        for (let t = lo; t <= hi; t++) a[t] = tmp[t];\n        return count;\n    };\n    return sort(0, a.length - 1);\n};"
+    }
+   }
+  ]
+ },
+ "count-of-range-sum": {
+  "pattern": "Prefix sums + merge-sort counting of pairs whose difference lies in [lower, upper]",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sum every subarray",
+    "idea": "Fix the start, extend the end one element at a time keeping a running 64-bit sum, and count sums inside the range.",
+    "steps": [
+     "For each `i`: `sum = 0`; for each `j ≥ i`: `sum += nums[j]`; count it if `lower ≤ sum ≤ upper`.",
+     "Return the count."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n(n + 1)/2 subarrays, O(1) each.",
+    "code": {
+     "java": "class Solution {\n    public int countRangeSum(int[] nums, int lower, int upper) {\n        long count = 0;\n        for (int i = 0; i < nums.length; i++) {\n            long sum = 0;\n            for (int j = i; j < nums.length; j++) {\n                sum += nums[j];\n                if (sum >= lower && sum <= upper) count++;\n            }\n        }\n        return (int) count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countRangeSum(vector<int>& nums, int lower, int upper) {\n        long long count = 0;\n        for (size_t i = 0; i < nums.size(); i++) {\n            long long sum = 0;\n            for (size_t j = i; j < nums.size(); j++) {\n                sum += nums[j];\n                if (sum >= lower && sum <= upper) count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countRangeSum(self, nums: List[int], lower: int, upper: int) -> int:\n        count = 0\n        for i in range(len(nums)):\n            total = 0\n            for j in range(i, len(nums)):\n                total += nums[j]\n                if lower <= total <= upper:\n                    count += 1\n        return count",
+     "javascript": "var countRangeSum = function(nums, lower, upper) {\n    let count = 0;\n    for (let i = 0; i < nums.length; i++) {\n        let sum = 0;\n        for (let j = i; j < nums.length; j++) {\n            sum += nums[j];\n            if (sum >= lower && sum <= upper) count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sorted prefix sums + binary search",
+    "idea": "With prefix sums `P`, a subarray `(i, j]` qualifies when `P[j] − upper ≤ P[i] ≤ P[j] − lower`. Keep earlier prefix sums sorted and count that window with two binary searches.",
+    "steps": [
+     "Start with `sorted = [0]` (the empty prefix).",
+     "For each new prefix sum `p`: count values in `[p − upper, p − lower]` via lower/upper bounds.",
+     "Insert `p` at its sorted position."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Counting is O(log n), but array insertion shifts up to n elements; a balanced tree with subtree sizes would make this O(n log n).",
+    "code": {
+     "java": "class Solution {\n    public int countRangeSum(int[] nums, int lower, int upper) {\n        List<Long> sorted = new ArrayList<>();\n        sorted.add(0L);\n        long p = 0, count = 0;\n        for (int x : nums) {\n            p += x;\n            count += firstAtLeast(sorted, p - lower + 1) - firstAtLeast(sorted, p - upper);\n            sorted.add(firstAtLeast(sorted, p), p);\n        }\n        return (int) count;\n    }\n\n    private int firstAtLeast(List<Long> a, long v) {\n        int lo = 0, hi = a.size();\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (a.get(mid) < v) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countRangeSum(vector<int>& nums, int lower, int upper) {\n        vector<long long> sorted{0};\n        long long p = 0, count = 0;\n        for (int x : nums) {\n            p += x;\n            count += upper_bound(sorted.begin(), sorted.end(), p - lower) - lower_bound(sorted.begin(), sorted.end(), p - upper);\n            sorted.insert(lower_bound(sorted.begin(), sorted.end(), p), p);\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countRangeSum(self, nums: List[int], lower: int, upper: int) -> int:\n        seen, p, count = [0], 0, 0\n        for x in nums:\n            p += x\n            count += bisect_right(seen, p - lower) - bisect_left(seen, p - upper)\n            insort(seen, p)\n        return count",
+     "javascript": "var countRangeSum = function(nums, lower, upper) {\n    const sorted = [0];\n    const firstAtLeast = (v) => {\n        let lo = 0, hi = sorted.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (sorted[mid] < v) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    };\n    let p = 0, count = 0;\n    for (const x of nums) {\n        p += x;\n        count += firstAtLeast(p - lower + 1) - firstAtLeast(p - upper);\n        sorted.splice(firstAtLeast(p), 0, p);\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Merge sort over prefix sums",
+    "idea": "Merge sort the prefix-sum array. Before merging two sorted halves, for each left value `P[i]` find the window of right values with `lower ≤ P[j] − P[i] ≤ upper`. Both window edges only move forward as `P[i]` grows.",
+    "steps": [
+     "Build `P[0..n]` with `P[0] = 0` (64-bit).",
+     "In each merge step, for each `i` in the left half: advance `lo` while `P[lo] − P[i] < lower`, advance `hi` while `P[hi] − P[i] ≤ upper`; add `hi − lo`.",
+     "Merge the halves and return the total."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Linear work per level over log n levels. Prefix sums reach ±2·10¹⁴, so they need 64-bit integers (JavaScript doubles are exact up to 2⁵³).",
+    "code": {
+     "java": "class Solution {\n    private int lower, upper;\n\n    public int countRangeSum(int[] nums, int lower, int upper) {\n        this.lower = lower;\n        this.upper = upper;\n        int n = nums.length;\n        long[] p = new long[n + 1];\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        return (int) sort(p, 0, n, new long[n + 1]);\n    }\n\n    private long sort(long[] p, int lo, int hi, long[] tmp) {\n        if (lo >= hi) return 0;\n        int mid = (lo + hi) >>> 1;\n        long count = sort(p, lo, mid, tmp) + sort(p, mid + 1, hi, tmp);\n        for (int i = lo, a = mid + 1, b = mid + 1; i <= mid; i++) {\n            while (a <= hi && p[a] - p[i] < lower) a++;\n            while (b <= hi && p[b] - p[i] <= upper) b++;\n            count += b - a;\n        }\n        int i = lo, j = mid + 1, k = lo;\n        while (i <= mid && j <= hi) tmp[k++] = p[i] <= p[j] ? p[i++] : p[j++];\n        while (i <= mid) tmp[k++] = p[i++];\n        while (j <= hi) tmp[k++] = p[j++];\n        System.arraycopy(tmp, lo, p, lo, hi - lo + 1);\n        return count;\n    }\n}",
+     "cpp": "class Solution {\n    long long sort(vector<long long>& p, int lo, int hi, vector<long long>& tmp, int lower, int upper) {\n        if (lo >= hi) return 0;\n        int mid = (lo + hi) / 2;\n        long long count = sort(p, lo, mid, tmp, lower, upper) + sort(p, mid + 1, hi, tmp, lower, upper);\n        for (int i = lo, a = mid + 1, b = mid + 1; i <= mid; i++) {\n            while (a <= hi && p[a] - p[i] < lower) a++;\n            while (b <= hi && p[b] - p[i] <= upper) b++;\n            count += b - a;\n        }\n        merge(p.begin() + lo, p.begin() + mid + 1, p.begin() + mid + 1, p.begin() + hi + 1, tmp.begin() + lo);\n        copy(tmp.begin() + lo, tmp.begin() + hi + 1, p.begin() + lo);\n        return count;\n    }\npublic:\n    int countRangeSum(vector<int>& nums, int lower, int upper) {\n        int n = nums.size();\n        vector<long long> p(n + 1, 0), tmp(n + 1);\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        return sort(p, 0, n, tmp, lower, upper);\n    }\n};",
+     "python": "class Solution:\n    def countRangeSum(self, nums: List[int], lower: int, upper: int) -> int:\n        prefix = [0]\n        for x in nums:\n            prefix.append(prefix[-1] + x)\n        def sort(a):\n            if len(a) <= 1:\n                return a, 0\n            mid = len(a) // 2\n            left, c1 = sort(a[:mid])\n            right, c2 = sort(a[mid:])\n            count, lo, hi = c1 + c2, 0, 0\n            for v in left:\n                while lo < len(right) and right[lo] - v < lower:\n                    lo += 1\n                while hi < len(right) and right[hi] - v <= upper:\n                    hi += 1\n                count += hi - lo\n            merged, i, j = [], 0, 0\n            while i < len(left) and j < len(right):\n                if left[i] <= right[j]:\n                    merged.append(left[i])\n                    i += 1\n                else:\n                    merged.append(right[j])\n                    j += 1\n            merged.extend(left[i:])\n            merged.extend(right[j:])\n            return merged, count\n        return sort(prefix)[1]",
+     "javascript": "var countRangeSum = function(nums, lower, upper) {\n    const n = nums.length, p = new Array(n + 1).fill(0), tmp = new Array(n + 1);\n    for (let i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n    const sort = (lo, hi) => {\n        if (lo >= hi) return 0;\n        const mid = (lo + hi) >> 1;\n        let count = sort(lo, mid) + sort(mid + 1, hi);\n        for (let i = lo, a = mid + 1, b = mid + 1; i <= mid; i++) {\n            while (a <= hi && p[a] - p[i] < lower) a++;\n            while (b <= hi && p[b] - p[i] <= upper) b++;\n            count += b - a;\n        }\n        let i = lo, j = mid + 1, k = lo;\n        while (i <= mid && j <= hi) tmp[k++] = p[i] <= p[j] ? p[i++] : p[j++];\n        while (i <= mid) tmp[k++] = p[i++];\n        while (j <= hi) tmp[k++] = p[j++];\n        for (let t = lo; t <= hi; t++) p[t] = tmp[t];\n        return count;\n    };\n    return sort(0, n);\n};"
+    }
+   }
+  ]
+ },
+ "create-sorted-array-through-instructions": {
+  "pattern": "Fenwick tree over values: count strictly less and strictly greater in O(log V)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count by scanning every earlier value",
+    "idea": "For each insertion, scan all values inserted so far and count those strictly less and strictly greater.",
+    "steps": [
+     "For each `i`, count `j < i` with `instructions[j] < x` and with `instructions[j] > x`.",
+     "Add the smaller count to the total (mod 10⁹ + 7)."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About n²/2 comparisons — 5·10⁹ for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int createSortedArray(int[] instructions) {\n        long cost = 0;\n        for (int i = 0; i < instructions.length; i++) {\n            int less = 0, greater = 0;\n            for (int j = 0; j < i; j++) {\n                if (instructions[j] < instructions[i]) less++;\n                else if (instructions[j] > instructions[i]) greater++;\n            }\n            cost += Math.min(less, greater);\n        }\n        return (int) (cost % 1_000_000_007);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int createSortedArray(vector<int>& instructions) {\n        long long cost = 0;\n        for (size_t i = 0; i < instructions.size(); i++) {\n            int less = 0, greater = 0;\n            for (size_t j = 0; j < i; j++) {\n                if (instructions[j] < instructions[i]) less++;\n                else if (instructions[j] > instructions[i]) greater++;\n            }\n            cost += min(less, greater);\n        }\n        return cost % 1'000'000'007;\n    }\n};",
+     "python": "class Solution:\n    def createSortedArray(self, instructions: List[int]) -> int:\n        cost = 0\n        for i, x in enumerate(instructions):\n            less = sum(y < x for y in instructions[:i])\n            greater = sum(y > x for y in instructions[:i])\n            cost += min(less, greater)\n        return cost % (10**9 + 7)",
+     "javascript": "var createSortedArray = function(instructions) {\n    let cost = 0;\n    for (let i = 0; i < instructions.length; i++) {\n        let less = 0, greater = 0;\n        for (let j = 0; j < i; j++) {\n            if (instructions[j] < instructions[i]) less++;\n            else if (instructions[j] > instructions[i]) greater++;\n        }\n        cost += Math.min(less, greater);\n    }\n    return cost % 1000000007;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Keep the container sorted, binary search",
+    "idea": "Actually maintain the sorted container. Lower bound gives the count of strictly smaller values; size minus upper bound gives the strictly greater ones.",
+    "steps": [
+     "For each `x`: `less = lowerBound(x)`, `greater = size − upperBound(x)`.",
+     "Add `min(less, greater)`; insert `x` at `lowerBound(x)`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Searches are O(log n) but array insertion can shift O(n) elements each time.",
+    "code": {
+     "java": "class Solution {\n    public int createSortedArray(int[] instructions) {\n        List<Integer> sorted = new ArrayList<>();\n        long cost = 0;\n        for (int x : instructions) {\n            int less = firstAtLeast(sorted, x), greater = sorted.size() - firstAtLeast(sorted, x + 1);\n            cost += Math.min(less, greater);\n            sorted.add(less, x);\n        }\n        return (int) (cost % 1_000_000_007);\n    }\n\n    private int firstAtLeast(List<Integer> a, int v) {\n        int lo = 0, hi = a.size();\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (a.get(mid) < v) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int createSortedArray(vector<int>& instructions) {\n        vector<int> sorted;\n        long long cost = 0;\n        for (int x : instructions) {\n            auto lo = lower_bound(sorted.begin(), sorted.end(), x);\n            long long less = lo - sorted.begin();\n            long long greater = sorted.end() - upper_bound(sorted.begin(), sorted.end(), x);\n            cost += min(less, greater);\n            sorted.insert(lo, x);\n        }\n        return cost % 1'000'000'007;\n    }\n};",
+     "python": "class Solution:\n    def createSortedArray(self, instructions: List[int]) -> int:\n        seen, cost = [], 0\n        for x in instructions:\n            less = bisect_left(seen, x)\n            greater = len(seen) - bisect_right(seen, x)\n            cost += min(less, greater)\n            seen.insert(less, x)\n        return cost % (10**9 + 7)",
+     "javascript": "var createSortedArray = function(instructions) {\n    const sorted = [];\n    const firstAtLeast = (v) => {\n        let lo = 0, hi = sorted.length;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (sorted[mid] < v) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo;\n    };\n    let cost = 0;\n    for (const x of instructions) {\n        const less = firstAtLeast(x), greater = sorted.length - firstAtLeast(x + 1);\n        cost += Math.min(less, greater);\n        sorted.splice(less, 0, x);\n    }\n    return cost % 1000000007;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Fenwick tree of value counts",
+    "idea": "Values are at most 10⁵, so keep a Fenwick tree of how many times each value has been inserted. Before inserting the i-th value `x`: `less = prefix(x − 1)` and `greater = i − prefix(x)`.",
+    "steps": [
+     "Tree over values 1..max.",
+     "For the i-th value `x` (0-based count `i` already inserted): `less = prefix(x − 1)`, `greater = i − prefix(x)`.",
+     "Add `min(less, greater)` to the total mod 10⁹ + 7; then `add(x, 1)`."
+    ],
+    "time": "O(n log V)",
+    "space": "O(V)",
+    "why": "Two prefix queries and one update per value, each about 17 hops for V = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int createSortedArray(int[] instructions) {\n        int max = 0;\n        for (int x : instructions) max = Math.max(max, x);\n        int[] tree = new int[max + 1];\n        long cost = 0;\n        for (int i = 0; i < instructions.length; i++) {\n            int x = instructions[i];\n            int less = prefix(tree, x - 1), greater = i - prefix(tree, x);\n            cost = (cost + Math.min(less, greater)) % 1_000_000_007;\n            for (int j = x; j <= max; j += j & -j) tree[j]++;\n        }\n        return (int) cost;\n    }\n\n    private int prefix(int[] tree, int k) {\n        int sum = 0;\n        for (int j = k; j > 0; j -= j & -j) sum += tree[j];\n        return sum;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> tree;\n    int prefix(int k) {\n        int sum = 0;\n        for (int j = k; j > 0; j -= j & -j) sum += tree[j];\n        return sum;\n    }\npublic:\n    int createSortedArray(vector<int>& instructions) {\n        int mx = *max_element(instructions.begin(), instructions.end());\n        tree.assign(mx + 1, 0);\n        long long cost = 0;\n        for (int i = 0; i < (int) instructions.size(); i++) {\n            int x = instructions[i];\n            int less = prefix(x - 1), greater = i - prefix(x);\n            cost = (cost + min(less, greater)) % 1'000'000'007;\n            for (int j = x; j <= mx; j += j & -j) tree[j]++;\n        }\n        return cost;\n    }\n};",
+     "python": "class Solution:\n    def createSortedArray(self, instructions: List[int]) -> int:\n        mx = max(instructions)\n        tree = [0] * (mx + 1)\n        def prefix(k):\n            total = 0\n            while k > 0:\n                total += tree[k]\n                k -= k & -k\n            return total\n        cost = 0\n        for i, x in enumerate(instructions):\n            cost += min(prefix(x - 1), i - prefix(x))\n            j = x\n            while j <= mx:\n                tree[j] += 1\n                j += j & -j\n        return cost % (10**9 + 7)",
+     "javascript": "var createSortedArray = function(instructions) {\n    const mx = Math.max(...instructions), tree = new Int32Array(mx + 1);\n    const prefix = (k) => {\n        let sum = 0;\n        for (let j = k; j > 0; j -= j & -j) sum += tree[j];\n        return sum;\n    };\n    let cost = 0;\n    for (let i = 0; i < instructions.length; i++) {\n        const x = instructions[i];\n        cost = (cost + Math.min(prefix(x - 1), i - prefix(x))) % 1000000007;\n        for (let j = x; j <= mx; j += j & -j) tree[j]++;\n    }\n    return cost;\n};"
+    }
+   }
+  ]
+ },
+ "falling-squares": {
+  "pattern": "Interval max + assign: brute-force overlap checks, or a segment tree over compressed coordinates",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare with every landed square",
+    "idea": "A new square `[left, left + side)` rests on the tallest earlier square it overlaps (touching edges do not count). Its top is that height plus `side`.",
+    "steps": [
+     "Keep each landed square as `(left, right, top)`.",
+     "For a new square, `base` = the max `top` over earlier squares with `l < right` and `left < r`.",
+     "Its top is `base + side`; append it and record the running maximum."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each square checks all earlier ones; with n ≤ 1000 that is only 5·10⁵ checks, so this is the common interview answer.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> fallingSquares(int[][] positions) {\n        List<int[]> landed = new ArrayList<>();\n        List<Integer> result = new ArrayList<>();\n        int best = 0;\n        for (int[] p : positions) {\n            int left = p[0], right = p[0] + p[1], base = 0;\n            for (int[] s : landed)\n                if (s[0] < right && left < s[1]) base = Math.max(base, s[2]);\n            int top = base + p[1];\n            landed.add(new int[] { left, right, top });\n            best = Math.max(best, top);\n            result.add(best);\n        }\n        return result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> fallingSquares(vector<vector<int>>& positions) {\n        vector<array<int, 3>> landed; // left, right, top\n        vector<int> result;\n        int best = 0;\n        for (auto& p : positions) {\n            int left = p[0], right = p[0] + p[1], base = 0;\n            for (auto& s : landed)\n                if (s[0] < right && left < s[1]) base = max(base, s[2]);\n            int top = base + p[1];\n            landed.push_back({left, right, top});\n            best = max(best, top);\n            result.push_back(best);\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def fallingSquares(self, positions: List[List[int]]) -> List[int]:\n        landed, result, best = [], [], 0\n        for left, side in positions:\n            right = left + side\n            base = max((top for l, r, top in landed if l < right and left < r), default=0)\n            landed.append((left, right, base + side))\n            best = max(best, base + side)\n            result.append(best)\n        return result",
+     "javascript": "var fallingSquares = function(positions) {\n    const landed = [], result = [];\n    let best = 0;\n    for (const [left, side] of positions) {\n        const right = left + side;\n        let base = 0;\n        for (const [l, r, top] of landed) if (l < right && left < r) base = Math.max(base, top);\n        landed.push([left, right, base + side]);\n        best = Math.max(best, base + side);\n        result.push(best);\n    }\n    return result;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Segment tree over compressed coordinates",
+    "idea": "Compress all square edges to indices; cell `k` stands for `[xs[k], xs[k + 1])`. Each drop is a range-max query over its cells followed by raising those cells to `max + side`. Because the new height exceeds everything in the range, \"assign\" is the same as \"raise to at least\", which a lazy max-tag handles.",
+    "steps": [
+     "Collect every `left` and `left + side`, sort and deduplicate into `xs`; there are `xs.length − 1` cells.",
+     "For a square, its cells are `[index(left), index(left + side) − 1]`.",
+     "`h = queryMax(cells) + side`; `chmax(cells, h)` with lazy propagation.",
+     "Record the running maximum of `h`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Each query and update touches O(log n) nodes of a tree over at most 2n coordinates. Using half-open cells makes squares that only touch at an edge share no cell.",
+    "code": {
+     "java": "class Solution {\n    private int[] mx, lazy;\n\n    public List<Integer> fallingSquares(int[][] positions) {\n        TreeSet<Integer> set = new TreeSet<>();\n        for (int[] p : positions) { set.add(p[0]); set.add(p[0] + p[1]); }\n        int[] xs = set.stream().mapToInt(Integer::intValue).toArray();\n        int cells = xs.length - 1;\n        mx = new int[4 * cells];\n        lazy = new int[4 * cells];\n        List<Integer> result = new ArrayList<>();\n        int best = 0;\n        for (int[] p : positions) {\n            int a = Arrays.binarySearch(xs, p[0]), b = Arrays.binarySearch(xs, p[0] + p[1]) - 1;\n            int h = query(1, 0, cells - 1, a, b) + p[1];\n            raise(1, 0, cells - 1, a, b, h);\n            best = Math.max(best, h);\n            result.add(best);\n        }\n        return result;\n    }\n\n    private void push(int node) {\n        for (int c = 2 * node; c <= 2 * node + 1; c++) {\n            mx[c] = Math.max(mx[c], lazy[node]);\n            lazy[c] = Math.max(lazy[c], lazy[node]);\n        }\n        lazy[node] = 0;\n    }\n\n    private int query(int node, int lo, int hi, int a, int b) {\n        if (b < lo || hi < a) return 0;\n        if (a <= lo && hi <= b) return mx[node];\n        push(node);\n        int mid = (lo + hi) / 2;\n        return Math.max(query(2 * node, lo, mid, a, b), query(2 * node + 1, mid + 1, hi, a, b));\n    }\n\n    private void raise(int node, int lo, int hi, int a, int b, int v) {\n        if (b < lo || hi < a) return;\n        if (a <= lo && hi <= b) {\n            mx[node] = Math.max(mx[node], v);\n            lazy[node] = Math.max(lazy[node], v);\n            return;\n        }\n        push(node);\n        int mid = (lo + hi) / 2;\n        raise(2 * node, lo, mid, a, b, v);\n        raise(2 * node + 1, mid + 1, hi, a, b, v);\n        mx[node] = Math.max(mx[2 * node], mx[2 * node + 1]);\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> mx, lazy;\n    void push(int node) {\n        for (int c = 2 * node; c <= 2 * node + 1; c++) {\n            mx[c] = max(mx[c], lazy[node]);\n            lazy[c] = max(lazy[c], lazy[node]);\n        }\n        lazy[node] = 0;\n    }\n    int query(int node, int lo, int hi, int a, int b) {\n        if (b < lo || hi < a) return 0;\n        if (a <= lo && hi <= b) return mx[node];\n        push(node);\n        int mid = (lo + hi) / 2;\n        return max(query(2 * node, lo, mid, a, b), query(2 * node + 1, mid + 1, hi, a, b));\n    }\n    void raise(int node, int lo, int hi, int a, int b, int v) {\n        if (b < lo || hi < a) return;\n        if (a <= lo && hi <= b) {\n            mx[node] = max(mx[node], v);\n            lazy[node] = max(lazy[node], v);\n            return;\n        }\n        push(node);\n        int mid = (lo + hi) / 2;\n        raise(2 * node, lo, mid, a, b, v);\n        raise(2 * node + 1, mid + 1, hi, a, b, v);\n        mx[node] = max(mx[2 * node], mx[2 * node + 1]);\n    }\npublic:\n    vector<int> fallingSquares(vector<vector<int>>& positions) {\n        vector<int> xs;\n        for (auto& p : positions) { xs.push_back(p[0]); xs.push_back(p[0] + p[1]); }\n        sort(xs.begin(), xs.end());\n        xs.erase(unique(xs.begin(), xs.end()), xs.end());\n        int cells = xs.size() - 1;\n        mx.assign(4 * cells, 0);\n        lazy.assign(4 * cells, 0);\n        vector<int> result;\n        int best = 0;\n        for (auto& p : positions) {\n            int a = lower_bound(xs.begin(), xs.end(), p[0]) - xs.begin();\n            int b = lower_bound(xs.begin(), xs.end(), p[0] + p[1]) - xs.begin() - 1;\n            int h = query(1, 0, cells - 1, a, b) + p[1];\n            raise(1, 0, cells - 1, a, b, h);\n            best = max(best, h);\n            result.push_back(best);\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def fallingSquares(self, positions: List[List[int]]) -> List[int]:\n        xs = sorted({x for left, side in positions for x in (left, left + side)})\n        index = {x: i for i, x in enumerate(xs)}\n        cells = len(xs) - 1\n        mx, lazy = [0] * (4 * cells), [0] * (4 * cells)\n\n        def push(node):\n            for c in (2 * node, 2 * node + 1):\n                mx[c] = max(mx[c], lazy[node])\n                lazy[c] = max(lazy[c], lazy[node])\n            lazy[node] = 0\n\n        def query(node, lo, hi, a, b):\n            if b < lo or hi < a:\n                return 0\n            if a <= lo and hi <= b:\n                return mx[node]\n            push(node)\n            mid = (lo + hi) // 2\n            return max(query(2 * node, lo, mid, a, b), query(2 * node + 1, mid + 1, hi, a, b))\n\n        def raise_to(node, lo, hi, a, b, v):\n            if b < lo or hi < a:\n                return\n            if a <= lo and hi <= b:\n                mx[node] = max(mx[node], v)\n                lazy[node] = max(lazy[node], v)\n                return\n            push(node)\n            mid = (lo + hi) // 2\n            raise_to(2 * node, lo, mid, a, b, v)\n            raise_to(2 * node + 1, mid + 1, hi, a, b, v)\n            mx[node] = max(mx[2 * node], mx[2 * node + 1])\n\n        result, best = [], 0\n        for left, side in positions:\n            a, b = index[left], index[left + side] - 1\n            h = query(1, 0, cells - 1, a, b) + side\n            raise_to(1, 0, cells - 1, a, b, h)\n            best = max(best, h)\n            result.append(best)\n        return result",
+     "javascript": "var fallingSquares = function(positions) {\n    const xs = [...new Set(positions.flatMap(([l, s]) => [l, l + s]))].sort((a, b) => a - b);\n    const index = new Map(xs.map((x, i) => [x, i]));\n    const cells = xs.length - 1, mx = new Array(4 * cells).fill(0), lazy = new Array(4 * cells).fill(0);\n    const push = (node) => {\n        for (const c of [2 * node, 2 * node + 1]) {\n            mx[c] = Math.max(mx[c], lazy[node]);\n            lazy[c] = Math.max(lazy[c], lazy[node]);\n        }\n        lazy[node] = 0;\n    };\n    const query = (node, lo, hi, a, b) => {\n        if (b < lo || hi < a) return 0;\n        if (a <= lo && hi <= b) return mx[node];\n        push(node);\n        const mid = (lo + hi) >> 1;\n        return Math.max(query(2 * node, lo, mid, a, b), query(2 * node + 1, mid + 1, hi, a, b));\n    };\n    const raise = (node, lo, hi, a, b, v) => {\n        if (b < lo || hi < a) return;\n        if (a <= lo && hi <= b) {\n            mx[node] = Math.max(mx[node], v);\n            lazy[node] = Math.max(lazy[node], v);\n            return;\n        }\n        push(node);\n        const mid = (lo + hi) >> 1;\n        raise(2 * node, lo, mid, a, b, v);\n        raise(2 * node + 1, mid + 1, hi, a, b, v);\n        mx[node] = Math.max(mx[2 * node], mx[2 * node + 1]);\n    };\n    const result = [];\n    let best = 0;\n    for (const [left, side] of positions) {\n        const a = index.get(left), b = index.get(left + side) - 1;\n        const h = query(1, 0, cells - 1, a, b) + side;\n        raise(1, 0, cells - 1, a, b, h);\n        best = Math.max(best, h);\n        result.push(best);\n    }\n    return result;\n};"
+    }
+   }
+  ]
+ }
+}
