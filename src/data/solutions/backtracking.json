@@ -1,0 +1,575 @@
+{
+ "subsets": {
+  "pattern": "Backtracking over include/exclude choices (or bitmasks over 2ⁿ subsets)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Backtracking: choose the next element to add",
+    "idea": "Build subsets in increasing index order. Every partial subset is itself an answer; then try extending it with each later element.",
+    "steps": [
+     "`build(start, current)`: record a copy of `current`.",
+     "For each `i` from `start` to n − 1: add `nums[i]`, call `build(i + 1, current)`, then remove it (undo).",
+     "Call `build(0, [])`."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n)",
+    "why": "There are 2ⁿ subsets and copying each costs up to n. Besides the output, only the current subset and the recursion (depth n) are kept.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> subsets(int[] nums) {\n        List<List<Integer>> out = new ArrayList<>();\n        build(nums, 0, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] nums, int start, List<Integer> cur, List<List<Integer>> out) {\n        out.add(new ArrayList<>(cur));\n        for (int i = start; i < nums.length; i++) {\n            cur.add(nums[i]);\n            build(nums, i + 1, cur, out);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& nums, int start, vector<int>& cur, vector<vector<int>>& out) {\n        out.push_back(cur);\n        for (int i = start; i < (int) nums.size(); i++) {\n            cur.push_back(nums[i]);\n            build(nums, i + 1, cur, out);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> out;\n        vector<int> cur;\n        build(nums, 0, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        out, cur = [], []\n        def build(start):\n            out.append(cur[:])\n            for i in range(start, len(nums)):\n                cur.append(nums[i])\n                build(i + 1)\n                cur.pop()\n        build(0)\n        return out",
+     "javascript": "var subsets = function(nums) {\n    const out = [], cur = [];\n    const build = (start) => {\n        out.push([...cur]);\n        for (let i = start; i < nums.length; i++) {\n            cur.push(nums[i]);\n            build(i + 1);\n            cur.pop();\n        }\n    };\n    build(0);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cascading: add each element to every subset so far",
+    "idea": "Start with only the empty subset. For each number, every existing subset either skips it or takes it, so append a copy of each existing subset with the number added.",
+    "steps": [
+     "Set `out = [[]]`.",
+     "For each `x` in `nums`, for each subset `s` currently in `out`, append `s + [x]`.",
+     "Return `out`."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(1)",
+    "why": "The list doubles with each element; building each new subset costs up to n. No recursion, and nothing beyond the output is stored.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> subsets(int[] nums) {\n        List<List<Integer>> out = new ArrayList<>();\n        out.add(new ArrayList<>());\n        for (int x : nums) {\n            int size = out.size();\n            for (int i = 0; i < size; i++) {\n                List<Integer> s = new ArrayList<>(out.get(i));\n                s.add(x);\n                out.add(s);\n            }\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> out{{}};\n        for (int x : nums) {\n            int size = out.size();\n            for (int i = 0; i < size; i++) {\n                vector<int> s = out[i];\n                s.push_back(x);\n                out.push_back(s);\n            }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        out = [[]]\n        for x in nums:\n            out += [s + [x] for s in out]\n        return out",
+     "javascript": "var subsets = function(nums) {\n    let out = [[]];\n    for (const x of nums) out = out.concat(out.map((s) => [...s, x]));\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bitmasks from 0 to 2ⁿ − 1",
+    "idea": "Each subset matches an n-bit number: bit `i` set means `nums[i]` is included. Counting from 0 to 2ⁿ − 1 lists every subset exactly once.",
+    "steps": [
+     "For `mask` from 0 to `2ⁿ − 1`:",
+     "Collect `nums[i]` for every bit `i` set in `mask`.",
+     "Add that subset to the answer."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(1)",
+    "why": "2ⁿ masks, each checked bit by bit. A neat trick for small n (n ≤ 30 fits an int).",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> subsets(int[] nums) {\n        int n = nums.length;\n        List<List<Integer>> out = new ArrayList<>();\n        for (int mask = 0; mask < (1 << n); mask++) {\n            List<Integer> s = new ArrayList<>();\n            for (int i = 0; i < n; i++) if ((mask >> i & 1) == 1) s.add(nums[i]);\n            out.add(s);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        int n = nums.size();\n        vector<vector<int>> out;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            vector<int> s;\n            for (int i = 0; i < n; i++) if (mask >> i & 1) s.push_back(nums[i]);\n            out.push_back(s);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        n = len(nums)\n        return [[nums[i] for i in range(n) if mask >> i & 1] for mask in range(1 << n)]",
+     "javascript": "var subsets = function(nums) {\n    const n = nums.length, out = [];\n    for (let mask = 0; mask < (1 << n); mask++) {\n        const s = [];\n        for (let i = 0; i < n; i++) if ((mask >> i) & 1) s.push(nums[i]);\n        out.push(s);\n    }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "pattern": "Backtracking with a start index (choose k of n), pruning when too few numbers remain",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Generate every subset of 1..n and keep those of size k",
+    "idea": "List all 2ⁿ subsets with bitmasks and keep the ones with exactly k elements.",
+    "steps": [
+     "For each `mask` from 0 to `2ⁿ − 1` with exactly `k` bits set:",
+     "Collect the numbers `i + 1` for each set bit `i`, and add the combination."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(k)",
+    "why": "Every one of the 2ⁿ masks is examined even though only C(n, k) are wanted.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> combine(int n, int k) {\n        List<List<Integer>> out = new ArrayList<>();\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (Integer.bitCount(mask) != k) continue;\n            List<Integer> c = new ArrayList<>();\n            for (int i = 0; i < n; i++) if ((mask >> i & 1) == 1) c.add(i + 1);\n            out.add(c);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> combine(int n, int k) {\n        vector<vector<int>> out;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (__builtin_popcount(mask) != k) continue;\n            vector<int> c;\n            for (int i = 0; i < n; i++) if (mask >> i & 1) c.push_back(i + 1);\n            out.push_back(c);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def combine(self, n: int, k: int) -> List[List[int]]:\n        return [\n            [i + 1 for i in range(n) if mask >> i & 1]\n            for mask in range(1 << n) if bin(mask).count(\"1\") == k\n        ]",
+     "javascript": "var combine = function(n, k) {\n    const out = [];\n    for (let mask = 0; mask < (1 << n); mask++) {\n        const c = [];\n        for (let i = 0; i < n; i++) if ((mask >> i) & 1) c.push(i + 1);\n        if (c.length === k) out.push(c);\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with pruning",
+    "idea": "Pick numbers in increasing order so each combination is built once. If not enough numbers remain to reach `k`, stop early.",
+    "steps": [
+     "`build(start, current)`: if `current` has `k` numbers, record a copy and return.",
+     "Let `need = k − current.size()`. Try each `i` from `start` up to `n − need + 1` (later starts cannot fill the combination).",
+     "Add `i`, recurse with `i + 1`, then remove `i`."
+    ],
+    "time": "O(k·C(n, k))",
+    "space": "O(k)",
+    "why": "With the pruning, every branch leads to a valid combination, and each one costs O(k) to copy. The recursion depth is k.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> combine(int n, int k) {\n        List<List<Integer>> out = new ArrayList<>();\n        build(n, k, 1, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int n, int k, int start, List<Integer> cur, List<List<Integer>> out) {\n        if (cur.size() == k) { out.add(new ArrayList<>(cur)); return; }\n        int need = k - cur.size();\n        for (int i = start; i <= n - need + 1; i++) {\n            cur.add(i);\n            build(n, k, i + 1, cur, out);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(int n, int k, int start, vector<int>& cur, vector<vector<int>>& out) {\n        if ((int) cur.size() == k) { out.push_back(cur); return; }\n        int need = k - cur.size();\n        for (int i = start; i <= n - need + 1; i++) {\n            cur.push_back(i);\n            build(n, k, i + 1, cur, out);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combine(int n, int k) {\n        vector<vector<int>> out;\n        vector<int> cur;\n        build(n, k, 1, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def combine(self, n: int, k: int) -> List[List[int]]:\n        out, cur = [], []\n        def build(start):\n            if len(cur) == k:\n                out.append(cur[:])\n                return\n            need = k - len(cur)\n            for i in range(start, n - need + 2):\n                cur.append(i)\n                build(i + 1)\n                cur.pop()\n        build(1)\n        return out",
+     "javascript": "var combine = function(n, k) {\n    const out = [], cur = [];\n    const build = (start) => {\n        if (cur.length === k) { out.push([...cur]); return; }\n        const need = k - cur.length;\n        for (let i = start; i <= n - need + 1; i++) {\n            cur.push(i);\n            build(i + 1);\n            cur.pop();\n        }\n    };\n    build(1);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "permutations": {
+  "pattern": "Backtracking with a \"used\" mark (or in-place swapping)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every sequence of length n, keep those without repeats",
+    "idea": "Generate all nⁿ sequences of positions (each slot can be any index), and keep only those that use every index exactly once.",
+    "steps": [
+     "Generate all sequences of n indices, each from 0 to n − 1.",
+     "Keep a sequence only if no index repeats; map it to values."
+    ],
+    "time": "O(n·nⁿ)",
+    "space": "O(n)",
+    "why": "nⁿ sequences (46,656 for n = 6) to produce only n! = 720 permutations.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> permute(int[] nums) {\n        int n = nums.length, total = 1;\n        for (int i = 0; i < n; i++) total *= n;\n        List<List<Integer>> out = new ArrayList<>();\n        for (int code = 0; code < total; code++) {\n            List<Integer> p = new ArrayList<>();\n            boolean[] used = new boolean[n];\n            boolean ok = true;\n            for (int c = code, i = 0; i < n && ok; i++, c /= n) {\n                int idx = c % n;\n                if (used[idx]) ok = false;\n                used[idx] = true;\n                p.add(nums[idx]);\n            }\n            if (ok) out.add(p);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> permute(vector<int>& nums) {\n        int n = nums.size(), total = 1;\n        for (int i = 0; i < n; i++) total *= n;\n        vector<vector<int>> out;\n        for (int code = 0; code < total; code++) {\n            vector<int> p;\n            vector<bool> used(n, false);\n            bool ok = true;\n            for (int c = code, i = 0; i < n && ok; i++, c /= n) {\n                int idx = c % n;\n                if (used[idx]) ok = false;\n                used[idx] = true;\n                p.push_back(nums[idx]);\n            }\n            if (ok) out.push_back(p);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        n = len(nums)\n        return [\n            [nums[i] for i in seq]\n            for seq in product(range(n), repeat=n) if len(set(seq)) == n\n        ]",
+     "javascript": "var permute = function(nums) {\n    const n = nums.length, total = n ** n, out = [];\n    for (let code = 0; code < total; code++) {\n        const p = [], used = new Array(n).fill(false);\n        let ok = true;\n        for (let c = code, i = 0; i < n && ok; i++, c = Math.floor(c / n)) {\n            const idx = c % n;\n            if (used[idx]) ok = false;\n            used[idx] = true;\n            p.push(nums[idx]);\n        }\n        if (ok) out.push(p);\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with a used array",
+    "idea": "Fill positions one by one; at each step try every value not used yet, then undo the choice before trying the next.",
+    "steps": [
+     "If `current` has n values, record a copy.",
+     "Otherwise, for each unused index `i`: mark it, append `nums[i]`, recurse, then remove it and unmark."
+    ],
+    "time": "O(n·n!)",
+    "space": "O(n)",
+    "why": "There are n! permutations, each copied in O(n); every branch of the recursion ends in a permutation. Besides the output, only the current path and flags are kept.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> permute(int[] nums) {\n        List<List<Integer>> out = new ArrayList<>();\n        build(nums, new boolean[nums.length], new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] nums, boolean[] used, List<Integer> cur, List<List<Integer>> out) {\n        if (cur.size() == nums.length) { out.add(new ArrayList<>(cur)); return; }\n        for (int i = 0; i < nums.length; i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.add(nums[i]);\n            build(nums, used, cur, out);\n            cur.remove(cur.size() - 1);\n            used[i] = false;\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& nums, vector<bool>& used, vector<int>& cur, vector<vector<int>>& out) {\n        if (cur.size() == nums.size()) { out.push_back(cur); return; }\n        for (size_t i = 0; i < nums.size(); i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.push_back(nums[i]);\n            build(nums, used, cur, out);\n            cur.pop_back();\n            used[i] = false;\n        }\n    }\npublic:\n    vector<vector<int>> permute(vector<int>& nums) {\n        vector<vector<int>> out;\n        vector<bool> used(nums.size(), false);\n        vector<int> cur;\n        build(nums, used, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        out, cur, used = [], [], [False] * len(nums)\n        def build():\n            if len(cur) == len(nums):\n                out.append(cur[:])\n                return\n            for i, x in enumerate(nums):\n                if not used[i]:\n                    used[i] = True\n                    cur.append(x)\n                    build()\n                    cur.pop()\n                    used[i] = False\n        build()\n        return out",
+     "javascript": "var permute = function(nums) {\n    const out = [], cur = [], used = new Array(nums.length).fill(false);\n    const build = () => {\n        if (cur.length === nums.length) { out.push([...cur]); return; }\n        for (let i = 0; i < nums.length; i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.push(nums[i]);\n            build();\n            cur.pop();\n            used[i] = false;\n        }\n    };\n    build();\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking by swapping in place",
+    "idea": "Position `k` can take any element from `k` onwards: swap it into position `k`, permute the rest, then swap back. No `used` array or extra path is needed.",
+    "steps": [
+     "`build(k)`: if `k == n`, record a copy of the array.",
+     "For each `i` from `k` to n − 1: swap `nums[k]` and `nums[i]`, call `build(k + 1)`, swap back."
+    ],
+    "time": "O(n·n!)",
+    "space": "O(n)",
+    "why": "Same count of permutations and copies; the array itself holds the current permutation, so only the recursion stack is extra.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> permute(int[] nums) {\n        List<List<Integer>> out = new ArrayList<>();\n        build(nums, 0, out);\n        return out;\n    }\n\n    private void build(int[] a, int k, List<List<Integer>> out) {\n        if (k == a.length) {\n            List<Integer> p = new ArrayList<>();\n            for (int x : a) p.add(x);\n            out.add(p);\n            return;\n        }\n        for (int i = k; i < a.length; i++) {\n            int t = a[k]; a[k] = a[i]; a[i] = t;\n            build(a, k + 1, out);\n            t = a[k]; a[k] = a[i]; a[i] = t;\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& a, int k, vector<vector<int>>& out) {\n        if (k == (int) a.size()) { out.push_back(a); return; }\n        for (int i = k; i < (int) a.size(); i++) {\n            swap(a[k], a[i]);\n            build(a, k + 1, out);\n            swap(a[k], a[i]);\n        }\n    }\npublic:\n    vector<vector<int>> permute(vector<int>& nums) {\n        vector<vector<int>> out;\n        build(nums, 0, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        out = []\n        def build(k):\n            if k == len(nums):\n                out.append(nums[:])\n                return\n            for i in range(k, len(nums)):\n                nums[k], nums[i] = nums[i], nums[k]\n                build(k + 1)\n                nums[k], nums[i] = nums[i], nums[k]\n        build(0)\n        return out",
+     "javascript": "var permute = function(nums) {\n    const out = [];\n    const build = (k) => {\n        if (k === nums.length) { out.push([...nums]); return; }\n        for (let i = k; i < nums.length; i++) {\n            [nums[k], nums[i]] = [nums[i], nums[k]];\n            build(k + 1);\n            [nums[k], nums[i]] = [nums[i], nums[k]];\n        }\n    };\n    build(0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "combination-sum": {
+  "pattern": "Backtracking with a start index (reuse allowed: recurse with the same index)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try any candidate at every step, de-duplicate at the end",
+    "idea": "Keep adding any candidate while the sum is below `target`. This produces the same combination in many orders (2+3+2, 3+2+2, …), so sort each found combination and keep it in a set.",
+    "steps": [
+     "`build(remaining, current)`: if `remaining == 0`, add `sorted(current)` to a set.",
+     "Otherwise, for every candidate `c <= remaining`, append it and recurse with `remaining − c`, then remove it.",
+     "Return the set's contents."
+    ],
+    "time": "O(n^(T/m)·T)",
+    "space": "O(T/m)",
+    "why": "It explores every ordering of every combination: up to n choices at each of T/m levels (T = target, m = smallest candidate). The set removes the repeats only afterwards.",
+    "code": {
+     "java": "class Solution {\n    private final Set<List<Integer>> found = new HashSet<>();\n\n    public List<List<Integer>> combinationSum(int[] candidates, int target) {\n        build(candidates, target, new ArrayList<>());\n        return new ArrayList<>(found);\n    }\n\n    private void build(int[] cand, int remaining, List<Integer> cur) {\n        if (remaining == 0) {\n            List<Integer> c = new ArrayList<>(cur);\n            Collections.sort(c);\n            found.add(c);\n            return;\n        }\n        for (int x : cand) {\n            if (x > remaining) continue;\n            cur.add(x);\n            build(cand, remaining - x, cur);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    set<vector<int>> found;\n    void build(vector<int>& cand, int remaining, vector<int>& cur) {\n        if (remaining == 0) {\n            vector<int> c = cur;\n            sort(c.begin(), c.end());\n            found.insert(c);\n            return;\n        }\n        for (int x : cand) {\n            if (x > remaining) continue;\n            cur.push_back(x);\n            build(cand, remaining - x, cur);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {\n        vector<int> cur;\n        build(candidates, target, cur);\n        return vector<vector<int>>(found.begin(), found.end());\n    }\n};",
+     "python": "class Solution:\n    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:\n        found, cur = set(), []\n        def build(remaining):\n            if remaining == 0:\n                found.add(tuple(sorted(cur)))\n                return\n            for x in candidates:\n                if x <= remaining:\n                    cur.append(x)\n                    build(remaining - x)\n                    cur.pop()\n        build(target)\n        return [list(c) for c in found]",
+     "javascript": "var combinationSum = function(candidates, target) {\n    const found = new Map(), cur = [];\n    const build = (remaining) => {\n        if (remaining === 0) {\n            const c = [...cur].sort((a, b) => a - b);\n            found.set(c.join(','), c);\n            return;\n        }\n        for (const x of candidates) {\n            if (x > remaining) continue;\n            cur.push(x);\n            build(remaining - x);\n            cur.pop();\n        }\n    };\n    build(target);\n    return [...found.values()];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking from a start index, sorted for early stopping",
+    "idea": "Generate each combination in non-decreasing candidate order: after choosing candidate `i`, only candidates `i` and later may follow. That makes every combination appear once. Sorting first lets the loop stop as soon as a candidate exceeds what is left.",
+    "steps": [
+     "Sort the candidates.",
+     "`build(start, remaining)`: if `remaining == 0`, record a copy.",
+     "For `i` from `start`: if `candidates[i] > remaining`, stop the loop; otherwise add it, recurse with `build(i, remaining − candidates[i])` (same `i`: reuse allowed), and remove it."
+    ],
+    "time": "O(n^(T/m)·T/m)",
+    "space": "O(T/m)",
+    "why": "The worst case is still exponential, but each combination is produced once and dead branches are cut immediately. The recursion depth is at most T/m.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> combinationSum(int[] candidates, int target) {\n        Arrays.sort(candidates);\n        List<List<Integer>> out = new ArrayList<>();\n        build(candidates, 0, target, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] c, int start, int remaining, List<Integer> cur, List<List<Integer>> out) {\n        if (remaining == 0) { out.add(new ArrayList<>(cur)); return; }\n        for (int i = start; i < c.length && c[i] <= remaining; i++) {\n            cur.add(c[i]);\n            build(c, i, remaining - c[i], cur, out);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& c, int start, int remaining, vector<int>& cur, vector<vector<int>>& out) {\n        if (remaining == 0) { out.push_back(cur); return; }\n        for (int i = start; i < (int) c.size() && c[i] <= remaining; i++) {\n            cur.push_back(c[i]);\n            build(c, i, remaining - c[i], cur, out);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {\n        sort(candidates.begin(), candidates.end());\n        vector<vector<int>> out;\n        vector<int> cur;\n        build(candidates, 0, target, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:\n        candidates.sort()\n        out, cur = [], []\n        def build(start, remaining):\n            if remaining == 0:\n                out.append(cur[:])\n                return\n            for i in range(start, len(candidates)):\n                if candidates[i] > remaining:\n                    break\n                cur.append(candidates[i])\n                build(i, remaining - candidates[i])\n                cur.pop()\n        build(0, target)\n        return out",
+     "javascript": "var combinationSum = function(candidates, target) {\n    candidates.sort((a, b) => a - b);\n    const out = [], cur = [];\n    const build = (start, remaining) => {\n        if (remaining === 0) { out.push([...cur]); return; }\n        for (let i = start; i < candidates.length && candidates[i] <= remaining; i++) {\n            cur.push(candidates[i]);\n            build(i, remaining - candidates[i]);\n            cur.pop();\n        }\n    };\n    build(0, target);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "letter-combinations-of-a-phone-number": {
+  "pattern": "Backtracking over a fixed number of positions, each with a few choices (Cartesian product)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Backtracking one digit at a time",
+    "idea": "Position `i` of the result can be any letter of `digits[i]`. Choose a letter, move to the next digit, and record the string when all digits are used.",
+    "steps": [
+     "If `digits` is empty, return an empty list.",
+     "`build(i, prefix)`: if `i == digits.length`, record `prefix`.",
+     "Otherwise, for each letter of `digits[i]`, call `build(i + 1, prefix + letter)`."
+    ],
+    "time": "O(n·4ⁿ)",
+    "space": "O(n)",
+    "why": "Up to 4 letters per digit gives up to 4ⁿ strings of length n. The recursion is n deep.",
+    "code": {
+     "java": "class Solution {\n    private static final String[] KEYS = { \"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\", \"mno\", \"pqrs\", \"tuv\", \"wxyz\" };\n\n    public List<String> letterCombinations(String digits) {\n        List<String> out = new ArrayList<>();\n        if (!digits.isEmpty()) build(digits, 0, new StringBuilder(), out);\n        return out;\n    }\n\n    private void build(String digits, int i, StringBuilder prefix, List<String> out) {\n        if (i == digits.length()) { out.add(prefix.toString()); return; }\n        for (char c : KEYS[digits.charAt(i) - '0'].toCharArray()) {\n            prefix.append(c);\n            build(digits, i + 1, prefix, out);\n            prefix.deleteCharAt(prefix.length() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    vector<string> keys{\"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\", \"mno\", \"pqrs\", \"tuv\", \"wxyz\"};\n    void build(const string& digits, size_t i, string& prefix, vector<string>& out) {\n        if (i == digits.size()) { out.push_back(prefix); return; }\n        for (char c : keys[digits[i] - '0']) {\n            prefix.push_back(c);\n            build(digits, i + 1, prefix, out);\n            prefix.pop_back();\n        }\n    }\npublic:\n    vector<string> letterCombinations(string digits) {\n        vector<string> out;\n        string prefix;\n        if (!digits.empty()) build(digits, 0, prefix, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def letterCombinations(self, digits: str) -> List[str]:\n        keys = {\"2\": \"abc\", \"3\": \"def\", \"4\": \"ghi\", \"5\": \"jkl\", \"6\": \"mno\", \"7\": \"pqrs\", \"8\": \"tuv\", \"9\": \"wxyz\"}\n        out = []\n        def build(i, prefix):\n            if i == len(digits):\n                out.append(prefix)\n                return\n            for c in keys[digits[i]]:\n                build(i + 1, prefix + c)\n        if digits:\n            build(0, \"\")\n        return out",
+     "javascript": "var letterCombinations = function(digits) {\n    const keys = ['', '', 'abc', 'def', 'ghi', 'jkl', 'mno', 'pqrs', 'tuv', 'wxyz'], out = [];\n    const build = (i, prefix) => {\n        if (i === digits.length) { out.push(prefix); return; }\n        for (const c of keys[digits[i]]) build(i + 1, prefix + c);\n    };\n    if (digits.length) build(0, '');\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative: extend every partial string by each letter",
+    "idea": "Start from `[\"\"]`. For each digit, replace the list with every string in it extended by every letter of that digit.",
+    "steps": [
+     "If `digits` is empty, return `[]`. Set `out = [\"\"]`.",
+     "For each digit, build a new list: for every `s` in `out` and every letter `c` of the digit, add `s + c`.",
+     "Return `out`."
+    ],
+    "time": "O(n·4ⁿ)",
+    "space": "O(n·4ⁿ)",
+    "why": "The same number of strings; the intermediate lists hold up to 4ⁿ partial strings, but there is no recursion.",
+    "code": {
+     "java": "class Solution {\n    public List<String> letterCombinations(String digits) {\n        if (digits.isEmpty()) return new ArrayList<>();\n        String[] keys = { \"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\", \"mno\", \"pqrs\", \"tuv\", \"wxyz\" };\n        List<String> out = new ArrayList<>(List.of(\"\"));\n        for (char d : digits.toCharArray()) {\n            List<String> next = new ArrayList<>();\n            for (String s : out)\n                for (char c : keys[d - '0'].toCharArray()) next.add(s + c);\n            out = next;\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> letterCombinations(string digits) {\n        if (digits.empty()) return {};\n        vector<string> keys{\"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\", \"mno\", \"pqrs\", \"tuv\", \"wxyz\"};\n        vector<string> out{\"\"};\n        for (char d : digits) {\n            vector<string> next;\n            for (auto& s : out)\n                for (char c : keys[d - '0']) next.push_back(s + c);\n            out = next;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def letterCombinations(self, digits: str) -> List[str]:\n        if not digits:\n            return []\n        keys = {\"2\": \"abc\", \"3\": \"def\", \"4\": \"ghi\", \"5\": \"jkl\", \"6\": \"mno\", \"7\": \"pqrs\", \"8\": \"tuv\", \"9\": \"wxyz\"}\n        out = [\"\"]\n        for d in digits:\n            out = [s + c for s in out for c in keys[d]]\n        return out",
+     "javascript": "var letterCombinations = function(digits) {\n    if (!digits.length) return [];\n    const keys = ['', '', 'abc', 'def', 'ghi', 'jkl', 'mno', 'pqrs', 'tuv', 'wxyz'];\n    let out = [''];\n    for (const d of digits) out = out.flatMap((s) => [...keys[d]].map((c) => s + c));\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "generate-parentheses": {
+  "pattern": "Backtracking with constraints (add \"(\" while opens remain, \")\" while it stays balanced)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Generate all 2²ⁿ strings and keep the valid ones",
+    "idea": "Every position is `(` or `)`. Generate every such string of length 2n and keep those that are balanced.",
+    "steps": [
+     "For each mask from 0 to `2²ⁿ − 1`, build the string (bit set = `(`).",
+     "Check validity with a running balance that never goes negative and ends at 0.",
+     "Keep the valid strings."
+    ],
+    "time": "O(n·4ⁿ)",
+    "space": "O(n)",
+    "why": "2²ⁿ = 4ⁿ strings, each checked in O(n) — about 65,000 for n = 8, almost all invalid.",
+    "code": {
+     "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        List<String> out = new ArrayList<>();\n        for (int mask = 0; mask < (1 << (2 * n)); mask++) {\n            StringBuilder sb = new StringBuilder();\n            int balance = 0;\n            for (int i = 0; i < 2 * n && balance >= 0; i++) {\n                boolean open = (mask >> i & 1) == 1;\n                sb.append(open ? '(' : ')');\n                balance += open ? 1 : -1;\n            }\n            if (balance == 0 && sb.length() == 2 * n) out.add(sb.toString());\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        vector<string> out;\n        for (int mask = 0; mask < (1 << (2 * n)); mask++) {\n            string s;\n            int balance = 0;\n            for (int i = 0; i < 2 * n && balance >= 0; i++) {\n                bool open = mask >> i & 1;\n                s += open ? '(' : ')';\n                balance += open ? 1 : -1;\n            }\n            if (balance == 0 && (int) s.size() == 2 * n) out.push_back(s);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        def valid(s):\n            balance = 0\n            for c in s:\n                balance += 1 if c == \"(\" else -1\n                if balance < 0:\n                    return False\n            return balance == 0\n        return [\"\".join(p) for p in product(\"()\", repeat=2 * n) if valid(p)]",
+     "javascript": "var generateParenthesis = function(n) {\n    const out = [];\n    for (let mask = 0; mask < (1 << (2 * n)); mask++) {\n        let s = '', balance = 0;\n        for (let i = 0; i < 2 * n && balance >= 0; i++) {\n            const open = (mask >> i) & 1;\n            s += open ? '(' : ')';\n            balance += open ? 1 : -1;\n        }\n        if (balance === 0 && s.length === 2 * n) out.push(s);\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking that only builds valid prefixes",
+    "idea": "Track how many `(` and `)` are used. An `(` can be added while fewer than n are used; a `)` only while it would not exceed the opens. Every completed string is then valid by construction.",
+    "steps": [
+     "`build(s, open, close)`: if `s` has length 2n, record it.",
+     "If `open < n`, recurse with `s + \"(\"`.",
+     "If `close < open`, recurse with `s + \")\"`."
+    ],
+    "time": "O(4ⁿ/√n)",
+    "space": "O(n)",
+    "why": "Only valid prefixes are explored, so the work matches the number of answers — the n-th Catalan number, which grows like 4ⁿ/(n√n) — times n to build each string. The recursion is 2n deep.",
+    "code": {
+     "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        List<String> out = new ArrayList<>();\n        build(n, new StringBuilder(), 0, 0, out);\n        return out;\n    }\n\n    private void build(int n, StringBuilder s, int open, int close, List<String> out) {\n        if (s.length() == 2 * n) { out.add(s.toString()); return; }\n        if (open < n) { s.append('('); build(n, s, open + 1, close, out); s.deleteCharAt(s.length() - 1); }\n        if (close < open) { s.append(')'); build(n, s, open, close + 1, out); s.deleteCharAt(s.length() - 1); }\n    }\n}",
+     "cpp": "class Solution {\n    void build(int n, string& s, int open, int close, vector<string>& out) {\n        if ((int) s.size() == 2 * n) { out.push_back(s); return; }\n        if (open < n) { s.push_back('('); build(n, s, open + 1, close, out); s.pop_back(); }\n        if (close < open) { s.push_back(')'); build(n, s, open, close + 1, out); s.pop_back(); }\n    }\npublic:\n    vector<string> generateParenthesis(int n) {\n        vector<string> out;\n        string s;\n        build(n, s, 0, 0, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        out = []\n        def build(s, open_, close):\n            if len(s) == 2 * n:\n                out.append(s)\n                return\n            if open_ < n:\n                build(s + \"(\", open_ + 1, close)\n            if close < open_:\n                build(s + \")\", open_, close + 1)\n        build(\"\", 0, 0)\n        return out",
+     "javascript": "var generateParenthesis = function(n) {\n    const out = [];\n    const build = (s, open, close) => {\n        if (s.length === 2 * n) { out.push(s); return; }\n        if (open < n) build(s + '(', open + 1, close);\n        if (close < open) build(s + ')', open, close + 1);\n    };\n    build('', 0, 0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "subsets-ii": {
+  "pattern": "Sort, then backtrack and skip equal values at the same depth",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "All 2ⁿ subsets, de-duplicated with a set",
+    "idea": "Sort the array so equal subsets look identical, generate every subset, and keep only distinct ones in a set.",
+    "steps": [
+     "Sort `nums`.",
+     "Generate all 2ⁿ subsets (e.g. with bitmasks), in sorted index order.",
+     "Insert each into a set; return the set's contents."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n·2ⁿ)",
+    "why": "Every subset is built and hashed even when it repeats; the set stores up to 2ⁿ subsets.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> subsetsWithDup(int[] nums) {\n        Arrays.sort(nums);\n        int n = nums.length;\n        Set<List<Integer>> found = new LinkedHashSet<>();\n        for (int mask = 0; mask < (1 << n); mask++) {\n            List<Integer> s = new ArrayList<>();\n            for (int i = 0; i < n; i++) if ((mask >> i & 1) == 1) s.add(nums[i]);\n            found.add(s);\n        }\n        return new ArrayList<>(found);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> subsetsWithDup(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        int n = nums.size();\n        set<vector<int>> found;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            vector<int> s;\n            for (int i = 0; i < n; i++) if (mask >> i & 1) s.push_back(nums[i]);\n            found.insert(s);\n        }\n        return vector<vector<int>>(found.begin(), found.end());\n    }\n};",
+     "python": "class Solution:\n    def subsetsWithDup(self, nums: List[int]) -> List[List[int]]:\n        nums.sort()\n        n = len(nums)\n        found = {tuple(nums[i] for i in range(n) if mask >> i & 1) for mask in range(1 << n)}\n        return [list(s) for s in found]",
+     "javascript": "var subsetsWithDup = function(nums) {\n    nums.sort((a, b) => a - b);\n    const n = nums.length, found = new Map();\n    for (let mask = 0; mask < (1 << n); mask++) {\n        const s = [];\n        for (let i = 0; i < n; i++) if ((mask >> i) & 1) s.push(nums[i]);\n        found.set(s.join(','), s);\n    }\n    return [...found.values()];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking that skips duplicates at each level",
+    "idea": "After sorting, equal values are adjacent. At one level of the recursion, choosing the second of two equal values would produce exactly the subsets that choosing the first already produced — so skip it.",
+    "steps": [
+     "Sort `nums`.",
+     "`build(start, current)`: record a copy of `current`.",
+     "For `i` from `start`: if `i > start` and `nums[i] == nums[i − 1]`, skip; otherwise add `nums[i]`, recurse with `i + 1`, and remove it."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n)",
+    "why": "In the worst case (all distinct) there are 2ⁿ subsets; duplicates are never generated, so no set is needed. Recursion depth is n.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> subsetsWithDup(int[] nums) {\n        Arrays.sort(nums);\n        List<List<Integer>> out = new ArrayList<>();\n        build(nums, 0, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] nums, int start, List<Integer> cur, List<List<Integer>> out) {\n        out.add(new ArrayList<>(cur));\n        for (int i = start; i < nums.length; i++) {\n            if (i > start && nums[i] == nums[i - 1]) continue;\n            cur.add(nums[i]);\n            build(nums, i + 1, cur, out);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& nums, int start, vector<int>& cur, vector<vector<int>>& out) {\n        out.push_back(cur);\n        for (int i = start; i < (int) nums.size(); i++) {\n            if (i > start && nums[i] == nums[i - 1]) continue;\n            cur.push_back(nums[i]);\n            build(nums, i + 1, cur, out);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> subsetsWithDup(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        vector<vector<int>> out;\n        vector<int> cur;\n        build(nums, 0, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def subsetsWithDup(self, nums: List[int]) -> List[List[int]]:\n        nums.sort()\n        out, cur = [], []\n        def build(start):\n            out.append(cur[:])\n            for i in range(start, len(nums)):\n                if i > start and nums[i] == nums[i - 1]:\n                    continue\n                cur.append(nums[i])\n                build(i + 1)\n                cur.pop()\n        build(0)\n        return out",
+     "javascript": "var subsetsWithDup = function(nums) {\n    nums.sort((a, b) => a - b);\n    const out = [], cur = [];\n    const build = (start) => {\n        out.push([...cur]);\n        for (let i = start; i < nums.length; i++) {\n            if (i > start && nums[i] === nums[i - 1]) continue;\n            cur.push(nums[i]);\n            build(i + 1);\n            cur.pop();\n        }\n    };\n    build(0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "combination-sum-ii": {
+  "pattern": "Sort, backtrack with each index used once, skip equal values at the same depth",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every subset of positions, keep the distinct ones that hit the target",
+    "idea": "Sort, then try every include/exclude choice for each position. Record subsets summing to `target` in a set to drop repeats caused by equal values.",
+    "steps": [
+     "Sort `candidates`.",
+     "Recurse over positions: either skip `candidates[i]` or include it (if it still fits).",
+     "When the remaining sum is 0, add the current combination to a set. Return the set's contents."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n)",
+    "why": "Up to 2ⁿ include/exclude paths (cut a little by the \"still fits\" check). Repeated combinations are generated and only removed by the set.",
+    "code": {
+     "java": "class Solution {\n    private final Set<List<Integer>> found = new HashSet<>();\n\n    public List<List<Integer>> combinationSum2(int[] candidates, int target) {\n        Arrays.sort(candidates);\n        build(candidates, 0, target, new ArrayList<>());\n        return new ArrayList<>(found);\n    }\n\n    private void build(int[] c, int i, int remaining, List<Integer> cur) {\n        if (remaining == 0) { found.add(new ArrayList<>(cur)); return; }\n        if (i == c.length || c[i] > remaining) return;\n        cur.add(c[i]);\n        build(c, i + 1, remaining - c[i], cur);\n        cur.remove(cur.size() - 1);\n        build(c, i + 1, remaining, cur);\n    }\n}",
+     "cpp": "class Solution {\n    set<vector<int>> found;\n    void build(vector<int>& c, size_t i, int remaining, vector<int>& cur) {\n        if (remaining == 0) { found.insert(cur); return; }\n        if (i == c.size() || c[i] > remaining) return;\n        cur.push_back(c[i]);\n        build(c, i + 1, remaining - c[i], cur);\n        cur.pop_back();\n        build(c, i + 1, remaining, cur);\n    }\npublic:\n    vector<vector<int>> combinationSum2(vector<int>& candidates, int target) {\n        sort(candidates.begin(), candidates.end());\n        vector<int> cur;\n        build(candidates, 0, target, cur);\n        return vector<vector<int>>(found.begin(), found.end());\n    }\n};",
+     "python": "class Solution:\n    def combinationSum2(self, candidates: List[int], target: int) -> List[List[int]]:\n        candidates.sort()\n        found, cur = set(), []\n        def build(i, remaining):\n            if remaining == 0:\n                found.add(tuple(cur))\n                return\n            if i == len(candidates) or candidates[i] > remaining:\n                return\n            cur.append(candidates[i])\n            build(i + 1, remaining - candidates[i])\n            cur.pop()\n            build(i + 1, remaining)\n        build(0, target)\n        return [list(c) for c in found]",
+     "javascript": "var combinationSum2 = function(candidates, target) {\n    candidates.sort((a, b) => a - b);\n    const found = new Map(), cur = [];\n    const build = (i, remaining) => {\n        if (remaining === 0) { found.set(cur.join(','), [...cur]); return; }\n        if (i === candidates.length || candidates[i] > remaining) return;\n        cur.push(candidates[i]);\n        build(i + 1, remaining - candidates[i]);\n        cur.pop();\n        build(i + 1, remaining);\n    };\n    build(0, target);\n    return [...found.values()];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with the duplicate-skip rule",
+    "idea": "Choose the next number from `start` onwards; each position is used once (recurse with `i + 1`). At one level, skip a value equal to the previous one, since it would only repeat combinations. Sorting also lets the loop stop once values exceed the remaining sum.",
+    "steps": [
+     "Sort `candidates`.",
+     "`build(start, remaining)`: if `remaining == 0`, record a copy.",
+     "For `i` from `start`: skip if `i > start` and `c[i] == c[i − 1]`; stop if `c[i] > remaining`; otherwise add `c[i]`, recurse with `(i + 1, remaining − c[i])`, remove it."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n)",
+    "why": "Still exponential in the worst case, but no combination is generated twice and the sorted break cuts every branch that cannot reach the target. Recursion depth is at most n.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> combinationSum2(int[] candidates, int target) {\n        Arrays.sort(candidates);\n        List<List<Integer>> out = new ArrayList<>();\n        build(candidates, 0, target, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] c, int start, int remaining, List<Integer> cur, List<List<Integer>> out) {\n        if (remaining == 0) { out.add(new ArrayList<>(cur)); return; }\n        for (int i = start; i < c.length && c[i] <= remaining; i++) {\n            if (i > start && c[i] == c[i - 1]) continue;\n            cur.add(c[i]);\n            build(c, i + 1, remaining - c[i], cur, out);\n            cur.remove(cur.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& c, int start, int remaining, vector<int>& cur, vector<vector<int>>& out) {\n        if (remaining == 0) { out.push_back(cur); return; }\n        for (int i = start; i < (int) c.size() && c[i] <= remaining; i++) {\n            if (i > start && c[i] == c[i - 1]) continue;\n            cur.push_back(c[i]);\n            build(c, i + 1, remaining - c[i], cur, out);\n            cur.pop_back();\n        }\n    }\npublic:\n    vector<vector<int>> combinationSum2(vector<int>& candidates, int target) {\n        sort(candidates.begin(), candidates.end());\n        vector<vector<int>> out;\n        vector<int> cur;\n        build(candidates, 0, target, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def combinationSum2(self, candidates: List[int], target: int) -> List[List[int]]:\n        candidates.sort()\n        out, cur = [], []\n        def build(start, remaining):\n            if remaining == 0:\n                out.append(cur[:])\n                return\n            for i in range(start, len(candidates)):\n                if candidates[i] > remaining:\n                    break\n                if i > start and candidates[i] == candidates[i - 1]:\n                    continue\n                cur.append(candidates[i])\n                build(i + 1, remaining - candidates[i])\n                cur.pop()\n        build(0, target)\n        return out",
+     "javascript": "var combinationSum2 = function(candidates, target) {\n    candidates.sort((a, b) => a - b);\n    const out = [], cur = [];\n    const build = (start, remaining) => {\n        if (remaining === 0) { out.push([...cur]); return; }\n        for (let i = start; i < candidates.length && candidates[i] <= remaining; i++) {\n            if (i > start && candidates[i] === candidates[i - 1]) continue;\n            cur.push(candidates[i]);\n            build(i + 1, remaining - candidates[i]);\n            cur.pop();\n        }\n    };\n    build(0, target);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "permutations-ii": {
+  "pattern": "Sort, backtrack with a used array, and only use the first unused copy of each value",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "All permutations of positions, de-duplicated with a set",
+    "idea": "Generate permutations as if all values were distinct, then keep only distinct results in a set.",
+    "steps": [
+     "Backtrack over positions with a `used` array, building every ordering.",
+     "Add each completed ordering to a set.",
+     "Return the set's contents."
+    ],
+    "time": "O(n·n!)",
+    "space": "O(n·n!)",
+    "why": "All n! orderings are built even when many are equal (for `[2,2,2]` all 6 are the same); the set may store up to n! permutations.",
+    "code": {
+     "java": "class Solution {\n    private final Set<List<Integer>> found = new HashSet<>();\n\n    public List<List<Integer>> permuteUnique(int[] nums) {\n        build(nums, new boolean[nums.length], new ArrayList<>());\n        return new ArrayList<>(found);\n    }\n\n    private void build(int[] nums, boolean[] used, List<Integer> cur) {\n        if (cur.size() == nums.length) { found.add(new ArrayList<>(cur)); return; }\n        for (int i = 0; i < nums.length; i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.add(nums[i]);\n            build(nums, used, cur);\n            cur.remove(cur.size() - 1);\n            used[i] = false;\n        }\n    }\n}",
+     "cpp": "class Solution {\n    set<vector<int>> found;\n    void build(vector<int>& nums, vector<bool>& used, vector<int>& cur) {\n        if (cur.size() == nums.size()) { found.insert(cur); return; }\n        for (size_t i = 0; i < nums.size(); i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.push_back(nums[i]);\n            build(nums, used, cur);\n            cur.pop_back();\n            used[i] = false;\n        }\n    }\npublic:\n    vector<vector<int>> permuteUnique(vector<int>& nums) {\n        vector<bool> used(nums.size(), false);\n        vector<int> cur;\n        build(nums, used, cur);\n        return vector<vector<int>>(found.begin(), found.end());\n    }\n};",
+     "python": "class Solution:\n    def permuteUnique(self, nums: List[int]) -> List[List[int]]:\n        return [list(p) for p in set(permutations(nums))]",
+     "javascript": "var permuteUnique = function(nums) {\n    const found = new Map(), cur = [], used = new Array(nums.length).fill(false);\n    const build = () => {\n        if (cur.length === nums.length) { found.set(cur.join(','), [...cur]); return; }\n        for (let i = 0; i < nums.length; i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            cur.push(nums[i]);\n            build();\n            cur.pop();\n            used[i] = false;\n        }\n    };\n    build();\n    return [...found.values()];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with the \"first unused copy\" rule",
+    "idea": "Sort so equal values are adjacent. When filling a position, among equal values only the first one not yet used may be chosen: if `nums[i] == nums[i − 1]` and `nums[i − 1]` is unused, picking `nums[i]` here would just repeat what picking `nums[i − 1]` produces.",
+    "steps": [
+     "Sort `nums`.",
+     "Backtrack with `used[]`: if the path is full, record a copy.",
+     "For each `i`: skip if used, or if `i > 0 && nums[i] == nums[i − 1] && !used[i − 1]`.",
+     "Otherwise mark, append, recurse, undo."
+    ],
+    "time": "O(n·n!)",
+    "space": "O(n)",
+    "why": "The bound is the same in the worst case (all distinct), but each distinct permutation is generated exactly once and no set is needed.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> permuteUnique(int[] nums) {\n        Arrays.sort(nums);\n        List<List<Integer>> out = new ArrayList<>();\n        build(nums, new boolean[nums.length], new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(int[] nums, boolean[] used, List<Integer> cur, List<List<Integer>> out) {\n        if (cur.size() == nums.length) { out.add(new ArrayList<>(cur)); return; }\n        for (int i = 0; i < nums.length; i++) {\n            if (used[i] || (i > 0 && nums[i] == nums[i - 1] && !used[i - 1])) continue;\n            used[i] = true;\n            cur.add(nums[i]);\n            build(nums, used, cur, out);\n            cur.remove(cur.size() - 1);\n            used[i] = false;\n        }\n    }\n}",
+     "cpp": "class Solution {\n    void build(vector<int>& nums, vector<bool>& used, vector<int>& cur, vector<vector<int>>& out) {\n        if (cur.size() == nums.size()) { out.push_back(cur); return; }\n        for (size_t i = 0; i < nums.size(); i++) {\n            if (used[i] || (i > 0 && nums[i] == nums[i - 1] && !used[i - 1])) continue;\n            used[i] = true;\n            cur.push_back(nums[i]);\n            build(nums, used, cur, out);\n            cur.pop_back();\n            used[i] = false;\n        }\n    }\npublic:\n    vector<vector<int>> permuteUnique(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        vector<vector<int>> out;\n        vector<bool> used(nums.size(), false);\n        vector<int> cur;\n        build(nums, used, cur, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def permuteUnique(self, nums: List[int]) -> List[List[int]]:\n        nums.sort()\n        out, cur, used = [], [], [False] * len(nums)\n        def build():\n            if len(cur) == len(nums):\n                out.append(cur[:])\n                return\n            for i in range(len(nums)):\n                if used[i] or (i > 0 and nums[i] == nums[i - 1] and not used[i - 1]):\n                    continue\n                used[i] = True\n                cur.append(nums[i])\n                build()\n                cur.pop()\n                used[i] = False\n        build()\n        return out",
+     "javascript": "var permuteUnique = function(nums) {\n    nums.sort((a, b) => a - b);\n    const out = [], cur = [], used = new Array(nums.length).fill(false);\n    const build = () => {\n        if (cur.length === nums.length) { out.push([...cur]); return; }\n        for (let i = 0; i < nums.length; i++) {\n            if (used[i] || (i > 0 && nums[i] === nums[i - 1] && !used[i - 1])) continue;\n            used[i] = true;\n            cur.push(nums[i]);\n            build();\n            cur.pop();\n            used[i] = false;\n        }\n    };\n    build();\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "palindrome-partitioning": {
+  "pattern": "Backtracking over cut positions, with a precomputed palindrome table",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Backtracking, checking each piece as you go",
+    "idea": "Choose the end of the first piece; if that piece is a palindrome, partition the rest the same way. Each completed path is one partition.",
+    "steps": [
+     "`build(start, pieces)`: if `start == n`, record a copy of `pieces`.",
+     "For each `end` from `start` to n − 1: if `s[start..end]` is a palindrome (two-pointer check), add it, recurse from `end + 1`, then remove it."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n)",
+    "why": "There are up to 2ⁿ⁻¹ partitions; the palindrome checks add O(n) per step, repeated for the same substrings many times.",
+    "code": {
+     "java": "class Solution {\n    public List<List<String>> partition(String s) {\n        List<List<String>> out = new ArrayList<>();\n        build(s, 0, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(String s, int start, List<String> pieces, List<List<String>> out) {\n        if (start == s.length()) { out.add(new ArrayList<>(pieces)); return; }\n        for (int end = start; end < s.length(); end++) {\n            if (!isPal(s, start, end)) continue;\n            pieces.add(s.substring(start, end + 1));\n            build(s, end + 1, pieces, out);\n            pieces.remove(pieces.size() - 1);\n        }\n    }\n\n    private boolean isPal(String s, int i, int j) {\n        while (i < j) if (s.charAt(i++) != s.charAt(j--)) return false;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    bool isPal(const string& s, int i, int j) {\n        while (i < j) if (s[i++] != s[j--]) return false;\n        return true;\n    }\n    void build(const string& s, int start, vector<string>& pieces, vector<vector<string>>& out) {\n        if (start == (int) s.size()) { out.push_back(pieces); return; }\n        for (int end = start; end < (int) s.size(); end++) {\n            if (!isPal(s, start, end)) continue;\n            pieces.push_back(s.substr(start, end - start + 1));\n            build(s, end + 1, pieces, out);\n            pieces.pop_back();\n        }\n    }\npublic:\n    vector<vector<string>> partition(string s) {\n        vector<vector<string>> out;\n        vector<string> pieces;\n        build(s, 0, pieces, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        out, pieces = [], []\n        def build(start):\n            if start == len(s):\n                out.append(pieces[:])\n                return\n            for end in range(start, len(s)):\n                piece = s[start:end + 1]\n                if piece == piece[::-1]:\n                    pieces.append(piece)\n                    build(end + 1)\n                    pieces.pop()\n        build(0)\n        return out",
+     "javascript": "var partition = function(s) {\n    const out = [], pieces = [];\n    const isPal = (i, j) => {\n        while (i < j) if (s[i++] !== s[j--]) return false;\n        return true;\n    };\n    const build = (start) => {\n        if (start === s.length) { out.push([...pieces]); return; }\n        for (let end = start; end < s.length; end++) {\n            if (!isPal(start, end)) continue;\n            pieces.push(s.slice(start, end + 1));\n            build(end + 1);\n            pieces.pop();\n        }\n    };\n    build(0);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with a palindrome DP table",
+    "idea": "Precompute `pal[i][j]` (is `s[i..j]` a palindrome?) once: it is true when the end characters match and the inside is a palindrome. The backtracking then checks a piece in O(1).",
+    "steps": [
+     "Fill `pal[i][j]` for `i` from n − 1 down to 0 and `j >= i`: `s[i] == s[j] && (j − i < 2 || pal[i + 1][j − 1])`.",
+     "Backtrack exactly as before, but use `pal[start][end]` for the check."
+    ],
+    "time": "O(n·2ⁿ)",
+    "space": "O(n²)",
+    "why": "The table costs O(n²) once; the backtracking is still bounded by the number of partitions (each copied in O(n)), but every palindrome test is now constant time.",
+    "code": {
+     "java": "class Solution {\n    private boolean[][] pal;\n\n    public List<List<String>> partition(String s) {\n        int n = s.length();\n        pal = new boolean[n][n];\n        for (int i = n - 1; i >= 0; i--)\n            for (int j = i; j < n; j++)\n                pal[i][j] = s.charAt(i) == s.charAt(j) && (j - i < 2 || pal[i + 1][j - 1]);\n        List<List<String>> out = new ArrayList<>();\n        build(s, 0, new ArrayList<>(), out);\n        return out;\n    }\n\n    private void build(String s, int start, List<String> pieces, List<List<String>> out) {\n        if (start == s.length()) { out.add(new ArrayList<>(pieces)); return; }\n        for (int end = start; end < s.length(); end++) {\n            if (!pal[start][end]) continue;\n            pieces.add(s.substring(start, end + 1));\n            build(s, end + 1, pieces, out);\n            pieces.remove(pieces.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<bool>> pal;\n    void build(const string& s, int start, vector<string>& pieces, vector<vector<string>>& out) {\n        if (start == (int) s.size()) { out.push_back(pieces); return; }\n        for (int end = start; end < (int) s.size(); end++) {\n            if (!pal[start][end]) continue;\n            pieces.push_back(s.substr(start, end - start + 1));\n            build(s, end + 1, pieces, out);\n            pieces.pop_back();\n        }\n    }\npublic:\n    vector<vector<string>> partition(string s) {\n        int n = s.size();\n        pal.assign(n, vector<bool>(n, false));\n        for (int i = n - 1; i >= 0; i--)\n            for (int j = i; j < n; j++)\n                pal[i][j] = s[i] == s[j] && (j - i < 2 || pal[i + 1][j - 1]);\n        vector<vector<string>> out;\n        vector<string> pieces;\n        build(s, 0, pieces, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        n = len(s)\n        pal = [[False] * n for _ in range(n)]\n        for i in range(n - 1, -1, -1):\n            for j in range(i, n):\n                pal[i][j] = s[i] == s[j] and (j - i < 2 or pal[i + 1][j - 1])\n        out, pieces = [], []\n        def build(start):\n            if start == n:\n                out.append(pieces[:])\n                return\n            for end in range(start, n):\n                if pal[start][end]:\n                    pieces.append(s[start:end + 1])\n                    build(end + 1)\n                    pieces.pop()\n        build(0)\n        return out",
+     "javascript": "var partition = function(s) {\n    const n = s.length, pal = Array.from({ length: n }, () => new Array(n).fill(false));\n    for (let i = n - 1; i >= 0; i--)\n        for (let j = i; j < n; j++)\n            pal[i][j] = s[i] === s[j] && (j - i < 2 || pal[i + 1][j - 1]);\n    const out = [], pieces = [];\n    const build = (start) => {\n        if (start === n) { out.push([...pieces]); return; }\n        for (let end = start; end < n; end++) {\n            if (!pal[start][end]) continue;\n            pieces.push(s.slice(start, end + 1));\n            build(end + 1);\n            pieces.pop();\n        }\n    };\n    build(0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "word-search": {
+  "pattern": "Grid DFS with backtracking (mark a cell while it is on the current path)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "DFS from every cell with in-place marking",
+    "idea": "Try every cell as the start. From a matching cell, mark it as used, look for the next letter in the four neighbours, and unmark it when backtracking so other paths can use it.",
+    "steps": [
+     "For each cell, call `dfs(r, c, 0)`; return true if any succeeds.",
+     "`dfs(r, c, i)`: fail if out of bounds or `board[r][c] != word[i]`; succeed if `i` is the last index.",
+     "Mark the cell (e.g. `#`), try the 4 neighbours with `i + 1`, restore the cell, and return whether any neighbour succeeded."
+    ],
+    "time": "O(m·n·3ᴸ)",
+    "space": "O(L)",
+    "why": "From each of the m·n starts, the path branches into at most 3 new directions per letter (it never goes straight back). The recursion depth is the word length L.",
+    "code": {
+     "java": "class Solution {\n    public boolean exist(char[][] board, String word) {\n        for (int r = 0; r < board.length; r++)\n            for (int c = 0; c < board[0].length; c++)\n                if (dfs(board, word, r, c, 0)) return true;\n        return false;\n    }\n\n    private boolean dfs(char[][] b, String w, int r, int c, int i) {\n        if (r < 0 || c < 0 || r >= b.length || c >= b[0].length || b[r][c] != w.charAt(i)) return false;\n        if (i == w.length() - 1) return true;\n        char saved = b[r][c];\n        b[r][c] = '#';\n        boolean found = dfs(b, w, r + 1, c, i + 1) || dfs(b, w, r - 1, c, i + 1)\n            || dfs(b, w, r, c + 1, i + 1) || dfs(b, w, r, c - 1, i + 1);\n        b[r][c] = saved;\n        return found;\n    }\n}",
+     "cpp": "class Solution {\n    bool dfs(vector<vector<char>>& b, const string& w, int r, int c, size_t i) {\n        if (r < 0 || c < 0 || r >= (int) b.size() || c >= (int) b[0].size() || b[r][c] != w[i]) return false;\n        if (i == w.size() - 1) return true;\n        char saved = b[r][c];\n        b[r][c] = '#';\n        bool found = dfs(b, w, r + 1, c, i + 1) || dfs(b, w, r - 1, c, i + 1)\n            || dfs(b, w, r, c + 1, i + 1) || dfs(b, w, r, c - 1, i + 1);\n        b[r][c] = saved;\n        return found;\n    }\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        for (int r = 0; r < (int) board.size(); r++)\n            for (int c = 0; c < (int) board[0].size(); c++)\n                if (dfs(board, word, r, c, 0)) return true;\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        m, n = len(board), len(board[0])\n        def dfs(r, c, i):\n            if r < 0 or c < 0 or r >= m or c >= n or board[r][c] != word[i]:\n                return False\n            if i == len(word) - 1:\n                return True\n            saved, board[r][c] = board[r][c], \"#\"\n            found = dfs(r + 1, c, i + 1) or dfs(r - 1, c, i + 1) or dfs(r, c + 1, i + 1) or dfs(r, c - 1, i + 1)\n            board[r][c] = saved\n            return found\n        return any(dfs(r, c, 0) for r in range(m) for c in range(n))",
+     "javascript": "var exist = function(board, word) {\n    const m = board.length, n = board[0].length;\n    const dfs = (r, c, i) => {\n        if (r < 0 || c < 0 || r >= m || c >= n || board[r][c] !== word[i]) return false;\n        if (i === word.length - 1) return true;\n        const saved = board[r][c];\n        board[r][c] = '#';\n        const found = dfs(r + 1, c, i + 1) || dfs(r - 1, c, i + 1) || dfs(r, c + 1, i + 1) || dfs(r, c - 1, i + 1);\n        board[r][c] = saved;\n        return found;\n    };\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) if (dfs(r, c, 0)) return true;\n    return false;\n};"
+    }
+   }
+  ]
+ },
+ "n-queens": {
+  "pattern": "Backtracking row by row with O(1) conflict checks (columns and both diagonals)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Place one queen per row, checking earlier rows each time",
+    "idea": "Put exactly one queen in each row. Before placing a queen at `(row, col)`, scan the queens already placed to make sure none shares its column or a diagonal.",
+    "steps": [
+     "Keep `cols[r]` = the column of the queen in row `r`.",
+     "For row `row`, try each column `c`: it is safe if for every earlier row `r`, `cols[r] != c` and `|cols[r] − c| != row − r`.",
+     "If safe, place it and recurse to the next row; when all rows are filled, convert `cols` to the board strings."
+    ],
+    "time": "O(n·n!)",
+    "space": "O(n)",
+    "why": "The search tree has at most n! leaves (one queen per row and column), and each placement check scans up to n earlier rows.",
+    "code": {
+     "java": "class Solution {\n    public List<List<String>> solveNQueens(int n) {\n        List<List<String>> out = new ArrayList<>();\n        place(n, 0, new int[n], out);\n        return out;\n    }\n\n    private void place(int n, int row, int[] cols, List<List<String>> out) {\n        if (row == n) { out.add(draw(cols)); return; }\n        for (int c = 0; c < n; c++) {\n            boolean safe = true;\n            for (int r = 0; r < row && safe; r++)\n                if (cols[r] == c || Math.abs(cols[r] - c) == row - r) safe = false;\n            if (!safe) continue;\n            cols[row] = c;\n            place(n, row + 1, cols, out);\n        }\n    }\n\n    private List<String> draw(int[] cols) {\n        List<String> board = new ArrayList<>();\n        for (int c : cols) {\n            char[] line = new char[cols.length];\n            Arrays.fill(line, '.');\n            line[c] = 'Q';\n            board.add(new String(line));\n        }\n        return board;\n    }\n}",
+     "cpp": "class Solution {\n    void place(int n, int row, vector<int>& cols, vector<vector<string>>& out) {\n        if (row == n) {\n            vector<string> board(n, string(n, '.'));\n            for (int r = 0; r < n; r++) board[r][cols[r]] = 'Q';\n            out.push_back(board);\n            return;\n        }\n        for (int c = 0; c < n; c++) {\n            bool safe = true;\n            for (int r = 0; r < row && safe; r++)\n                if (cols[r] == c || abs(cols[r] - c) == row - r) safe = false;\n            if (!safe) continue;\n            cols[row] = c;\n            place(n, row + 1, cols, out);\n        }\n    }\npublic:\n    vector<vector<string>> solveNQueens(int n) {\n        vector<vector<string>> out;\n        vector<int> cols(n);\n        place(n, 0, cols, out);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def solveNQueens(self, n: int) -> List[List[str]]:\n        out, cols = [], []\n        def place(row):\n            if row == n:\n                out.append([\".\" * c + \"Q\" + \".\" * (n - c - 1) for c in cols])\n                return\n            for c in range(n):\n                if all(cols[r] != c and abs(cols[r] - c) != row - r for r in range(row)):\n                    cols.append(c)\n                    place(row + 1)\n                    cols.pop()\n        place(0)\n        return out",
+     "javascript": "var solveNQueens = function(n) {\n    const out = [], cols = [];\n    const place = (row) => {\n        if (row === n) {\n            out.push(cols.map((c) => '.'.repeat(c) + 'Q' + '.'.repeat(n - c - 1)));\n            return;\n        }\n        for (let c = 0; c < n; c++) {\n            let safe = true;\n            for (let r = 0; r < row && safe; r++)\n                if (cols[r] === c || Math.abs(cols[r] - c) === row - r) safe = false;\n            if (!safe) continue;\n            cols.push(c);\n            place(row + 1);\n            cols.pop();\n        }\n    };\n    place(0);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Backtracking with column and diagonal sets",
+    "idea": "Squares on the same \"\\\" diagonal share `row − col`; on the same \"/\" diagonal they share `row + col`. Keeping three boolean arrays (columns, `row − col + n − 1`, `row + col`) makes each safety check O(1).",
+    "steps": [
+     "Keep `col[n]`, `diag[2n − 1]` (row − col + n − 1) and `anti[2n − 1]` (row + col).",
+     "For row `row`, try each `c` whose three flags are all free; set them, place the queen, recurse, then clear them.",
+     "When `row == n`, draw the board."
+    ],
+    "time": "O(n!)",
+    "space": "O(n)",
+    "why": "The search is bounded by n! placements and every check is constant time; the flag arrays and recursion are O(n).",
+    "code": {
+     "java": "class Solution {\n    private boolean[] col, diag, anti;\n    private int[] queens;\n    private final List<List<String>> out = new ArrayList<>();\n\n    public List<List<String>> solveNQueens(int n) {\n        col = new boolean[n];\n        diag = new boolean[2 * n - 1];\n        anti = new boolean[2 * n - 1];\n        queens = new int[n];\n        place(n, 0);\n        return out;\n    }\n\n    private void place(int n, int row) {\n        if (row == n) {\n            List<String> board = new ArrayList<>();\n            for (int c : queens) {\n                char[] line = new char[n];\n                Arrays.fill(line, '.');\n                line[c] = 'Q';\n                board.add(new String(line));\n            }\n            out.add(board);\n            return;\n        }\n        for (int c = 0; c < n; c++) {\n            int d = row - c + n - 1, a = row + c;\n            if (col[c] || diag[d] || anti[a]) continue;\n            col[c] = diag[d] = anti[a] = true;\n            queens[row] = c;\n            place(n, row + 1);\n            col[c] = diag[d] = anti[a] = false;\n        }\n    }\n}",
+     "cpp": "class Solution {\n    vector<bool> col, diag, anti;\n    vector<int> queens;\n    vector<vector<string>> out;\n    void place(int n, int row) {\n        if (row == n) {\n            vector<string> board(n, string(n, '.'));\n            for (int r = 0; r < n; r++) board[r][queens[r]] = 'Q';\n            out.push_back(board);\n            return;\n        }\n        for (int c = 0; c < n; c++) {\n            int d = row - c + n - 1, a = row + c;\n            if (col[c] || diag[d] || anti[a]) continue;\n            col[c] = diag[d] = anti[a] = true;\n            queens[row] = c;\n            place(n, row + 1);\n            col[c] = diag[d] = anti[a] = false;\n        }\n    }\npublic:\n    vector<vector<string>> solveNQueens(int n) {\n        col.assign(n, false);\n        diag.assign(2 * n - 1, false);\n        anti.assign(2 * n - 1, false);\n        queens.assign(n, 0);\n        place(n, 0);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def solveNQueens(self, n: int) -> List[List[str]]:\n        col, diag, anti = set(), set(), set()\n        queens, out = [], []\n        def place(row):\n            if row == n:\n                out.append([\".\" * c + \"Q\" + \".\" * (n - c - 1) for c in queens])\n                return\n            for c in range(n):\n                if c in col or row - c in diag or row + c in anti:\n                    continue\n                col.add(c)\n                diag.add(row - c)\n                anti.add(row + c)\n                queens.append(c)\n                place(row + 1)\n                queens.pop()\n                col.remove(c)\n                diag.remove(row - c)\n                anti.remove(row + c)\n        place(0)\n        return out",
+     "javascript": "var solveNQueens = function(n) {\n    const col = new Array(n).fill(false), diag = new Array(2 * n - 1).fill(false), anti = new Array(2 * n - 1).fill(false);\n    const queens = [], out = [];\n    const place = (row) => {\n        if (row === n) {\n            out.push(queens.map((c) => '.'.repeat(c) + 'Q' + '.'.repeat(n - c - 1)));\n            return;\n        }\n        for (let c = 0; c < n; c++) {\n            const d = row - c + n - 1, a = row + c;\n            if (col[c] || diag[d] || anti[a]) continue;\n            col[c] = diag[d] = anti[a] = true;\n            queens.push(c);\n            place(row + 1);\n            queens.pop();\n            col[c] = diag[d] = anti[a] = false;\n        }\n    };\n    place(0);\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "sudoku-solver": {
+  "pattern": "Backtracking with constraint bitmasks (rows, columns, boxes), choosing the most constrained cell",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Backtracking over empty cells, scanning for conflicts",
+    "idea": "Fill empty cells in order. For each, try digits 1–9, checking the row, column and box by scanning them; move on when a digit fits and undo it if the rest cannot be completed.",
+    "steps": [
+     "Find the next empty cell; if there is none, the board is solved.",
+     "For each digit, scan its row, column and 3 × 3 box for a conflict.",
+     "If it fits, place it and recurse; if the recursion fails, reset the cell to `.` and try the next digit."
+    ],
+    "time": "O(9ᵐ·27)",
+    "space": "O(m)",
+    "why": "m empty cells with up to 9 choices each in the worst case, and every check scans 27 cells. Real puzzles are pruned heavily, but the bound is exponential.",
+    "code": {
+     "java": "class Solution {\n    public void solveSudoku(char[][] board) {\n        solve(board);\n    }\n\n    private boolean solve(char[][] b) {\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++) {\n                if (b[r][c] != '.') continue;\n                for (char d = '1'; d <= '9'; d++) {\n                    if (!fits(b, r, c, d)) continue;\n                    b[r][c] = d;\n                    if (solve(b)) return true;\n                    b[r][c] = '.';\n                }\n                return false;\n            }\n        return true;\n    }\n\n    private boolean fits(char[][] b, int r, int c, char d) {\n        for (int k = 0; k < 9; k++) {\n            if (b[r][k] == d || b[k][c] == d) return false;\n            if (b[3 * (r / 3) + k / 3][3 * (c / 3) + k % 3] == d) return false;\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    bool fits(vector<vector<char>>& b, int r, int c, char d) {\n        for (int k = 0; k < 9; k++) {\n            if (b[r][k] == d || b[k][c] == d) return false;\n            if (b[3 * (r / 3) + k / 3][3 * (c / 3) + k % 3] == d) return false;\n        }\n        return true;\n    }\n    bool solve(vector<vector<char>>& b) {\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++) {\n                if (b[r][c] != '.') continue;\n                for (char d = '1'; d <= '9'; d++) {\n                    if (!fits(b, r, c, d)) continue;\n                    b[r][c] = d;\n                    if (solve(b)) return true;\n                    b[r][c] = '.';\n                }\n                return false;\n            }\n        return true;\n    }\npublic:\n    void solveSudoku(vector<vector<char>>& board) {\n        solve(board);\n    }\n};",
+     "python": "class Solution:\n    def solveSudoku(self, board: List[List[str]]) -> None:\n        def fits(r, c, d):\n            for k in range(9):\n                if board[r][k] == d or board[k][c] == d:\n                    return False\n                if board[3 * (r // 3) + k // 3][3 * (c // 3) + k % 3] == d:\n                    return False\n            return True\n        def solve():\n            for r in range(9):\n                for c in range(9):\n                    if board[r][c] != \".\":\n                        continue\n                    for d in \"123456789\":\n                        if fits(r, c, d):\n                            board[r][c] = d\n                            if solve():\n                                return True\n                            board[r][c] = \".\"\n                    return False\n            return True\n        solve()",
+     "javascript": "var solveSudoku = function(board) {\n    const fits = (r, c, d) => {\n        for (let k = 0; k < 9; k++) {\n            if (board[r][k] === d || board[k][c] === d) return false;\n            if (board[3 * Math.floor(r / 3) + Math.floor(k / 3)][3 * Math.floor(c / 3) + k % 3] === d) return false;\n        }\n        return true;\n    };\n    const solve = () => {\n        for (let r = 0; r < 9; r++)\n            for (let c = 0; c < 9; c++) {\n                if (board[r][c] !== '.') continue;\n                for (let d = 1; d <= 9; d++) {\n                    const ch = String(d);\n                    if (!fits(r, c, ch)) continue;\n                    board[r][c] = ch;\n                    if (solve()) return true;\n                    board[r][c] = '.';\n                }\n                return false;\n            }\n        return true;\n    };\n    solve();\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bitmasks and the most-constrained empty cell first",
+    "idea": "Keep a 9-bit mask of used digits for every row, column and box, so the digits allowed in a cell are found with a few bit operations. At each step fill the empty cell with the fewest options: dead ends are found almost immediately.",
+    "steps": [
+     "Build `rows[9]`, `cols[9]`, `boxes[9]` masks from the given digits and list the empty cells.",
+     "Pick the empty cell whose allowed set `~(rows | cols | boxes) & 0x1FF` has the fewest bits; if one has none, backtrack.",
+     "For each allowed digit: set the bits, write the digit, recurse; on failure clear the bits and restore `.`."
+    ],
+    "time": "O(9ᵐ)",
+    "space": "O(m)",
+    "why": "Still exponential in the worst case (m empty cells), but each check is O(1) and choosing the most constrained cell keeps the search tree tiny on real puzzles. The masks are a fixed 27 integers.",
+    "code": {
+     "java": "class Solution {\n    private final int[] rows = new int[9], cols = new int[9], boxes = new int[9];\n    private final List<int[]> empty = new ArrayList<>();\n    private char[][] b;\n\n    public void solveSudoku(char[][] board) {\n        b = board;\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++) {\n                if (b[r][c] == '.') { empty.add(new int[] { r, c }); continue; }\n                int bit = 1 << (b[r][c] - '1');\n                rows[r] |= bit; cols[c] |= bit; boxes[(r / 3) * 3 + c / 3] |= bit;\n            }\n        solve(0);\n    }\n\n    private boolean solve(int filled) {\n        if (filled == empty.size()) return true;\n        int best = -1, bestOptions = 0, bestCount = 10;\n        for (int k = filled; k < empty.size(); k++) {\n            int r = empty.get(k)[0], c = empty.get(k)[1];\n            int options = ~(rows[r] | cols[c] | boxes[(r / 3) * 3 + c / 3]) & 0x1FF;\n            int count = Integer.bitCount(options);\n            if (count < bestCount) { best = k; bestOptions = options; bestCount = count; }\n        }\n        Collections.swap(empty, filled, best);\n        int r = empty.get(filled)[0], c = empty.get(filled)[1], box = (r / 3) * 3 + c / 3;\n        for (int options = bestOptions; options != 0; options &= options - 1) {\n            int bit = options & -options;\n            rows[r] |= bit; cols[c] |= bit; boxes[box] |= bit;\n            b[r][c] = (char) ('1' + Integer.numberOfTrailingZeros(bit));\n            if (solve(filled + 1)) return true;\n            rows[r] ^= bit; cols[c] ^= bit; boxes[box] ^= bit;\n        }\n        b[r][c] = '.';\n        Collections.swap(empty, filled, best);\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    int rows[9] = {}, cols[9] = {}, boxes[9] = {};\n    vector<pair<int, int>> empty;\n    bool solve(vector<vector<char>>& b, size_t filled) {\n        if (filled == empty.size()) return true;\n        size_t best = filled;\n        int bestOptions = 0, bestCount = 10;\n        for (size_t k = filled; k < empty.size(); k++) {\n            auto [r, c] = empty[k];\n            int options = ~(rows[r] | cols[c] | boxes[(r / 3) * 3 + c / 3]) & 0x1FF;\n            int count = __builtin_popcount(options);\n            if (count < bestCount) { best = k; bestOptions = options; bestCount = count; }\n        }\n        swap(empty[filled], empty[best]);\n        auto [r, c] = empty[filled];\n        int box = (r / 3) * 3 + c / 3;\n        for (int options = bestOptions; options; options &= options - 1) {\n            int bit = options & -options;\n            rows[r] |= bit; cols[c] |= bit; boxes[box] |= bit;\n            b[r][c] = '1' + __builtin_ctz(bit);\n            if (solve(b, filled + 1)) return true;\n            rows[r] ^= bit; cols[c] ^= bit; boxes[box] ^= bit;\n        }\n        b[r][c] = '.';\n        swap(empty[filled], empty[best]);\n        return false;\n    }\npublic:\n    void solveSudoku(vector<vector<char>>& board) {\n        for (int r = 0; r < 9; r++)\n            for (int c = 0; c < 9; c++) {\n                if (board[r][c] == '.') { empty.push_back({r, c}); continue; }\n                int bit = 1 << (board[r][c] - '1');\n                rows[r] |= bit; cols[c] |= bit; boxes[(r / 3) * 3 + c / 3] |= bit;\n            }\n        solve(board, 0);\n    }\n};",
+     "python": "class Solution:\n    def solveSudoku(self, board: List[List[str]]) -> None:\n        rows, cols, boxes = [0] * 9, [0] * 9, [0] * 9\n        empty = []\n        for r in range(9):\n            for c in range(9):\n                if board[r][c] == \".\":\n                    empty.append((r, c))\n                else:\n                    bit = 1 << (int(board[r][c]) - 1)\n                    rows[r] |= bit\n                    cols[c] |= bit\n                    boxes[(r // 3) * 3 + c // 3] |= bit\n        def options(r, c):\n            return ~(rows[r] | cols[c] | boxes[(r // 3) * 3 + c // 3]) & 0x1FF\n        def solve(filled):\n            if filled == len(empty):\n                return True\n            best = min(range(filled, len(empty)), key=lambda k: bin(options(*empty[k])).count(\"1\"))\n            empty[filled], empty[best] = empty[best], empty[filled]\n            r, c = empty[filled]\n            box = (r // 3) * 3 + c // 3\n            opts = options(r, c)\n            while opts:\n                bit = opts & -opts\n                opts ^= bit\n                rows[r] |= bit\n                cols[c] |= bit\n                boxes[box] |= bit\n                board[r][c] = str(bit.bit_length())\n                if solve(filled + 1):\n                    return True\n                rows[r] ^= bit\n                cols[c] ^= bit\n                boxes[box] ^= bit\n            board[r][c] = \".\"\n            empty[filled], empty[best] = empty[best], empty[filled]\n            return False\n        solve(0)",
+     "javascript": "var solveSudoku = function(board) {\n    const rows = new Array(9).fill(0), cols = new Array(9).fill(0), boxes = new Array(9).fill(0), empty = [];\n    const boxOf = (r, c) => Math.floor(r / 3) * 3 + Math.floor(c / 3);\n    for (let r = 0; r < 9; r++)\n        for (let c = 0; c < 9; c++) {\n            if (board[r][c] === '.') { empty.push([r, c]); continue; }\n            const bit = 1 << (Number(board[r][c]) - 1);\n            rows[r] |= bit; cols[c] |= bit; boxes[boxOf(r, c)] |= bit;\n        }\n    const options = (r, c) => ~(rows[r] | cols[c] | boxes[boxOf(r, c)]) & 0x1ff;\n    const bits = (x) => { let n = 0; for (; x; x &= x - 1) n++; return n; };\n    const solve = (filled) => {\n        if (filled === empty.length) return true;\n        let best = filled, bestCount = 10;\n        for (let k = filled; k < empty.length; k++) {\n            const count = bits(options(...empty[k]));\n            if (count < bestCount) { best = k; bestCount = count; }\n        }\n        [empty[filled], empty[best]] = [empty[best], empty[filled]];\n        const [r, c] = empty[filled], box = boxOf(r, c);\n        for (let opts = options(r, c); opts; opts &= opts - 1) {\n            const bit = opts & -opts;\n            rows[r] |= bit; cols[c] |= bit; boxes[box] |= bit;\n            board[r][c] = String(Math.log2(bit) + 1);\n            if (solve(filled + 1)) return true;\n            rows[r] ^= bit; cols[c] ^= bit; boxes[box] ^= bit;\n        }\n        board[r][c] = '.';\n        [empty[filled], empty[best]] = [empty[best], empty[filled]];\n        return false;\n    };\n    solve(0);\n};"
+    }
+   }
+  ]
+ }
+}
