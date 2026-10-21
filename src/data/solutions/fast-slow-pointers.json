@@ -1,0 +1,407 @@
+{
+ "middle-of-the-linked-list": {
+  "pattern": "Fast and slow pointers (fast moves two steps for each step of slow)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the nodes into an array",
+    "idea": "Put every node in an array; the middle (the second one for an even length) is at index `n / 2`.",
+    "steps": [
+     "Walk the list and append each node to an array.",
+     "Return the node at index `n / 2` (integer division)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass to copy; the array holds all n node references.",
+    "code": {
+     "java": "class Solution {\n    public ListNode middleNode(ListNode head) {\n        List<ListNode> nodes = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) nodes.add(p);\n        return nodes.get(nodes.size() / 2);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* middleNode(ListNode* head) {\n        vector<ListNode*> nodes;\n        for (ListNode* p = head; p; p = p->next) nodes.push_back(p);\n        return nodes[nodes.size() / 2];\n    }\n};",
+     "python": "class Solution:\n    def middleNode(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        nodes = []\n        while head:\n            nodes.append(head)\n            head = head.next\n        return nodes[len(nodes) // 2]",
+     "javascript": "var middleNode = function(head) {\n    const nodes = [];\n    for (let p = head; p; p = p.next) nodes.push(p);\n    return nodes[Math.floor(nodes.length / 2)];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count, then walk half way",
+    "idea": "Count the nodes in a first pass, then walk `n / 2` steps from the head in a second pass.",
+    "steps": [
+     "Count the nodes: `n`.",
+     "Start at `head` and move `n / 2` times.",
+     "Return that node."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two passes (n + n/2 steps) with only a counter and a pointer.",
+    "code": {
+     "java": "class Solution {\n    public ListNode middleNode(ListNode head) {\n        int n = 0;\n        for (ListNode p = head; p != null; p = p.next) n++;\n        ListNode p = head;\n        for (int i = 0; i < n / 2; i++) p = p.next;\n        return p;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* middleNode(ListNode* head) {\n        int n = 0;\n        for (ListNode* p = head; p; p = p->next) n++;\n        ListNode* p = head;\n        for (int i = 0; i < n / 2; i++) p = p->next;\n        return p;\n    }\n};",
+     "python": "class Solution:\n    def middleNode(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        n, p = 0, head\n        while p:\n            n += 1\n            p = p.next\n        p = head\n        for _ in range(n // 2):\n            p = p.next\n        return p",
+     "javascript": "var middleNode = function(head) {\n    let n = 0;\n    for (let p = head; p; p = p.next) n++;\n    let p = head;\n    for (let i = 0; i < Math.floor(n / 2); i++) p = p.next;\n    return p;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Slow and fast pointers in one pass",
+    "idea": "Move `slow` one step and `fast` two steps at a time. When `fast` reaches the end, `slow` has covered half the distance and sits at the middle.",
+    "steps": [
+     "Set `slow = fast = head`.",
+     "While `fast` and `fast.next` are not null: `slow = slow.next`, `fast = fast.next.next`.",
+     "Return `slow` (for an even length this is the second middle)."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "`fast` crosses the list once, so about n/2 iterations; two pointers of state.",
+    "code": {
+     "java": "class Solution {\n    public ListNode middleNode(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast != null && fast.next != null) {\n            slow = slow.next;\n            fast = fast.next.next;\n        }\n        return slow;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* middleNode(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n        }\n        return slow;\n    }\n};",
+     "python": "class Solution:\n    def middleNode(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n        return slow",
+     "javascript": "var middleNode = function(head) {\n    let slow = head, fast = head;\n    while (fast && fast.next) {\n        slow = slow.next;\n        fast = fast.next.next;\n    }\n    return slow;\n};"
+    }
+   }
+  ]
+ },
+ "linked-list-cycle": {
+  "pattern": "Floyd's cycle detection (tortoise and hare)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Remember every node visited",
+    "idea": "Walk the list storing each node in a hash set. Reaching a node that is already in the set means the list loops.",
+    "steps": [
+     "Create an empty set of nodes.",
+     "Walk from `head`: if the current node is in the set, return true; otherwise add it and move on.",
+     "If the walk reaches null, return false."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node is visited once before a repeat is found or the end is reached; the set can hold all n nodes. Nodes are compared by identity, not value.",
+    "code": {
+     "java": "class Solution {\n    public boolean hasCycle(ListNode head) {\n        Set<ListNode> seen = new HashSet<>();\n        for (ListNode p = head; p != null; p = p.next)\n            if (!seen.add(p)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool hasCycle(ListNode* head) {\n        unordered_set<ListNode*> seen;\n        for (ListNode* p = head; p; p = p->next)\n            if (!seen.insert(p).second) return true;\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def hasCycle(self, head: Optional[ListNode]) -> bool:\n        seen = set()\n        while head:\n            if head in seen:\n                return True\n            seen.add(head)\n            head = head.next\n        return False",
+     "javascript": "var hasCycle = function(head) {\n    const seen = new Set();\n    for (let p = head; p; p = p.next) {\n        if (seen.has(p)) return true;\n        seen.add(p);\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Floyd's slow and fast pointers",
+    "idea": "Run two pointers, one step and two steps at a time. Without a cycle the fast one falls off the end; with a cycle both end up circling it and the fast one closes the gap by one node per step, so they must meet.",
+    "steps": [
+     "Set `slow = fast = head`.",
+     "While `fast` and `fast.next` are not null: move `slow` one step and `fast` two steps.",
+     "If they point to the same node, return true.",
+     "If the loop ends, return false."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Once both are in the cycle, the gap shrinks by 1 each step, so they meet within one lap; before that, slow takes at most n steps. Only two pointers are stored.",
+    "code": {
+     "java": "class Solution {\n    public boolean hasCycle(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast != null && fast.next != null) {\n            slow = slow.next;\n            fast = fast.next.next;\n            if (slow == fast) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool hasCycle(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n            if (slow == fast) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def hasCycle(self, head: Optional[ListNode]) -> bool:\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n            if slow is fast:\n                return True\n        return False",
+     "javascript": "var hasCycle = function(head) {\n    let slow = head, fast = head;\n    while (fast && fast.next) {\n        slow = slow.next;\n        fast = fast.next.next;\n        if (slow === fast) return true;\n    }\n    return false;\n};"
+    }
+   }
+  ]
+ },
+ "happy-number": {
+  "pattern": "Cycle detection on an implicit sequence (n → sum of squares of digits)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Remember every value seen",
+    "idea": "Keep applying the digit-square step. The sequence either reaches 1 or repeats a value (then it loops forever). A hash set spots the repeat.",
+    "steps": [
+     "Create an empty set.",
+     "While `n != 1`: if `n` is in the set, return false; otherwise add it and replace `n` with the sum of the squares of its digits.",
+     "Return true when `n` becomes 1."
+    ],
+    "time": "O(log n)",
+    "space": "O(log n)",
+    "why": "One step costs O(number of digits) = O(log n), and after the first step every value is below 1000 (a 10-digit number gives at most 10 × 81 = 810), so only a bounded number of steps follow. The set stores those few values.",
+    "code": {
+     "java": "class Solution {\n    public boolean isHappy(int n) {\n        Set<Integer> seen = new HashSet<>();\n        while (n != 1) {\n            if (!seen.add(n)) return false;\n            n = next(n);\n        }\n        return true;\n    }\n\n    private int next(int n) {\n        int s = 0;\n        while (n > 0) { int d = n % 10; s += d * d; n /= 10; }\n        return s;\n    }\n}",
+     "cpp": "class Solution {\n    int next(int n) {\n        int s = 0;\n        while (n > 0) { int d = n % 10; s += d * d; n /= 10; }\n        return s;\n    }\npublic:\n    bool isHappy(int n) {\n        unordered_set<int> seen;\n        while (n != 1) {\n            if (!seen.insert(n).second) return false;\n            n = next(n);\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def isHappy(self, n: int) -> bool:\n        seen = set()\n        while n != 1:\n            if n in seen:\n                return False\n            seen.add(n)\n            n = sum(int(d) ** 2 for d in str(n))\n        return True",
+     "javascript": "var isHappy = function(n) {\n    const next = (n) => { let s = 0; while (n > 0) { const d = n % 10; s += d * d; n = Math.floor(n / 10); } return s; };\n    const seen = new Set();\n    while (n !== 1) {\n        if (seen.has(n)) return false;\n        seen.add(n);\n        n = next(n);\n    }\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Floyd's slow and fast pointers on the sequence",
+    "idea": "Treat the numbers as a linked list where each value points to its digit-square sum. Run a slow pointer (one step) and a fast pointer (two steps); they meet inside the cycle, and the number is happy exactly when that cycle is the fixed point 1.",
+    "steps": [
+     "Set `slow = n`, `fast = next(n)`.",
+     "While `fast != 1` and `slow != fast`: `slow = next(slow)`, `fast = next(next(fast))`.",
+     "Return `fast == 1`."
+    ],
+    "time": "O(log n)",
+    "space": "O(1)",
+    "why": "Same number of steps as before, up to a constant factor, but no set is stored.",
+    "code": {
+     "java": "class Solution {\n    public boolean isHappy(int n) {\n        int slow = n, fast = next(n);\n        while (fast != 1 && slow != fast) {\n            slow = next(slow);\n            fast = next(next(fast));\n        }\n        return fast == 1;\n    }\n\n    private int next(int n) {\n        int s = 0;\n        while (n > 0) { int d = n % 10; s += d * d; n /= 10; }\n        return s;\n    }\n}",
+     "cpp": "class Solution {\n    int next(int n) {\n        int s = 0;\n        while (n > 0) { int d = n % 10; s += d * d; n /= 10; }\n        return s;\n    }\npublic:\n    bool isHappy(int n) {\n        int slow = n, fast = next(n);\n        while (fast != 1 && slow != fast) {\n            slow = next(slow);\n            fast = next(next(fast));\n        }\n        return fast == 1;\n    }\n};",
+     "python": "class Solution:\n    def isHappy(self, n: int) -> bool:\n        def nxt(x):\n            s = 0\n            while x:\n                x, d = divmod(x, 10)\n                s += d * d\n            return s\n        slow, fast = n, nxt(n)\n        while fast != 1 and slow != fast:\n            slow = nxt(slow)\n            fast = nxt(nxt(fast))\n        return fast == 1",
+     "javascript": "var isHappy = function(n) {\n    const next = (n) => { let s = 0; while (n > 0) { const d = n % 10; s += d * d; n = Math.floor(n / 10); } return s; };\n    let slow = n, fast = next(n);\n    while (fast !== 1 && slow !== fast) {\n        slow = next(slow);\n        fast = next(next(fast));\n    }\n    return fast === 1;\n};"
+    }
+   }
+  ]
+ },
+ "palindrome-linked-list": {
+  "pattern": "Fast and slow pointers to find the middle, then reverse the second half",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the values into an array",
+    "idea": "A singly linked list cannot be read backwards, but an array can. Copy the values and check them with two pointers.",
+    "steps": [
+     "Walk the list and append each value to an array.",
+     "Compare `a[i]` with `a[n − 1 − i]` moving inwards; return false on a mismatch.",
+     "Return true."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two linear passes; the array holds all n values.",
+    "code": {
+     "java": "class Solution {\n    public boolean isPalindrome(ListNode head) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) vals.add(p.val);\n        for (int i = 0, j = vals.size() - 1; i < j; i++, j--)\n            if (!vals.get(i).equals(vals.get(j))) return false;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isPalindrome(ListNode* head) {\n        vector<int> vals;\n        for (ListNode* p = head; p; p = p->next) vals.push_back(p->val);\n        for (int i = 0, j = (int) vals.size() - 1; i < j; i++, j--)\n            if (vals[i] != vals[j]) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def isPalindrome(self, head: Optional[ListNode]) -> bool:\n        vals = []\n        while head:\n            vals.append(head.val)\n            head = head.next\n        return vals == vals[::-1]",
+     "javascript": "var isPalindrome = function(head) {\n    const vals = [];\n    for (let p = head; p; p = p.next) vals.push(p.val);\n    for (let i = 0, j = vals.length - 1; i < j; i++, j--)\n        if (vals[i] !== vals[j]) return false;\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Reverse the second half in place and compare",
+    "idea": "Find the middle with slow and fast pointers, reverse the second half, and walk both halves together comparing values. Reverse the second half back afterwards so the input is left unchanged.",
+    "steps": [
+     "Move `slow` one step and `fast` two steps until `fast` cannot move; `slow` is the start of the second half (the middle node of an odd list belongs to it, which is harmless).",
+     "Reverse the list starting at `slow`; call its new head `tail`.",
+     "Walk `p` from `head` and `q` from `tail` while `q` is not null, comparing values; remember any mismatch.",
+     "Reverse the second half again to restore the list, then return the result."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Finding the middle, two reversals and the comparison are each O(n). Only a few pointers are used.",
+    "code": {
+     "java": "class Solution {\n    public boolean isPalindrome(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast != null && fast.next != null) {\n            slow = slow.next;\n            fast = fast.next.next;\n        }\n        ListNode tail = reverse(slow);\n        boolean ok = true;\n        for (ListNode p = head, q = tail; q != null; p = p.next, q = q.next)\n            if (p.val != q.val) { ok = false; break; }\n        reverse(tail);\n        return ok;\n    }\n\n    private ListNode reverse(ListNode node) {\n        ListNode prev = null;\n        while (node != null) {\n            ListNode next = node.next;\n            node.next = prev;\n            prev = node;\n            node = next;\n        }\n        return prev;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* reverse(ListNode* node) {\n        ListNode* prev = nullptr;\n        while (node) {\n            ListNode* next = node->next;\n            node->next = prev;\n            prev = node;\n            node = next;\n        }\n        return prev;\n    }\npublic:\n    bool isPalindrome(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n        }\n        ListNode* tail = reverse(slow);\n        bool ok = true;\n        for (ListNode *p = head, *q = tail; q; p = p->next, q = q->next)\n            if (p->val != q->val) { ok = false; break; }\n        reverse(tail);\n        return ok;\n    }\n};",
+     "python": "class Solution:\n    def isPalindrome(self, head: Optional[ListNode]) -> bool:\n        def reverse(node):\n            prev = None\n            while node:\n                node.next, prev, node = prev, node, node.next\n            return prev\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n        tail = reverse(slow)\n        ok, p, q = True, head, tail\n        while q:\n            if p.val != q.val:\n                ok = False\n                break\n            p, q = p.next, q.next\n        reverse(tail)\n        return ok",
+     "javascript": "var isPalindrome = function(head) {\n    const reverse = (node) => {\n        let prev = null;\n        while (node) {\n            const next = node.next;\n            node.next = prev;\n            prev = node;\n            node = next;\n        }\n        return prev;\n    };\n    let slow = head, fast = head;\n    while (fast && fast.next) {\n        slow = slow.next;\n        fast = fast.next.next;\n    }\n    const tail = reverse(slow);\n    let ok = true;\n    for (let p = head, q = tail; q; p = p.next, q = q.next)\n        if (p.val !== q.val) { ok = false; break; }\n    reverse(tail);\n    return ok;\n};"
+    }
+   }
+  ]
+ },
+ "remove-nth-node-from-end-of-list": {
+  "pattern": "Two pointers with a fixed gap (lead pointer n steps ahead) + dummy head",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count the length, then remove in a second pass",
+    "idea": "The n-th node from the end is node `L − n` from the start (0-based), where `L` is the length. Count `L`, then walk to the node just before it and unlink.",
+    "steps": [
+     "Count the nodes: `L`.",
+     "Put a dummy node in front of `head` and walk `L − n` steps from the dummy; you are now just before the node to remove.",
+     "Skip it: `prev.next = prev.next.next`.",
+     "Return `dummy.next` (this handles removing the head)."
+    ],
+    "time": "O(L)",
+    "space": "O(1)",
+    "why": "Two passes over the list with a counter and a pointer.",
+    "code": {
+     "java": "class Solution {\n    public ListNode removeNthFromEnd(ListNode head, int n) {\n        int len = 0;\n        for (ListNode p = head; p != null; p = p.next) len++;\n        ListNode dummy = new ListNode(0, head), prev = dummy;\n        for (int i = 0; i < len - n; i++) prev = prev.next;\n        prev.next = prev.next.next;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* removeNthFromEnd(ListNode* head, int n) {\n        int len = 0;\n        for (ListNode* p = head; p; p = p->next) len++;\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        for (int i = 0; i < len - n; i++) prev = prev->next;\n        prev->next = prev->next->next;\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:\n        length, p = 0, head\n        while p:\n            length += 1\n            p = p.next\n        dummy = ListNode(0, head)\n        prev = dummy\n        for _ in range(length - n):\n            prev = prev.next\n        prev.next = prev.next.next\n        return dummy.next",
+     "javascript": "var removeNthFromEnd = function(head, n) {\n    let len = 0;\n    for (let p = head; p; p = p.next) len++;\n    const dummy = new ListNode(0, head);\n    let prev = dummy;\n    for (let i = 0; i < len - n; i++) prev = prev.next;\n    prev.next = prev.next.next;\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One pass with a lead pointer n steps ahead",
+    "idea": "Start two pointers at a dummy node and move the lead pointer `n` steps ahead. Then move both together; when the lead reaches the last node, the trailing pointer is just before the node to remove.",
+    "steps": [
+     "Create `dummy` pointing to `head`; set `lead = trail = dummy`.",
+     "Move `lead` forward `n` times.",
+     "While `lead.next` is not null, move both `lead` and `trail` one step.",
+     "Unlink `trail.next` and return `dummy.next`."
+    ],
+    "time": "O(L)",
+    "space": "O(1)",
+    "why": "The lead pointer crosses the list once. The gap of exactly n nodes means `trail` stops n + 1 nodes before the end, right before the target.",
+    "code": {
+     "java": "class Solution {\n    public ListNode removeNthFromEnd(ListNode head, int n) {\n        ListNode dummy = new ListNode(0, head), lead = dummy, trail = dummy;\n        for (int i = 0; i < n; i++) lead = lead.next;\n        while (lead.next != null) {\n            lead = lead.next;\n            trail = trail.next;\n        }\n        trail.next = trail.next.next;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* removeNthFromEnd(ListNode* head, int n) {\n        ListNode dummy(0, head);\n        ListNode *lead = &dummy, *trail = &dummy;\n        for (int i = 0; i < n; i++) lead = lead->next;\n        while (lead->next) {\n            lead = lead->next;\n            trail = trail->next;\n        }\n        trail->next = trail->next->next;\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:\n        dummy = ListNode(0, head)\n        lead = trail = dummy\n        for _ in range(n):\n            lead = lead.next\n        while lead.next:\n            lead, trail = lead.next, trail.next\n        trail.next = trail.next.next\n        return dummy.next",
+     "javascript": "var removeNthFromEnd = function(head, n) {\n    const dummy = new ListNode(0, head);\n    let lead = dummy, trail = dummy;\n    for (let i = 0; i < n; i++) lead = lead.next;\n    while (lead.next) {\n        lead = lead.next;\n        trail = trail.next;\n    }\n    trail.next = trail.next.next;\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "linked-list-cycle-ii": {
+  "pattern": "Floyd's cycle detection, then a second walk to find the cycle's start",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "The first node visited twice",
+    "idea": "Walk the list storing nodes in a hash set. The first node found already in the set is where the cycle begins.",
+    "steps": [
+     "Create an empty set.",
+     "Walk from `head`; if the current node is in the set, return it; otherwise add it.",
+     "If the walk reaches null, return null."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every node is visited once before the first repeat; the set can hold all n nodes.",
+    "code": {
+     "java": "class Solution {\n    public ListNode detectCycle(ListNode head) {\n        Set<ListNode> seen = new HashSet<>();\n        for (ListNode p = head; p != null; p = p.next)\n            if (!seen.add(p)) return p;\n        return null;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* detectCycle(ListNode* head) {\n        unordered_set<ListNode*> seen;\n        for (ListNode* p = head; p; p = p->next)\n            if (!seen.insert(p).second) return p;\n        return nullptr;\n    }\n};",
+     "python": "class Solution:\n    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        seen = set()\n        while head:\n            if head in seen:\n                return head\n            seen.add(head)\n            head = head.next\n        return None",
+     "javascript": "var detectCycle = function(head) {\n    const seen = new Set();\n    for (let p = head; p; p = p.next) {\n        if (seen.has(p)) return p;\n        seen.add(p);\n    }\n    return null;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Floyd's meeting point, then restart one pointer from the head",
+    "idea": "Let `a` be the distance from the head to the cycle start and `c` the cycle length. When slow and fast meet, slow has walked some `d` steps and fast `2d`, so `d` is a multiple of `c`. Walking `a` more steps from the meeting point therefore lands on the cycle start — exactly where a pointer from the head arrives after `a` steps.",
+    "steps": [
+     "Run slow (one step) and fast (two steps) from `head` until they meet; if fast reaches null, return null.",
+     "Move one pointer back to `head`, leave the other at the meeting point.",
+     "Move both one step at a time until they are the same node.",
+     "Return that node: the start of the cycle."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Both phases take at most about n steps. Only two pointers are used and the list is not modified.",
+    "code": {
+     "java": "class Solution {\n    public ListNode detectCycle(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast != null && fast.next != null) {\n            slow = slow.next;\n            fast = fast.next.next;\n            if (slow == fast) {\n                ListNode p = head;\n                while (p != slow) { p = p.next; slow = slow.next; }\n                return p;\n            }\n        }\n        return null;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* detectCycle(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n            if (slow == fast) {\n                ListNode* p = head;\n                while (p != slow) { p = p->next; slow = slow->next; }\n                return p;\n            }\n        }\n        return nullptr;\n    }\n};",
+     "python": "class Solution:\n    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        slow = fast = head\n        while fast and fast.next:\n            slow = slow.next\n            fast = fast.next.next\n            if slow is fast:\n                p = head\n                while p is not slow:\n                    p, slow = p.next, slow.next\n                return p\n        return None",
+     "javascript": "var detectCycle = function(head) {\n    let slow = head, fast = head;\n    while (fast && fast.next) {\n        slow = slow.next;\n        fast = fast.next.next;\n        if (slow === fast) {\n            let p = head;\n            while (p !== slow) { p = p.next; slow = slow.next; }\n            return p;\n        }\n    }\n    return null;\n};"
+    }
+   }
+  ]
+ },
+ "reorder-list": {
+  "pattern": "Find the middle (fast/slow), reverse the second half, merge the halves alternately",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Array of nodes and two pointers",
+    "idea": "Store the nodes in an array, then relink them by taking from the front and the back alternately.",
+    "steps": [
+     "Copy every node into an array `a`.",
+     "With `i = 0`, `j = n − 1`: while `i < j`, set `a[i].next = a[j]`, move `i` right; if `i == j` stop; set `a[j].next = a[i]`, move `j` left.",
+     "Set `a[i].next = null` to end the list."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass to copy and one to relink; the array holds n node references.",
+    "code": {
+     "java": "class Solution {\n    public void reorderList(ListNode head) {\n        List<ListNode> a = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) a.add(p);\n        int i = 0, j = a.size() - 1;\n        while (i < j) {\n            a.get(i).next = a.get(j);\n            i++;\n            if (i == j) break;\n            a.get(j).next = a.get(i);\n            j--;\n        }\n        a.get(i).next = null;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    void reorderList(ListNode* head) {\n        vector<ListNode*> a;\n        for (ListNode* p = head; p; p = p->next) a.push_back(p);\n        int i = 0, j = (int) a.size() - 1;\n        while (i < j) {\n            a[i]->next = a[j];\n            i++;\n            if (i == j) break;\n            a[j]->next = a[i];\n            j--;\n        }\n        a[i]->next = nullptr;\n    }\n};",
+     "python": "class Solution:\n    def reorderList(self, head: Optional[ListNode]) -> None:\n        a = []\n        while head:\n            a.append(head)\n            head = head.next\n        i, j = 0, len(a) - 1\n        while i < j:\n            a[i].next = a[j]\n            i += 1\n            if i == j:\n                break\n            a[j].next = a[i]\n            j -= 1\n        a[i].next = None",
+     "javascript": "var reorderList = function(head) {\n    const a = [];\n    for (let p = head; p; p = p.next) a.push(p);\n    let i = 0, j = a.length - 1;\n    while (i < j) {\n        a[i].next = a[j];\n        i++;\n        if (i === j) break;\n        a[j].next = a[i];\n        j--;\n    }\n    a[i].next = null;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Middle, reverse, merge — all in place",
+    "idea": "The new order interleaves the first half with the second half read backwards. So split at the middle, reverse the second half, and weave the two lists together.",
+    "steps": [
+     "Find the end of the first half with slow/fast pointers (`fast` starts at `head`, loop while `fast.next` and `fast.next.next` exist), so the first half is never shorter.",
+     "Cut the list after `slow`, and reverse the part that followed it.",
+     "Merge: take one node from the first half, then one from the reversed second half, until the second half runs out."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each of the three phases is one linear pass; only a few pointers are used.",
+    "code": {
+     "java": "class Solution {\n    public void reorderList(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast.next != null && fast.next.next != null) {\n            slow = slow.next;\n            fast = fast.next.next;\n        }\n        ListNode second = null, cur = slow.next;\n        slow.next = null;\n        while (cur != null) {\n            ListNode next = cur.next;\n            cur.next = second;\n            second = cur;\n            cur = next;\n        }\n        ListNode first = head;\n        while (second != null) {\n            ListNode n1 = first.next, n2 = second.next;\n            first.next = second;\n            second.next = n1;\n            first = n1;\n            second = n2;\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    void reorderList(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast->next && fast->next->next) {\n            slow = slow->next;\n            fast = fast->next->next;\n        }\n        ListNode *second = nullptr, *cur = slow->next;\n        slow->next = nullptr;\n        while (cur) {\n            ListNode* next = cur->next;\n            cur->next = second;\n            second = cur;\n            cur = next;\n        }\n        ListNode* first = head;\n        while (second) {\n            ListNode *n1 = first->next, *n2 = second->next;\n            first->next = second;\n            second->next = n1;\n            first = n1;\n            second = n2;\n        }\n    }\n};",
+     "python": "class Solution:\n    def reorderList(self, head: Optional[ListNode]) -> None:\n        slow = fast = head\n        while fast.next and fast.next.next:\n            slow = slow.next\n            fast = fast.next.next\n        second, cur = None, slow.next\n        slow.next = None\n        while cur:\n            cur.next, second, cur = second, cur, cur.next\n        first = head\n        while second:\n            n1, n2 = first.next, second.next\n            first.next = second\n            second.next = n1\n            first, second = n1, n2",
+     "javascript": "var reorderList = function(head) {\n    let slow = head, fast = head;\n    while (fast.next && fast.next.next) {\n        slow = slow.next;\n        fast = fast.next.next;\n    }\n    let second = null, cur = slow.next;\n    slow.next = null;\n    while (cur) {\n        const next = cur.next;\n        cur.next = second;\n        second = cur;\n        cur = next;\n    }\n    let first = head;\n    while (second) {\n        const n1 = first.next, n2 = second.next;\n        first.next = second;\n        second.next = n1;\n        first = n1;\n        second = n2;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "find-the-duplicate-number": {
+  "pattern": "Floyd's cycle detection on index → value links (array as a linked list)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare every pair",
+    "idea": "The repeated value is the one that two different positions share.",
+    "steps": [
+     "For each `i` and each `j > i`, compare `nums[i]` and `nums[j]`.",
+     "The first equal pair gives the duplicate: return `nums[i]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About n²/2 comparisons. It respects the rules (no changes, O(1) space) but is too slow for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int findDuplicate(int[] nums) {\n        for (int i = 0; i < nums.length; i++)\n            for (int j = i + 1; j < nums.length; j++)\n                if (nums[i] == nums[j]) return nums[i];\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int n = nums.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++)\n                if (nums[i] == nums[j]) return nums[i];\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        n = len(nums)\n        for i in range(n):\n            for j in range(i + 1, n):\n                if nums[i] == nums[j]:\n                    return nums[i]\n        return -1",
+     "javascript": "var findDuplicate = function(nums) {\n    for (let i = 0; i < nums.length; i++)\n        for (let j = i + 1; j < nums.length; j++)\n            if (nums[i] === nums[j]) return nums[i];\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Hash set (or a seen array)",
+    "idea": "Remember every value seen; the first value seen twice is the duplicate.",
+    "steps": [
+     "Keep a boolean array `seen` of size n + 1 (values are 1..n).",
+     "For each value: if `seen[x]`, return `x`; otherwise mark it."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass, but the extra array breaks the O(1) space rule.",
+    "code": {
+     "java": "class Solution {\n    public int findDuplicate(int[] nums) {\n        boolean[] seen = new boolean[nums.length];\n        for (int x : nums) {\n            if (seen[x]) return x;\n            seen[x] = true;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        vector<bool> seen(nums.size(), false);\n        for (int x : nums) {\n            if (seen[x]) return x;\n            seen[x] = true;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        seen = set()\n        for x in nums:\n            if x in seen:\n                return x\n            seen.add(x)\n        return -1",
+     "javascript": "var findDuplicate = function(nums) {\n    const seen = new Array(nums.length).fill(false);\n    for (const x of nums) {\n        if (seen[x]) return x;\n        seen[x] = true;\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Binary search on the value (pigeonhole counting)",
+    "idea": "For a guess `mid`, count how many values are `<= mid`. Without a duplicate at or below `mid` that count is at most `mid`; if it is larger, the duplicate is in `1..mid`. This halves the value range each time.",
+    "steps": [
+     "Set `lo = 1`, `hi = n` (n = `nums.length − 1`).",
+     "While `lo < hi`: `mid = (lo + hi) / 2`; count values `<= mid`.",
+     "If the count is greater than `mid`, set `hi = mid`; otherwise `lo = mid + 1`.",
+     "Return `lo`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(1)",
+    "why": "log n rounds, each counting over the whole array. No extra memory and the array is not changed.",
+    "code": {
+     "java": "class Solution {\n    public int findDuplicate(int[] nums) {\n        int lo = 1, hi = nums.length - 1;\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1, count = 0;\n            for (int x : nums) if (x <= mid) count++;\n            if (count > mid) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int lo = 1, hi = (int) nums.size() - 1;\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2, count = 0;\n            for (int x : nums) if (x <= mid) count++;\n            if (count > mid) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        lo, hi = 1, len(nums) - 1\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if sum(x <= mid for x in nums) > mid:\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var findDuplicate = function(nums) {\n    let lo = 1, hi = nums.length - 1;\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        let count = 0;\n        for (const x of nums) if (x <= mid) count++;\n        if (count > mid) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Floyd's cycle detection on i → nums[i]",
+    "idea": "Read the array as a linked list where index `i` points to index `nums[i]`. Every value is in 1..n, so nothing points back to index 0: the walk from 0 must eventually enter a cycle. The duplicate value is pointed to by two different indices, so it is exactly where the path joins the cycle — the cycle's entrance.",
+    "steps": [
+     "Start `slow` and `fast` at index 0; move `slow = nums[slow]` and `fast = nums[nums[fast]]` until they meet.",
+     "Reset `slow = 0`.",
+     "Move both one step at a time (`slow = nums[slow]`, `fast = nums[fast]`) until they are equal.",
+     "Return that value: the entrance of the cycle, i.e. the duplicate."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "The same argument as Linked List Cycle II: both phases take O(n) steps, two integers of state, and the array is only read.",
+    "code": {
+     "java": "class Solution {\n    public int findDuplicate(int[] nums) {\n        int slow = 0, fast = 0;\n        do {\n            slow = nums[slow];\n            fast = nums[nums[fast]];\n        } while (slow != fast);\n        slow = 0;\n        while (slow != fast) {\n            slow = nums[slow];\n            fast = nums[fast];\n        }\n        return slow;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        int slow = 0, fast = 0;\n        do {\n            slow = nums[slow];\n            fast = nums[nums[fast]];\n        } while (slow != fast);\n        slow = 0;\n        while (slow != fast) {\n            slow = nums[slow];\n            fast = nums[fast];\n        }\n        return slow;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        slow = fast = 0\n        while True:\n            slow = nums[slow]\n            fast = nums[nums[fast]]\n            if slow == fast:\n                break\n        slow = 0\n        while slow != fast:\n            slow = nums[slow]\n            fast = nums[fast]\n        return slow",
+     "javascript": "var findDuplicate = function(nums) {\n    let slow = 0, fast = 0;\n    do {\n        slow = nums[slow];\n        fast = nums[nums[fast]];\n    } while (slow !== fast);\n    slow = 0;\n    while (slow !== fast) {\n        slow = nums[slow];\n        fast = nums[fast];\n    }\n    return slow;\n};"
+    }
+   }
+  ]
+ }
+}

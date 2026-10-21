@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
   Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
-  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb, Repeat, Mountain, Sunrise,
+  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb, Repeat, Mountain, Sunrise, BookOpenCheck,
 } from 'lucide-react';
 import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
+import { Inline } from './Inline';
+import { SolutionTab } from './SolutionTab';
 import { useSplit } from './useSplit';
 import { loadProblem, exampleCount } from '../../lib/judge/problems';
 import { runTests } from '../../lib/judge/runner';
@@ -50,7 +52,8 @@ const validJson = (s) => {
 
 /**
  * A LeetCode-style workspace for one practice problem: the description and your submissions on the
- * left; the editor, editable test cases and results on the right, with draggable dividers.
+ * left, with the worked solution beside them (not in a mock); the editor, editable test cases and
+ * results on the right, with draggable dividers.
  * "Run" runs the cases in the Testcase tab (your own included); "Submit" runs every test, and
  * passing them all marks the problem solved. Code is written in Java, C++, Python or JavaScript;
  * drafts are kept in this browser, submissions also in the account (src/lib/submissions.js).
@@ -92,6 +95,7 @@ export function ProblemSolver({ slug, compact = false }) {
     setResult(null);
     setError(null);
     setBottomTab('testcase');
+    setLeftTab('description');
     loadProblem(slug).then((p) => {
       if (!alive) return;
       setSpec(p);
@@ -223,6 +227,8 @@ export function ProblemSolver({ slug, compact = false }) {
           <TabButton active={leftTab === 'submissions'} onClick={() => setLeftTab('submissions')} icon={History}>
             Submissions{subs.length ? <span className={styles.count}>{subs.length}</span> : null}
           </TabButton>
+          {/* a mock interview is a test: no worked solution there */}
+          {!compact && <TabButton active={leftTab === 'solution'} onClick={() => setLeftTab('solution')} icon={BookOpenCheck}>Solution</TabButton>}
         </div>
         <div className={styles.panelBody}>
           {leftTab === 'description' ? (
@@ -230,6 +236,10 @@ export function ProblemSolver({ slug, compact = false }) {
               {coachMode && <CoachBanner mode={coachMode} resolve={resolve} />}
               <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} lang={lang} hideHints={resolving} />
             </>
+          ) : leftTab === 'solution' ? (
+            resolving
+              ? <p className={styles.empty}>The solution is hidden until this re-solve ends.</p>
+              : <SolutionTab key={slug} spec={spec} slug={slug} solved={isSolved(slug)} lang={lang} />
           ) : resolving ? (
             <p className={styles.empty}>Your earlier submissions are hidden until this re-solve ends.</p>
           ) : (
@@ -418,13 +428,6 @@ export function prettyConstraint(c) {
     .replace(/\s\*\s/g, ' × ');
   if (parsed) t = t.replace(/(?<![\w`])([A-Za-z_]\w*(?:\[[ij0]\])*(?:\.\w+)?(?:\[[ij0]\])*)/g, '`$1`');
   return t.replace(/`(\w+)\.nodes`/g, 'the number of nodes in `$1`');
-}
-
-/** Text with `code` spans. */
-function Inline({ text }) {
-  return text.split(/(`[^`]+`)/).map((part, i) => (part.startsWith('`') && part.endsWith('`') && part.length > 1
-    ? <code key={i} className={styles.code}>{part.slice(1, -1)}</code>
-    : part));
 }
 
 /** Paragraphs separated by blank lines; lines starting with "- " form a list. */

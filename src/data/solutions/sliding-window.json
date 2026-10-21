@@ -1,0 +1,542 @@
+{
+ "maximum-average-subarray-i": {
+  "pattern": "Fixed-size sliding window (add the element that enters, subtract the one that leaves)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sum every window from scratch",
+    "idea": "There are n − k + 1 windows of size k. Add up each one separately and keep the largest sum; the best average is that sum divided by k.",
+    "steps": [
+     "For each start `i` from 0 to n − k, add `nums[i] … nums[i + k − 1]`.",
+     "Keep the largest sum seen.",
+     "Return the largest sum divided by `k` (as a decimal)."
+    ],
+    "time": "O(n·k)",
+    "space": "O(1)",
+    "why": "n − k + 1 windows, each summed in O(k). When k is about n/2 that is about n²/4 additions.",
+    "code": {
+     "java": "class Solution {\n    public double findMaxAverage(int[] nums, int k) {\n        long best = Long.MIN_VALUE;\n        for (int i = 0; i + k <= nums.length; i++) {\n            long sum = 0;\n            for (int j = i; j < i + k; j++) sum += nums[j];\n            best = Math.max(best, sum);\n        }\n        return (double) best / k;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double findMaxAverage(vector<int>& nums, int k) {\n        long long best = LLONG_MIN;\n        for (int i = 0; i + k <= (int) nums.size(); i++) {\n            long long sum = 0;\n            for (int j = i; j < i + k; j++) sum += nums[j];\n            best = max(best, sum);\n        }\n        return (double) best / k;\n    }\n};",
+     "python": "class Solution:\n    def findMaxAverage(self, nums: List[int], k: int) -> float:\n        best = max(sum(nums[i:i + k]) for i in range(len(nums) - k + 1))\n        return best / k",
+     "javascript": "var findMaxAverage = function(nums, k) {\n    let best = -Infinity;\n    for (let i = 0; i + k <= nums.length; i++) {\n        let sum = 0;\n        for (let j = i; j < i + k; j++) sum += nums[j];\n        best = Math.max(best, sum);\n    }\n    return best / k;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Prefix sums",
+    "idea": "With `prefix[i]` = sum of the first `i` values, any window sum is a difference of two prefix sums: `prefix[i + k] − prefix[i]`.",
+    "steps": [
+     "Build `prefix` of length n + 1 with `prefix[0] = 0` and `prefix[i + 1] = prefix[i] + nums[i]`.",
+     "For each start `i`, the window sum is `prefix[i + k] − prefix[i]`; keep the largest.",
+     "Return the largest sum divided by `k`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass builds the prefix array and one pass reads n − k + 1 differences. The prefix array costs O(n) memory, which the sliding window avoids.",
+    "code": {
+     "java": "class Solution {\n    public double findMaxAverage(int[] nums, int k) {\n        int n = nums.length;\n        long[] prefix = new long[n + 1];\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        long best = Long.MIN_VALUE;\n        for (int i = 0; i + k <= n; i++) best = Math.max(best, prefix[i + k] - prefix[i]);\n        return (double) best / k;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double findMaxAverage(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        long long best = LLONG_MIN;\n        for (int i = 0; i + k <= n; i++) best = max(best, prefix[i + k] - prefix[i]);\n        return (double) best / k;\n    }\n};",
+     "python": "class Solution:\n    def findMaxAverage(self, nums: List[int], k: int) -> float:\n        prefix = [0]\n        for x in nums:\n            prefix.append(prefix[-1] + x)\n        best = max(prefix[i + k] - prefix[i] for i in range(len(nums) - k + 1))\n        return best / k",
+     "javascript": "var findMaxAverage = function(nums, k) {\n    const n = nums.length, prefix = [0];\n    for (let i = 0; i < n; i++) prefix.push(prefix[i] + nums[i]);\n    let best = -Infinity;\n    for (let i = 0; i + k <= n; i++) best = Math.max(best, prefix[i + k] - prefix[i]);\n    return best / k;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Slide a window of size k",
+    "idea": "Neighbouring windows share k − 1 elements. Moving the window one step adds the new element on the right and removes the one that falls off the left.",
+    "steps": [
+     "Sum the first `k` elements; this is the current and best sum.",
+     "For `i` from `k` to n − 1: `sum += nums[i] − nums[i − k]`, then update the best.",
+     "Return the best sum divided by `k`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each element enters the window once and leaves once, and only the running sum and the best are stored. Dividing only at the end avoids rounding on every step.",
+    "code": {
+     "java": "class Solution {\n    public double findMaxAverage(int[] nums, int k) {\n        long sum = 0;\n        for (int i = 0; i < k; i++) sum += nums[i];\n        long best = sum;\n        for (int i = k; i < nums.length; i++) {\n            sum += nums[i] - nums[i - k];\n            best = Math.max(best, sum);\n        }\n        return (double) best / k;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double findMaxAverage(vector<int>& nums, int k) {\n        long long sum = 0;\n        for (int i = 0; i < k; i++) sum += nums[i];\n        long long best = sum;\n        for (int i = k; i < (int) nums.size(); i++) {\n            sum += nums[i] - nums[i - k];\n            best = max(best, sum);\n        }\n        return (double) best / k;\n    }\n};",
+     "python": "class Solution:\n    def findMaxAverage(self, nums: List[int], k: int) -> float:\n        s = sum(nums[:k])\n        best = s\n        for i in range(k, len(nums)):\n            s += nums[i] - nums[i - k]\n            best = max(best, s)\n        return best / k",
+     "javascript": "var findMaxAverage = function(nums, k) {\n    let sum = 0;\n    for (let i = 0; i < k; i++) sum += nums[i];\n    let best = sum;\n    for (let i = k; i < nums.length; i++) {\n        sum += nums[i] - nums[i - k];\n        best = Math.max(best, sum);\n    }\n    return best / k;\n};"
+    }
+   }
+  ]
+ },
+ "longest-substring-without-repeating-characters": {
+  "pattern": "Variable-size sliding window (grow on the right, shrink on the left while the window is invalid)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend until a character repeats",
+    "idea": "For each starting index, keep adding characters to a set; the first repeated character ends the longest valid substring from that start.",
+    "steps": [
+     "For each start `i`, create an empty set.",
+     "Move `j` from `i` to the right; if `s[j]` is already in the set, stop; otherwise add it.",
+     "The substring `s[i..j)` has no repeats; update the best length with `j − i`.",
+     "Return the best length."
+    ],
+    "time": "O(n²)",
+    "space": "O(σ)",
+    "why": "Each start can scan to the end of the string, giving O(n²) in the worst case. (A scan never runs longer than the alphabet size σ before repeating, so it is really O(n·σ).) The set holds at most σ characters.",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        int best = 0;\n        for (int i = 0; i < s.length(); i++) {\n            Set<Character> seen = new HashSet<>();\n            int j = i;\n            while (j < s.length() && seen.add(s.charAt(j))) j++;\n            best = Math.max(best, j - i);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        int best = 0, n = s.size();\n        for (int i = 0; i < n; i++) {\n            unordered_set<char> seen;\n            int j = i;\n            while (j < n && !seen.count(s[j])) seen.insert(s[j++]);\n            best = max(best, j - i);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        best = 0\n        for i in range(len(s)):\n            seen = set()\n            j = i\n            while j < len(s) and s[j] not in seen:\n                seen.add(s[j])\n                j += 1\n            best = max(best, j - i)\n        return best",
+     "javascript": "var lengthOfLongestSubstring = function(s) {\n    let best = 0;\n    for (let i = 0; i < s.length; i++) {\n        const seen = new Set();\n        let j = i;\n        while (j < s.length && !seen.has(s[j])) seen.add(s[j++]);\n        best = Math.max(best, j - i);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sliding window with a set, shrinking one step at a time",
+    "idea": "Keep a window `s[l..r]` with no repeats. When `s[r]` is already inside, remove characters from the left until it is not.",
+    "steps": [
+     "Set `l = 0` and an empty set.",
+     "For each `r`: while `s[r]` is in the set, remove `s[l]` and move `l` right.",
+     "Add `s[r]`; the window `s[l..r]` has no repeats, so update the best with `r − l + 1`.",
+     "Return the best length."
+    ],
+    "time": "O(n)",
+    "space": "O(σ)",
+    "why": "Each character is added once (when `r` reaches it) and removed at most once (when `l` passes it): at most 2n set operations. The set holds at most σ characters.",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        Set<Character> window = new HashSet<>();\n        int best = 0;\n        for (int l = 0, r = 0; r < s.length(); r++) {\n            while (window.contains(s.charAt(r))) window.remove(s.charAt(l++));\n            window.add(s.charAt(r));\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        unordered_set<char> window;\n        int best = 0;\n        for (int l = 0, r = 0; r < (int) s.size(); r++) {\n            while (window.count(s[r])) window.erase(s[l++]);\n            window.insert(s[r]);\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        window = set()\n        best = l = 0\n        for r, c in enumerate(s):\n            while c in window:\n                window.remove(s[l])\n                l += 1\n            window.add(c)\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var lengthOfLongestSubstring = function(s) {\n    const window = new Set();\n    let best = 0;\n    for (let l = 0, r = 0; r < s.length; r++) {\n        while (window.has(s[r])) window.delete(s[l++]);\n        window.add(s[r]);\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window that jumps using the last position of each character",
+    "idea": "Remember where each character was last seen. When `s[r]` repeats inside the window, the left edge can jump straight past its previous position instead of stepping there.",
+    "steps": [
+     "Keep `last[c]` = the last index where character `c` appeared (−1 if never), and `l = 0`.",
+     "For each `r`: if `last[s[r]] >= l`, the repeat is inside the window, so set `l = last[s[r]] + 1`.",
+     "Set `last[s[r]] = r` and update the best with `r − l + 1`.",
+     "Return the best length."
+    ],
+    "time": "O(n)",
+    "space": "O(σ)",
+    "why": "One pass with O(1) work per character; `l` only moves forward. The table has one entry per possible character (128 for ASCII).",
+    "code": {
+     "java": "class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        int[] last = new int[128];\n        Arrays.fill(last, -1);\n        int best = 0;\n        for (int l = 0, r = 0; r < s.length(); r++) {\n            char c = s.charAt(r);\n            if (last[c] >= l) l = last[c] + 1;\n            last[c] = r;\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        vector<int> last(128, -1);\n        int best = 0;\n        for (int l = 0, r = 0; r < (int) s.size(); r++) {\n            unsigned char c = s[r];\n            if (last[c] >= l) l = last[c] + 1;\n            last[c] = r;\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        last = {}\n        best = l = 0\n        for r, c in enumerate(s):\n            if last.get(c, -1) >= l:\n                l = last[c] + 1\n            last[c] = r\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var lengthOfLongestSubstring = function(s) {\n    const last = new Map();\n    let best = 0;\n    for (let l = 0, r = 0; r < s.length; r++) {\n        const c = s[r];\n        if (last.has(c) && last.get(c) >= l) l = last.get(c) + 1;\n        last.set(c, r);\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-size-subarray-sum": {
+  "pattern": "Variable-size sliding window on positive numbers (shrink while the window is still valid)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend until the sum reaches target",
+    "idea": "For each start, add elements until the sum reaches `target`; the first such end gives the shortest subarray from that start.",
+    "steps": [
+     "For each start `i`, set `sum = 0`.",
+     "Move `j` right from `i`, adding `nums[j]`; as soon as `sum >= target`, record `j − i + 1` and stop.",
+     "Return the smallest length recorded, or 0 if none."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Each start may scan to the end: about n²/2 additions in the worst case.",
+    "code": {
+     "java": "class Solution {\n    public int minSubArrayLen(int target, int[] nums) {\n        int n = nums.length, best = Integer.MAX_VALUE;\n        for (int i = 0; i < n; i++) {\n            long sum = 0;\n            for (int j = i; j < n; j++) {\n                sum += nums[j];\n                if (sum >= target) { best = Math.min(best, j - i + 1); break; }\n            }\n        }\n        return best == Integer.MAX_VALUE ? 0 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& nums) {\n        int n = nums.size(), best = INT_MAX;\n        for (int i = 0; i < n; i++) {\n            long long sum = 0;\n            for (int j = i; j < n; j++) {\n                sum += nums[j];\n                if (sum >= target) { best = min(best, j - i + 1); break; }\n            }\n        }\n        return best == INT_MAX ? 0 : best;\n    }\n};",
+     "python": "class Solution:\n    def minSubArrayLen(self, target: int, nums: List[int]) -> int:\n        n, best = len(nums), inf\n        for i in range(n):\n            s = 0\n            for j in range(i, n):\n                s += nums[j]\n                if s >= target:\n                    best = min(best, j - i + 1)\n                    break\n        return 0 if best == inf else best",
+     "javascript": "var minSubArrayLen = function(target, nums) {\n    const n = nums.length;\n    let best = Infinity;\n    for (let i = 0; i < n; i++) {\n        let sum = 0;\n        for (let j = i; j < n; j++) {\n            sum += nums[j];\n            if (sum >= target) { best = Math.min(best, j - i + 1); break; }\n        }\n    }\n    return best === Infinity ? 0 : best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Prefix sums and binary search",
+    "idea": "All values are positive, so prefix sums are strictly increasing. For each start `i`, binary search the first end where `prefix[end] − prefix[i] >= target`.",
+    "steps": [
+     "Build `prefix` with `prefix[0] = 0`, `prefix[k + 1] = prefix[k] + nums[k]`.",
+     "For each start `i`, binary search the smallest `e` with `prefix[e] >= prefix[i] + target`.",
+     "If such an `e` exists, the subarray `nums[i..e − 1]` has length `e − i`; keep the smallest.",
+     "Return the smallest length, or 0."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "n binary searches over an array of n + 1 prefix sums. Binary search works only because positive values make the prefix sums sorted.",
+    "code": {
+     "java": "class Solution {\n    public int minSubArrayLen(int target, int[] nums) {\n        int n = nums.length, best = Integer.MAX_VALUE;\n        long[] prefix = new long[n + 1];\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        for (int i = 0; i < n; i++) {\n            long want = prefix[i] + target;\n            int lo = i + 1, hi = n;\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (prefix[mid] >= want) hi = mid; else lo = mid + 1;\n            }\n            if (prefix[lo] >= want) best = Math.min(best, lo - i);\n        }\n        return best == Integer.MAX_VALUE ? 0 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& nums) {\n        int n = nums.size(), best = INT_MAX;\n        vector<long long> prefix(n + 1, 0);\n        for (int i = 0; i < n; i++) prefix[i + 1] = prefix[i] + nums[i];\n        for (int i = 0; i < n; i++) {\n            auto it = lower_bound(prefix.begin() + i + 1, prefix.end(), prefix[i] + target);\n            if (it != prefix.end()) best = min(best, (int) (it - prefix.begin()) - i);\n        }\n        return best == INT_MAX ? 0 : best;\n    }\n};",
+     "python": "class Solution:\n    def minSubArrayLen(self, target: int, nums: List[int]) -> int:\n        n = len(nums)\n        prefix = [0]\n        for x in nums:\n            prefix.append(prefix[-1] + x)\n        best = inf\n        for i in range(n):\n            e = bisect_left(prefix, prefix[i] + target, i + 1)\n            if e <= n:\n                best = min(best, e - i)\n        return 0 if best == inf else best",
+     "javascript": "var minSubArrayLen = function(target, nums) {\n    const n = nums.length, prefix = [0];\n    for (let i = 0; i < n; i++) prefix.push(prefix[i] + nums[i]);\n    let best = Infinity;\n    for (let i = 0; i < n; i++) {\n        const want = prefix[i] + target;\n        let lo = i + 1, hi = n;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (prefix[mid] >= want) hi = mid; else lo = mid + 1;\n        }\n        if (prefix[lo] >= want) best = Math.min(best, lo - i);\n    }\n    return best === Infinity ? 0 : best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window: grow right, shrink left while the sum is enough",
+    "idea": "Extend the window to the right; whenever its sum reaches `target`, record the length and shrink from the left as long as the sum stays at or above `target`.",
+    "steps": [
+     "Set `l = 0`, `sum = 0`.",
+     "For each `r`, add `nums[r]` to `sum`.",
+     "While `sum >= target`: record `r − l + 1`, subtract `nums[l]`, and move `l` right.",
+     "Return the smallest length recorded, or 0."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each index enters the window once and leaves at most once, so the total work is O(n). Positivity is what makes this valid: shrinking can only lower the sum, so once it drops below `target` no shorter window ending at `r` exists.",
+    "code": {
+     "java": "class Solution {\n    public int minSubArrayLen(int target, int[] nums) {\n        int best = Integer.MAX_VALUE, sum = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            sum += nums[r];\n            while (sum >= target) {\n                best = Math.min(best, r - l + 1);\n                sum -= nums[l++];\n            }\n        }\n        return best == Integer.MAX_VALUE ? 0 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minSubArrayLen(int target, vector<int>& nums) {\n        int best = INT_MAX, sum = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            sum += nums[r];\n            while (sum >= target) {\n                best = min(best, r - l + 1);\n                sum -= nums[l++];\n            }\n        }\n        return best == INT_MAX ? 0 : best;\n    }\n};",
+     "python": "class Solution:\n    def minSubArrayLen(self, target: int, nums: List[int]) -> int:\n        best, s, l = inf, 0, 0\n        for r, x in enumerate(nums):\n            s += x\n            while s >= target:\n                best = min(best, r - l + 1)\n                s -= nums[l]\n                l += 1\n        return 0 if best == inf else best",
+     "javascript": "var minSubArrayLen = function(target, nums) {\n    let best = Infinity, sum = 0;\n    for (let l = 0, r = 0; r < nums.length; r++) {\n        sum += nums[r];\n        while (sum >= target) {\n            best = Math.min(best, r - l + 1);\n            sum -= nums[l++];\n        }\n    }\n    return best === Infinity ? 0 : best;\n};"
+    }
+   }
+  ]
+ },
+ "max-consecutive-ones-iii": {
+  "pattern": "Variable-size sliding window with a budget (at most k zeros inside)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend while at most k zeros",
+    "idea": "Flipping at most k zeros means finding the longest subarray with at most k zeros. Try every start and extend until a (k + 1)-th zero appears.",
+    "steps": [
+     "For each start `i`, set `zeros = 0`.",
+     "Move `j` right; count zeros; stop when `zeros` would exceed `k`.",
+     "The run `nums[i..j)` is valid; update the best with `j − i`.",
+     "Return the best."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Each start may scan to the end of the array.",
+    "code": {
+     "java": "class Solution {\n    public int longestOnes(int[] nums, int k) {\n        int n = nums.length, best = 0;\n        for (int i = 0; i < n; i++) {\n            int zeros = 0, j = i;\n            while (j < n && zeros + (nums[j] == 0 ? 1 : 0) <= k) {\n                if (nums[j] == 0) zeros++;\n                j++;\n            }\n            best = Math.max(best, j - i);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestOnes(vector<int>& nums, int k) {\n        int n = nums.size(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int zeros = 0, j = i;\n            while (j < n && zeros + (nums[j] == 0) <= k) {\n                zeros += nums[j] == 0;\n                j++;\n            }\n            best = max(best, j - i);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestOnes(self, nums: List[int], k: int) -> int:\n        n, best = len(nums), 0\n        for i in range(n):\n            zeros, j = 0, i\n            while j < n and zeros + (nums[j] == 0) <= k:\n                zeros += nums[j] == 0\n                j += 1\n            best = max(best, j - i)\n        return best",
+     "javascript": "var longestOnes = function(nums, k) {\n    const n = nums.length;\n    let best = 0;\n    for (let i = 0; i < n; i++) {\n        let zeros = 0, j = i;\n        while (j < n && zeros + (nums[j] === 0 ? 1 : 0) <= k) {\n            if (nums[j] === 0) zeros++;\n            j++;\n        }\n        best = Math.max(best, j - i);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Prefix count of zeros and binary search",
+    "idea": "`zeros[i]` = number of zeros among the first `i` values never decreases. For each right end `r`, binary search the leftmost start whose window has at most k zeros.",
+    "steps": [
+     "Build `zeros` with `zeros[0] = 0` and `zeros[i + 1] = zeros[i] + (nums[i] == 0 ? 1 : 0)`.",
+     "For each `r`, find the smallest `l` with `zeros[r + 1] − zeros[l] <= k`, i.e. `zeros[l] >= zeros[r + 1] − k`.",
+     "Update the best with `r − l + 1`.",
+     "Return the best."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "n binary searches over the n + 1 prefix counts, which are sorted because counts never go down.",
+    "code": {
+     "java": "class Solution {\n    public int longestOnes(int[] nums, int k) {\n        int n = nums.length, best = 0;\n        int[] zeros = new int[n + 1];\n        for (int i = 0; i < n; i++) zeros[i + 1] = zeros[i] + (nums[i] == 0 ? 1 : 0);\n        for (int r = 0; r < n; r++) {\n            int want = zeros[r + 1] - k, lo = 0, hi = r + 1;\n            while (lo < hi) {\n                int mid = (lo + hi) >>> 1;\n                if (zeros[mid] >= want) hi = mid; else lo = mid + 1;\n            }\n            best = Math.max(best, r - lo + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestOnes(vector<int>& nums, int k) {\n        int n = nums.size(), best = 0;\n        vector<int> zeros(n + 1, 0);\n        for (int i = 0; i < n; i++) zeros[i + 1] = zeros[i] + (nums[i] == 0);\n        for (int r = 0; r < n; r++) {\n            int l = lower_bound(zeros.begin(), zeros.begin() + r + 1, zeros[r + 1] - k) - zeros.begin();\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestOnes(self, nums: List[int], k: int) -> int:\n        zeros = [0]\n        for x in nums:\n            zeros.append(zeros[-1] + (x == 0))\n        best = 0\n        for r in range(len(nums)):\n            l = bisect_left(zeros, zeros[r + 1] - k, 0, r + 1)\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var longestOnes = function(nums, k) {\n    const n = nums.length, zeros = [0];\n    for (let i = 0; i < n; i++) zeros.push(zeros[i] + (nums[i] === 0 ? 1 : 0));\n    let best = 0;\n    for (let r = 0; r < n; r++) {\n        const want = zeros[r + 1] - k;\n        let lo = 0, hi = r + 1;\n        while (lo < hi) {\n            const mid = (lo + hi) >> 1;\n            if (zeros[mid] >= want) hi = mid; else lo = mid + 1;\n        }\n        best = Math.max(best, r - lo + 1);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window that keeps at most k zeros",
+    "idea": "Grow the window to the right, counting zeros. When there are more than k zeros, move the left edge until one zero leaves.",
+    "steps": [
+     "Set `l = 0`, `zeros = 0`.",
+     "For each `r`: if `nums[r] == 0`, increase `zeros`.",
+     "While `zeros > k`: if `nums[l] == 0`, decrease `zeros`; move `l` right.",
+     "Update the best with `r − l + 1`; return it at the end."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Both edges only move forward, so each index is visited at most twice. Only two indices and a counter are stored.",
+    "code": {
+     "java": "class Solution {\n    public int longestOnes(int[] nums, int k) {\n        int best = 0, zeros = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            if (nums[r] == 0) zeros++;\n            while (zeros > k) if (nums[l++] == 0) zeros--;\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestOnes(vector<int>& nums, int k) {\n        int best = 0, zeros = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            if (nums[r] == 0) zeros++;\n            while (zeros > k) if (nums[l++] == 0) zeros--;\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestOnes(self, nums: List[int], k: int) -> int:\n        best = zeros = l = 0\n        for r, x in enumerate(nums):\n            if x == 0:\n                zeros += 1\n            while zeros > k:\n                if nums[l] == 0:\n                    zeros -= 1\n                l += 1\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var longestOnes = function(nums, k) {\n    let best = 0, zeros = 0;\n    for (let l = 0, r = 0; r < nums.length; r++) {\n        if (nums[r] === 0) zeros++;\n        while (zeros > k) if (nums[l++] === 0) zeros--;\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "longest-repeating-character-replacement": {
+  "pattern": "Variable-size sliding window: a window is valid when length − (count of its most common letter) ≤ k",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend while the window can be fixed",
+    "idea": "A substring can become one repeated letter if the letters that are not its most common letter number at most `k`. Try every start and extend, keeping letter counts.",
+    "steps": [
+     "For each start `i`, reset 26 counts and `maxCount = 0`.",
+     "Move `j` right: count `s[j]` and update `maxCount`.",
+     "If `(j − i + 1) − maxCount <= k`, the window works: update the best length; otherwise stop (longer windows from `i` only need more changes).",
+     "Return the best."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Up to n starts, each scanning up to n letters with O(1) work. The 26 counters are constant space.",
+    "code": {
+     "java": "class Solution {\n    public int characterReplacement(String s, int k) {\n        int n = s.length(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int[] count = new int[26];\n            int maxCount = 0;\n            for (int j = i; j < n; j++) {\n                maxCount = Math.max(maxCount, ++count[s.charAt(j) - 'A']);\n                if (j - i + 1 - maxCount > k) break;\n                best = Math.max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int characterReplacement(string s, int k) {\n        int n = s.size(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int count[26] = {0}, maxCount = 0;\n            for (int j = i; j < n; j++) {\n                maxCount = max(maxCount, ++count[s[j] - 'A']);\n                if (j - i + 1 - maxCount > k) break;\n                best = max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        n, best = len(s), 0\n        for i in range(n):\n            count = [0] * 26\n            max_count = 0\n            for j in range(i, n):\n                c = ord(s[j]) - 65\n                count[c] += 1\n                max_count = max(max_count, count[c])\n                if j - i + 1 - max_count > k:\n                    break\n                best = max(best, j - i + 1)\n        return best",
+     "javascript": "var characterReplacement = function(s, k) {\n    const n = s.length;\n    let best = 0;\n    for (let i = 0; i < n; i++) {\n        const count = new Array(26).fill(0);\n        let maxCount = 0;\n        for (let j = i; j < n; j++) {\n            maxCount = Math.max(maxCount, ++count[s.charCodeAt(j) - 65]);\n            if (j - i + 1 - maxCount > k) break;\n            best = Math.max(best, j - i + 1);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sliding window, recomputing the most common letter",
+    "idea": "Keep a window and its letter counts. While the window needs more than `k` changes, shrink it from the left; the needed changes are the length minus the largest of the 26 counts.",
+    "steps": [
+     "Set `l = 0` and 26 counts at 0.",
+     "For each `r`, count `s[r]`.",
+     "While `(r − l + 1) − max(count) > k`, uncount `s[l]` and move `l` right.",
+     "Update the best with `r − l + 1`; return it at the end."
+    ],
+    "time": "O(26·n)",
+    "space": "O(1)",
+    "why": "Each edge moves at most n times, and each check scans 26 counts.",
+    "code": {
+     "java": "class Solution {\n    public int characterReplacement(String s, int k) {\n        int[] count = new int[26];\n        int best = 0;\n        for (int l = 0, r = 0; r < s.length(); r++) {\n            count[s.charAt(r) - 'A']++;\n            while (r - l + 1 - Arrays.stream(count).max().getAsInt() > k) count[s.charAt(l++) - 'A']--;\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int characterReplacement(string s, int k) {\n        int count[26] = {0}, best = 0;\n        for (int l = 0, r = 0; r < (int) s.size(); r++) {\n            count[s[r] - 'A']++;\n            while (r - l + 1 - *max_element(count, count + 26) > k) count[s[l++] - 'A']--;\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        count = [0] * 26\n        best = l = 0\n        for r in range(len(s)):\n            count[ord(s[r]) - 65] += 1\n            while r - l + 1 - max(count) > k:\n                count[ord(s[l]) - 65] -= 1\n                l += 1\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var characterReplacement = function(s, k) {\n    const count = new Array(26).fill(0);\n    let best = 0;\n    for (let l = 0, r = 0; r < s.length; r++) {\n        count[s.charCodeAt(r) - 65]++;\n        while (r - l + 1 - Math.max(...count) > k) count[s.charCodeAt(l++) - 65]--;\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window that never lowers the best count",
+    "idea": "The answer only grows when some window has a larger most-common count, so `maxCount` never needs to go down. With a stale `maxCount` the window just slides at its best length instead of shrinking.",
+    "steps": [
+     "Set `l = 0`, `maxCount = 0` and 26 counts.",
+     "For each `r`: count `s[r]` and set `maxCount = max(maxCount, count[s[r]])`.",
+     "If `(r − l + 1) − maxCount > k`, uncount `s[l]` and move `l` right once (the window keeps its length).",
+     "Return `n − l` at the end (the final window length, which is the best length seen)."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "O(1) work per character. The window never shrinks, it only grows or slides; it grows only when a real window with a higher count is found, so its final length is the answer.",
+    "code": {
+     "java": "class Solution {\n    public int characterReplacement(String s, int k) {\n        int[] count = new int[26];\n        int l = 0, maxCount = 0;\n        for (int r = 0; r < s.length(); r++) {\n            maxCount = Math.max(maxCount, ++count[s.charAt(r) - 'A']);\n            if (r - l + 1 - maxCount > k) count[s.charAt(l++) - 'A']--;\n        }\n        return s.length() - l;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int characterReplacement(string s, int k) {\n        int count[26] = {0}, l = 0, maxCount = 0, n = s.size();\n        for (int r = 0; r < n; r++) {\n            maxCount = max(maxCount, ++count[s[r] - 'A']);\n            if (r - l + 1 - maxCount > k) count[s[l++] - 'A']--;\n        }\n        return n - l;\n    }\n};",
+     "python": "class Solution:\n    def characterReplacement(self, s: str, k: int) -> int:\n        count = [0] * 26\n        l = max_count = 0\n        for r in range(len(s)):\n            c = ord(s[r]) - 65\n            count[c] += 1\n            max_count = max(max_count, count[c])\n            if r - l + 1 - max_count > k:\n                count[ord(s[l]) - 65] -= 1\n                l += 1\n        return len(s) - l",
+     "javascript": "var characterReplacement = function(s, k) {\n    const count = new Array(26).fill(0);\n    let l = 0, maxCount = 0;\n    for (let r = 0; r < s.length; r++) {\n        maxCount = Math.max(maxCount, ++count[s.charCodeAt(r) - 65]);\n        if (r - l + 1 - maxCount > k) count[s.charCodeAt(l++) - 65]--;\n    }\n    return s.length - l;\n};"
+    }
+   }
+  ]
+ },
+ "permutation-in-string": {
+  "pattern": "Fixed-size sliding window with letter counts (anagram check)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort each window and compare",
+    "idea": "Two strings are permutations of each other exactly when their sorted letters are equal. Sort `s1` once and compare it with every sorted window of `s2` of the same length.",
+    "steps": [
+     "Let `n = s1.length`; if `n > s2.length`, return false.",
+     "Sort the letters of `s1`.",
+     "For each start `i` in `s2`, sort `s2[i..i + n)` and compare it with sorted `s1`; return true on a match.",
+     "Return false if no window matches."
+    ],
+    "time": "O(m·n log n)",
+    "space": "O(n)",
+    "why": "About m windows (m = `s2.length`), each sorted in O(n log n). Each sorted copy takes O(n) memory.",
+    "code": {
+     "java": "class Solution {\n    public boolean checkInclusion(String s1, String s2) {\n        int n = s1.length();\n        char[] want = s1.toCharArray();\n        Arrays.sort(want);\n        for (int i = 0; i + n <= s2.length(); i++) {\n            char[] window = s2.substring(i, i + n).toCharArray();\n            Arrays.sort(window);\n            if (Arrays.equals(want, window)) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool checkInclusion(string s1, string s2) {\n        int n = s1.size();\n        sort(s1.begin(), s1.end());\n        for (int i = 0; i + n <= (int) s2.size(); i++) {\n            string window = s2.substr(i, n);\n            sort(window.begin(), window.end());\n            if (window == s1) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        n, want = len(s1), sorted(s1)\n        return any(sorted(s2[i:i + n]) == want for i in range(len(s2) - n + 1))",
+     "javascript": "var checkInclusion = function(s1, s2) {\n    const n = s1.length, want = s1.split('').sort().join('');\n    for (let i = 0; i + n <= s2.length; i++)\n        if (s2.slice(i, i + n).split('').sort().join('') === want) return true;\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Slide a window of counts and compare all 26",
+    "idea": "Instead of sorting, compare letter counts. Keep counts for the current window of `s2` and update them as it slides: one letter enters and one leaves.",
+    "steps": [
+     "Count the letters of `s1` in `need[26]`.",
+     "Slide a window of length n over `s2`, adding the entering letter to `have` and removing the letter that leaves.",
+     "Whenever the window has length n, compare `need` and `have`; return true if they are equal.",
+     "Return false at the end."
+    ],
+    "time": "O(26·m)",
+    "space": "O(1)",
+    "why": "O(1) updates per step, plus a 26-entry comparison per window.",
+    "code": {
+     "java": "class Solution {\n    public boolean checkInclusion(String s1, String s2) {\n        int n = s1.length();\n        if (n > s2.length()) return false;\n        int[] need = new int[26], have = new int[26];\n        for (char c : s1.toCharArray()) need[c - 'a']++;\n        for (int i = 0; i < s2.length(); i++) {\n            have[s2.charAt(i) - 'a']++;\n            if (i >= n) have[s2.charAt(i - n) - 'a']--;\n            if (i >= n - 1 && Arrays.equals(need, have)) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool checkInclusion(string s1, string s2) {\n        int n = s1.size();\n        if (n > (int) s2.size()) return false;\n        array<int, 26> need{}, have{};\n        for (char c : s1) need[c - 'a']++;\n        for (int i = 0; i < (int) s2.size(); i++) {\n            have[s2[i] - 'a']++;\n            if (i >= n) have[s2[i - n] - 'a']--;\n            if (i >= n - 1 && need == have) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        n = len(s1)\n        if n > len(s2):\n            return False\n        need, have = [0] * 26, [0] * 26\n        for c in s1:\n            need[ord(c) - 97] += 1\n        for i, c in enumerate(s2):\n            have[ord(c) - 97] += 1\n            if i >= n:\n                have[ord(s2[i - n]) - 97] -= 1\n            if i >= n - 1 and need == have:\n                return True\n        return False",
+     "javascript": "var checkInclusion = function(s1, s2) {\n    const n = s1.length;\n    if (n > s2.length) return false;\n    const need = new Array(26).fill(0), have = new Array(26).fill(0);\n    for (const c of s1) need[c.charCodeAt(0) - 97]++;\n    for (let i = 0; i < s2.length; i++) {\n        have[s2.charCodeAt(i) - 97]++;\n        if (i >= n) have[s2.charCodeAt(i - n) - 97]--;\n        if (i >= n - 1 && need.every((v, k) => v === have[k])) return true;\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Slide the window and track how many letters match",
+    "idea": "Keep `diff[c] = need[c] − have[c]` and a counter of letters whose difference is 0. Only the letter entering and the one leaving change, so the counter updates in O(1); all 26 match exactly when the counter is 26.",
+    "steps": [
+     "Set `diff[c] = count of c in s1` and `matches` = number of letters with `diff[c] == 0`.",
+     "For each index `i` of `s2`, the entering letter decreases its `diff`; adjust `matches` if that letter just became or just stopped being 0.",
+     "If `i >= n`, the leaving letter `s2[i − n]` increases its `diff`; adjust `matches` the same way.",
+     "Once the window has length n, return true if `matches == 26`. Return false at the end."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "Each letter of each string is handled with O(1) work; the tables have a fixed 26 entries.",
+    "code": {
+     "java": "class Solution {\n    public boolean checkInclusion(String s1, String s2) {\n        int n = s1.length();\n        if (n > s2.length()) return false;\n        int[] diff = new int[26];\n        for (char c : s1.toCharArray()) diff[c - 'a']++;\n        int matches = 0;\n        for (int d : diff) if (d == 0) matches++;\n        for (int i = 0; i < s2.length(); i++) {\n            int in = s2.charAt(i) - 'a';\n            if (diff[in] == 0) matches--;\n            if (--diff[in] == 0) matches++;\n            if (i >= n) {\n                int out = s2.charAt(i - n) - 'a';\n                if (diff[out] == 0) matches--;\n                if (++diff[out] == 0) matches++;\n            }\n            if (i >= n - 1 && matches == 26) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool checkInclusion(string s1, string s2) {\n        int n = s1.size();\n        if (n > (int) s2.size()) return false;\n        int diff[26] = {0}, matches = 0;\n        for (char c : s1) diff[c - 'a']++;\n        for (int d : diff) matches += d == 0;\n        for (int i = 0; i < (int) s2.size(); i++) {\n            int in = s2[i] - 'a';\n            if (diff[in] == 0) matches--;\n            if (--diff[in] == 0) matches++;\n            if (i >= n) {\n                int out = s2[i - n] - 'a';\n                if (diff[out] == 0) matches--;\n                if (++diff[out] == 0) matches++;\n            }\n            if (i >= n - 1 && matches == 26) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def checkInclusion(self, s1: str, s2: str) -> bool:\n        n = len(s1)\n        if n > len(s2):\n            return False\n        diff = [0] * 26\n        for c in s1:\n            diff[ord(c) - 97] += 1\n        matches = diff.count(0)\n        for i, c in enumerate(s2):\n            k = ord(c) - 97\n            if diff[k] == 0:\n                matches -= 1\n            diff[k] -= 1\n            if diff[k] == 0:\n                matches += 1\n            if i >= n:\n                k = ord(s2[i - n]) - 97\n                if diff[k] == 0:\n                    matches -= 1\n                diff[k] += 1\n                if diff[k] == 0:\n                    matches += 1\n            if i >= n - 1 and matches == 26:\n                return True\n        return False",
+     "javascript": "var checkInclusion = function(s1, s2) {\n    const n = s1.length;\n    if (n > s2.length) return false;\n    const diff = new Array(26).fill(0);\n    for (const c of s1) diff[c.charCodeAt(0) - 97]++;\n    let matches = diff.filter((d) => d === 0).length;\n    for (let i = 0; i < s2.length; i++) {\n        const a = s2.charCodeAt(i) - 97;\n        if (diff[a] === 0) matches--;\n        if (--diff[a] === 0) matches++;\n        if (i >= n) {\n            const b = s2.charCodeAt(i - n) - 97;\n            if (diff[b] === 0) matches--;\n            if (++diff[b] === 0) matches++;\n        }\n        if (i >= n - 1 && matches === 26) return true;\n    }\n    return false;\n};"
+    }
+   }
+  ]
+ },
+ "find-all-anagrams-in-a-string": {
+  "pattern": "Fixed-size sliding window with letter counts (anagram check)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort each window and compare",
+    "idea": "A window is an anagram of `p` exactly when its sorted letters equal `p` sorted. Check every window of length `p.length`.",
+    "steps": [
+     "Let `n = p.length`; sort the letters of `p`.",
+     "For each start `i` with `i + n <= s.length`, sort `s[i..i + n)` and compare with sorted `p`.",
+     "Collect every `i` that matches, in increasing order."
+    ],
+    "time": "O(m·n log n)",
+    "space": "O(n)",
+    "why": "About m windows (m = `s.length`), each sorted in O(n log n); each sorted copy takes O(n) memory.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findAnagrams(String s, String p) {\n        int n = p.length();\n        char[] want = p.toCharArray();\n        Arrays.sort(want);\n        List<Integer> out = new ArrayList<>();\n        for (int i = 0; i + n <= s.length(); i++) {\n            char[] window = s.substring(i, i + n).toCharArray();\n            Arrays.sort(window);\n            if (Arrays.equals(want, window)) out.add(i);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        int n = p.size();\n        sort(p.begin(), p.end());\n        vector<int> out;\n        for (int i = 0; i + n <= (int) s.size(); i++) {\n            string window = s.substr(i, n);\n            sort(window.begin(), window.end());\n            if (window == p) out.push_back(i);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        n, want = len(p), sorted(p)\n        return [i for i in range(len(s) - n + 1) if sorted(s[i:i + n]) == want]",
+     "javascript": "var findAnagrams = function(s, p) {\n    const n = p.length, want = p.split('').sort().join(''), out = [];\n    for (let i = 0; i + n <= s.length; i++)\n        if (s.slice(i, i + n).split('').sort().join('') === want) out.push(i);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Slide a window of counts and compare all 26",
+    "idea": "Keep letter counts of the current window and update them as it slides; compare them with the counts of `p` at each position.",
+    "steps": [
+     "Count `p` into `need[26]`.",
+     "For each index `i` of `s`, add `s[i]` to `have`; if `i >= n`, remove `s[i − n]`.",
+     "When `i >= n − 1` and `have` equals `need`, record the start `i − n + 1`.",
+     "Return the recorded starts."
+    ],
+    "time": "O(26·m)",
+    "space": "O(1)",
+    "why": "O(1) updates per step plus a 26-entry comparison per window (the output list aside).",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findAnagrams(String s, String p) {\n        int n = p.length();\n        int[] need = new int[26], have = new int[26];\n        for (char c : p.toCharArray()) need[c - 'a']++;\n        List<Integer> out = new ArrayList<>();\n        for (int i = 0; i < s.length(); i++) {\n            have[s.charAt(i) - 'a']++;\n            if (i >= n) have[s.charAt(i - n) - 'a']--;\n            if (i >= n - 1 && Arrays.equals(need, have)) out.add(i - n + 1);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        int n = p.size();\n        array<int, 26> need{}, have{};\n        for (char c : p) need[c - 'a']++;\n        vector<int> out;\n        for (int i = 0; i < (int) s.size(); i++) {\n            have[s[i] - 'a']++;\n            if (i >= n) have[s[i - n] - 'a']--;\n            if (i >= n - 1 && need == have) out.push_back(i - n + 1);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        n = len(p)\n        need, have = [0] * 26, [0] * 26\n        for c in p:\n            need[ord(c) - 97] += 1\n        out = []\n        for i, c in enumerate(s):\n            have[ord(c) - 97] += 1\n            if i >= n:\n                have[ord(s[i - n]) - 97] -= 1\n            if i >= n - 1 and have == need:\n                out.append(i - n + 1)\n        return out",
+     "javascript": "var findAnagrams = function(s, p) {\n    const n = p.length, need = new Array(26).fill(0), have = new Array(26).fill(0), out = [];\n    for (const c of p) need[c.charCodeAt(0) - 97]++;\n    for (let i = 0; i < s.length; i++) {\n        have[s.charCodeAt(i) - 97]++;\n        if (i >= n) have[s.charCodeAt(i - n) - 97]--;\n        if (i >= n - 1 && need.every((v, k) => v === have[k])) out.push(i - n + 1);\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Slide the window and count the letters still missing",
+    "idea": "Keep `need[c]` = how many more of letter `c` the window still needs, and `missing` = the total still needed. A window is an anagram exactly when `missing == 0`, and each slide changes `missing` in O(1).",
+    "steps": [
+     "Count `p` into `need`, and set `missing = p.length`.",
+     "For each index `i`: if `need[s[i]] > 0`, it fills a gap, so decrease `missing`; then decrease `need[s[i]]` (it may go negative: a surplus).",
+     "If `i >= n`, let the letter `s[i − n]` leave: increase its `need`; if it is now positive, a gap opened, so increase `missing`.",
+     "When `i >= n − 1` and `missing == 0`, record `i − n + 1`."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "Each letter of `p` and `s` costs O(1); the count table has 26 entries (the output list aside).",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findAnagrams(String s, String p) {\n        int n = p.length(), missing = n;\n        int[] need = new int[26];\n        for (char c : p.toCharArray()) need[c - 'a']++;\n        List<Integer> out = new ArrayList<>();\n        for (int i = 0; i < s.length(); i++) {\n            if (need[s.charAt(i) - 'a']-- > 0) missing--;\n            if (i >= n && ++need[s.charAt(i - n) - 'a'] > 0) missing++;\n            if (i >= n - 1 && missing == 0) out.add(i - n + 1);\n        }\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        int n = p.size(), missing = n, need[26] = {0};\n        for (char c : p) need[c - 'a']++;\n        vector<int> out;\n        for (int i = 0; i < (int) s.size(); i++) {\n            if (need[s[i] - 'a']-- > 0) missing--;\n            if (i >= n && ++need[s[i - n] - 'a'] > 0) missing++;\n            if (i >= n - 1 && missing == 0) out.push_back(i - n + 1);\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        n, missing = len(p), len(p)\n        need = [0] * 26\n        for c in p:\n            need[ord(c) - 97] += 1\n        out = []\n        for i, c in enumerate(s):\n            k = ord(c) - 97\n            if need[k] > 0:\n                missing -= 1\n            need[k] -= 1\n            if i >= n:\n                k = ord(s[i - n]) - 97\n                need[k] += 1\n                if need[k] > 0:\n                    missing += 1\n            if i >= n - 1 and missing == 0:\n                out.append(i - n + 1)\n        return out",
+     "javascript": "var findAnagrams = function(s, p) {\n    const n = p.length, need = new Array(26).fill(0), out = [];\n    let missing = n;\n    for (const c of p) need[c.charCodeAt(0) - 97]++;\n    for (let i = 0; i < s.length; i++) {\n        if (need[s.charCodeAt(i) - 97]-- > 0) missing--;\n        if (i >= n && ++need[s.charCodeAt(i - n) - 97] > 0) missing++;\n        if (i >= n - 1 && missing === 0) out.push(i - n + 1);\n    }\n    return out;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-window-substring": {
+  "pattern": "Variable-size sliding window: expand until valid, then shrink while still valid",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend until every needed letter is covered",
+    "idea": "For each start, add letters until the window contains all of `t` (with repeats); that end gives the shortest valid window from this start.",
+    "steps": [
+     "Count the letters of `t` and let `total = t.length`.",
+     "For each start `i`, copy the counts and set `missing = total`.",
+     "Move `j` right: if `s[j]` is still needed, decrease `missing`; decrease its count. When `missing == 0`, the window `s[i..j]` is valid: keep it if it is the shortest so far, and stop.",
+     "Return the shortest window, or `\"\"`."
+    ],
+    "time": "O(m²)",
+    "space": "O(σ)",
+    "why": "Each of the m starts may scan to the end of `s` (copying σ counts per start is O(σ) each, dominated by the scan). σ is the alphabet size, 52 letters here.",
+    "code": {
+     "java": "class Solution {\n    public String minWindow(String s, String t) {\n        int[] need = new int[128];\n        for (char c : t.toCharArray()) need[c]++;\n        int m = s.length(), bestStart = 0, bestLen = Integer.MAX_VALUE;\n        for (int i = 0; i < m; i++) {\n            int[] left = need.clone();\n            int missing = t.length();\n            for (int j = i; j < m && j - i + 1 < bestLen; j++) {\n                if (left[s.charAt(j)]-- > 0) missing--;\n                if (missing == 0) { bestStart = i; bestLen = j - i + 1; break; }\n            }\n        }\n        return bestLen == Integer.MAX_VALUE ? \"\" : s.substring(bestStart, bestStart + bestLen);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        vector<int> need(128, 0);\n        for (char c : t) need[c]++;\n        int m = s.size(), bestStart = 0, bestLen = INT_MAX;\n        for (int i = 0; i < m; i++) {\n            vector<int> left = need;\n            int missing = t.size();\n            for (int j = i; j < m && j - i + 1 < bestLen; j++) {\n                if (left[s[j]]-- > 0) missing--;\n                if (missing == 0) { bestStart = i; bestLen = j - i + 1; break; }\n            }\n        }\n        return bestLen == INT_MAX ? \"\" : s.substr(bestStart, bestLen);\n    }\n};",
+     "python": "class Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        need = Counter(t)\n        best = \"\"\n        for i in range(len(s)):\n            left = dict(need)\n            missing = len(t)\n            for j in range(i, len(s)):\n                if best and j - i + 1 >= len(best):\n                    break\n                c = s[j]\n                if left.get(c, 0) > 0:\n                    missing -= 1\n                left[c] = left.get(c, 0) - 1\n                if missing == 0:\n                    best = s[i:j + 1]\n                    break\n        return best",
+     "javascript": "var minWindow = function(s, t) {\n    const need = new Array(128).fill(0);\n    for (const c of t) need[c.charCodeAt(0)]++;\n    const m = s.length;\n    let bestStart = 0, bestLen = Infinity;\n    for (let i = 0; i < m; i++) {\n        const left = need.slice();\n        let missing = t.length;\n        for (let j = i; j < m && j - i + 1 < bestLen; j++) {\n            if (left[s.charCodeAt(j)]-- > 0) missing--;\n            if (missing === 0) { bestStart = i; bestLen = j - i + 1; break; }\n        }\n    }\n    return bestLen === Infinity ? '' : s.slice(bestStart, bestStart + bestLen);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window with a count of missing letters",
+    "idea": "Grow the window on the right until it covers `t` (`missing == 0`), then shrink it from the left for as long as it still covers `t`, recording the shortest valid window along the way.",
+    "steps": [
+     "`need[c]` = how many more of `c` the window needs (starts as the counts of `t`); `missing = t.length`.",
+     "For each `r`: if `need[s[r]] > 0`, decrease `missing`; then decrease `need[s[r]]` (negative means a surplus).",
+     "While `missing == 0`: record the window `[l, r]` if it is the shortest; then remove `s[l]`: increase `need[s[l]]`, and if it becomes positive the window is short of that letter, so increase `missing`. Move `l` right.",
+     "Return the shortest recorded window, or `\"\"`."
+    ],
+    "time": "O(m + n)",
+    "space": "O(σ)",
+    "why": "Counting `t` is O(n); each index of `s` enters and leaves the window once, O(m). The count table has one entry per possible character.",
+    "code": {
+     "java": "class Solution {\n    public String minWindow(String s, String t) {\n        int[] need = new int[128];\n        for (char c : t.toCharArray()) need[c]++;\n        int missing = t.length(), bestStart = 0, bestLen = Integer.MAX_VALUE;\n        for (int l = 0, r = 0; r < s.length(); r++) {\n            if (need[s.charAt(r)]-- > 0) missing--;\n            while (missing == 0) {\n                if (r - l + 1 < bestLen) { bestStart = l; bestLen = r - l + 1; }\n                if (++need[s.charAt(l++)] > 0) missing++;\n            }\n        }\n        return bestLen == Integer.MAX_VALUE ? \"\" : s.substring(bestStart, bestStart + bestLen);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        vector<int> need(128, 0);\n        for (char c : t) need[c]++;\n        int missing = t.size(), bestStart = 0, bestLen = INT_MAX;\n        for (int l = 0, r = 0; r < (int) s.size(); r++) {\n            if (need[s[r]]-- > 0) missing--;\n            while (missing == 0) {\n                if (r - l + 1 < bestLen) { bestStart = l; bestLen = r - l + 1; }\n                if (++need[s[l++]] > 0) missing++;\n            }\n        }\n        return bestLen == INT_MAX ? \"\" : s.substr(bestStart, bestLen);\n    }\n};",
+     "python": "class Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        need = Counter(t)\n        missing = len(t)\n        best_start, best_len = 0, inf\n        l = 0\n        for r, c in enumerate(s):\n            if need[c] > 0:\n                missing -= 1\n            need[c] -= 1\n            while missing == 0:\n                if r - l + 1 < best_len:\n                    best_start, best_len = l, r - l + 1\n                need[s[l]] += 1\n                if need[s[l]] > 0:\n                    missing += 1\n                l += 1\n        return \"\" if best_len == inf else s[best_start:best_start + best_len]",
+     "javascript": "var minWindow = function(s, t) {\n    const need = new Array(128).fill(0);\n    for (const c of t) need[c.charCodeAt(0)]++;\n    let missing = t.length, bestStart = 0, bestLen = Infinity;\n    for (let l = 0, r = 0; r < s.length; r++) {\n        if (need[s.charCodeAt(r)]-- > 0) missing--;\n        while (missing === 0) {\n            if (r - l + 1 < bestLen) { bestStart = l; bestLen = r - l + 1; }\n            if (++need[s.charCodeAt(l++)] > 0) missing++;\n        }\n    }\n    return bestLen === Infinity ? '' : s.slice(bestStart, bestStart + bestLen);\n};"
+    }
+   }
+  ]
+ },
+ "subarrays-with-k-different-integers": {
+  "pattern": "Sliding window counting trick: exactly(k) = atMost(k) − atMost(k − 1)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "From every start, extend while counting distinct values",
+    "idea": "For each start, extend the subarray to the right, tracking how many distinct values it holds; count the ends where that number is exactly `k`, and stop once it exceeds `k`.",
+    "steps": [
+     "For each start `i`, reset the counts and `distinct = 0`.",
+     "Move `j` right: if `nums[j]` is new, increase `distinct`.",
+     "If `distinct > k`, stop (longer subarrays only add values); if `distinct == k`, add 1 to the answer.",
+     "Return the answer."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each start may scan to the end. The count table has one entry per possible value (values are at most n).",
+    "code": {
+     "java": "class Solution {\n    public int subarraysWithKDistinct(int[] nums, int k) {\n        int n = nums.length, total = 0;\n        for (int i = 0; i < n; i++) {\n            int[] count = new int[n + 1];\n            int distinct = 0;\n            for (int j = i; j < n; j++) {\n                if (count[nums[j]]++ == 0) distinct++;\n                if (distinct > k) break;\n                if (distinct == k) total++;\n            }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int subarraysWithKDistinct(vector<int>& nums, int k) {\n        int n = nums.size(), total = 0;\n        for (int i = 0; i < n; i++) {\n            vector<int> count(n + 1, 0);\n            int distinct = 0;\n            for (int j = i; j < n; j++) {\n                if (count[nums[j]]++ == 0) distinct++;\n                if (distinct > k) break;\n                if (distinct == k) total++;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def subarraysWithKDistinct(self, nums: List[int], k: int) -> int:\n        n, total = len(nums), 0\n        for i in range(n):\n            seen = set()\n            for j in range(i, n):\n                seen.add(nums[j])\n                if len(seen) > k:\n                    break\n                if len(seen) == k:\n                    total += 1\n        return total",
+     "javascript": "var subarraysWithKDistinct = function(nums, k) {\n    const n = nums.length;\n    let total = 0;\n    for (let i = 0; i < n; i++) {\n        const seen = new Set();\n        for (let j = i; j < n; j++) {\n            seen.add(nums[j]);\n            if (seen.size > k) break;\n            if (seen.size === k) total++;\n        }\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count \"at most k\" twice and subtract",
+    "idea": "\"Exactly k distinct\" is hard to slide, but \"at most k distinct\" is easy: for each right end `r`, every start from `l` to `r` works, adding `r − l + 1` subarrays. Then exactly(k) = atMost(k) − atMost(k − 1).",
+    "steps": [
+     "Write `atMost(k)`: a window `[l, r]` with value counts and a `distinct` counter.",
+     "For each `r`, add `nums[r]` (a new value increases `distinct`); while `distinct > k`, remove `nums[l]` and move `l` right.",
+     "Every subarray ending at `r` and starting in `[l, r]` has at most k distinct values: add `r − l + 1`.",
+     "Return `atMost(k) − atMost(k − 1)`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each `atMost` call moves both edges forward at most n times; it runs twice. The count table has n + 1 entries.",
+    "code": {
+     "java": "class Solution {\n    public int subarraysWithKDistinct(int[] nums, int k) {\n        return atMost(nums, k) - atMost(nums, k - 1);\n    }\n\n    private int atMost(int[] nums, int k) {\n        int[] count = new int[nums.length + 1];\n        int distinct = 0, total = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            if (count[nums[r]]++ == 0) distinct++;\n            while (distinct > k) if (--count[nums[l++]] == 0) distinct--;\n            total += r - l + 1;\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    int atMost(vector<int>& nums, int k) {\n        vector<int> count(nums.size() + 1, 0);\n        int distinct = 0, total = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            if (count[nums[r]]++ == 0) distinct++;\n            while (distinct > k) if (--count[nums[l++]] == 0) distinct--;\n            total += r - l + 1;\n        }\n        return total;\n    }\npublic:\n    int subarraysWithKDistinct(vector<int>& nums, int k) {\n        return atMost(nums, k) - atMost(nums, k - 1);\n    }\n};",
+     "python": "class Solution:\n    def subarraysWithKDistinct(self, nums: List[int], k: int) -> int:\n        def at_most(k):\n            count = [0] * (len(nums) + 1)\n            distinct = total = l = 0\n            for r, x in enumerate(nums):\n                if count[x] == 0:\n                    distinct += 1\n                count[x] += 1\n                while distinct > k:\n                    count[nums[l]] -= 1\n                    if count[nums[l]] == 0:\n                        distinct -= 1\n                    l += 1\n                total += r - l + 1\n            return total\n        return at_most(k) - at_most(k - 1)",
+     "javascript": "var subarraysWithKDistinct = function(nums, k) {\n    const atMost = (k) => {\n        const count = new Array(nums.length + 1).fill(0);\n        let distinct = 0, total = 0;\n        for (let l = 0, r = 0; r < nums.length; r++) {\n            if (count[nums[r]]++ === 0) distinct++;\n            while (distinct > k) if (--count[nums[l++]] === 0) distinct--;\n            total += r - l + 1;\n        }\n        return total;\n    };\n    return atMost(k) - atMost(k - 1);\n};"
+    }
+   }
+  ]
+ }
+}
