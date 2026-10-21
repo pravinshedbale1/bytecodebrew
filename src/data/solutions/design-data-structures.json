@@ -1,0 +1,531 @@
+{
+ "implement-queue-using-stacks": {
+  "pattern": "Two stacks: an input stack and an output stack, transferring lazily (amortised O(1))",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep the front on top by re-stacking on every push",
+    "idea": "Keep one stack whose top is always the queue's front. To push, move everything to a helper stack, push the new value, and move everything back.",
+    "steps": [
+     "`push(x)`: pop all of `s` onto `tmp`, push `x` onto `s`, then pop all of `tmp` back onto `s`.",
+     "`pop` / `peek`: the top of `s`. `empty`: whether `s` is empty."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "push is O(n) every time (pop, peek and empty are O(1)).",
+    "code": {
+     "java": "class MyQueue {\n    private final Deque<Integer> s = new ArrayDeque<>(), tmp = new ArrayDeque<>();\n\n    public void push(int x) {\n        while (!s.isEmpty()) tmp.push(s.pop());\n        s.push(x);\n        while (!tmp.isEmpty()) s.push(tmp.pop());\n    }\n\n    public int pop() {\n        return s.pop();\n    }\n\n    public int peek() {\n        return s.peek();\n    }\n\n    public boolean empty() {\n        return s.isEmpty();\n    }\n}",
+     "cpp": "class MyQueue {\n    stack<int> s, tmp;\npublic:\n    MyQueue() {}\n\n    void push(int x) {\n        while (!s.empty()) { tmp.push(s.top()); s.pop(); }\n        s.push(x);\n        while (!tmp.empty()) { s.push(tmp.top()); tmp.pop(); }\n    }\n\n    int pop() {\n        int x = s.top();\n        s.pop();\n        return x;\n    }\n\n    int peek() {\n        return s.top();\n    }\n\n    bool empty() {\n        return s.empty();\n    }\n};",
+     "python": "class MyQueue:\n    def __init__(self):\n        self.s = []\n\n    def push(self, x: int) -> None:\n        tmp = []\n        while self.s:\n            tmp.append(self.s.pop())\n        self.s.append(x)\n        while tmp:\n            self.s.append(tmp.pop())\n\n    def pop(self) -> int:\n        return self.s.pop()\n\n    def peek(self) -> int:\n        return self.s[-1]\n\n    def empty(self) -> bool:\n        return not self.s",
+     "javascript": "var MyQueue = function() {\n    this.s = [];\n};\n\nMyQueue.prototype.push = function(x) {\n    const tmp = [];\n    while (this.s.length) tmp.push(this.s.pop());\n    this.s.push(x);\n    while (tmp.length) this.s.push(tmp.pop());\n};\n\nMyQueue.prototype.pop = function() {\n    return this.s.pop();\n};\n\nMyQueue.prototype.peek = function() {\n    return this.s[this.s.length - 1];\n};\n\nMyQueue.prototype.empty = function() {\n    return this.s.length === 0;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Input and output stacks with lazy transfer",
+    "idea": "Push onto `in`. Pop and peek from `out`; only when `out` is empty, pour all of `in` into it, which reverses the order so the oldest element ends up on top.",
+    "steps": [
+     "`push(x)`: push onto `in`.",
+     "`pop` / `peek`: if `out` is empty, move everything from `in` to `out`; then pop / read the top of `out`.",
+     "`empty`: both stacks are empty."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "Amortised O(1) per operation: each element is pushed and popped at most twice in total. A single pop can cost O(n) when a transfer happens.",
+    "code": {
+     "java": "class MyQueue {\n    private final Deque<Integer> in = new ArrayDeque<>(), out = new ArrayDeque<>();\n\n    public void push(int x) {\n        in.push(x);\n    }\n\n    public int pop() {\n        peek();\n        return out.pop();\n    }\n\n    public int peek() {\n        if (out.isEmpty())\n            while (!in.isEmpty()) out.push(in.pop());\n        return out.peek();\n    }\n\n    public boolean empty() {\n        return in.isEmpty() && out.isEmpty();\n    }\n}",
+     "cpp": "class MyQueue {\n    stack<int> in, out;\npublic:\n    MyQueue() {}\n\n    void push(int x) {\n        in.push(x);\n    }\n\n    int pop() {\n        int x = peek();\n        out.pop();\n        return x;\n    }\n\n    int peek() {\n        if (out.empty())\n            while (!in.empty()) { out.push(in.top()); in.pop(); }\n        return out.top();\n    }\n\n    bool empty() {\n        return in.empty() && out.empty();\n    }\n};",
+     "python": "class MyQueue:\n    def __init__(self):\n        self.inbox, self.outbox = [], []\n\n    def push(self, x: int) -> None:\n        self.inbox.append(x)\n\n    def pop(self) -> int:\n        self.peek()\n        return self.outbox.pop()\n\n    def peek(self) -> int:\n        if not self.outbox:\n            while self.inbox:\n                self.outbox.append(self.inbox.pop())\n        return self.outbox[-1]\n\n    def empty(self) -> bool:\n        return not self.inbox and not self.outbox",
+     "javascript": "var MyQueue = function() {\n    this.in = [];\n    this.out = [];\n};\n\nMyQueue.prototype.push = function(x) {\n    this.in.push(x);\n};\n\nMyQueue.prototype.pop = function() {\n    this.peek();\n    return this.out.pop();\n};\n\nMyQueue.prototype.peek = function() {\n    if (this.out.length === 0) while (this.in.length) this.out.push(this.in.pop());\n    return this.out[this.out.length - 1];\n};\n\nMyQueue.prototype.empty = function() {\n    return this.in.length === 0 && this.out.length === 0;\n};"
+    }
+   }
+  ]
+ },
+ "design-hashmap": {
+  "pattern": "Hashing with separate chaining (an array of buckets)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "List of key–value pairs",
+    "idea": "Keep all pairs in one list and search it linearly for every operation.",
+    "steps": [
+     "`put`: find the key and update it, or append a new pair.",
+     "`get` / `remove`: scan for the key."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every operation may scan all n stored pairs.",
+    "code": {
+     "java": "class MyHashMap {\n    private final List<int[]> pairs = new ArrayList<>();\n\n    public void put(int key, int value) {\n        for (int[] p : pairs) if (p[0] == key) { p[1] = value; return; }\n        pairs.add(new int[] { key, value });\n    }\n\n    public int get(int key) {\n        for (int[] p : pairs) if (p[0] == key) return p[1];\n        return -1;\n    }\n\n    public void remove(int key) {\n        pairs.removeIf(p -> p[0] == key);\n    }\n}",
+     "cpp": "class MyHashMap {\n    vector<pair<int, int>> pairs;\npublic:\n    MyHashMap() {}\n\n    void put(int key, int value) {\n        for (auto& p : pairs) if (p.first == key) { p.second = value; return; }\n        pairs.push_back({key, value});\n    }\n\n    int get(int key) {\n        for (auto& p : pairs) if (p.first == key) return p.second;\n        return -1;\n    }\n\n    void remove(int key) {\n        for (size_t i = 0; i < pairs.size(); i++)\n            if (pairs[i].first == key) { pairs.erase(pairs.begin() + i); return; }\n    }\n};",
+     "python": "class MyHashMap:\n    def __init__(self):\n        self.pairs = []\n\n    def put(self, key: int, value: int) -> None:\n        for p in self.pairs:\n            if p[0] == key:\n                p[1] = value\n                return\n        self.pairs.append([key, value])\n\n    def get(self, key: int) -> int:\n        for k, v in self.pairs:\n            if k == key:\n                return v\n        return -1\n\n    def remove(self, key: int) -> None:\n        self.pairs = [p for p in self.pairs if p[0] != key]",
+     "javascript": "var MyHashMap = function() {\n    this.pairs = [];\n};\n\nMyHashMap.prototype.put = function(key, value) {\n    for (const p of this.pairs) if (p[0] === key) { p[1] = value; return; }\n    this.pairs.push([key, value]);\n};\n\nMyHashMap.prototype.get = function(key) {\n    for (const [k, v] of this.pairs) if (k === key) return v;\n    return -1;\n};\n\nMyHashMap.prototype.remove = function(key) {\n    this.pairs = this.pairs.filter((p) => p[0] !== key);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Direct addressing",
+    "idea": "Keys are at most 10⁶, so use an array indexed by the key itself, with −1 meaning \"absent\".",
+    "steps": [
+     "Allocate `table[0..10⁶]` filled with −1.",
+     "`put`: `table[key] = value`; `get`: `table[key]`; `remove`: `table[key] = −1`."
+    ],
+    "time": "O(1)",
+    "space": "O(U)",
+    "why": "Every operation is one array access, but memory is proportional to the key universe U = 10⁶ even if only a handful of keys are stored — and impossible for large key spaces.",
+    "code": {
+     "java": "class MyHashMap {\n    private final int[] table = new int[1_000_001];\n\n    public MyHashMap() {\n        Arrays.fill(table, -1);\n    }\n\n    public void put(int key, int value) {\n        table[key] = value;\n    }\n\n    public int get(int key) {\n        return table[key];\n    }\n\n    public void remove(int key) {\n        table[key] = -1;\n    }\n}",
+     "cpp": "class MyHashMap {\n    vector<int> table;\npublic:\n    MyHashMap() : table(1000001, -1) {}\n\n    void put(int key, int value) {\n        table[key] = value;\n    }\n\n    int get(int key) {\n        return table[key];\n    }\n\n    void remove(int key) {\n        table[key] = -1;\n    }\n};",
+     "python": "class MyHashMap:\n    def __init__(self):\n        self.table = [-1] * 1000001\n\n    def put(self, key: int, value: int) -> None:\n        self.table[key] = value\n\n    def get(self, key: int) -> int:\n        return self.table[key]\n\n    def remove(self, key: int) -> None:\n        self.table[key] = -1",
+     "javascript": "var MyHashMap = function() {\n    this.table = new Int32Array(1000001).fill(-1);\n};\n\nMyHashMap.prototype.put = function(key, value) {\n    this.table[key] = value;\n};\n\nMyHashMap.prototype.get = function(key) {\n    return this.table[key];\n};\n\nMyHashMap.prototype.remove = function(key) {\n    this.table[key] = -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Buckets with separate chaining",
+    "idea": "Hash each key to one of B buckets (`key % B`, B a prime) and keep a short list of pairs in each bucket. Keys that collide simply share a bucket.",
+    "steps": [
+     "B = 10007 buckets, each a list of `(key, value)` pairs (created lazily).",
+     "`put`: in bucket `key % B`, update the key if found, else append.",
+     "`get` / `remove`: search only that bucket."
+    ],
+    "time": "O(1)",
+    "space": "O(n + B)",
+    "why": "Average O(1 + n/B) per operation — about 10 entries per bucket at the maximum 10⁵ keys. Real hash tables also grow B as n grows to keep this constant.",
+    "code": {
+     "java": "class MyHashMap {\n    private static final int B = 10007;\n    private final List<int[]>[] buckets;\n\n    @SuppressWarnings(\"unchecked\")\n    public MyHashMap() {\n        buckets = new List[B];\n    }\n\n    public void put(int key, int value) {\n        int h = key % B;\n        if (buckets[h] == null) buckets[h] = new ArrayList<>();\n        for (int[] p : buckets[h]) if (p[0] == key) { p[1] = value; return; }\n        buckets[h].add(new int[] { key, value });\n    }\n\n    public int get(int key) {\n        List<int[]> bucket = buckets[key % B];\n        if (bucket != null)\n            for (int[] p : bucket) if (p[0] == key) return p[1];\n        return -1;\n    }\n\n    public void remove(int key) {\n        List<int[]> bucket = buckets[key % B];\n        if (bucket != null) bucket.removeIf(p -> p[0] == key);\n    }\n}",
+     "cpp": "class MyHashMap {\n    static const int B = 10007;\n    vector<vector<pair<int, int>>> buckets;\npublic:\n    MyHashMap() : buckets(B) {}\n\n    void put(int key, int value) {\n        auto& bucket = buckets[key % B];\n        for (auto& p : bucket) if (p.first == key) { p.second = value; return; }\n        bucket.push_back({key, value});\n    }\n\n    int get(int key) {\n        for (auto& p : buckets[key % B]) if (p.first == key) return p.second;\n        return -1;\n    }\n\n    void remove(int key) {\n        auto& bucket = buckets[key % B];\n        for (size_t i = 0; i < bucket.size(); i++)\n            if (bucket[i].first == key) {\n                bucket[i] = bucket.back();\n                bucket.pop_back();\n                return;\n            }\n    }\n};",
+     "python": "class MyHashMap:\n    B = 10007\n\n    def __init__(self):\n        self.buckets = [[] for _ in range(self.B)]\n\n    def put(self, key: int, value: int) -> None:\n        bucket = self.buckets[key % self.B]\n        for p in bucket:\n            if p[0] == key:\n                p[1] = value\n                return\n        bucket.append([key, value])\n\n    def get(self, key: int) -> int:\n        for k, v in self.buckets[key % self.B]:\n            if k == key:\n                return v\n        return -1\n\n    def remove(self, key: int) -> None:\n        bucket = self.buckets[key % self.B]\n        for i, p in enumerate(bucket):\n            if p[0] == key:\n                bucket[i] = bucket[-1]\n                bucket.pop()\n                return",
+     "javascript": "var MyHashMap = function() {\n    this.B = 10007;\n    this.buckets = Array.from({ length: this.B }, () => []);\n};\n\nMyHashMap.prototype.put = function(key, value) {\n    const bucket = this.buckets[key % this.B];\n    for (const p of bucket) if (p[0] === key) { p[1] = value; return; }\n    bucket.push([key, value]);\n};\n\nMyHashMap.prototype.get = function(key) {\n    for (const [k, v] of this.buckets[key % this.B]) if (k === key) return v;\n    return -1;\n};\n\nMyHashMap.prototype.remove = function(key) {\n    const bucket = this.buckets[key % this.B];\n    const i = bucket.findIndex((p) => p[0] === key);\n    if (i >= 0) {\n        bucket[i] = bucket[bucket.length - 1];\n        bucket.pop();\n    }\n};"
+    }
+   }
+  ]
+ },
+ "min-stack": {
+  "pattern": "Store the running minimum alongside each element",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan for the minimum",
+    "idea": "Use an ordinary stack; `getMin` looks through every element.",
+    "steps": [
+     "`push`, `pop`, `top` work on a plain array-backed stack.",
+     "`getMin` scans all elements and returns the smallest."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "getMin is O(n), breaking the O(1) requirement (the other operations are O(1)).",
+    "code": {
+     "java": "class MinStack {\n    private final List<Integer> s = new ArrayList<>();\n\n    public void push(int val) {\n        s.add(val);\n    }\n\n    public void pop() {\n        s.remove(s.size() - 1);\n    }\n\n    public int top() {\n        return s.get(s.size() - 1);\n    }\n\n    public int getMin() {\n        int min = Integer.MAX_VALUE;\n        for (int x : s) min = Math.min(min, x);\n        return min;\n    }\n}",
+     "cpp": "class MinStack {\n    vector<int> s;\npublic:\n    MinStack() {}\n\n    void push(int val) {\n        s.push_back(val);\n    }\n\n    void pop() {\n        s.pop_back();\n    }\n\n    int top() {\n        return s.back();\n    }\n\n    int getMin() {\n        return *min_element(s.begin(), s.end());\n    }\n};",
+     "python": "class MinStack:\n    def __init__(self):\n        self.s = []\n\n    def push(self, val: int) -> None:\n        self.s.append(val)\n\n    def pop(self) -> None:\n        self.s.pop()\n\n    def top(self) -> int:\n        return self.s[-1]\n\n    def getMin(self) -> int:\n        return min(self.s)",
+     "javascript": "var MinStack = function() {\n    this.s = [];\n};\n\nMinStack.prototype.push = function(val) {\n    this.s.push(val);\n};\n\nMinStack.prototype.pop = function() {\n    this.s.pop();\n};\n\nMinStack.prototype.top = function() {\n    return this.s[this.s.length - 1];\n};\n\nMinStack.prototype.getMin = function() {\n    let min = Infinity;\n    for (const x of this.s) min = Math.min(min, x);\n    return min;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack of (value, minimum so far) pairs",
+    "idea": "When pushing, also record the minimum of the stack including this element. Popping then automatically restores the previous minimum, which is stored in the element below.",
+    "steps": [
+     "`push(val)`: push `(val, min(val, current min))` (just `val` if the stack is empty).",
+     "`pop`: pop the pair. `top`: first field of the top pair.",
+     "`getMin`: second field of the top pair."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "Every operation touches only the top. (A second stack that only stores new minimums saves memory when the minimum rarely changes.)",
+    "code": {
+     "java": "class MinStack {\n    private final Deque<int[]> s = new ArrayDeque<>();\n\n    public void push(int val) {\n        s.push(new int[] { val, s.isEmpty() ? val : Math.min(val, s.peek()[1]) });\n    }\n\n    public void pop() {\n        s.pop();\n    }\n\n    public int top() {\n        return s.peek()[0];\n    }\n\n    public int getMin() {\n        return s.peek()[1];\n    }\n}",
+     "cpp": "class MinStack {\n    vector<pair<int, int>> s; // (value, minimum so far)\npublic:\n    MinStack() {}\n\n    void push(int val) {\n        s.push_back({val, s.empty() ? val : min(val, s.back().second)});\n    }\n\n    void pop() {\n        s.pop_back();\n    }\n\n    int top() {\n        return s.back().first;\n    }\n\n    int getMin() {\n        return s.back().second;\n    }\n};",
+     "python": "class MinStack:\n    def __init__(self):\n        self.s = []  # (value, minimum so far)\n\n    def push(self, val: int) -> None:\n        self.s.append((val, min(val, self.s[-1][1]) if self.s else val))\n\n    def pop(self) -> None:\n        self.s.pop()\n\n    def top(self) -> int:\n        return self.s[-1][0]\n\n    def getMin(self) -> int:\n        return self.s[-1][1]",
+     "javascript": "var MinStack = function() {\n    this.s = []; // [value, minimum so far]\n};\n\nMinStack.prototype.push = function(val) {\n    const min = this.s.length ? Math.min(val, this.s[this.s.length - 1][1]) : val;\n    this.s.push([val, min]);\n};\n\nMinStack.prototype.pop = function() {\n    this.s.pop();\n};\n\nMinStack.prototype.top = function() {\n    return this.s[this.s.length - 1][0];\n};\n\nMinStack.prototype.getMin = function() {\n    return this.s[this.s.length - 1][1];\n};"
+    }
+   }
+  ]
+ },
+ "lru-cache": {
+  "pattern": "Hash map + doubly linked list (recency order)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "List ordered by recency",
+    "idea": "Keep `(key, value)` pairs in a list from least to most recently used. Every access finds the key by scanning and moves it to the end; eviction removes the first element.",
+    "steps": [
+     "`get`: scan for the key; if found, move it to the end and return its value.",
+     "`put`: if the key exists, update and move it to the end; otherwise, if full, remove the first pair, then append."
+    ],
+    "time": "O(capacity)",
+    "space": "O(capacity)",
+    "why": "Each operation scans and shifts up to `capacity` elements.",
+    "code": {
+     "java": "class LRUCache {\n    private final int capacity;\n    private final List<int[]> items = new ArrayList<>(); // least recent first\n\n    public LRUCache(int capacity) {\n        this.capacity = capacity;\n    }\n\n    public int get(int key) {\n        for (int i = 0; i < items.size(); i++)\n            if (items.get(i)[0] == key) {\n                int[] item = items.remove(i);\n                items.add(item);\n                return item[1];\n            }\n        return -1;\n    }\n\n    public void put(int key, int value) {\n        if (get(key) != -1) {\n            items.get(items.size() - 1)[1] = value;\n            return;\n        }\n        if (items.size() == capacity) items.remove(0);\n        items.add(new int[] { key, value });\n    }\n}",
+     "cpp": "class LRUCache {\n    int capacity;\n    vector<pair<int, int>> items; // least recent first\npublic:\n    LRUCache(int capacity) : capacity(capacity) {}\n\n    int get(int key) {\n        for (size_t i = 0; i < items.size(); i++)\n            if (items[i].first == key) {\n                auto item = items[i];\n                items.erase(items.begin() + i);\n                items.push_back(item);\n                return item.second;\n            }\n        return -1;\n    }\n\n    void put(int key, int value) {\n        if (get(key) != -1) {\n            items.back().second = value;\n            return;\n        }\n        if ((int) items.size() == capacity) items.erase(items.begin());\n        items.push_back({key, value});\n    }\n};",
+     "python": "class LRUCache:\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.items = []  # [key, value], least recent first\n\n    def get(self, key: int) -> int:\n        for i, item in enumerate(self.items):\n            if item[0] == key:\n                self.items.append(self.items.pop(i))\n                return item[1]\n        return -1\n\n    def put(self, key: int, value: int) -> None:\n        if self.get(key) != -1:\n            self.items[-1][1] = value\n            return\n        if len(self.items) == self.capacity:\n            self.items.pop(0)\n        self.items.append([key, value])",
+     "javascript": "var LRUCache = function(capacity) {\n    this.capacity = capacity;\n    this.items = []; // [key, value], least recent first\n};\n\nLRUCache.prototype.get = function(key) {\n    const i = this.items.findIndex((item) => item[0] === key);\n    if (i < 0) return -1;\n    const [item] = this.items.splice(i, 1);\n    this.items.push(item);\n    return item[1];\n};\n\nLRUCache.prototype.put = function(key, value) {\n    if (this.get(key) !== -1) {\n        this.items[this.items.length - 1][1] = value;\n        return;\n    }\n    if (this.items.length === this.capacity) this.items.shift();\n    this.items.push([key, value]);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Hash map + doubly linked list",
+    "idea": "A doubly linked list keeps the recency order (most recent next to the head) and can unlink any node in O(1); a hash map from key to node finds that node in O(1). Sentinel head and tail nodes remove edge cases.",
+    "steps": [
+     "`get`: look up the node; if present, unlink it, re-insert it after `head`, and return its value.",
+     "`put`: if the key exists, update its value and move it to the front.",
+     "Otherwise create a node at the front and map it; if the size now exceeds `capacity`, unlink the node before `tail` and delete its key from the map."
+    ],
+    "time": "O(1)",
+    "space": "O(capacity)",
+    "why": "Every step is a constant number of map and pointer operations. Built-ins package exactly this structure: Java's `LinkedHashMap` (access order), Python's `OrderedDict`, and a JavaScript `Map` (delete + re-set to move a key to the end).",
+    "code": {
+     "java": "class LRUCache {\n    private static class Node {\n        int key, value;\n        Node prev, next;\n        Node(int key, int value) { this.key = key; this.value = value; }\n    }\n\n    private final int capacity;\n    private final Map<Integer, Node> map = new HashMap<>();\n    private final Node head = new Node(0, 0), tail = new Node(0, 0);\n\n    public LRUCache(int capacity) {\n        this.capacity = capacity;\n        head.next = tail;\n        tail.prev = head;\n    }\n\n    public int get(int key) {\n        Node node = map.get(key);\n        if (node == null) return -1;\n        unlink(node);\n        addFront(node);\n        return node.value;\n    }\n\n    public void put(int key, int value) {\n        Node node = map.get(key);\n        if (node != null) {\n            node.value = value;\n            unlink(node);\n            addFront(node);\n            return;\n        }\n        node = new Node(key, value);\n        map.put(key, node);\n        addFront(node);\n        if (map.size() > capacity) {\n            Node lru = tail.prev;\n            unlink(lru);\n            map.remove(lru.key);\n        }\n    }\n\n    private void unlink(Node node) {\n        node.prev.next = node.next;\n        node.next.prev = node.prev;\n    }\n\n    private void addFront(Node node) {\n        node.next = head.next;\n        node.prev = head;\n        head.next.prev = node;\n        head.next = node;\n    }\n}",
+     "cpp": "class LRUCache {\n    int capacity;\n    list<pair<int, int>> order; // most recent at the front\n    unordered_map<int, list<pair<int, int>>::iterator> where;\npublic:\n    LRUCache(int capacity) : capacity(capacity) {}\n\n    int get(int key) {\n        auto it = where.find(key);\n        if (it == where.end()) return -1;\n        order.splice(order.begin(), order, it->second); // move to the front in O(1)\n        return it->second->second;\n    }\n\n    void put(int key, int value) {\n        auto it = where.find(key);\n        if (it != where.end()) {\n            it->second->second = value;\n            order.splice(order.begin(), order, it->second);\n            return;\n        }\n        order.push_front({key, value});\n        where[key] = order.begin();\n        if ((int) where.size() > capacity) {\n            where.erase(order.back().first);\n            order.pop_back();\n        }\n    }\n};",
+     "python": "class LRUCache:\n    class Node:\n        __slots__ = ('key', 'value', 'prev', 'next')\n\n        def __init__(self, key=0, value=0):\n            self.key, self.value = key, value\n            self.prev = self.next = None\n\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.map = {}\n        self.head, self.tail = self.Node(), self.Node()\n        self.head.next, self.tail.prev = self.tail, self.head\n\n    def _unlink(self, node):\n        node.prev.next, node.next.prev = node.next, node.prev\n\n    def _add_front(self, node):\n        node.prev, node.next = self.head, self.head.next\n        self.head.next.prev = node\n        self.head.next = node\n\n    def get(self, key: int) -> int:\n        node = self.map.get(key)\n        if not node:\n            return -1\n        self._unlink(node)\n        self._add_front(node)\n        return node.value\n\n    def put(self, key: int, value: int) -> None:\n        node = self.map.get(key)\n        if node:\n            node.value = value\n            self._unlink(node)\n            self._add_front(node)\n            return\n        node = self.Node(key, value)\n        self.map[key] = node\n        self._add_front(node)\n        if len(self.map) > self.capacity:\n            lru = self.tail.prev\n            self._unlink(lru)\n            del self.map[lru.key]",
+     "javascript": "var LRUCache = function(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n    this.head = { key: 0, value: 0, prev: null, next: null };\n    this.tail = { key: 0, value: 0, prev: this.head, next: null };\n    this.head.next = this.tail;\n};\n\nLRUCache.prototype.unlink = function(node) {\n    node.prev.next = node.next;\n    node.next.prev = node.prev;\n};\n\nLRUCache.prototype.addFront = function(node) {\n    node.prev = this.head;\n    node.next = this.head.next;\n    this.head.next.prev = node;\n    this.head.next = node;\n};\n\nLRUCache.prototype.get = function(key) {\n    const node = this.map.get(key);\n    if (!node) return -1;\n    this.unlink(node);\n    this.addFront(node);\n    return node.value;\n};\n\nLRUCache.prototype.put = function(key, value) {\n    let node = this.map.get(key);\n    if (node) {\n        node.value = value;\n        this.unlink(node);\n        this.addFront(node);\n        return;\n    }\n    node = { key, value, prev: null, next: null };\n    this.map.set(key, node);\n    this.addFront(node);\n    if (this.map.size > this.capacity) {\n        const lru = this.tail.prev;\n        this.unlink(lru);\n        this.map.delete(lru.key);\n    }\n};"
+    }
+   }
+  ]
+ },
+ "insert-delete-getrandom-o1": {
+  "pattern": "Array for O(1) random access + hash map of value → index; delete by swapping with the last element",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Array only",
+    "idea": "Store the values in a dynamic array. Membership checks and removals search the array; random picks a uniform index.",
+    "steps": [
+     "`insert`: if the value is not already in the array (linear search), append it.",
+     "`remove`: find it, delete it from the array.",
+     "`getRandom`: return the element at a uniformly random index."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "insert and remove are O(n) because of the search (and the shift when deleting from the middle); getRandom is O(1).",
+    "code": {
+     "java": "class RandomizedSet {\n    private final List<Integer> values = new ArrayList<>();\n    private final Random rng = new Random();\n\n    public boolean insert(int val) {\n        if (values.contains(val)) return false;\n        values.add(val);\n        return true;\n    }\n\n    public boolean remove(int val) {\n        return values.remove(Integer.valueOf(val));\n    }\n\n    public int getRandom() {\n        return values.get(rng.nextInt(values.size()));\n    }\n}",
+     "cpp": "class RandomizedSet {\n    vector<int> values;\n    mt19937 rng{random_device{}()};\npublic:\n    RandomizedSet() {}\n\n    bool insert(int val) {\n        if (find(values.begin(), values.end(), val) != values.end()) return false;\n        values.push_back(val);\n        return true;\n    }\n\n    bool remove(int val) {\n        auto it = find(values.begin(), values.end(), val);\n        if (it == values.end()) return false;\n        values.erase(it);\n        return true;\n    }\n\n    int getRandom() {\n        return values[uniform_int_distribution<int>(0, values.size() - 1)(rng)];\n    }\n};",
+     "python": "class RandomizedSet:\n    def __init__(self):\n        self.values = []\n\n    def insert(self, val: int) -> bool:\n        if val in self.values:\n            return False\n        self.values.append(val)\n        return True\n\n    def remove(self, val: int) -> bool:\n        if val not in self.values:\n            return False\n        self.values.remove(val)\n        return True\n\n    def getRandom(self) -> int:\n        return random.choice(self.values)",
+     "javascript": "var RandomizedSet = function() {\n    this.values = [];\n};\n\nRandomizedSet.prototype.insert = function(val) {\n    if (this.values.includes(val)) return false;\n    this.values.push(val);\n    return true;\n};\n\nRandomizedSet.prototype.remove = function(val) {\n    const i = this.values.indexOf(val);\n    if (i < 0) return false;\n    this.values.splice(i, 1);\n    return true;\n};\n\nRandomizedSet.prototype.getRandom = function() {\n    return this.values[Math.floor(Math.random() * this.values.length)];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Array + index map, swap-with-last removal",
+    "idea": "The array gives O(1) uniform random picks; a hash map from value to its array index gives O(1) lookups. To delete from the middle in O(1), move the last element into the hole and pop the end.",
+    "steps": [
+     "`insert`: if absent, record `index[val] = size` and append.",
+     "`remove`: if present, let `i = index[val]` and `last` be the final element; put `last` at `i`, set `index[last] = i`, pop the end, delete `val` from the map.",
+     "`getRandom`: element at a uniformly random index."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "Average O(1) for all three: hash operations plus work at the array's end only. The array order changes on removal, which is fine for a set.",
+    "code": {
+     "java": "class RandomizedSet {\n    private final List<Integer> values = new ArrayList<>();\n    private final Map<Integer, Integer> index = new HashMap<>();\n    private final Random rng = new Random();\n\n    public boolean insert(int val) {\n        if (index.containsKey(val)) return false;\n        index.put(val, values.size());\n        values.add(val);\n        return true;\n    }\n\n    public boolean remove(int val) {\n        Integer i = index.remove(val);\n        if (i == null) return false;\n        int last = values.remove(values.size() - 1);\n        if (i < values.size()) {\n            values.set(i, last);\n            index.put(last, i);\n        }\n        return true;\n    }\n\n    public int getRandom() {\n        return values.get(rng.nextInt(values.size()));\n    }\n}",
+     "cpp": "class RandomizedSet {\n    vector<int> values;\n    unordered_map<int, int> index;\n    mt19937 rng{random_device{}()};\npublic:\n    RandomizedSet() {}\n\n    bool insert(int val) {\n        if (index.count(val)) return false;\n        index[val] = values.size();\n        values.push_back(val);\n        return true;\n    }\n\n    bool remove(int val) {\n        auto it = index.find(val);\n        if (it == index.end()) return false;\n        int i = it->second, last = values.back();\n        values[i] = last;\n        index[last] = i;\n        values.pop_back();\n        index.erase(val);\n        return true;\n    }\n\n    int getRandom() {\n        return values[uniform_int_distribution<int>(0, values.size() - 1)(rng)];\n    }\n};",
+     "python": "class RandomizedSet:\n    def __init__(self):\n        self.values, self.index = [], {}\n\n    def insert(self, val: int) -> bool:\n        if val in self.index:\n            return False\n        self.index[val] = len(self.values)\n        self.values.append(val)\n        return True\n\n    def remove(self, val: int) -> bool:\n        if val not in self.index:\n            return False\n        i, last = self.index[val], self.values[-1]\n        self.values[i] = last\n        self.index[last] = i\n        self.values.pop()\n        del self.index[val]\n        return True\n\n    def getRandom(self) -> int:\n        return random.choice(self.values)",
+     "javascript": "var RandomizedSet = function() {\n    this.values = [];\n    this.index = new Map();\n};\n\nRandomizedSet.prototype.insert = function(val) {\n    if (this.index.has(val)) return false;\n    this.index.set(val, this.values.length);\n    this.values.push(val);\n    return true;\n};\n\nRandomizedSet.prototype.remove = function(val) {\n    if (!this.index.has(val)) return false;\n    const i = this.index.get(val), last = this.values[this.values.length - 1];\n    this.values[i] = last;\n    this.index.set(last, i);\n    this.values.pop();\n    this.index.delete(val);\n    return true;\n};\n\nRandomizedSet.prototype.getRandom = function() {\n    return this.values[Math.floor(Math.random() * this.values.length)];\n};"
+    }
+   }
+  ]
+ },
+ "time-based-key-value-store": {
+  "pattern": "Hash map of key → timestamps in increasing order, binary search for the floor",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan versions backwards",
+    "idea": "For each key keep its versions in the order they were set (timestamps increase). `get` walks backwards from the newest version until it finds a timestamp ≤ the query.",
+    "steps": [
+     "`set`: append `(timestamp, value)` to the key's list.",
+     "`get`: walk the list from the end; return the first value whose timestamp ≤ `timestamp`, else \"\"."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "`set` is O(1), but `get` can scan all n versions of a key.",
+    "code": {
+     "java": "class TimeMap {\n    private final Map<String, List<Object[]>> versions = new HashMap<>();\n\n    public void set(String key, String value, int timestamp) {\n        versions.computeIfAbsent(key, k -> new ArrayList<>()).add(new Object[] { timestamp, value });\n    }\n\n    public String get(String key, int timestamp) {\n        List<Object[]> list = versions.getOrDefault(key, List.of());\n        for (int i = list.size() - 1; i >= 0; i--)\n            if ((int) list.get(i)[0] <= timestamp) return (String) list.get(i)[1];\n        return \"\";\n    }\n}",
+     "cpp": "class TimeMap {\n    unordered_map<string, vector<pair<int, string>>> versions;\npublic:\n    TimeMap() {}\n\n    void set(string key, string value, int timestamp) {\n        versions[key].push_back({timestamp, value});\n    }\n\n    string get(string key, int timestamp) {\n        auto it = versions.find(key);\n        if (it == versions.end()) return \"\";\n        auto& list = it->second;\n        for (int i = (int) list.size() - 1; i >= 0; i--)\n            if (list[i].first <= timestamp) return list[i].second;\n        return \"\";\n    }\n};",
+     "python": "class TimeMap:\n    def __init__(self):\n        self.versions = defaultdict(list)\n\n    def set(self, key: str, value: str, timestamp: int) -> None:\n        self.versions[key].append((timestamp, value))\n\n    def get(self, key: str, timestamp: int) -> str:\n        for t, v in reversed(self.versions.get(key, [])):\n            if t <= timestamp:\n                return v\n        return ''",
+     "javascript": "var TimeMap = function() {\n    this.versions = new Map();\n};\n\nTimeMap.prototype.set = function(key, value, timestamp) {\n    if (!this.versions.has(key)) this.versions.set(key, []);\n    this.versions.get(key).push([timestamp, value]);\n};\n\nTimeMap.prototype.get = function(key, timestamp) {\n    const list = this.versions.get(key) || [];\n    for (let i = list.length - 1; i >= 0; i--) if (list[i][0] <= timestamp) return list[i][1];\n    return '';\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search for the last timestamp ≤ t",
+    "idea": "Because each key's timestamps arrive in increasing order, its list is already sorted. Binary-search for the last timestamp that is ≤ the query.",
+    "steps": [
+     "`set`: append the timestamp and the value to the key's parallel lists.",
+     "`get`: binary-search the first timestamp > `timestamp`; the answer is the element just before it, or \"\" if there is none."
+    ],
+    "time": "O(log n)",
+    "space": "O(n)",
+    "why": "`set` is O(1) (amortised) and `get` is O(log n) per key. A `TreeMap.floorEntry` per key would also work, at O(log n) for both.",
+    "code": {
+     "java": "class TimeMap {\n    private final Map<String, List<Integer>> times = new HashMap<>();\n    private final Map<String, List<String>> values = new HashMap<>();\n\n    public void set(String key, String value, int timestamp) {\n        times.computeIfAbsent(key, k -> new ArrayList<>()).add(timestamp);\n        values.computeIfAbsent(key, k -> new ArrayList<>()).add(value);\n    }\n\n    public String get(String key, int timestamp) {\n        List<Integer> t = times.get(key);\n        if (t == null) return \"\";\n        int lo = 0, hi = t.size(); // first index with time > timestamp\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (t.get(mid) <= timestamp) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo == 0 ? \"\" : values.get(key).get(lo - 1);\n    }\n}",
+     "cpp": "class TimeMap {\n    unordered_map<string, vector<pair<int, string>>> versions;\npublic:\n    TimeMap() {}\n\n    void set(string key, string value, int timestamp) {\n        versions[key].push_back({timestamp, value});\n    }\n\n    string get(string key, int timestamp) {\n        auto it = versions.find(key);\n        if (it == versions.end()) return \"\";\n        auto& list = it->second;\n        auto pos = upper_bound(list.begin(), list.end(), timestamp,\n                               [](int t, const pair<int, string>& p) { return t < p.first; });\n        return pos == list.begin() ? \"\" : prev(pos)->second;\n    }\n};",
+     "python": "class TimeMap:\n    def __init__(self):\n        self.times = defaultdict(list)\n        self.values = defaultdict(list)\n\n    def set(self, key: str, value: str, timestamp: int) -> None:\n        self.times[key].append(timestamp)\n        self.values[key].append(value)\n\n    def get(self, key: str, timestamp: int) -> str:\n        i = bisect_right(self.times.get(key, []), timestamp)\n        return self.values[key][i - 1] if i else ''",
+     "javascript": "var TimeMap = function() {\n    this.versions = new Map();\n};\n\nTimeMap.prototype.set = function(key, value, timestamp) {\n    if (!this.versions.has(key)) this.versions.set(key, []);\n    this.versions.get(key).push([timestamp, value]);\n};\n\nTimeMap.prototype.get = function(key, timestamp) {\n    const list = this.versions.get(key) || [];\n    let lo = 0, hi = list.length; // first index with time > timestamp\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (list[mid][0] <= timestamp) lo = mid + 1;\n        else hi = mid;\n    }\n    return lo === 0 ? '' : list[lo - 1][1];\n};"
+    }
+   }
+  ]
+ },
+ "peeking-iterator": {
+  "pattern": "Iterator wrapper with a one-element lookahead cache",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy everything up front",
+    "idea": "Drain the underlying iterator into a list in the constructor, then serve `peek`, `next` and `hasNext` from the list with an index.",
+    "steps": [
+     "Constructor: read every element into `items`; `pos = 0`.",
+     "`peek`: `items[pos]`; `next`: `items[pos++]`; `hasNext`: `pos < items.length`."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "O(n) up front and O(n) memory — it defeats the purpose of an iterator, which may be huge or infinite.",
+    "code": {
+     "java": "class PeekingIterator implements Iterator<Integer> {\n    private final List<Integer> items = new ArrayList<>();\n    private int pos = 0;\n\n    public PeekingIterator(Iterator<Integer> iterator) {\n        while (iterator.hasNext()) items.add(iterator.next());\n    }\n\n    public Integer peek() {\n        return items.get(pos);\n    }\n\n    @Override\n    public Integer next() {\n        return items.get(pos++);\n    }\n\n    @Override\n    public boolean hasNext() {\n        return pos < items.size();\n    }\n}",
+     "cpp": "class PeekingIterator : public Iterator {\n    vector<int> items;\n    size_t pos = 0;\npublic:\n    PeekingIterator(const vector<int>& nums) : Iterator(nums) {\n        while (Iterator::hasNext()) items.push_back(Iterator::next());\n    }\n\n    int peek() {\n        return items[pos];\n    }\n\n    int next() {\n        return items[pos++];\n    }\n\n    bool hasNext() {\n        return pos < items.size();\n    }\n};",
+     "python": "class PeekingIterator:\n    def __init__(self, iterator):\n        self.items, self.pos = [], 0\n        while iterator.hasNext():\n            self.items.append(iterator.next())\n\n    def peek(self) -> int:\n        return self.items[self.pos]\n\n    def next(self) -> int:\n        self.pos += 1\n        return self.items[self.pos - 1]\n\n    def hasNext(self) -> bool:\n        return self.pos < len(self.items)",
+     "javascript": "var PeekingIterator = function(iterator) {\n    this.items = [];\n    this.pos = 0;\n    while (iterator.hasNext()) this.items.push(iterator.next());\n};\n\nPeekingIterator.prototype.peek = function() {\n    return this.items[this.pos];\n};\n\nPeekingIterator.prototype.next = function() {\n    return this.items[this.pos++];\n};\n\nPeekingIterator.prototype.hasNext = function() {\n    return this.pos < this.items.length;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cache exactly one element ahead",
+    "idea": "Always hold the next element (if any) in a field. `peek` returns it; `next` returns it and refills the cache from the underlying iterator.",
+    "steps": [
+     "Constructor: `has = it.hasNext()`; if so, `cached = it.next()`.",
+     "`peek`: return `cached`. `hasNext`: return `has`.",
+     "`next`: remember `cached`, refill (`has = it.hasNext()`, `cached = it.next()` if so), return the remembered value."
+    ],
+    "time": "O(1)",
+    "space": "O(1)",
+    "why": "Each call does at most one call on the underlying iterator and keeps one extra element.",
+    "code": {
+     "java": "class PeekingIterator implements Iterator<Integer> {\n    private final Iterator<Integer> it;\n    private boolean has;\n    private Integer cached;\n\n    public PeekingIterator(Iterator<Integer> iterator) {\n        it = iterator;\n        advance();\n    }\n\n    private void advance() {\n        has = it.hasNext();\n        cached = has ? it.next() : null;\n    }\n\n    public Integer peek() {\n        return cached;\n    }\n\n    @Override\n    public Integer next() {\n        Integer value = cached;\n        advance();\n        return value;\n    }\n\n    @Override\n    public boolean hasNext() {\n        return has;\n    }\n}",
+     "cpp": "class PeekingIterator : public Iterator {\n    bool has;\n    int cached = 0;\n    void advance() {\n        has = Iterator::hasNext();\n        if (has) cached = Iterator::next();\n    }\npublic:\n    PeekingIterator(const vector<int>& nums) : Iterator(nums) {\n        advance();\n    }\n\n    int peek() {\n        return cached;\n    }\n\n    int next() {\n        int value = cached;\n        advance();\n        return value;\n    }\n\n    bool hasNext() {\n        return has;\n    }\n};",
+     "python": "class PeekingIterator:\n    def __init__(self, iterator):\n        self.it = iterator\n        self._advance()\n\n    def _advance(self):\n        self.has = self.it.hasNext()\n        self.cached = self.it.next() if self.has else None\n\n    def peek(self) -> int:\n        return self.cached\n\n    def next(self) -> int:\n        value = self.cached\n        self._advance()\n        return value\n\n    def hasNext(self) -> bool:\n        return self.has",
+     "javascript": "var PeekingIterator = function(iterator) {\n    this.it = iterator;\n    this.advance();\n};\n\nPeekingIterator.prototype.advance = function() {\n    this.has = this.it.hasNext();\n    this.cached = this.has ? this.it.next() : undefined;\n};\n\nPeekingIterator.prototype.peek = function() {\n    return this.cached;\n};\n\nPeekingIterator.prototype.next = function() {\n    const value = this.cached;\n    this.advance();\n    return value;\n};\n\nPeekingIterator.prototype.hasNext = function() {\n    return this.has;\n};"
+    }
+   }
+  ]
+ },
+ "flatten-nested-list-iterator": {
+  "pattern": "Lazy DFS with an explicit stack of (list, position) frames",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Flatten everything in the constructor",
+    "idea": "Recursively walk the whole nested structure once, collecting integers into a flat list; then iterate over that list.",
+    "steps": [
+     "Constructor: DFS over `nestedList`, appending each integer in order.",
+     "`next`: return `flat[pos++]`; `hasNext`: `pos < flat.length`."
+    ],
+    "time": "O(N + L)",
+    "space": "O(N + D)",
+    "why": "N integers and L lists are all visited up front, and the whole flat copy is kept (D = nesting depth for the recursion). Fine here, but it does all the work even if the caller stops early.",
+    "code": {
+     "java": "class NestedIterator implements Iterator<Integer> {\n    private final List<Integer> flat = new ArrayList<>();\n    private int pos = 0;\n\n    public NestedIterator(List<NestedInteger> nestedList) {\n        flatten(nestedList);\n    }\n\n    private void flatten(List<NestedInteger> list) {\n        for (NestedInteger x : list) {\n            if (x.isInteger()) flat.add(x.getInteger());\n            else flatten(x.getList());\n        }\n    }\n\n    @Override\n    public Integer next() {\n        return flat.get(pos++);\n    }\n\n    @Override\n    public boolean hasNext() {\n        return pos < flat.size();\n    }\n}",
+     "cpp": "class NestedIterator {\n    vector<int> flat;\n    size_t pos = 0;\n    void flatten(const vector<NestedInteger>& list) {\n        for (const auto& x : list) {\n            if (x.isInteger()) flat.push_back(x.getInteger());\n            else flatten(x.getList());\n        }\n    }\npublic:\n    NestedIterator(vector<NestedInteger>& nestedList) {\n        flatten(nestedList);\n    }\n\n    int next() {\n        return flat[pos++];\n    }\n\n    bool hasNext() {\n        return pos < flat.size();\n    }\n};",
+     "python": "class NestedIterator:\n    def __init__(self, nestedList: [NestedInteger]):\n        self.flat, self.pos = [], 0\n        def flatten(items):\n            for x in items:\n                if x.isInteger():\n                    self.flat.append(x.getInteger())\n                else:\n                    flatten(x.getList())\n        flatten(nestedList)\n\n    def next(self) -> int:\n        self.pos += 1\n        return self.flat[self.pos - 1]\n\n    def hasNext(self) -> bool:\n        return self.pos < len(self.flat)",
+     "javascript": "var NestedIterator = function(nestedList) {\n    this.flat = [];\n    this.pos = 0;\n    const flatten = (list) => {\n        for (const x of list) {\n            if (x.isInteger()) this.flat.push(x.getInteger());\n            else flatten(x.getList());\n        }\n    };\n    flatten(nestedList);\n};\n\nNestedIterator.prototype.next = function() {\n    return this.flat[this.pos++];\n};\n\nNestedIterator.prototype.hasNext = function() {\n    return this.pos < this.flat.length;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Lazy stack of positions",
+    "idea": "Keep a stack of frames `(list, index)` — the DFS call stack, made explicit. `hasNext` advances until the top frame points at an integer, descending into sub-lists and popping finished ones. `next` then just returns that integer.",
+    "steps": [
+     "Start with one frame for `nestedList` at index 0.",
+     "`hasNext`: while the stack is not empty — if the top frame is finished, pop it; if it points at an integer, return true; if it points at a list, step past it and push a frame for that list.",
+     "Return false when the stack empties (this also skips empty lists like `[[]]`).",
+     "`next`: call `hasNext`, then return the integer at the top frame and advance it."
+    ],
+    "time": "O(1)",
+    "space": "O(D)",
+    "why": "Amortised O(1) per call: each list and integer is stepped over once across the whole iteration. Only the current path (depth D) is stored, and nothing is copied.",
+    "code": {
+     "java": "class NestedIterator implements Iterator<Integer> {\n    private final Deque<Iterator<NestedInteger>> stack = new ArrayDeque<>();\n    private Integer ready; // the next integer, once hasNext() has found it\n\n    public NestedIterator(List<NestedInteger> nestedList) {\n        stack.push(nestedList.iterator());\n    }\n\n    @Override\n    public boolean hasNext() {\n        while (ready == null && !stack.isEmpty()) {\n            Iterator<NestedInteger> top = stack.peek();\n            if (!top.hasNext()) {\n                stack.pop();\n                continue;\n            }\n            NestedInteger x = top.next();\n            if (x.isInteger()) ready = x.getInteger();\n            else stack.push(x.getList().iterator());\n        }\n        return ready != null;\n    }\n\n    @Override\n    public Integer next() {\n        hasNext();\n        Integer value = ready;\n        ready = null;\n        return value;\n    }\n}",
+     "cpp": "class NestedIterator {\n    vector<NestedInteger> root;\n    stack<pair<const vector<NestedInteger>*, size_t>> frames; // (list, next index)\npublic:\n    NestedIterator(vector<NestedInteger>& nestedList) : root(nestedList) {\n        frames.push({&root, 0});\n    }\n\n    bool hasNext() {\n        while (!frames.empty()) {\n            auto& [list, i] = frames.top();\n            if (i == list->size()) {\n                frames.pop();\n                continue;\n            }\n            const NestedInteger& x = (*list)[i];\n            if (x.isInteger()) return true;\n            i++;\n            frames.push({&x.getList(), 0});\n        }\n        return false;\n    }\n\n    int next() {\n        hasNext();\n        auto& [list, i] = frames.top();\n        return (*list)[i++].getInteger();\n    }\n};",
+     "python": "class NestedIterator:\n    def __init__(self, nestedList: [NestedInteger]):\n        self.stack = [[nestedList, 0]]  # (list, next index)\n\n    def hasNext(self) -> bool:\n        while self.stack:\n            frame = self.stack[-1]\n            items, i = frame\n            if i == len(items):\n                self.stack.pop()\n                continue\n            if items[i].isInteger():\n                return True\n            frame[1] += 1\n            self.stack.append([items[i].getList(), 0])\n        return False\n\n    def next(self) -> int:\n        self.hasNext()\n        frame = self.stack[-1]\n        frame[1] += 1\n        return frame[0][frame[1] - 1].getInteger()",
+     "javascript": "var NestedIterator = function(nestedList) {\n    this.stack = [[nestedList, 0]]; // [list, next index]\n};\n\nNestedIterator.prototype.hasNext = function() {\n    while (this.stack.length) {\n        const frame = this.stack[this.stack.length - 1], [list, i] = frame;\n        if (i === list.length) {\n            this.stack.pop();\n            continue;\n        }\n        if (list[i].isInteger()) return true;\n        frame[1]++;\n        this.stack.push([list[i].getList(), 0]);\n    }\n    return false;\n};\n\nNestedIterator.prototype.next = function() {\n    this.hasNext();\n    const frame = this.stack[this.stack.length - 1];\n    return frame[0][frame[1]++].getInteger();\n};"
+    }
+   }
+  ]
+ },
+ "snapshot-array": {
+  "pattern": "Per-index version history + binary search (store only changes, not copies)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the whole array on every snap",
+    "idea": "Keep the current array; `snap` saves a full copy. `get` reads from the saved copy.",
+    "steps": [
+     "`set`: write into the current array.",
+     "`snap`: append a copy of the current array; return its index.",
+     "`get(i, id)`: `snapshots[id][i]`."
+    ],
+    "time": "O(length)",
+    "space": "O(length·snaps)",
+    "why": "`set` and `get` are O(1), but each snap copies `length` values — up to 5·10⁴ × 10⁵ operations and memory in the worst case.",
+    "code": {
+     "java": "class SnapshotArray {\n    private final int[] current;\n    private final List<int[]> snapshots = new ArrayList<>();\n\n    public SnapshotArray(int length) {\n        current = new int[length];\n    }\n\n    public void set(int index, int val) {\n        current[index] = val;\n    }\n\n    public int snap() {\n        snapshots.add(current.clone());\n        return snapshots.size() - 1;\n    }\n\n    public int get(int index, int snap_id) {\n        return snapshots.get(snap_id)[index];\n    }\n}",
+     "cpp": "class SnapshotArray {\n    vector<int> current;\n    vector<vector<int>> snapshots;\npublic:\n    SnapshotArray(int length) : current(length, 0) {}\n\n    void set(int index, int val) {\n        current[index] = val;\n    }\n\n    int snap() {\n        snapshots.push_back(current);\n        return snapshots.size() - 1;\n    }\n\n    int get(int index, int snap_id) {\n        return snapshots[snap_id][index];\n    }\n};",
+     "python": "class SnapshotArray:\n    def __init__(self, length: int):\n        self.current = [0] * length\n        self.snapshots = []\n\n    def set(self, index: int, val: int) -> None:\n        self.current[index] = val\n\n    def snap(self) -> int:\n        self.snapshots.append(self.current[:])\n        return len(self.snapshots) - 1\n\n    def get(self, index: int, snap_id: int) -> int:\n        return self.snapshots[snap_id][index]",
+     "javascript": "var SnapshotArray = function(length) {\n    this.current = new Array(length).fill(0);\n    this.snapshots = [];\n};\n\nSnapshotArray.prototype.set = function(index, val) {\n    this.current[index] = val;\n};\n\nSnapshotArray.prototype.snap = function() {\n    this.snapshots.push([...this.current]);\n    return this.snapshots.length - 1;\n};\n\nSnapshotArray.prototype.get = function(index, snap_id) {\n    return this.snapshots[snap_id][index];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Per-index change log + binary search",
+    "idea": "For each index, record only the changes as `(snapId, value)` pairs, where `snapId` is the snapshot the change will belong to. A `get` finds the last change with `snapId ≤ id` by binary search.",
+    "steps": [
+     "`set(i, v)`: if the last entry of `history[i]` has the current snap id, overwrite its value; otherwise append `(snapCount, v)`.",
+     "`snap()`: return `snapCount++` — nothing is copied.",
+     "`get(i, id)`: binary-search `history[i]` for the last entry with `snapId ≤ id`; return its value, or 0 if there is none."
+    ],
+    "time": "O(log s)",
+    "space": "O(length + sets)",
+    "why": "`set` and `snap` are O(1), `get` is O(log s) for s recorded changes at that index; memory grows only with the number of `set` calls.",
+    "code": {
+     "java": "class SnapshotArray {\n    private final List<List<int[]>> history = new ArrayList<>();\n    private int snapCount = 0;\n\n    public SnapshotArray(int length) {\n        for (int i = 0; i < length; i++) history.add(new ArrayList<>());\n    }\n\n    public void set(int index, int val) {\n        List<int[]> h = history.get(index);\n        if (!h.isEmpty() && h.get(h.size() - 1)[0] == snapCount) h.get(h.size() - 1)[1] = val;\n        else h.add(new int[] { snapCount, val });\n    }\n\n    public int snap() {\n        return snapCount++;\n    }\n\n    public int get(int index, int snap_id) {\n        List<int[]> h = history.get(index);\n        int lo = 0, hi = h.size(); // first entry with snapId > snap_id\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (h.get(mid)[0] <= snap_id) lo = mid + 1;\n            else hi = mid;\n        }\n        return lo == 0 ? 0 : h.get(lo - 1)[1];\n    }\n}",
+     "cpp": "class SnapshotArray {\n    vector<vector<pair<int, int>>> history; // (snapId, value) per index\n    int snapCount = 0;\npublic:\n    SnapshotArray(int length) : history(length) {}\n\n    void set(int index, int val) {\n        auto& h = history[index];\n        if (!h.empty() && h.back().first == snapCount) h.back().second = val;\n        else h.push_back({snapCount, val});\n    }\n\n    int snap() {\n        return snapCount++;\n    }\n\n    int get(int index, int snap_id) {\n        auto& h = history[index];\n        auto it = upper_bound(h.begin(), h.end(), make_pair(snap_id, INT_MAX));\n        return it == h.begin() ? 0 : prev(it)->second;\n    }\n};",
+     "python": "class SnapshotArray:\n    def __init__(self, length: int):\n        self.snap_ids = [[] for _ in range(length)]\n        self.values = [[] for _ in range(length)]\n        self.snap_count = 0\n\n    def set(self, index: int, val: int) -> None:\n        ids, vals = self.snap_ids[index], self.values[index]\n        if ids and ids[-1] == self.snap_count:\n            vals[-1] = val\n        else:\n            ids.append(self.snap_count)\n            vals.append(val)\n\n    def snap(self) -> int:\n        self.snap_count += 1\n        return self.snap_count - 1\n\n    def get(self, index: int, snap_id: int) -> int:\n        i = bisect_right(self.snap_ids[index], snap_id)\n        return self.values[index][i - 1] if i else 0",
+     "javascript": "var SnapshotArray = function(length) {\n    this.history = Array.from({ length }, () => []); // [snapId, value] per index\n    this.snapCount = 0;\n};\n\nSnapshotArray.prototype.set = function(index, val) {\n    const h = this.history[index];\n    if (h.length && h[h.length - 1][0] === this.snapCount) h[h.length - 1][1] = val;\n    else h.push([this.snapCount, val]);\n};\n\nSnapshotArray.prototype.snap = function() {\n    return this.snapCount++;\n};\n\nSnapshotArray.prototype.get = function(index, snap_id) {\n    const h = this.history[index];\n    let lo = 0, hi = h.length; // first entry with snapId > snap_id\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (h[mid][0] <= snap_id) lo = mid + 1;\n        else hi = mid;\n    }\n    return lo === 0 ? 0 : h[lo - 1][1];\n};"
+    }
+   }
+  ]
+ },
+ "design-twitter": {
+  "pattern": "Per-user tweet lists + k-way merge with a max-heap (merge k sorted lists)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan the global timeline",
+    "idea": "Keep every tweet in one list in posting order. For a feed, walk it from the newest end and keep tweets by the user or anyone they follow, stopping at 10.",
+    "steps": [
+     "`postTweet`: append `(userId, tweetId)` to the global list.",
+     "`follow` / `unfollow`: add to / remove from the user's followee set.",
+     "`getNewsFeed`: scan backwards, collecting tweets whose author is the user or a followee, until 10 are found."
+    ],
+    "time": "O(T)",
+    "space": "O(T + F)",
+    "why": "A feed may scan all T tweets ever posted if the user's network is quiet; the other operations are O(1).",
+    "code": {
+     "java": "class Twitter {\n    private final List<int[]> tweets = new ArrayList<>(); // (userId, tweetId) in posting order\n    private final Map<Integer, Set<Integer>> follows = new HashMap<>();\n\n    public void postTweet(int userId, int tweetId) {\n        tweets.add(new int[] { userId, tweetId });\n    }\n\n    public List<Integer> getNewsFeed(int userId) {\n        Set<Integer> followees = follows.getOrDefault(userId, Set.of());\n        List<Integer> feed = new ArrayList<>();\n        for (int i = tweets.size() - 1; i >= 0 && feed.size() < 10; i--) {\n            int author = tweets.get(i)[0];\n            if (author == userId || followees.contains(author)) feed.add(tweets.get(i)[1]);\n        }\n        return feed;\n    }\n\n    public void follow(int followerId, int followeeId) {\n        follows.computeIfAbsent(followerId, k -> new HashSet<>()).add(followeeId);\n    }\n\n    public void unfollow(int followerId, int followeeId) {\n        Set<Integer> s = follows.get(followerId);\n        if (s != null) s.remove(followeeId);\n    }\n}",
+     "cpp": "class Twitter {\n    vector<pair<int, int>> tweets; // (userId, tweetId) in posting order\n    unordered_map<int, unordered_set<int>> follows;\npublic:\n    Twitter() {}\n\n    void postTweet(int userId, int tweetId) {\n        tweets.push_back({userId, tweetId});\n    }\n\n    vector<int> getNewsFeed(int userId) {\n        auto& followees = follows[userId];\n        vector<int> feed;\n        for (int i = (int) tweets.size() - 1; i >= 0 && feed.size() < 10; i--) {\n            int author = tweets[i].first;\n            if (author == userId || followees.count(author)) feed.push_back(tweets[i].second);\n        }\n        return feed;\n    }\n\n    void follow(int followerId, int followeeId) {\n        follows[followerId].insert(followeeId);\n    }\n\n    void unfollow(int followerId, int followeeId) {\n        follows[followerId].erase(followeeId);\n    }\n};",
+     "python": "class Twitter:\n    def __init__(self):\n        self.tweets = []  # (userId, tweetId) in posting order\n        self.follows = defaultdict(set)\n\n    def postTweet(self, userId: int, tweetId: int) -> None:\n        self.tweets.append((userId, tweetId))\n\n    def getNewsFeed(self, userId: int) -> List[int]:\n        feed, followees = [], self.follows[userId]\n        for author, tweet in reversed(self.tweets):\n            if author == userId or author in followees:\n                feed.append(tweet)\n                if len(feed) == 10:\n                    break\n        return feed\n\n    def follow(self, followerId: int, followeeId: int) -> None:\n        self.follows[followerId].add(followeeId)\n\n    def unfollow(self, followerId: int, followeeId: int) -> None:\n        self.follows[followerId].discard(followeeId)",
+     "javascript": "var Twitter = function() {\n    this.tweets = []; // [userId, tweetId] in posting order\n    this.follows = new Map();\n};\n\nTwitter.prototype.postTweet = function(userId, tweetId) {\n    this.tweets.push([userId, tweetId]);\n};\n\nTwitter.prototype.getNewsFeed = function(userId) {\n    const followees = this.follows.get(userId) || new Set(), feed = [];\n    for (let i = this.tweets.length - 1; i >= 0 && feed.length < 10; i--) {\n        const [author, tweet] = this.tweets[i];\n        if (author === userId || followees.has(author)) feed.push(tweet);\n    }\n    return feed;\n};\n\nTwitter.prototype.follow = function(followerId, followeeId) {\n    if (!this.follows.has(followerId)) this.follows.set(followerId, new Set());\n    this.follows.get(followerId).add(followeeId);\n};\n\nTwitter.prototype.unfollow = function(followerId, followeeId) {\n    const s = this.follows.get(followerId);\n    if (s) s.delete(followeeId);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Per-user lists merged with a max-heap",
+    "idea": "Each user's tweets form a list already sorted by time. A feed is the top 10 of a k-way merge of the user's list and their followees' lists: put each list's newest tweet in a max-heap by time, pop the newest, and push the next-older tweet from the same list.",
+    "steps": [
+     "`postTweet`: append `(time++, tweetId)` to the user's own list.",
+     "`getNewsFeed`: for the user and each followee with tweets, push their newest `(time, tweetId, user, index)`.",
+     "Pop up to 10 times; after each pop, push that user's previous tweet if there is one."
+    ],
+    "time": "O(F + 10·log F)",
+    "space": "O(T + F)",
+    "why": "Building the heap costs O(F) for F followees, and only 10 pops follow — independent of how many tweets exist overall.",
+    "code": {
+     "java": "class Twitter {\n    private int time = 0;\n    private final Map<Integer, List<int[]>> tweets = new HashMap<>(); // userId -> (time, tweetId)\n    private final Map<Integer, Set<Integer>> follows = new HashMap<>();\n\n    public void postTweet(int userId, int tweetId) {\n        tweets.computeIfAbsent(userId, k -> new ArrayList<>()).add(new int[] { time++, tweetId });\n    }\n\n    public List<Integer> getNewsFeed(int userId) {\n        // heap entries: (time, tweetId, userId, index in that user's list), newest first\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> b[0] - a[0]);\n        Set<Integer> users = new HashSet<>(follows.getOrDefault(userId, Set.of()));\n        users.add(userId);\n        for (int u : users) {\n            List<int[]> list = tweets.get(u);\n            if (list != null && !list.isEmpty()) {\n                int i = list.size() - 1;\n                heap.add(new int[] { list.get(i)[0], list.get(i)[1], u, i });\n            }\n        }\n        List<Integer> feed = new ArrayList<>();\n        while (!heap.isEmpty() && feed.size() < 10) {\n            int[] top = heap.poll();\n            feed.add(top[1]);\n            if (top[3] > 0) {\n                int[] older = tweets.get(top[2]).get(top[3] - 1);\n                heap.add(new int[] { older[0], older[1], top[2], top[3] - 1 });\n            }\n        }\n        return feed;\n    }\n\n    public void follow(int followerId, int followeeId) {\n        follows.computeIfAbsent(followerId, k -> new HashSet<>()).add(followeeId);\n    }\n\n    public void unfollow(int followerId, int followeeId) {\n        Set<Integer> s = follows.get(followerId);\n        if (s != null) s.remove(followeeId);\n    }\n}",
+     "cpp": "class Twitter {\n    int time = 0;\n    unordered_map<int, vector<pair<int, int>>> tweets; // userId -> (time, tweetId)\n    unordered_map<int, unordered_set<int>> follows;\npublic:\n    Twitter() {}\n\n    void postTweet(int userId, int tweetId) {\n        tweets[userId].push_back({time++, tweetId});\n    }\n\n    vector<int> getNewsFeed(int userId) {\n        priority_queue<array<int, 4>> heap; // (time, tweetId, userId, index), newest on top\n        unordered_set<int> users = follows[userId];\n        users.insert(userId);\n        for (int u : users) {\n            auto it = tweets.find(u);\n            if (it != tweets.end() && !it->second.empty()) {\n                int i = it->second.size() - 1;\n                heap.push({it->second[i].first, it->second[i].second, u, i});\n            }\n        }\n        vector<int> feed;\n        while (!heap.empty() && feed.size() < 10) {\n            auto [t, id, u, i] = heap.top();\n            heap.pop();\n            feed.push_back(id);\n            if (i > 0) heap.push({tweets[u][i - 1].first, tweets[u][i - 1].second, u, i - 1});\n        }\n        return feed;\n    }\n\n    void follow(int followerId, int followeeId) {\n        follows[followerId].insert(followeeId);\n    }\n\n    void unfollow(int followerId, int followeeId) {\n        follows[followerId].erase(followeeId);\n    }\n};",
+     "python": "class Twitter:\n    def __init__(self):\n        self.time = 0\n        self.tweets = defaultdict(list)  # userId -> [(time, tweetId)]\n        self.follows = defaultdict(set)\n\n    def postTweet(self, userId: int, tweetId: int) -> None:\n        self.tweets[userId].append((self.time, tweetId))\n        self.time += 1\n\n    def getNewsFeed(self, userId: int) -> List[int]:\n        heap = []  # (-time, tweetId, userId, index): newest first\n        for u in self.follows[userId] | {userId}:\n            if self.tweets[u]:\n                i = len(self.tweets[u]) - 1\n                t, tweet = self.tweets[u][i]\n                heap.append((-t, tweet, u, i))\n        heapify(heap)\n        feed = []\n        while heap and len(feed) < 10:\n            _, tweet, u, i = heappop(heap)\n            feed.append(tweet)\n            if i > 0:\n                t, older = self.tweets[u][i - 1]\n                heappush(heap, (-t, older, u, i - 1))\n        return feed\n\n    def follow(self, followerId: int, followeeId: int) -> None:\n        self.follows[followerId].add(followeeId)\n\n    def unfollow(self, followerId: int, followeeId: int) -> None:\n        self.follows[followerId].discard(followeeId)",
+     "javascript": "var Twitter = function() {\n    this.time = 0;\n    this.tweets = new Map(); // userId -> [time, tweetId][]\n    this.follows = new Map();\n};\n\nTwitter.prototype.postTweet = function(userId, tweetId) {\n    if (!this.tweets.has(userId)) this.tweets.set(userId, []);\n    this.tweets.get(userId).push([this.time++, tweetId]);\n};\n\nTwitter.prototype.getNewsFeed = function(userId) {\n    const heap = new PriorityQueue((a, b) => b[0] - a[0]); // [time, tweetId, userId, index]\n    const users = new Set(this.follows.get(userId) || []);\n    users.add(userId);\n    for (const u of users) {\n        const list = this.tweets.get(u);\n        if (list && list.length) {\n            const i = list.length - 1;\n            heap.enqueue([list[i][0], list[i][1], u, i]);\n        }\n    }\n    const feed = [];\n    while (heap.size() > 0 && feed.length < 10) {\n        const [, tweet, u, i] = heap.dequeue();\n        feed.push(tweet);\n        if (i > 0) {\n            const [t, older] = this.tweets.get(u)[i - 1];\n            heap.enqueue([t, older, u, i - 1]);\n        }\n    }\n    return feed;\n};\n\nTwitter.prototype.follow = function(followerId, followeeId) {\n    if (!this.follows.has(followerId)) this.follows.set(followerId, new Set());\n    this.follows.get(followerId).add(followeeId);\n};\n\nTwitter.prototype.unfollow = function(followerId, followeeId) {\n    const s = this.follows.get(followerId);\n    if (s) s.delete(followeeId);\n};"
+    }
+   }
+  ]
+ },
+ "lfu-cache": {
+  "pattern": "Hash map + frequency buckets (each an LRU-ordered list) + a min-frequency pointer",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan for the victim",
+    "idea": "Store each key with its value, use count and the time it was last used. On eviction, scan all keys for the smallest `(count, lastUsed)`.",
+    "steps": [
+     "`get`: if present, increment its count, stamp the current time, return the value.",
+     "`put` on an existing key: update the value and touch it the same way.",
+     "`put` of a new key when full: remove the key with the smallest count, breaking ties by the oldest time; then insert with count 1."
+    ],
+    "time": "O(capacity)",
+    "space": "O(capacity)",
+    "why": "`get` is O(1), but every eviction scans all stored keys.",
+    "code": {
+     "java": "class LFUCache {\n    private final int capacity;\n    private int clock = 0;\n    private final Map<Integer, int[]> entries = new HashMap<>(); // key -> {value, count, lastUsed}\n\n    public LFUCache(int capacity) {\n        this.capacity = capacity;\n    }\n\n    public int get(int key) {\n        int[] e = entries.get(key);\n        if (e == null) return -1;\n        e[1]++;\n        e[2] = clock++;\n        return e[0];\n    }\n\n    public void put(int key, int value) {\n        int[] e = entries.get(key);\n        if (e != null) {\n            e[0] = value;\n            e[1]++;\n            e[2] = clock++;\n            return;\n        }\n        if (entries.size() == capacity) {\n            int victim = -1;\n            int[] worst = null;\n            for (Map.Entry<Integer, int[]> x : entries.entrySet()) {\n                int[] v = x.getValue();\n                if (worst == null || v[1] < worst[1] || (v[1] == worst[1] && v[2] < worst[2])) {\n                    worst = v;\n                    victim = x.getKey();\n                }\n            }\n            entries.remove(victim);\n        }\n        entries.put(key, new int[] { value, 1, clock++ });\n    }\n}",
+     "cpp": "class LFUCache {\n    int capacity, clock = 0;\n    unordered_map<int, array<int, 3>> entries; // key -> {value, count, lastUsed}\npublic:\n    LFUCache(int capacity) : capacity(capacity) {}\n\n    int get(int key) {\n        auto it = entries.find(key);\n        if (it == entries.end()) return -1;\n        it->second[1]++;\n        it->second[2] = clock++;\n        return it->second[0];\n    }\n\n    void put(int key, int value) {\n        auto it = entries.find(key);\n        if (it != entries.end()) {\n            it->second = {value, it->second[1] + 1, clock++};\n            return;\n        }\n        if ((int) entries.size() == capacity) {\n            auto victim = entries.begin();\n            for (auto x = entries.begin(); x != entries.end(); ++x)\n                if (make_pair(x->second[1], x->second[2]) < make_pair(victim->second[1], victim->second[2])) victim = x;\n            entries.erase(victim);\n        }\n        entries[key] = {value, 1, clock++};\n    }\n};",
+     "python": "class LFUCache:\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.clock = 0\n        self.entries = {}  # key -> [value, count, lastUsed]\n\n    def get(self, key: int) -> int:\n        e = self.entries.get(key)\n        if e is None:\n            return -1\n        e[1] += 1\n        e[2] = self.clock\n        self.clock += 1\n        return e[0]\n\n    def put(self, key: int, value: int) -> None:\n        if key in self.entries:\n            e = self.entries[key]\n            e[0] = value\n            e[1] += 1\n            e[2] = self.clock\n        else:\n            if len(self.entries) == self.capacity:\n                victim = min(self.entries, key=lambda k: (self.entries[k][1], self.entries[k][2]))\n                del self.entries[victim]\n            self.entries[key] = [value, 1, self.clock]\n        self.clock += 1",
+     "javascript": "var LFUCache = function(capacity) {\n    this.capacity = capacity;\n    this.clock = 0;\n    this.entries = new Map(); // key -> [value, count, lastUsed]\n};\n\nLFUCache.prototype.get = function(key) {\n    const e = this.entries.get(key);\n    if (!e) return -1;\n    e[1]++;\n    e[2] = this.clock++;\n    return e[0];\n};\n\nLFUCache.prototype.put = function(key, value) {\n    const e = this.entries.get(key);\n    if (e) {\n        e[0] = value;\n        e[1]++;\n        e[2] = this.clock++;\n        return;\n    }\n    if (this.entries.size === this.capacity) {\n        let victim = null, worst = null;\n        for (const [k, v] of this.entries)\n            if (!worst || v[1] < worst[1] || (v[1] === worst[1] && v[2] < worst[2])) { worst = v; victim = k; }\n        this.entries.delete(victim);\n    }\n    this.entries.set(key, [value, 1, this.clock++]);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Frequency buckets with LRU order and minFreq",
+    "idea": "Group keys by use count. Each bucket keeps its keys in recency order (an insertion-ordered set or linked list), so the eviction victim is the oldest key in the lowest non-empty bucket. Track that lowest count in `minFreq`.",
+    "steps": [
+     "`touch(key)`: move the key from bucket `f` to the back of bucket `f + 1`; if bucket `f` became empty and `f == minFreq`, increment `minFreq`.",
+     "`get`: if present, `touch` it and return the value.",
+     "`put` on an existing key: update the value and `touch` it.",
+     "`put` of a new key: if full, remove the first key of bucket `minFreq`; insert the new key into bucket 1 and set `minFreq = 1`."
+    ],
+    "time": "O(1)",
+    "space": "O(capacity)",
+    "why": "Every step is a constant number of hash-map and linked-list operations. `minFreq` only ever increases by one during a touch, or resets to 1 on insertion, so it never needs a search.",
+    "code": {
+     "java": "class LFUCache {\n    private final int capacity;\n    private int minFreq = 0;\n    private final Map<Integer, int[]> entries = new HashMap<>(); // key -> {value, count}\n    private final Map<Integer, LinkedHashSet<Integer>> buckets = new HashMap<>(); // count -> keys, oldest first\n\n    public LFUCache(int capacity) {\n        this.capacity = capacity;\n    }\n\n    public int get(int key) {\n        int[] e = entries.get(key);\n        if (e == null) return -1;\n        touch(key, e);\n        return e[0];\n    }\n\n    public void put(int key, int value) {\n        int[] e = entries.get(key);\n        if (e != null) {\n            e[0] = value;\n            touch(key, e);\n            return;\n        }\n        if (entries.size() == capacity) {\n            Iterator<Integer> oldest = buckets.get(minFreq).iterator();\n            int victim = oldest.next();\n            oldest.remove();\n            entries.remove(victim);\n        }\n        entries.put(key, new int[] { value, 1 });\n        buckets.computeIfAbsent(1, f -> new LinkedHashSet<>()).add(key);\n        minFreq = 1;\n    }\n\n    private void touch(int key, int[] e) {\n        LinkedHashSet<Integer> bucket = buckets.get(e[1]);\n        bucket.remove(key);\n        if (bucket.isEmpty() && minFreq == e[1]) minFreq++;\n        e[1]++;\n        buckets.computeIfAbsent(e[1], f -> new LinkedHashSet<>()).add(key);\n    }\n}",
+     "cpp": "class LFUCache {\n    struct Entry { int value, count; list<int>::iterator pos; };\n    int capacity, minFreq = 0;\n    unordered_map<int, Entry> entries;\n    unordered_map<int, list<int>> buckets; // count -> keys, oldest at the front\n\n    void touch(int key, Entry& e) {\n        auto& bucket = buckets[e.count];\n        bucket.erase(e.pos);\n        if (bucket.empty() && minFreq == e.count) minFreq++;\n        e.count++;\n        auto& next = buckets[e.count];\n        e.pos = next.insert(next.end(), key);\n    }\npublic:\n    LFUCache(int capacity) : capacity(capacity) {}\n\n    int get(int key) {\n        auto it = entries.find(key);\n        if (it == entries.end()) return -1;\n        touch(key, it->second);\n        return it->second.value;\n    }\n\n    void put(int key, int value) {\n        auto it = entries.find(key);\n        if (it != entries.end()) {\n            it->second.value = value;\n            touch(key, it->second);\n            return;\n        }\n        if ((int) entries.size() == capacity) {\n            auto& bucket = buckets[minFreq];\n            entries.erase(bucket.front());\n            bucket.pop_front();\n        }\n        auto& ones = buckets[1];\n        entries[key] = {value, 1, ones.insert(ones.end(), key)};\n        minFreq = 1;\n    }\n};",
+     "python": "class LFUCache:\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.min_freq = 0\n        self.entries = {}  # key -> [value, count]\n        self.buckets = defaultdict(OrderedDict)  # count -> keys, oldest first\n\n    def _touch(self, key, e):\n        bucket = self.buckets[e[1]]\n        del bucket[key]\n        if not bucket and self.min_freq == e[1]:\n            self.min_freq += 1\n        e[1] += 1\n        self.buckets[e[1]][key] = None\n\n    def get(self, key: int) -> int:\n        e = self.entries.get(key)\n        if e is None:\n            return -1\n        self._touch(key, e)\n        return e[0]\n\n    def put(self, key: int, value: int) -> None:\n        if key in self.entries:\n            e = self.entries[key]\n            e[0] = value\n            self._touch(key, e)\n            return\n        if len(self.entries) == self.capacity:\n            victim, _ = self.buckets[self.min_freq].popitem(last=False)\n            del self.entries[victim]\n        self.entries[key] = [value, 1]\n        self.buckets[1][key] = None\n        self.min_freq = 1",
+     "javascript": "var LFUCache = function(capacity) {\n    this.capacity = capacity;\n    this.minFreq = 0;\n    this.entries = new Map(); // key -> [value, count]\n    this.buckets = new Map(); // count -> Set of keys, oldest first (insertion order)\n};\n\nLFUCache.prototype.bucket = function(count) {\n    if (!this.buckets.has(count)) this.buckets.set(count, new Set());\n    return this.buckets.get(count);\n};\n\nLFUCache.prototype.touch = function(key, e) {\n    const bucket = this.bucket(e[1]);\n    bucket.delete(key);\n    if (bucket.size === 0 && this.minFreq === e[1]) this.minFreq++;\n    e[1]++;\n    this.bucket(e[1]).add(key);\n};\n\nLFUCache.prototype.get = function(key) {\n    const e = this.entries.get(key);\n    if (!e) return -1;\n    this.touch(key, e);\n    return e[0];\n};\n\nLFUCache.prototype.put = function(key, value) {\n    const e = this.entries.get(key);\n    if (e) {\n        e[0] = value;\n        this.touch(key, e);\n        return;\n    }\n    if (this.entries.size === this.capacity) {\n        const bucket = this.bucket(this.minFreq), victim = bucket.values().next().value;\n        bucket.delete(victim);\n        this.entries.delete(victim);\n    }\n    this.entries.set(key, [value, 1]);\n    this.bucket(1).add(key);\n    this.minFreq = 1;\n};"
+    }
+   }
+  ]
+ },
+ "insert-delete-getrandom-o1-duplicates-allowed": {
+  "pattern": "Array + hash map of value → set of indices; delete by swapping with the last element",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Array only",
+    "idea": "Keep every copy in a dynamic array. A uniformly random index automatically weights each value by its number of copies.",
+    "steps": [
+     "`insert`: note whether the value is already present (linear search), then append.",
+     "`remove`: find one copy and delete it.",
+     "`getRandom`: element at a uniformly random index."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "insert and remove search (and shift) the array; getRandom is O(1).",
+    "code": {
+     "java": "class RandomizedCollection {\n    private final List<Integer> values = new ArrayList<>();\n    private final Random rng = new Random();\n\n    public boolean insert(int val) {\n        boolean absent = !values.contains(val);\n        values.add(val);\n        return absent;\n    }\n\n    public boolean remove(int val) {\n        return values.remove(Integer.valueOf(val));\n    }\n\n    public int getRandom() {\n        return values.get(rng.nextInt(values.size()));\n    }\n}",
+     "cpp": "class RandomizedCollection {\n    vector<int> values;\n    mt19937 rng{random_device{}()};\npublic:\n    RandomizedCollection() {}\n\n    bool insert(int val) {\n        bool absent = find(values.begin(), values.end(), val) == values.end();\n        values.push_back(val);\n        return absent;\n    }\n\n    bool remove(int val) {\n        auto it = find(values.begin(), values.end(), val);\n        if (it == values.end()) return false;\n        values.erase(it);\n        return true;\n    }\n\n    int getRandom() {\n        return values[uniform_int_distribution<int>(0, values.size() - 1)(rng)];\n    }\n};",
+     "python": "class RandomizedCollection:\n    def __init__(self):\n        self.values = []\n\n    def insert(self, val: int) -> bool:\n        absent = val not in self.values\n        self.values.append(val)\n        return absent\n\n    def remove(self, val: int) -> bool:\n        if val not in self.values:\n            return False\n        self.values.remove(val)\n        return True\n\n    def getRandom(self) -> int:\n        return random.choice(self.values)",
+     "javascript": "var RandomizedCollection = function() {\n    this.values = [];\n};\n\nRandomizedCollection.prototype.insert = function(val) {\n    const absent = !this.values.includes(val);\n    this.values.push(val);\n    return absent;\n};\n\nRandomizedCollection.prototype.remove = function(val) {\n    const i = this.values.indexOf(val);\n    if (i < 0) return false;\n    this.values.splice(i, 1);\n    return true;\n};\n\nRandomizedCollection.prototype.getRandom = function() {\n    return this.values[Math.floor(Math.random() * this.values.length)];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Array + map of value → set of positions",
+    "idea": "Like the no-duplicates version, but each value maps to the set of all positions holding a copy. To remove one copy, take any of its positions, move the last element into it, and fix both values' position sets.",
+    "steps": [
+     "`insert`: add `size` to `pos[val]`, append `val`; return whether the set was empty before.",
+     "`remove`: if `pos[val]` is empty, return false. Take any `i` from it; let `last = values[n − 1]`.",
+     "Set `values[i] = last`; add `i` to `pos[last]` and remove `n − 1` from it (in that order, which also works when `last == val` or `i == n − 1`); pop the end.",
+     "`getRandom`: element at a uniformly random index."
+    ],
+    "time": "O(1)",
+    "space": "O(n)",
+    "why": "Average O(1): a constant number of hash-set operations plus work at the array end. The array holds each copy once, so random indices are weighted by copy count.",
+    "code": {
+     "java": "class RandomizedCollection {\n    private final List<Integer> values = new ArrayList<>();\n    private final Map<Integer, Set<Integer>> pos = new HashMap<>();\n    private final Random rng = new Random();\n\n    public boolean insert(int val) {\n        Set<Integer> s = pos.computeIfAbsent(val, k -> new HashSet<>());\n        s.add(values.size());\n        values.add(val);\n        return s.size() == 1;\n    }\n\n    public boolean remove(int val) {\n        Set<Integer> s = pos.get(val);\n        if (s == null || s.isEmpty()) return false;\n        int i = s.iterator().next(), lastIndex = values.size() - 1, last = values.get(lastIndex);\n        s.remove(i);\n        values.set(i, last);\n        Set<Integer> lastSet = pos.get(last);\n        lastSet.add(i);\n        lastSet.remove(lastIndex);\n        values.remove(lastIndex);\n        return true;\n    }\n\n    public int getRandom() {\n        return values.get(rng.nextInt(values.size()));\n    }\n}",
+     "cpp": "class RandomizedCollection {\n    vector<int> values;\n    unordered_map<int, unordered_set<int>> pos;\n    mt19937 rng{random_device{}()};\npublic:\n    RandomizedCollection() {}\n\n    bool insert(int val) {\n        auto& s = pos[val];\n        s.insert(values.size());\n        values.push_back(val);\n        return s.size() == 1;\n    }\n\n    bool remove(int val) {\n        auto it = pos.find(val);\n        if (it == pos.end() || it->second.empty()) return false;\n        int i = *it->second.begin(), lastIndex = values.size() - 1, last = values[lastIndex];\n        it->second.erase(i);\n        values[i] = last;\n        pos[last].insert(i);\n        pos[last].erase(lastIndex);\n        values.pop_back();\n        return true;\n    }\n\n    int getRandom() {\n        return values[uniform_int_distribution<int>(0, values.size() - 1)(rng)];\n    }\n};",
+     "python": "class RandomizedCollection:\n    def __init__(self):\n        self.values = []\n        self.pos = defaultdict(set)\n\n    def insert(self, val: int) -> bool:\n        self.pos[val].add(len(self.values))\n        self.values.append(val)\n        return len(self.pos[val]) == 1\n\n    def remove(self, val: int) -> bool:\n        if not self.pos[val]:\n            return False\n        i = self.pos[val].pop()\n        last_index, last = len(self.values) - 1, self.values[-1]\n        self.values[i] = last\n        self.pos[last].add(i)\n        self.pos[last].discard(last_index)\n        self.values.pop()\n        return True\n\n    def getRandom(self) -> int:\n        return random.choice(self.values)",
+     "javascript": "var RandomizedCollection = function() {\n    this.values = [];\n    this.pos = new Map(); // value -> Set of indices\n};\n\nRandomizedCollection.prototype.insert = function(val) {\n    if (!this.pos.has(val)) this.pos.set(val, new Set());\n    const s = this.pos.get(val);\n    s.add(this.values.length);\n    this.values.push(val);\n    return s.size === 1;\n};\n\nRandomizedCollection.prototype.remove = function(val) {\n    const s = this.pos.get(val);\n    if (!s || s.size === 0) return false;\n    const i = s.values().next().value, lastIndex = this.values.length - 1, last = this.values[lastIndex];\n    s.delete(i);\n    this.values[i] = last;\n    const lastSet = this.pos.get(last);\n    lastSet.add(i);\n    lastSet.delete(lastIndex);\n    this.values.pop();\n    return true;\n};\n\nRandomizedCollection.prototype.getRandom = function() {\n    return this.values[Math.floor(Math.random() * this.values.length)];\n};"
+    }
+   }
+  ]
+ }
+}
