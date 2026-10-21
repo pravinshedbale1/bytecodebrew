@@ -1,0 +1,471 @@
+{
+ "find-the-index-of-the-first-occurrence-in-a-string": {
+  "pattern": "String matching: naive scan → Rabin–Karp rolling hash → KMP prefix function",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check every start position",
+    "idea": "For each position in `haystack` where `needle` could fit, compare character by character.",
+    "steps": [
+     "For `i` from 0 to `n − m`: compare `haystack[i + j]` with `needle[j]` for `j = 0..m − 1`.",
+     "Return `i` on the first full match; −1 if none."
+    ],
+    "time": "O(n·m)",
+    "space": "O(1)",
+    "why": "Up to n − m + 1 starts, each comparing up to m characters (e.g. \"aaaa…ab\" in \"aaaa…a\").",
+    "code": {
+     "java": "class Solution {\n    public int strStr(String haystack, String needle) {\n        int n = haystack.length(), m = needle.length();\n        for (int i = 0; i + m <= n; i++) {\n            int j = 0;\n            while (j < m && haystack.charAt(i + j) == needle.charAt(j)) j++;\n            if (j == m) return i;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int strStr(string haystack, string needle) {\n        int n = haystack.size(), m = needle.size();\n        for (int i = 0; i + m <= n; i++) {\n            int j = 0;\n            while (j < m && haystack[i + j] == needle[j]) j++;\n            if (j == m) return i;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def strStr(self, haystack: str, needle: str) -> int:\n        n, m = len(haystack), len(needle)\n        for i in range(n - m + 1):\n            j = 0\n            while j < m and haystack[i + j] == needle[j]:\n                j += 1\n            if j == m:\n                return i\n        return -1",
+     "javascript": "var strStr = function(haystack, needle) {\n    const n = haystack.length, m = needle.length;\n    for (let i = 0; i + m <= n; i++) {\n        let j = 0;\n        while (j < m && haystack[i + j] === needle[j]) j++;\n        if (j === m) return i;\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Rabin–Karp rolling hash",
+    "idea": "Hash the needle, then slide a window of length m over the haystack, updating its hash in O(1) per step (drop the leftmost character, add the new one). Only compare characters when the hashes match.",
+    "steps": [
+     "Polynomial hash with base 131 modulo 10⁹ + 7; precompute `high = 131^(m−1)`.",
+     "For each `i`: if the window is full, subtract `haystack[i − m]·high`; then `h = h·131 + haystack[i]`.",
+     "When `h` equals the needle's hash, confirm with a direct comparison and return the start."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "O(n + m) expected; a hash collision costs an extra O(m) check, so adversarial inputs could degrade it — which KMP avoids.",
+    "code": {
+     "java": "class Solution {\n    public int strStr(String haystack, String needle) {\n        final long M = 1_000_000_007L, B = 131;\n        int n = haystack.length(), m = needle.length();\n        if (m > n) return -1;\n        long target = 0, h = 0, high = 1;\n        for (int j = 0; j < m; j++) target = (target * B + needle.charAt(j)) % M;\n        for (int j = 1; j < m; j++) high = high * B % M;\n        for (int i = 0; i < n; i++) {\n            if (i >= m) h = ((h - haystack.charAt(i - m) * high) % M + M) % M;\n            h = (h * B + haystack.charAt(i)) % M;\n            if (i >= m - 1 && h == target && haystack.regionMatches(i - m + 1, needle, 0, m)) return i - m + 1;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int strStr(string haystack, string needle) {\n        const long long M = 1'000'000'007, B = 131;\n        int n = haystack.size(), m = needle.size();\n        if (m > n) return -1;\n        long long target = 0, h = 0, high = 1;\n        for (char c : needle) target = (target * B + c) % M;\n        for (int j = 1; j < m; j++) high = high * B % M;\n        for (int i = 0; i < n; i++) {\n            if (i >= m) h = ((h - haystack[i - m] * high) % M + M) % M;\n            h = (h * B + haystack[i]) % M;\n            if (i >= m - 1 && h == target && haystack.compare(i - m + 1, m, needle) == 0) return i - m + 1;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def strStr(self, haystack: str, needle: str) -> int:\n        M, B = 10**9 + 7, 131\n        n, m = len(haystack), len(needle)\n        if m > n:\n            return -1\n        target = h = 0\n        for c in needle:\n            target = (target * B + ord(c)) % M\n        high = pow(B, m - 1, M)\n        for i, c in enumerate(haystack):\n            if i >= m:\n                h = (h - ord(haystack[i - m]) * high) % M\n            h = (h * B + ord(c)) % M\n            if i >= m - 1 and h == target and haystack[i - m + 1:i + 1] == needle:\n                return i - m + 1\n        return -1",
+     "javascript": "var strStr = function(haystack, needle) {\n    const M = 1000000007, B = 131, n = haystack.length, m = needle.length;\n    if (m > n) return -1;\n    let target = 0, h = 0, high = 1;\n    for (let j = 0; j < m; j++) target = (target * B + needle.charCodeAt(j)) % M;\n    for (let j = 1; j < m; j++) high = (high * B) % M;\n    for (let i = 0; i < n; i++) {\n        if (i >= m) h = (((h - haystack.charCodeAt(i - m) * high) % M) + M) % M;\n        h = (h * B + haystack.charCodeAt(i)) % M;\n        if (i >= m - 1 && h === target && haystack.startsWith(needle, i - m + 1)) return i - m + 1;\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "KMP (Knuth–Morris–Pratt)",
+    "idea": "Precompute, for every prefix of the needle, the length of its longest proper prefix that is also a suffix (`pi`). On a mismatch, jump to `pi[j − 1]` instead of restarting — the haystack pointer never moves back.",
+    "steps": [
+     "Build `pi` for `needle`: for each `i`, fall back `k = pi[k − 1]` while `needle[i] != needle[k]`; extend `k` on a match.",
+     "Scan `haystack` with `j` = matched length, falling back the same way on mismatches.",
+     "When `j == m`, return `i − m + 1`."
+    ],
+    "time": "O(n + m)",
+    "space": "O(m)",
+    "why": "Guaranteed linear: each fall-back undoes an earlier extension, so total work is bounded by n + m.",
+    "code": {
+     "java": "class Solution {\n    public int strStr(String haystack, String needle) {\n        int n = haystack.length(), m = needle.length();\n        int[] pi = new int[m];\n        for (int i = 1, k = 0; i < m; i++) {\n            while (k > 0 && needle.charAt(i) != needle.charAt(k)) k = pi[k - 1];\n            if (needle.charAt(i) == needle.charAt(k)) k++;\n            pi[i] = k;\n        }\n        for (int i = 0, j = 0; i < n; i++) {\n            while (j > 0 && haystack.charAt(i) != needle.charAt(j)) j = pi[j - 1];\n            if (haystack.charAt(i) == needle.charAt(j)) j++;\n            if (j == m) return i - m + 1;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int strStr(string haystack, string needle) {\n        int n = haystack.size(), m = needle.size();\n        vector<int> pi(m, 0);\n        for (int i = 1, k = 0; i < m; i++) {\n            while (k > 0 && needle[i] != needle[k]) k = pi[k - 1];\n            if (needle[i] == needle[k]) k++;\n            pi[i] = k;\n        }\n        for (int i = 0, j = 0; i < n; i++) {\n            while (j > 0 && haystack[i] != needle[j]) j = pi[j - 1];\n            if (haystack[i] == needle[j]) j++;\n            if (j == m) return i - m + 1;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def strStr(self, haystack: str, needle: str) -> int:\n        m = len(needle)\n        pi, k = [0] * m, 0\n        for i in range(1, m):\n            while k and needle[i] != needle[k]:\n                k = pi[k - 1]\n            if needle[i] == needle[k]:\n                k += 1\n            pi[i] = k\n        j = 0\n        for i, c in enumerate(haystack):\n            while j and c != needle[j]:\n                j = pi[j - 1]\n            if c == needle[j]:\n                j += 1\n            if j == m:\n                return i - m + 1\n        return -1",
+     "javascript": "var strStr = function(haystack, needle) {\n    const n = haystack.length, m = needle.length, pi = new Array(m).fill(0);\n    for (let i = 1, k = 0; i < m; i++) {\n        while (k > 0 && needle[i] !== needle[k]) k = pi[k - 1];\n        if (needle[i] === needle[k]) k++;\n        pi[i] = k;\n    }\n    for (let i = 0, j = 0; i < n; i++) {\n        while (j > 0 && haystack[i] !== needle[j]) j = pi[j - 1];\n        if (haystack[i] === needle[j]) j++;\n        if (j === m) return i - m + 1;\n    }\n    return -1;\n};"
+    }
+   }
+  ]
+ },
+ "rotate-string": {
+  "pattern": "Every rotation of s is a substring of s + s",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every rotation",
+    "idea": "Build each of the n rotations of `s` and compare it with `goal`.",
+    "steps": [
+     "If the lengths differ, return false.",
+     "For each `k` from 0 to n − 1: if `s[k..] + s[..k]` equals `goal`, return true."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n rotations, each built and compared in O(n).",
+    "code": {
+     "java": "class Solution {\n    public boolean rotateString(String s, String goal) {\n        if (s.length() != goal.length()) return false;\n        for (int k = 0; k < s.length(); k++)\n            if ((s.substring(k) + s.substring(0, k)).equals(goal)) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool rotateString(string s, string goal) {\n        if (s.size() != goal.size()) return false;\n        for (size_t k = 0; k < s.size(); k++)\n            if (s.substr(k) + s.substr(0, k) == goal) return true;\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def rotateString(self, s: str, goal: str) -> bool:\n        return len(s) == len(goal) and any(s[k:] + s[:k] == goal for k in range(len(s)))",
+     "javascript": "var rotateString = function(s, goal) {\n    if (s.length !== goal.length) return false;\n    for (let k = 0; k < s.length; k++) if (s.slice(k) + s.slice(0, k) === goal) return true;\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Search for goal inside s + s",
+    "idea": "Writing `s` twice in a row contains every rotation as a length-n window. So `goal` is a rotation exactly when the lengths match and `goal` occurs in `s + s`.",
+    "steps": [
+     "If the lengths differ, return false.",
+     "Otherwise return whether `s + s` contains `goal`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "One line, but the library search is the naive O(n·m) scan in the worst case.",
+    "code": {
+     "java": "class Solution {\n    public boolean rotateString(String s, String goal) {\n        return s.length() == goal.length() && (s + s).contains(goal);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool rotateString(string s, string goal) {\n        return s.size() == goal.size() && (s + s).find(goal) != string::npos;\n    }\n};",
+     "python": "class Solution:\n    def rotateString(self, s: str, goal: str) -> bool:\n        return len(s) == len(goal) and goal in s + s",
+     "javascript": "var rotateString = function(s, goal) {\n    return s.length === goal.length && (s + s).includes(goal);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "KMP search in s + s",
+    "idea": "Same observation, with a guaranteed-linear search: build the KMP prefix function of `goal` and scan `s + s` with it.",
+    "steps": [
+     "If the lengths differ, return false.",
+     "Build `pi` for `goal`.",
+     "Scan `s + s`, falling back with `pi` on mismatches; return true when a full match is found."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Linear in the 3n characters involved, no matter the input.",
+    "code": {
+     "java": "class Solution {\n    public boolean rotateString(String s, String goal) {\n        int n = s.length();\n        if (n != goal.length()) return false;\n        int[] pi = new int[n];\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && goal.charAt(i) != goal.charAt(k)) k = pi[k - 1];\n            if (goal.charAt(i) == goal.charAt(k)) k++;\n            pi[i] = k;\n        }\n        String t = s + s;\n        for (int i = 0, j = 0; i < t.length(); i++) {\n            while (j > 0 && t.charAt(i) != goal.charAt(j)) j = pi[j - 1];\n            if (t.charAt(i) == goal.charAt(j)) j++;\n            if (j == n) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool rotateString(string s, string goal) {\n        int n = s.size();\n        if (n != (int) goal.size()) return false;\n        vector<int> pi(n, 0);\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && goal[i] != goal[k]) k = pi[k - 1];\n            if (goal[i] == goal[k]) k++;\n            pi[i] = k;\n        }\n        string t = s + s;\n        for (int i = 0, j = 0; i < (int) t.size(); i++) {\n            while (j > 0 && t[i] != goal[j]) j = pi[j - 1];\n            if (t[i] == goal[j]) j++;\n            if (j == n) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def rotateString(self, s: str, goal: str) -> bool:\n        n = len(s)\n        if n != len(goal):\n            return False\n        pi, k = [0] * n, 0\n        for i in range(1, n):\n            while k and goal[i] != goal[k]:\n                k = pi[k - 1]\n            if goal[i] == goal[k]:\n                k += 1\n            pi[i] = k\n        j = 0\n        for c in s + s:\n            while j and c != goal[j]:\n                j = pi[j - 1]\n            if c == goal[j]:\n                j += 1\n            if j == n:\n                return True\n        return False",
+     "javascript": "var rotateString = function(s, goal) {\n    const n = s.length;\n    if (n !== goal.length) return false;\n    const pi = new Array(n).fill(0);\n    for (let i = 1, k = 0; i < n; i++) {\n        while (k > 0 && goal[i] !== goal[k]) k = pi[k - 1];\n        if (goal[i] === goal[k]) k++;\n        pi[i] = k;\n    }\n    const t = s + s;\n    for (let i = 0, j = 0; i < t.length; i++) {\n        while (j > 0 && t[i] !== goal[j]) j = pi[j - 1];\n        if (t[i] === goal[j]) j++;\n        if (j === n) return true;\n    }\n    return false;\n};"
+    }
+   }
+  ]
+ },
+ "repeated-substring-pattern": {
+  "pattern": "KMP prefix function: the smallest period is n − pi[n − 1]",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every block length that divides n",
+    "idea": "A repeating block must have a length `L` that divides n and is at most n/2. For each such `L`, check that every character equals the one `L` positions earlier.",
+    "steps": [
+     "For `L` from 1 to n/2 with `n % L == 0`:",
+     "If `s[i] == s[i − L]` for all `i ≥ L`, return true.",
+     "Return false."
+    ],
+    "time": "O(n·d(n))",
+    "space": "O(1)",
+    "why": "d(n) = number of divisors of n (at most 64 for n ≤ 10⁴), each checked in O(n).",
+    "code": {
+     "java": "class Solution {\n    public boolean repeatedSubstringPattern(String s) {\n        int n = s.length();\n        for (int len = 1; len <= n / 2; len++) {\n            if (n % len != 0) continue;\n            int i = len;\n            while (i < n && s.charAt(i) == s.charAt(i - len)) i++;\n            if (i == n) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool repeatedSubstringPattern(string s) {\n        int n = s.size();\n        for (int len = 1; len <= n / 2; len++) {\n            if (n % len != 0) continue;\n            int i = len;\n            while (i < n && s[i] == s[i - len]) i++;\n            if (i == n) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def repeatedSubstringPattern(self, s: str) -> bool:\n        n = len(s)\n        return any(n % L == 0 and s[:L] * (n // L) == s for L in range(1, n // 2 + 1))",
+     "javascript": "var repeatedSubstringPattern = function(s) {\n    const n = s.length;\n    for (let len = 1; len <= n / 2; len++) {\n        if (n % len !== 0) continue;\n        let i = len;\n        while (i < n && s[i] === s[i - len]) i++;\n        if (i === n) return true;\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Look for s inside (s + s) without its ends",
+    "idea": "If `s` is a repetition, rotating it by one block gives `s` again, so `s` occurs in `s + s` at some position other than 0 and n. Removing the first and last character of `s + s` rules those two out.",
+    "steps": [
+     "Let `t = (s + s)` with its first and last characters removed.",
+     "Return whether `t` contains `s`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Elegant, but the library substring search is O(n·m) in the worst case.",
+    "code": {
+     "java": "class Solution {\n    public boolean repeatedSubstringPattern(String s) {\n        String t = s + s;\n        return t.substring(1, t.length() - 1).contains(s);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool repeatedSubstringPattern(string s) {\n        string t = s + s;\n        return t.substr(1, t.size() - 2).find(s) != string::npos;\n    }\n};",
+     "python": "class Solution:\n    def repeatedSubstringPattern(self, s: str) -> bool:\n        return s in (s + s)[1:-1]",
+     "javascript": "var repeatedSubstringPattern = function(s) {\n    return (s + s).slice(1, -1).includes(s);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Period from the KMP prefix function",
+    "idea": "`p = pi[n − 1]` is the longest proper prefix that is also a suffix, so `n − p` is the smallest period of `s`. The string is a whole-number repetition exactly when `p > 0` and that period divides n.",
+    "steps": [
+     "Build the prefix function `pi` of `s`.",
+     "Let `p = pi[n − 1]`.",
+     "Return `p > 0 && n % (n − p) == 0`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One linear pass to build `pi`.",
+    "code": {
+     "java": "class Solution {\n    public boolean repeatedSubstringPattern(String s) {\n        int n = s.length();\n        int[] pi = new int[n];\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && s.charAt(i) != s.charAt(k)) k = pi[k - 1];\n            if (s.charAt(i) == s.charAt(k)) k++;\n            pi[i] = k;\n        }\n        int p = pi[n - 1];\n        return p > 0 && n % (n - p) == 0;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool repeatedSubstringPattern(string s) {\n        int n = s.size();\n        vector<int> pi(n, 0);\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && s[i] != s[k]) k = pi[k - 1];\n            if (s[i] == s[k]) k++;\n            pi[i] = k;\n        }\n        int p = pi[n - 1];\n        return p > 0 && n % (n - p) == 0;\n    }\n};",
+     "python": "class Solution:\n    def repeatedSubstringPattern(self, s: str) -> bool:\n        n = len(s)\n        pi, k = [0] * n, 0\n        for i in range(1, n):\n            while k and s[i] != s[k]:\n                k = pi[k - 1]\n            if s[i] == s[k]:\n                k += 1\n            pi[i] = k\n        p = pi[-1]\n        return p > 0 and n % (n - p) == 0",
+     "javascript": "var repeatedSubstringPattern = function(s) {\n    const n = s.length, pi = new Array(n).fill(0);\n    for (let i = 1, k = 0; i < n; i++) {\n        while (k > 0 && s[i] !== s[k]) k = pi[k - 1];\n        if (s[i] === s[k]) k++;\n        pi[i] = k;\n    }\n    const p = pi[n - 1];\n    return p > 0 && n % (n - p) === 0;\n};"
+    }
+   }
+  ]
+ },
+ "repeated-string-match": {
+  "pattern": "Bound the repetitions (⌈|b|/|a|⌉ or one more), then string-search with KMP",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep appending a and searching",
+    "idea": "Append `a` one copy at a time and check whether `b` appears yet. Any match fits within ⌈|b|/|a|⌉ + 1 copies (it can start anywhere inside the first copy), so stop after that.",
+    "steps": [
+     "Let `limit = |b| / |a| + 2`.",
+     "For `k` from 1 to `limit`: append `a`; if the string contains `b`, return `k`.",
+     "Return −1."
+    ],
+    "time": "O((m/n)·(n + m)·m)",
+    "space": "O(n + m)",
+    "why": "Up to m/n + 2 library searches, each O(length · m) in the worst case.",
+    "code": {
+     "java": "class Solution {\n    public int repeatedStringMatch(String a, String b) {\n        StringBuilder sb = new StringBuilder();\n        int limit = b.length() / a.length() + 2;\n        for (int k = 1; k <= limit; k++) {\n            sb.append(a);\n            if (sb.indexOf(b) >= 0) return k;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int repeatedStringMatch(string a, string b) {\n        string t;\n        int limit = b.size() / a.size() + 2;\n        for (int k = 1; k <= limit; k++) {\n            t += a;\n            if (t.find(b) != string::npos) return k;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def repeatedStringMatch(self, a: str, b: str) -> int:\n        t = ''\n        for k in range(1, len(b) // len(a) + 3):\n            t += a\n            if b in t:\n                return k\n        return -1",
+     "javascript": "var repeatedStringMatch = function(a, b) {\n    let t = '';\n    const limit = Math.floor(b.length / a.length) + 2;\n    for (let k = 1; k <= limit; k++) {\n        t += a;\n        if (t.includes(b)) return k;\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One KMP search over ⌈m/n⌉ + 1 copies",
+    "idea": "Build `t` = `a` repeated `q + 1` times, where `q = ⌈|b|/|a|⌉`. Find the first occurrence of `b` in `t` with KMP; the copies needed are those covering up to the end of that occurrence.",
+    "steps": [
+     "`q = ⌈m / n⌉`; `t = a` repeated `q + 1` times.",
+     "KMP-search `b` in `t`; if not found, return −1.",
+     "With first match ending at index `end` (exclusive), return `⌈end / n⌉`."
+    ],
+    "time": "O(n + m)",
+    "space": "O(n + m)",
+    "why": "`t` has at most m + 2n characters and KMP is linear. The first occurrence ends earliest, so it needs the fewest copies.",
+    "code": {
+     "java": "class Solution {\n    public int repeatedStringMatch(String a, String b) {\n        int n = a.length(), m = b.length(), q = (m + n - 1) / n;\n        String t = a.repeat(q + 1);\n        int[] pi = new int[m];\n        for (int i = 1, k = 0; i < m; i++) {\n            while (k > 0 && b.charAt(i) != b.charAt(k)) k = pi[k - 1];\n            if (b.charAt(i) == b.charAt(k)) k++;\n            pi[i] = k;\n        }\n        for (int i = 0, j = 0; i < t.length(); i++) {\n            while (j > 0 && t.charAt(i) != b.charAt(j)) j = pi[j - 1];\n            if (t.charAt(i) == b.charAt(j)) j++;\n            if (j == m) return (i + 1 + n - 1) / n;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int repeatedStringMatch(string a, string b) {\n        int n = a.size(), m = b.size(), q = (m + n - 1) / n;\n        string t;\n        for (int k = 0; k <= q; k++) t += a;\n        vector<int> pi(m, 0);\n        for (int i = 1, k = 0; i < m; i++) {\n            while (k > 0 && b[i] != b[k]) k = pi[k - 1];\n            if (b[i] == b[k]) k++;\n            pi[i] = k;\n        }\n        for (int i = 0, j = 0; i < (int) t.size(); i++) {\n            while (j > 0 && t[i] != b[j]) j = pi[j - 1];\n            if (t[i] == b[j]) j++;\n            if (j == m) return (i + 1 + n - 1) / n;\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def repeatedStringMatch(self, a: str, b: str) -> int:\n        n, m = len(a), len(b)\n        q = -(-m // n)\n        t = a * (q + 1)\n        pi, k = [0] * m, 0\n        for i in range(1, m):\n            while k and b[i] != b[k]:\n                k = pi[k - 1]\n            if b[i] == b[k]:\n                k += 1\n            pi[i] = k\n        j = 0\n        for i, c in enumerate(t):\n            while j and c != b[j]:\n                j = pi[j - 1]\n            if c == b[j]:\n                j += 1\n            if j == m:\n                return -(-(i + 1) // n)\n        return -1",
+     "javascript": "var repeatedStringMatch = function(a, b) {\n    const n = a.length, m = b.length, q = Math.ceil(m / n), t = a.repeat(q + 1);\n    const pi = new Array(m).fill(0);\n    for (let i = 1, k = 0; i < m; i++) {\n        while (k > 0 && b[i] !== b[k]) k = pi[k - 1];\n        if (b[i] === b[k]) k++;\n        pi[i] = k;\n    }\n    for (let i = 0, j = 0; i < t.length; i++) {\n        while (j > 0 && t[i] !== b[j]) j = pi[j - 1];\n        if (t[i] === b[j]) j++;\n        if (j === m) return Math.ceil((i + 1) / n);\n    }\n    return -1;\n};"
+    }
+   }
+  ]
+ },
+ "repeated-dna-sequences": {
+  "pattern": "Fixed-size sliding window + hashing (2 bits per letter → 20-bit rolling code)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare each window with every later window",
+    "idea": "For each 10-letter window, look for an identical window later in the string; collect matches in a set so each answer appears once.",
+    "steps": [
+     "For each start `i`, compare `s[i..i+10)` with `s[j..j+10)` for every `j > i`.",
+     "On a match, add the window to a result set and stop scanning for this `i`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "About n²/2 window comparisons of 10 letters each.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findRepeatedDnaSequences(String s) {\n        Set<String> result = new HashSet<>();\n        for (int i = 0; i + 10 <= s.length(); i++)\n            for (int j = i + 1; j + 10 <= s.length(); j++)\n                if (s.regionMatches(i, s, j, 10)) {\n                    result.add(s.substring(i, i + 10));\n                    break;\n                }\n        return new ArrayList<>(result);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> findRepeatedDnaSequences(string s) {\n        set<string> result;\n        int n = s.size();\n        for (int i = 0; i + 10 <= n; i++)\n            for (int j = i + 1; j + 10 <= n; j++)\n                if (s.compare(i, 10, s, j, 10) == 0) {\n                    result.insert(s.substr(i, 10));\n                    break;\n                }\n        return vector<string>(result.begin(), result.end());\n    }\n};",
+     "python": "class Solution:\n    def findRepeatedDnaSequences(self, s: str) -> List[str]:\n        result = set()\n        for i in range(len(s) - 9):\n            window = s[i:i + 10]\n            if any(s[j:j + 10] == window for j in range(i + 1, len(s) - 9)):\n                result.add(window)\n        return list(result)",
+     "javascript": "var findRepeatedDnaSequences = function(s) {\n    const result = new Set();\n    for (let i = 0; i + 10 <= s.length; i++) {\n        const w = s.slice(i, i + 10);\n        for (let j = i + 1; j + 10 <= s.length; j++)\n            if (s.startsWith(w, j)) { result.add(w); break; }\n    }\n    return [...result];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Hash set of windows",
+    "idea": "Slide over every 10-letter window, storing seen windows in a set. A window seen before goes into the answer set.",
+    "steps": [
+     "For each start `i`: `w = s[i..i+10)`.",
+     "If `w` is already in `seen`, add it to `repeated`; otherwise add it to `seen`.",
+     "Return `repeated`."
+    ],
+    "time": "O(n·L)",
+    "space": "O(n·L)",
+    "why": "L = 10: each window is copied and hashed as a 10-character string.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findRepeatedDnaSequences(String s) {\n        Set<String> seen = new HashSet<>(), repeated = new HashSet<>();\n        for (int i = 0; i + 10 <= s.length(); i++) {\n            String w = s.substring(i, i + 10);\n            if (!seen.add(w)) repeated.add(w);\n        }\n        return new ArrayList<>(repeated);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> findRepeatedDnaSequences(string s) {\n        unordered_set<string> seen, repeated;\n        for (int i = 0; i + 10 <= (int) s.size(); i++) {\n            string w = s.substr(i, 10);\n            if (!seen.insert(w).second) repeated.insert(w);\n        }\n        return vector<string>(repeated.begin(), repeated.end());\n    }\n};",
+     "python": "class Solution:\n    def findRepeatedDnaSequences(self, s: str) -> List[str]:\n        seen, repeated = set(), set()\n        for i in range(len(s) - 9):\n            w = s[i:i + 10]\n            if w in seen:\n                repeated.add(w)\n            seen.add(w)\n        return list(repeated)",
+     "javascript": "var findRepeatedDnaSequences = function(s) {\n    const seen = new Set(), repeated = new Set();\n    for (let i = 0; i + 10 <= s.length; i++) {\n        const w = s.slice(i, i + 10);\n        if (seen.has(w)) repeated.add(w);\n        else seen.add(w);\n    }\n    return [...repeated];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "2-bit rolling code",
+    "idea": "With only four letters, each fits in 2 bits, so a 10-letter window is a 20-bit integer. Slide it in O(1): shift left by 2, add the new letter, mask to 20 bits. Track counts per code in a 2²⁰ table.",
+    "steps": [
+     "Map A, C, G, T to 0, 1, 2, 3.",
+     "For each `i`: `code = ((code << 2) | val(s[i])) & (2²⁰ − 1)`.",
+     "Once `i ≥ 9`, increment `count[code]`; when it becomes exactly 2, add `s[i − 9..i]` to the answer."
+    ],
+    "time": "O(n)",
+    "space": "O(4^L)",
+    "why": "O(1) per step with no string hashing; the table has 4¹⁰ ≈ 10⁶ entries regardless of n. Adding at count 2 reports each sequence once.",
+    "code": {
+     "java": "class Solution {\n    public List<String> findRepeatedDnaSequences(String s) {\n        List<String> result = new ArrayList<>();\n        byte[] count = new byte[1 << 20];\n        int code = 0;\n        for (int i = 0; i < s.length(); i++) {\n            code = ((code << 2) | \"ACGT\".indexOf(s.charAt(i))) & ((1 << 20) - 1);\n            if (i >= 9 && count[code] < 2 && ++count[code] == 2) result.add(s.substring(i - 9, i + 1));\n        }\n        return result;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<string> findRepeatedDnaSequences(string s) {\n        vector<string> result;\n        vector<unsigned char> count(1 << 20, 0);\n        int val[128] = {};\n        val['C'] = 1; val['G'] = 2; val['T'] = 3;\n        int code = 0;\n        for (int i = 0; i < (int) s.size(); i++) {\n            code = ((code << 2) | val[(int) s[i]]) & ((1 << 20) - 1);\n            if (i >= 9 && count[code] < 2 && ++count[code] == 2) result.push_back(s.substr(i - 9, 10));\n        }\n        return result;\n    }\n};",
+     "python": "class Solution:\n    def findRepeatedDnaSequences(self, s: str) -> List[str]:\n        val = {'A': 0, 'C': 1, 'G': 2, 'T': 3}\n        count, result, code, mask = {}, [], 0, (1 << 20) - 1\n        for i, ch in enumerate(s):\n            code = ((code << 2) | val[ch]) & mask\n            if i >= 9:\n                count[code] = count.get(code, 0) + 1\n                if count[code] == 2:\n                    result.append(s[i - 9:i + 1])\n        return result",
+     "javascript": "var findRepeatedDnaSequences = function(s) {\n    const val = { A: 0, C: 1, G: 2, T: 3 }, count = new Uint8Array(1 << 20), result = [];\n    let code = 0;\n    for (let i = 0; i < s.length; i++) {\n        code = ((code << 2) | val[s[i]]) & ((1 << 20) - 1);\n        if (i >= 9 && count[code] < 2 && ++count[code] === 2) result.push(s.slice(i - 9, i + 1));\n    }\n    return result;\n};"
+    }
+   }
+  ]
+ },
+ "longest-happy-prefix": {
+  "pattern": "KMP prefix function: pi[n − 1] is the longest border",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every length, longest first",
+    "idea": "For `L` from n − 1 down to 1, compare the prefix and suffix of length `L`; the first match is the answer.",
+    "steps": [
+     "For `L` from n − 1 down to 1: if `s[0..L) == s[n−L..n)`, return that prefix.",
+     "Return \"\"."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Up to n lengths, each compared in O(L).",
+    "code": {
+     "java": "class Solution {\n    public String longestPrefix(String s) {\n        int n = s.length();\n        for (int len = n - 1; len > 0; len--)\n            if (s.regionMatches(0, s, n - len, len)) return s.substring(0, len);\n        return \"\";\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        int n = s.size();\n        for (int len = n - 1; len > 0; len--)\n            if (s.compare(0, len, s, n - len, len) == 0) return s.substr(0, len);\n        return \"\";\n    }\n};",
+     "python": "class Solution:\n    def longestPrefix(self, s: str) -> str:\n        n = len(s)\n        for L in range(n - 1, 0, -1):\n            if s[:L] == s[n - L:]:\n                return s[:L]\n        return ''",
+     "javascript": "var longestPrefix = function(s) {\n    const n = s.length;\n    for (let len = n - 1; len > 0; len--) if (s.startsWith(s.slice(n - len))) return s.slice(0, len);\n    return '';\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Rolling hash of prefix and suffix",
+    "idea": "Grow the prefix one character at the end and the suffix one character at the front, updating both polynomial hashes in O(1). Remember the longest length where they agree.",
+    "steps": [
+     "Prefix hash: `hp = hp·B + s[L − 1]`. Suffix hash: `hs = s[n − L]·B^(L−1) + hs`.",
+     "Use two moduli (10⁹ + 7 and 10⁹ + 9) to make collisions negligible.",
+     "Track the largest `L < n` with equal hashes and return `s[0..L)`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Linear, but probabilistic: a double-hash collision is astronomically unlikely, not impossible. KMP gives the same bound deterministically.",
+    "code": {
+     "java": "class Solution {\n    public String longestPrefix(String s) {\n        final long M1 = 1_000_000_007L, M2 = 1_000_000_009L, B = 131;\n        int n = s.length(), best = 0;\n        long p1 = 0, p2 = 0, s1 = 0, s2 = 0, w1 = 1, w2 = 1;\n        for (int len = 1; len < n; len++) {\n            p1 = (p1 * B + s.charAt(len - 1)) % M1;\n            p2 = (p2 * B + s.charAt(len - 1)) % M2;\n            s1 = (s.charAt(n - len) * w1 + s1) % M1;\n            s2 = (s.charAt(n - len) * w2 + s2) % M2;\n            w1 = w1 * B % M1;\n            w2 = w2 * B % M2;\n            if (p1 == s1 && p2 == s2) best = len;\n        }\n        return s.substring(0, best);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        const long long M1 = 1'000'000'007, M2 = 1'000'000'009, B = 131;\n        int n = s.size(), best = 0;\n        long long p1 = 0, p2 = 0, s1 = 0, s2 = 0, w1 = 1, w2 = 1;\n        for (int len = 1; len < n; len++) {\n            p1 = (p1 * B + s[len - 1]) % M1;\n            p2 = (p2 * B + s[len - 1]) % M2;\n            s1 = (s[n - len] * w1 + s1) % M1;\n            s2 = (s[n - len] * w2 + s2) % M2;\n            w1 = w1 * B % M1;\n            w2 = w2 * B % M2;\n            if (p1 == s1 && p2 == s2) best = len;\n        }\n        return s.substr(0, best);\n    }\n};",
+     "python": "class Solution:\n    def longestPrefix(self, s: str) -> str:\n        M1, M2, B = 10**9 + 7, 10**9 + 9, 131\n        n, best = len(s), 0\n        p1 = p2 = s1 = s2 = 0\n        w1 = w2 = 1\n        for L in range(1, n):\n            a, b = ord(s[L - 1]), ord(s[n - L])\n            p1, p2 = (p1 * B + a) % M1, (p2 * B + a) % M2\n            s1, s2 = (b * w1 + s1) % M1, (b * w2 + s2) % M2\n            w1, w2 = w1 * B % M1, w2 * B % M2\n            if p1 == s1 and p2 == s2:\n                best = L\n        return s[:best]",
+     "javascript": "var longestPrefix = function(s) {\n    const M1 = 1000000007, M2 = 1000000009, B = 131, n = s.length;\n    let best = 0, p1 = 0, p2 = 0, s1 = 0, s2 = 0, w1 = 1, w2 = 1;\n    for (let len = 1; len < n; len++) {\n        const a = s.charCodeAt(len - 1), b = s.charCodeAt(n - len);\n        p1 = (p1 * B + a) % M1;\n        p2 = (p2 * B + a) % M2;\n        s1 = (b * w1 + s1) % M1;\n        s2 = (b * w2 + s2) % M2;\n        w1 = (w1 * B) % M1;\n        w2 = (w2 * B) % M2;\n        if (p1 === s1 && p2 === s2) best = len;\n    }\n    return s.slice(0, best);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "KMP prefix function",
+    "idea": "`pi[i]` is the length of the longest proper prefix of `s[0..i]` that is also its suffix. For the whole string that is exactly the happy prefix: `pi[n − 1]`.",
+    "steps": [
+     "Build `pi`: for each `i`, fall back `k = pi[k − 1]` while `s[i] != s[k]`; extend `k` on a match.",
+     "Return `s[0..pi[n − 1])`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Deterministic linear time: total fall-backs never exceed total extensions.",
+    "code": {
+     "java": "class Solution {\n    public String longestPrefix(String s) {\n        int n = s.length();\n        int[] pi = new int[n];\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && s.charAt(i) != s.charAt(k)) k = pi[k - 1];\n            if (s.charAt(i) == s.charAt(k)) k++;\n            pi[i] = k;\n        }\n        return s.substring(0, pi[n - 1]);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestPrefix(string s) {\n        int n = s.size();\n        vector<int> pi(n, 0);\n        for (int i = 1, k = 0; i < n; i++) {\n            while (k > 0 && s[i] != s[k]) k = pi[k - 1];\n            if (s[i] == s[k]) k++;\n            pi[i] = k;\n        }\n        return s.substr(0, pi[n - 1]);\n    }\n};",
+     "python": "class Solution:\n    def longestPrefix(self, s: str) -> str:\n        n = len(s)\n        pi, k = [0] * n, 0\n        for i in range(1, n):\n            while k and s[i] != s[k]:\n                k = pi[k - 1]\n            if s[i] == s[k]:\n                k += 1\n            pi[i] = k\n        return s[:pi[-1]]",
+     "javascript": "var longestPrefix = function(s) {\n    const n = s.length, pi = new Array(n).fill(0);\n    for (let i = 1, k = 0; i < n; i++) {\n        while (k > 0 && s[i] !== s[k]) k = pi[k - 1];\n        if (s[i] === s[k]) k++;\n        pi[i] = k;\n    }\n    return s.slice(0, pi[n - 1]);\n};"
+    }
+   }
+  ]
+ },
+ "shortest-palindrome": {
+  "pattern": "Longest palindromic prefix via KMP on s + \"#\" + reverse(s)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Find the longest palindromic prefix directly",
+    "idea": "The answer keeps the longest palindromic prefix of `s` in the middle and mirrors the rest in front. Test prefixes from longest to shortest.",
+    "steps": [
+     "For `end` from n down to 1: if `s[0..end)` is a palindrome (two pointers), stop.",
+     "Return `reverse(s[end..])` + `s` (for an empty string, return \"\")."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Up to n prefixes, each palindrome check O(n) — e.g. \"aaa…ab\".",
+    "code": {
+     "java": "class Solution {\n    public String shortestPalindrome(String s) {\n        int end = s.length();\n        while (end > 0 && !isPalindrome(s, end)) end--;\n        return new StringBuilder(s.substring(end)).reverse().toString() + s;\n    }\n\n    private boolean isPalindrome(String s, int end) {\n        for (int i = 0, j = end - 1; i < j; i++, j--)\n            if (s.charAt(i) != s.charAt(j)) return false;\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    bool isPalindrome(const string& s, int end) {\n        for (int i = 0, j = end - 1; i < j; i++, j--)\n            if (s[i] != s[j]) return false;\n        return true;\n    }\npublic:\n    string shortestPalindrome(string s) {\n        int end = s.size();\n        while (end > 0 && !isPalindrome(s, end)) end--;\n        string front = s.substr(end);\n        reverse(front.begin(), front.end());\n        return front + s;\n    }\n};",
+     "python": "class Solution:\n    def shortestPalindrome(self, s: str) -> str:\n        end = len(s)\n        while end > 0 and s[:end] != s[:end][::-1]:\n            end -= 1\n        return s[end:][::-1] + s",
+     "javascript": "var shortestPalindrome = function(s) {\n    const isPalindrome = (end) => {\n        for (let i = 0, j = end - 1; i < j; i++, j--) if (s[i] !== s[j]) return false;\n        return true;\n    };\n    let end = s.length;\n    while (end > 0 && !isPalindrome(end)) end--;\n    return s.slice(end).split('').reverse().join('') + s;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Forward and backward rolling hashes",
+    "idea": "A prefix is a palindrome when it reads the same both ways. Maintain its hash read forwards (`h·B + c`) and backwards (`c·B^i + h`) as it grows; equal hashes mean a palindrome.",
+    "steps": [
+     "For `i` from 0 to n − 1, update both hashes with `s[i]` (two moduli to avoid collisions).",
+     "When they agree, record `end = i + 1`.",
+     "Return `reverse(s[end..]) + s`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "O(1) per character; correct with overwhelming probability (double hashing), whereas KMP is exact.",
+    "code": {
+     "java": "class Solution {\n    public String shortestPalindrome(String s) {\n        final long M1 = 1_000_000_007L, M2 = 1_000_000_009L, B = 131;\n        long f1 = 0, f2 = 0, b1 = 0, b2 = 0, w1 = 1, w2 = 1;\n        int end = 0;\n        for (int i = 0; i < s.length(); i++) {\n            int c = s.charAt(i);\n            f1 = (f1 * B + c) % M1;\n            f2 = (f2 * B + c) % M2;\n            b1 = (c * w1 + b1) % M1;\n            b2 = (c * w2 + b2) % M2;\n            w1 = w1 * B % M1;\n            w2 = w2 * B % M2;\n            if (f1 == b1 && f2 == b2) end = i + 1;\n        }\n        return new StringBuilder(s.substring(end)).reverse().toString() + s;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string shortestPalindrome(string s) {\n        const long long M1 = 1'000'000'007, M2 = 1'000'000'009, B = 131;\n        long long f1 = 0, f2 = 0, b1 = 0, b2 = 0, w1 = 1, w2 = 1;\n        int end = 0;\n        for (int i = 0; i < (int) s.size(); i++) {\n            int c = s[i];\n            f1 = (f1 * B + c) % M1;\n            f2 = (f2 * B + c) % M2;\n            b1 = (c * w1 + b1) % M1;\n            b2 = (c * w2 + b2) % M2;\n            w1 = w1 * B % M1;\n            w2 = w2 * B % M2;\n            if (f1 == b1 && f2 == b2) end = i + 1;\n        }\n        string front = s.substr(end);\n        reverse(front.begin(), front.end());\n        return front + s;\n    }\n};",
+     "python": "class Solution:\n    def shortestPalindrome(self, s: str) -> str:\n        M1, M2, B = 10**9 + 7, 10**9 + 9, 131\n        f1 = f2 = b1 = b2 = 0\n        w1 = w2 = 1\n        end = 0\n        for i, ch in enumerate(s):\n            c = ord(ch)\n            f1, f2 = (f1 * B + c) % M1, (f2 * B + c) % M2\n            b1, b2 = (c * w1 + b1) % M1, (c * w2 + b2) % M2\n            w1, w2 = w1 * B % M1, w2 * B % M2\n            if f1 == b1 and f2 == b2:\n                end = i + 1\n        return s[end:][::-1] + s",
+     "javascript": "var shortestPalindrome = function(s) {\n    const M1 = 1000000007, M2 = 1000000009, B = 131;\n    let f1 = 0, f2 = 0, b1 = 0, b2 = 0, w1 = 1, w2 = 1, end = 0;\n    for (let i = 0; i < s.length; i++) {\n        const c = s.charCodeAt(i);\n        f1 = (f1 * B + c) % M1;\n        f2 = (f2 * B + c) % M2;\n        b1 = (c * w1 + b1) % M1;\n        b2 = (c * w2 + b2) % M2;\n        w1 = (w1 * B) % M1;\n        w2 = (w2 * B) % M2;\n        if (f1 === b1 && f2 === b2) end = i + 1;\n    }\n    return s.slice(end).split('').reverse().join('') + s;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "KMP on s + \"#\" + reverse(s)",
+    "idea": "A palindromic prefix of `s` equals a suffix of `reverse(s)`. In `t = s + \"#\" + reverse(s)`, the last prefix-function value is the longest prefix of `s` that matches a suffix of `reverse(s)` — the longest palindromic prefix. The `#` stops matches running past `s`.",
+    "steps": [
+     "Build `t = s + \"#\" + reverse(s)` and its prefix function `pi`.",
+     "`L = pi[last]` is the longest palindromic prefix length.",
+     "Return `reverse(s)[0..n − L) + s`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One deterministic linear pass over 2n + 1 characters.",
+    "code": {
+     "java": "class Solution {\n    public String shortestPalindrome(String s) {\n        String rev = new StringBuilder(s).reverse().toString(), t = s + \"#\" + rev;\n        int[] pi = new int[t.length()];\n        for (int i = 1, k = 0; i < t.length(); i++) {\n            while (k > 0 && t.charAt(i) != t.charAt(k)) k = pi[k - 1];\n            if (t.charAt(i) == t.charAt(k)) k++;\n            pi[i] = k;\n        }\n        return rev.substring(0, s.length() - pi[t.length() - 1]) + s;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string shortestPalindrome(string s) {\n        string rev(s.rbegin(), s.rend()), t = s + \"#\" + rev;\n        vector<int> pi(t.size(), 0);\n        for (int i = 1, k = 0; i < (int) t.size(); i++) {\n            while (k > 0 && t[i] != t[k]) k = pi[k - 1];\n            if (t[i] == t[k]) k++;\n            pi[i] = k;\n        }\n        return rev.substr(0, s.size() - pi.back()) + s;\n    }\n};",
+     "python": "class Solution:\n    def shortestPalindrome(self, s: str) -> str:\n        rev = s[::-1]\n        t = s + '#' + rev\n        pi, k = [0] * len(t), 0\n        for i in range(1, len(t)):\n            while k and t[i] != t[k]:\n                k = pi[k - 1]\n            if t[i] == t[k]:\n                k += 1\n            pi[i] = k\n        return rev[:len(s) - pi[-1]] + s",
+     "javascript": "var shortestPalindrome = function(s) {\n    const rev = s.split('').reverse().join(''), t = s + '#' + rev, pi = new Array(t.length).fill(0);\n    for (let i = 1, k = 0; i < t.length; i++) {\n        while (k > 0 && t[i] !== t[k]) k = pi[k - 1];\n        if (t[i] === t[k]) k++;\n        pi[i] = k;\n    }\n    return rev.slice(0, s.length - pi[t.length - 1]) + s;\n};"
+    }
+   }
+  ]
+ },
+ "longest-duplicate-substring": {
+  "pattern": "Binary search on the answer length + Rabin–Karp rolling hash",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every length, longest first, with a set of substrings",
+    "idea": "For each length `L` from n − 1 down to 1, put every substring of length `L` in a set; the first repeat found is a longest duplicate.",
+    "steps": [
+     "For `L` from n − 1 down to 1: for each start, add `s[i..i+L)` to a set.",
+     "If it was already there, return it.",
+     "Return \"\" if no length repeats."
+    ],
+    "time": "O(n³)",
+    "space": "O(n²)",
+    "why": "Up to n lengths × n substrings × O(L) to build and hash each.",
+    "code": {
+     "java": "class Solution {\n    public String longestDupSubstring(String s) {\n        int n = s.length();\n        for (int len = n - 1; len > 0; len--) {\n            Set<String> seen = new HashSet<>();\n            for (int i = 0; i + len <= n; i++) {\n                String sub = s.substring(i, i + len);\n                if (!seen.add(sub)) return sub;\n            }\n        }\n        return \"\";\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestDupSubstring(string s) {\n        int n = s.size();\n        for (int len = n - 1; len > 0; len--) {\n            unordered_set<string> seen;\n            for (int i = 0; i + len <= n; i++)\n                if (!seen.insert(s.substr(i, len)).second) return s.substr(i, len);\n        }\n        return \"\";\n    }\n};",
+     "python": "class Solution:\n    def longestDupSubstring(self, s: str) -> str:\n        n = len(s)\n        for L in range(n - 1, 0, -1):\n            seen = set()\n            for i in range(n - L + 1):\n                sub = s[i:i + L]\n                if sub in seen:\n                    return sub\n                seen.add(sub)\n        return ''",
+     "javascript": "var longestDupSubstring = function(s) {\n    const n = s.length;\n    for (let len = n - 1; len > 0; len--) {\n        const seen = new Set();\n        for (let i = 0; i + len <= n; i++) {\n            const sub = s.slice(i, i + len);\n            if (seen.has(sub)) return sub;\n            seen.add(sub);\n        }\n    }\n    return '';\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Binary search on the length, with a set of substrings",
+    "idea": "If some substring of length `L` repeats, so does one of length `L − 1` (drop its last letter). That monotonicity lets you binary-search the largest repeating `L`, testing each candidate with a set of substrings.",
+    "steps": [
+     "`lo = 1`, `hi = n − 1`.",
+     "`dup(L)`: return the start of a repeated length-`L` substring (using a set), or −1.",
+     "If `dup(mid)` succeeds, record it and search longer; otherwise search shorter."
+    ],
+    "time": "O(n² log n)",
+    "space": "O(n²)",
+    "why": "log n checks, each building n substrings of length up to n.",
+    "code": {
+     "java": "class Solution {\n    public String longestDupSubstring(String s) {\n        int lo = 1, hi = s.length() - 1, start = -1, len = 0;\n        while (lo <= hi) {\n            int mid = (lo + hi) >>> 1, at = dup(s, mid);\n            if (at >= 0) { start = at; len = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return start < 0 ? \"\" : s.substring(start, start + len);\n    }\n\n    private int dup(String s, int len) {\n        Set<String> seen = new HashSet<>();\n        for (int i = 0; i + len <= s.length(); i++)\n            if (!seen.add(s.substring(i, i + len))) return i;\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\n    int dup(const string& s, int len) {\n        unordered_set<string> seen;\n        for (int i = 0; i + len <= (int) s.size(); i++)\n            if (!seen.insert(s.substr(i, len)).second) return i;\n        return -1;\n    }\npublic:\n    string longestDupSubstring(string s) {\n        int lo = 1, hi = s.size() - 1, start = -1, len = 0;\n        while (lo <= hi) {\n            int mid = (lo + hi) / 2, at = dup(s, mid);\n            if (at >= 0) { start = at; len = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return start < 0 ? \"\" : s.substr(start, len);\n    }\n};",
+     "python": "class Solution:\n    def longestDupSubstring(self, s: str) -> str:\n        def dup(L):\n            seen = set()\n            for i in range(len(s) - L + 1):\n                sub = s[i:i + L]\n                if sub in seen:\n                    return i\n                seen.add(sub)\n            return -1\n        lo, hi, best = 1, len(s) - 1, ''\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            at = dup(mid)\n            if at >= 0:\n                best, lo = s[at:at + mid], mid + 1\n            else:\n                hi = mid - 1\n        return best",
+     "javascript": "var longestDupSubstring = function(s) {\n    const dup = (len) => {\n        const seen = new Set();\n        for (let i = 0; i + len <= s.length; i++) {\n            const sub = s.slice(i, i + len);\n            if (seen.has(sub)) return i;\n            seen.add(sub);\n        }\n        return -1;\n    };\n    let lo = 1, hi = s.length - 1, best = '';\n    while (lo <= hi) {\n        const mid = (lo + hi) >> 1, at = dup(mid);\n        if (at >= 0) { best = s.slice(at, at + mid); lo = mid + 1; }\n        else hi = mid - 1;\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search + Rabin–Karp",
+    "idea": "Same binary search, but test a length in O(n) with a rolling hash: slide a window, update its hash in O(1), and look it up in a hash map of starts. Confirm a hash hit by comparing the actual characters.",
+    "steps": [
+     "Binary search the length as before.",
+     "`dup(L)`: hash the first window (two moduli), then roll: `h = h·B + s[i] − s[i − L]·B^L`.",
+     "If the combined hash was seen before and the two substrings really match, return the current start."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "log n checks of O(n) each (character checks only on hash hits). Two moduli keep false hits negligible, and the direct check means a false hit can never produce a wrong answer.",
+    "code": {
+     "java": "class Solution {\n    private static final long M1 = 1_000_000_007L, M2 = 1_000_000_009L, B = 131;\n\n    public String longestDupSubstring(String s) {\n        int lo = 1, hi = s.length() - 1, start = -1, len = 0;\n        while (lo <= hi) {\n            int mid = (lo + hi) >>> 1, at = dup(s, mid);\n            if (at >= 0) { start = at; len = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return start < 0 ? \"\" : s.substring(start, start + len);\n    }\n\n    private int dup(String s, int len) {\n        long h1 = 0, h2 = 0, p1 = 1, p2 = 1;\n        for (int i = 0; i < len; i++) {\n            h1 = (h1 * B + s.charAt(i)) % M1;\n            h2 = (h2 * B + s.charAt(i)) % M2;\n            p1 = p1 * B % M1;\n            p2 = p2 * B % M2;\n        }\n        Map<Long, Integer> seen = new HashMap<>();\n        seen.put(h1 * M2 + h2, 0);\n        for (int i = len; i < s.length(); i++) {\n            h1 = ((h1 * B + s.charAt(i) - s.charAt(i - len) * p1) % M1 + M1) % M1;\n            h2 = ((h2 * B + s.charAt(i) - s.charAt(i - len) * p2) % M2 + M2) % M2;\n            int start = i - len + 1;\n            Integer prev = seen.putIfAbsent(h1 * M2 + h2, start);\n            if (prev != null && s.regionMatches(prev, s, start, len)) return start;\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\n    static constexpr long long M1 = 1'000'000'007, M2 = 1'000'000'009, B = 131;\n    int dup(const string& s, int len) {\n        long long h1 = 0, h2 = 0, p1 = 1, p2 = 1;\n        for (int i = 0; i < len; i++) {\n            h1 = (h1 * B + s[i]) % M1;\n            h2 = (h2 * B + s[i]) % M2;\n            p1 = p1 * B % M1;\n            p2 = p2 * B % M2;\n        }\n        unordered_map<long long, int> seen;\n        seen[h1 * M2 + h2] = 0;\n        for (int i = len; i < (int) s.size(); i++) {\n            h1 = ((h1 * B + s[i] - s[i - len] * p1) % M1 + M1) % M1;\n            h2 = ((h2 * B + s[i] - s[i - len] * p2) % M2 + M2) % M2;\n            int start = i - len + 1;\n            auto [it, inserted] = seen.emplace(h1 * M2 + h2, start);\n            if (!inserted && s.compare(it->second, len, s, start, len) == 0) return start;\n        }\n        return -1;\n    }\npublic:\n    string longestDupSubstring(string s) {\n        int lo = 1, hi = s.size() - 1, start = -1, len = 0;\n        while (lo <= hi) {\n            int mid = (lo + hi) / 2, at = dup(s, mid);\n            if (at >= 0) { start = at; len = mid; lo = mid + 1; }\n            else hi = mid - 1;\n        }\n        return start < 0 ? \"\" : s.substr(start, len);\n    }\n};",
+     "python": "class Solution:\n    def longestDupSubstring(self, s: str) -> str:\n        M, B = (1 << 61) - 1, 131\n        codes = [ord(c) for c in s]\n        def dup(L):\n            h = 0\n            for c in codes[:L]:\n                h = (h * B + c) % M\n            power = pow(B, L, M)\n            seen = {h: 0}\n            for i in range(L, len(s)):\n                h = (h * B + codes[i] - codes[i - L] * power) % M\n                start = i - L + 1\n                prev = seen.setdefault(h, start)\n                if prev != start and s[prev:prev + L] == s[start:start + L]:\n                    return start\n            return -1\n        lo, hi, best = 1, len(s) - 1, ''\n        while lo <= hi:\n            mid = (lo + hi) // 2\n            at = dup(mid)\n            if at >= 0:\n                best, lo = s[at:at + mid], mid + 1\n            else:\n                hi = mid - 1\n        return best",
+     "javascript": "var longestDupSubstring = function(s) {\n    const M1 = 1000000007, M2 = 1000000009, B = 131;\n    const dup = (len) => {\n        let h1 = 0, h2 = 0, p1 = 1, p2 = 1;\n        for (let i = 0; i < len; i++) {\n            h1 = (h1 * B + s.charCodeAt(i)) % M1;\n            h2 = (h2 * B + s.charCodeAt(i)) % M2;\n            p1 = (p1 * B) % M1;\n            p2 = (p2 * B) % M2;\n        }\n        const seen = new Map([[h1 + ',' + h2, 0]]);\n        for (let i = len; i < s.length; i++) {\n            const add = s.charCodeAt(i), drop = s.charCodeAt(i - len);\n            h1 = (((h1 * B + add - drop * p1) % M1) + M1) % M1;\n            h2 = (((h2 * B + add - drop * p2) % M2) + M2) % M2;\n            const key = h1 + ',' + h2, start = i - len + 1;\n            if (!seen.has(key)) seen.set(key, start);\n            else if (s.substr(seen.get(key), len) === s.substr(start, len)) return start;\n        }\n        return -1;\n    };\n    let lo = 1, hi = s.length - 1, best = '';\n    while (lo <= hi) {\n        const mid = (lo + hi) >> 1, at = dup(mid);\n        if (at >= 0) { best = s.slice(at, at + mid); lo = mid + 1; }\n        else hi = mid - 1;\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ }
+}
