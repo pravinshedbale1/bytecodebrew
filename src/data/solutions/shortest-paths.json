@@ -1,0 +1,350 @@
+{
+ "network-delay-time": {
+  "pattern": "Single-source shortest paths with non-negative weights (Dijkstra)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Bellman–Ford: relax every edge n − 1 times",
+    "idea": "A shortest path uses at most n − 1 edges. Starting with `dist[k] = 0`, relaxing every edge n − 1 times makes every distance final. The answer is the largest distance, or −1 if some node stays unreachable.",
+    "steps": [
+     "Set `dist[k] = 0` and every other distance to ∞.",
+     "Repeat n − 1 times: for every edge `u → v` of weight `w`, if `dist[u] + w < dist[v]`, update `dist[v]`.",
+     "If any distance is still ∞, return −1; otherwise return the maximum distance."
+    ],
+    "time": "O(V·E)",
+    "space": "O(V)",
+    "why": "n − 1 rounds over all E edges. Slower than Dijkstra, but it also handles negative edge weights.",
+    "code": {
+     "java": "class Solution {\n    public int networkDelayTime(int[][] times, int n, int k) {\n        int INF = Integer.MAX_VALUE / 2;\n        int[] dist = new int[n + 1];\n        Arrays.fill(dist, INF);\n        dist[k] = 0;\n        for (int round = 1; round < n; round++)\n            for (int[] t : times)\n                if (dist[t[0]] + t[2] < dist[t[1]]) dist[t[1]] = dist[t[0]] + t[2];\n        int best = 0;\n        for (int i = 1; i <= n; i++) best = Math.max(best, dist[i]);\n        return best == INF ? -1 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int networkDelayTime(vector<vector<int>>& times, int n, int k) {\n        const int INF = INT_MAX / 2;\n        vector<int> dist(n + 1, INF);\n        dist[k] = 0;\n        for (int round = 1; round < n; round++)\n            for (auto& t : times)\n                if (dist[t[0]] + t[2] < dist[t[1]]) dist[t[1]] = dist[t[0]] + t[2];\n        int best = *max_element(dist.begin() + 1, dist.end());\n        return best == INF ? -1 : best;\n    }\n};",
+     "python": "class Solution:\n    def networkDelayTime(self, times: List[List[int]], n: int, k: int) -> int:\n        dist = [inf] * (n + 1)\n        dist[k] = 0\n        for _ in range(n - 1):\n            for u, v, w in times:\n                if dist[u] + w < dist[v]:\n                    dist[v] = dist[u] + w\n        best = max(dist[1:])\n        return -1 if best == inf else best",
+     "javascript": "var networkDelayTime = function(times, n, k) {\n    const dist = new Array(n + 1).fill(Infinity);\n    dist[k] = 0;\n    for (let round = 1; round < n; round++)\n        for (const [u, v, w] of times)\n            if (dist[u] + w < dist[v]) dist[v] = dist[u] + w;\n    const best = Math.max(...dist.slice(1));\n    return best === Infinity ? -1 : best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dijkstra with a min-heap",
+    "idea": "Always settle the unsettled node with the smallest known distance; with non-negative weights, no later path can make it shorter. Relax its outgoing edges and continue.",
+    "steps": [
+     "Build adjacency lists. Push `(0, k)` into a min-heap; `dist[k] = 0`.",
+     "Pop `(d, u)`; skip it if `d > dist[u]` (an outdated entry).",
+     "For each edge `u → v` with weight `w`, if `d + w < dist[v]`, update `dist[v]` and push `(dist[v], v)`.",
+     "Return the largest distance, or −1 if some node was never reached."
+    ],
+    "time": "O(E log V)",
+    "space": "O(V + E)",
+    "why": "Each edge can push one heap entry, and each heap operation costs O(log E) = O(log V).",
+    "code": {
+     "java": "class Solution {\n    public int networkDelayTime(int[][] times, int n, int k) {\n        List<List<int[]>> adj = new ArrayList<>();\n        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());\n        for (int[] t : times) adj.get(t[0]).add(new int[] { t[1], t[2] });\n        int[] dist = new int[n + 1];\n        Arrays.fill(dist, Integer.MAX_VALUE);\n        dist[k] = 0;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        heap.add(new int[] { 0, k });\n        while (!heap.isEmpty()) {\n            int[] top = heap.poll();\n            int d = top[0], u = top[1];\n            if (d > dist[u]) continue;\n            for (int[] e : adj.get(u))\n                if (d + e[1] < dist[e[0]]) { dist[e[0]] = d + e[1]; heap.add(new int[] { dist[e[0]], e[0] }); }\n        }\n        int best = 0;\n        for (int i = 1; i <= n; i++) best = Math.max(best, dist[i]);\n        return best == Integer.MAX_VALUE ? -1 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int networkDelayTime(vector<vector<int>>& times, int n, int k) {\n        vector<vector<pair<int, int>>> adj(n + 1);\n        for (auto& t : times) adj[t[0]].push_back({t[1], t[2]});\n        vector<int> dist(n + 1, INT_MAX);\n        dist[k] = 0;\n        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;\n        heap.push({0, k});\n        while (!heap.empty()) {\n            auto [d, u] = heap.top();\n            heap.pop();\n            if (d > dist[u]) continue;\n            for (auto [v, w] : adj[u])\n                if (d + w < dist[v]) { dist[v] = d + w; heap.push({dist[v], v}); }\n        }\n        int best = *max_element(dist.begin() + 1, dist.end());\n        return best == INT_MAX ? -1 : best;\n    }\n};",
+     "python": "class Solution:\n    def networkDelayTime(self, times: List[List[int]], n: int, k: int) -> int:\n        adj = defaultdict(list)\n        for u, v, w in times:\n            adj[u].append((v, w))\n        dist = {}\n        heap = [(0, k)]\n        while heap:\n            d, u = heappop(heap)\n            if u in dist:\n                continue\n            dist[u] = d\n            for v, w in adj[u]:\n                if v not in dist:\n                    heappush(heap, (d + w, v))\n        return max(dist.values()) if len(dist) == n else -1",
+     "javascript": "var networkDelayTime = function(times, n, k) {\n    const adj = Array.from({ length: n + 1 }, () => []);\n    for (const [u, v, w] of times) adj[u].push([v, w]);\n    const dist = new Array(n + 1).fill(Infinity);\n    dist[k] = 0;\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    heap.enqueue([0, k]);\n    while (heap.size()) {\n        const [d, u] = heap.dequeue();\n        if (d > dist[u]) continue;\n        for (const [v, w] of adj[u])\n            if (d + w < dist[v]) { dist[v] = d + w; heap.enqueue([dist[v], v]); }\n    }\n    const best = Math.max(...dist.slice(1));\n    return best === Infinity ? -1 : best;\n};"
+    }
+   }
+  ]
+ },
+ "path-with-minimum-effort": {
+  "pattern": "Minimax path: Dijkstra where a path's cost is its largest step (or binary search + BFS)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Binary search the effort, check with BFS",
+    "idea": "For a limit `E`, ask: can you reach the corner using only steps with height difference ≤ `E`? That is a plain BFS, and if it works for `E` it works for anything larger. Binary search the smallest `E`.",
+    "steps": [
+     "Search `E` in `[0, 10⁶]`.",
+     "BFS from the top-left using only moves whose height difference is at most `E`; see whether the bottom-right is reached.",
+     "If reachable, `hi = E`; else `lo = E + 1`. Return `lo`."
+    ],
+    "time": "O(m·n·log H)",
+    "space": "O(m·n)",
+    "why": "About 20 BFS runs (H = 10⁶ is the height range), each O(m·n).",
+    "code": {
+     "java": "class Solution {\n    public int minimumEffortPath(int[][] heights) {\n        int lo = 0, hi = 1_000_000;\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (reachable(heights, mid)) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n\n    private boolean reachable(int[][] h, int limit) {\n        int m = h.length, n = h[0].length;\n        boolean[][] seen = new boolean[m][n];\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        queue.add(new int[] { 0, 0 });\n        seen[0][0] = true;\n        while (!queue.isEmpty()) {\n            int[] c = queue.poll();\n            if (c[0] == m - 1 && c[1] == n - 1) return true;\n            for (int[] d : dirs) {\n                int r = c[0] + d[0], col = c[1] + d[1];\n                if (r >= 0 && col >= 0 && r < m && col < n && !seen[r][col] && Math.abs(h[r][col] - h[c[0]][c[1]]) <= limit) {\n                    seen[r][col] = true;\n                    queue.add(new int[] { r, col });\n                }\n            }\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool reachable(vector<vector<int>>& h, int limit) {\n        int m = h.size(), n = h[0].size();\n        vector<vector<bool>> seen(m, vector<bool>(n, false));\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        queue<pair<int, int>> q;\n        q.push({0, 0});\n        seen[0][0] = true;\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            if (r0 == m - 1 && c0 == n - 1) return true;\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < m && c < n && !seen[r][c] && abs(h[r][c] - h[r0][c0]) <= limit) {\n                    seen[r][c] = true;\n                    q.push({r, c});\n                }\n            }\n        }\n        return false;\n    }\npublic:\n    int minimumEffortPath(vector<vector<int>>& heights) {\n        int lo = 0, hi = 1000000;\n        while (lo < hi) {\n            int mid = (lo + hi) / 2;\n            if (reachable(heights, mid)) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def minimumEffortPath(self, heights: List[List[int]]) -> int:\n        m, n = len(heights), len(heights[0])\n        def reachable(limit):\n            seen, queue = {(0, 0)}, deque([(0, 0)])\n            while queue:\n                r0, c0 = queue.popleft()\n                if (r0, c0) == (m - 1, n - 1):\n                    return True\n                for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                    if 0 <= r < m and 0 <= c < n and (r, c) not in seen and abs(heights[r][c] - heights[r0][c0]) <= limit:\n                        seen.add((r, c))\n                        queue.append((r, c))\n            return False\n        lo, hi = 0, 10**6\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if reachable(mid):\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var minimumEffortPath = function(heights) {\n    const m = heights.length, n = heights[0].length;\n    const reachable = (limit) => {\n        const seen = new Uint8Array(m * n), queue = [[0, 0]];\n        seen[0] = 1;\n        for (let h = 0; h < queue.length; h++) {\n            const [r0, c0] = queue[h];\n            if (r0 === m - 1 && c0 === n - 1) return true;\n            for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n                if (r >= 0 && c >= 0 && r < m && c < n && !seen[r * n + c] && Math.abs(heights[r][c] - heights[r0][c0]) <= limit) {\n                    seen[r * n + c] = 1;\n                    queue.push([r, c]);\n                }\n            }\n        }\n        return false;\n    };\n    let lo = 0, hi = 1000000;\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        if (reachable(mid)) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dijkstra on the largest step so far",
+    "idea": "Let `effort[cell]` be the smallest possible \"largest step\" of a path to it. Extending a path with a step of size `d` gives effort `max(current, d)`, which never decreases — so Dijkstra still works with `max` in place of `+`.",
+    "steps": [
+     "Set `effort[0][0] = 0` and push it into a min-heap.",
+     "Pop the cell with the smallest effort; if it is the bottom-right, return it (skip outdated entries).",
+     "For each neighbour, `candidate = max(effort, |height difference|)`; if smaller than its recorded effort, record and push it."
+    ],
+    "time": "O(m·n·log(m·n))",
+    "space": "O(m·n)",
+    "why": "Each cell has 4 edges, so O(m·n) heap pushes of O(log(m·n)) each.",
+    "code": {
+     "java": "class Solution {\n    public int minimumEffortPath(int[][] heights) {\n        int m = heights.length, n = heights[0].length;\n        int[][] effort = new int[m][n];\n        for (int[] row : effort) Arrays.fill(row, Integer.MAX_VALUE);\n        effort[0][0] = 0;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        heap.add(new int[] { 0, 0, 0 });\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!heap.isEmpty()) {\n            int[] top = heap.poll();\n            int e = top[0], r0 = top[1], c0 = top[2];\n            if (e > effort[r0][c0]) continue;\n            if (r0 == m - 1 && c0 == n - 1) return e;\n            for (int[] d : dirs) {\n                int r = r0 + d[0], c = c0 + d[1];\n                if (r < 0 || c < 0 || r >= m || c >= n) continue;\n                int cand = Math.max(e, Math.abs(heights[r][c] - heights[r0][c0]));\n                if (cand < effort[r][c]) { effort[r][c] = cand; heap.add(new int[] { cand, r, c }); }\n            }\n        }\n        return 0;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumEffortPath(vector<vector<int>>& heights) {\n        int m = heights.size(), n = heights[0].size();\n        vector<vector<int>> effort(m, vector<int>(n, INT_MAX));\n        effort[0][0] = 0;\n        priority_queue<array<int, 3>, vector<array<int, 3>>, greater<>> heap;\n        heap.push({0, 0, 0});\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!heap.empty()) {\n            auto [e, r0, c0] = heap.top();\n            heap.pop();\n            if (e > effort[r0][c0]) continue;\n            if (r0 == m - 1 && c0 == n - 1) return e;\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r < 0 || c < 0 || r >= m || c >= n) continue;\n                int cand = max(e, abs(heights[r][c] - heights[r0][c0]));\n                if (cand < effort[r][c]) { effort[r][c] = cand; heap.push({cand, r, c}); }\n            }\n        }\n        return 0;\n    }\n};",
+     "python": "class Solution:\n    def minimumEffortPath(self, heights: List[List[int]]) -> int:\n        m, n = len(heights), len(heights[0])\n        effort = [[inf] * n for _ in range(m)]\n        effort[0][0] = 0\n        heap = [(0, 0, 0)]\n        while heap:\n            e, r0, c0 = heappop(heap)\n            if e > effort[r0][c0]:\n                continue\n            if (r0, c0) == (m - 1, n - 1):\n                return e\n            for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                if 0 <= r < m and 0 <= c < n:\n                    cand = max(e, abs(heights[r][c] - heights[r0][c0]))\n                    if cand < effort[r][c]:\n                        effort[r][c] = cand\n                        heappush(heap, (cand, r, c))\n        return 0",
+     "javascript": "var minimumEffortPath = function(heights) {\n    const m = heights.length, n = heights[0].length;\n    const effort = Array.from({ length: m }, () => new Array(n).fill(Infinity));\n    effort[0][0] = 0;\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    heap.enqueue([0, 0, 0]);\n    while (heap.size()) {\n        const [e, r0, c0] = heap.dequeue();\n        if (e > effort[r0][c0]) continue;\n        if (r0 === m - 1 && c0 === n - 1) return e;\n        for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n            if (r < 0 || c < 0 || r >= m || c >= n) continue;\n            const cand = Math.max(e, Math.abs(heights[r][c] - heights[r0][c0]));\n            if (cand < effort[r][c]) { effort[r][c] = cand; heap.enqueue([cand, r, c]); }\n        }\n    }\n    return 0;\n};"
+    }
+   }
+  ]
+ },
+ "cheapest-flights-within-k-stops": {
+  "pattern": "Bellman–Ford limited to k + 1 rounds (shortest path with at most k + 1 edges)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "DFS over every route with at most k + 1 flights",
+    "idea": "Explore every route from `src` that uses at most k + 1 flights, and keep the cheapest one that ends at `dst`. Prune routes that already cost more than the best found.",
+    "steps": [
+     "`dfs(city, flightsLeft, cost)`: if `cost >= best`, stop; if `city == dst`, record `cost`.",
+     "If flights remain, follow every outgoing flight with `flightsLeft − 1`.",
+     "Start with `dfs(src, k + 1, 0)` and return the best, or −1."
+    ],
+    "time": "O(dᵏ⁺¹)",
+    "space": "O(k)",
+    "why": "With out-degree d, the number of routes grows exponentially in k; pruning helps but does not change the worst case.",
+    "code": {
+     "java": "class Solution {\n    private List<List<int[]>> adj;\n    private int dst, best = Integer.MAX_VALUE;\n\n    public int findCheapestPrice(int n, int[][] flights, int src, int dst, int k) {\n        adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] f : flights) adj.get(f[0]).add(new int[] { f[1], f[2] });\n        this.dst = dst;\n        dfs(src, k + 1, 0);\n        return best == Integer.MAX_VALUE ? -1 : best;\n    }\n\n    private void dfs(int city, int left, int cost) {\n        if (cost >= best) return;\n        if (city == dst) { best = cost; return; }\n        if (left == 0) return;\n        for (int[] f : adj.get(city)) dfs(f[0], left - 1, cost + f[1]);\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<pair<int, int>>> adj;\n    int dst, best = INT_MAX;\n    void dfs(int city, int left, int cost) {\n        if (cost >= best) return;\n        if (city == dst) { best = cost; return; }\n        if (left == 0) return;\n        for (auto [v, p] : adj[city]) dfs(v, left - 1, cost + p);\n    }\npublic:\n    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int k) {\n        adj.assign(n, {});\n        for (auto& f : flights) adj[f[0]].push_back({f[1], f[2]});\n        this->dst = dst;\n        dfs(src, k + 1, 0);\n        return best == INT_MAX ? -1 : best;\n    }\n};",
+     "python": "class Solution:\n    def findCheapestPrice(self, n: int, flights: List[List[int]], src: int, dst: int, k: int) -> int:\n        adj = defaultdict(list)\n        for u, v, p in flights:\n            adj[u].append((v, p))\n        best = inf\n        def dfs(city, left, cost):\n            nonlocal best\n            if cost >= best:\n                return\n            if city == dst:\n                best = cost\n                return\n            if left:\n                for v, p in adj[city]:\n                    dfs(v, left - 1, cost + p)\n        dfs(src, k + 1, 0)\n        return -1 if best == inf else best",
+     "javascript": "var findCheapestPrice = function(n, flights, src, dst, k) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [u, v, p] of flights) adj[u].push([v, p]);\n    let best = Infinity;\n    const dfs = (city, left, cost) => {\n        if (cost >= best) return;\n        if (city === dst) { best = cost; return; }\n        if (left === 0) return;\n        for (const [v, p] of adj[city]) dfs(v, left - 1, cost + p);\n    };\n    dfs(src, k + 1, 0);\n    return best === Infinity ? -1 : best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bellman–Ford for exactly k + 1 rounds",
+    "idea": "After round `i` of Bellman–Ford, `dist` holds the cheapest prices using at most `i` flights — as long as each round reads the previous round's values (a copy), so one round cannot chain several flights together.",
+    "steps": [
+     "Set `dist[src] = 0`, all others ∞.",
+     "Repeat k + 1 times: copy `dist` to `next`; for each flight `u → v` with price `p`, if `dist[u] + p < next[v]`, set `next[v]`. Then `dist = next`.",
+     "Return `dist[dst]`, or −1 if it is still ∞."
+    ],
+    "time": "O(k·E)",
+    "space": "O(V)",
+    "why": "k + 1 rounds over all E flights, with two arrays of size V. Plain Dijkstra fails here, because the cheapest path might use too many stops.",
+    "code": {
+     "java": "class Solution {\n    public int findCheapestPrice(int n, int[][] flights, int src, int dst, int k) {\n        int INF = Integer.MAX_VALUE;\n        int[] dist = new int[n];\n        Arrays.fill(dist, INF);\n        dist[src] = 0;\n        for (int round = 0; round <= k; round++) {\n            int[] next = dist.clone();\n            for (int[] f : flights)\n                if (dist[f[0]] != INF && dist[f[0]] + f[2] < next[f[1]]) next[f[1]] = dist[f[0]] + f[2];\n            dist = next;\n        }\n        return dist[dst] == INF ? -1 : dist[dst];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findCheapestPrice(int n, vector<vector<int>>& flights, int src, int dst, int k) {\n        const int INF = INT_MAX;\n        vector<int> dist(n, INF);\n        dist[src] = 0;\n        for (int round = 0; round <= k; round++) {\n            vector<int> next = dist;\n            for (auto& f : flights)\n                if (dist[f[0]] != INF && dist[f[0]] + f[2] < next[f[1]]) next[f[1]] = dist[f[0]] + f[2];\n            dist = next;\n        }\n        return dist[dst] == INF ? -1 : dist[dst];\n    }\n};",
+     "python": "class Solution:\n    def findCheapestPrice(self, n: int, flights: List[List[int]], src: int, dst: int, k: int) -> int:\n        dist = [inf] * n\n        dist[src] = 0\n        for _ in range(k + 1):\n            nxt = dist[:]\n            for u, v, p in flights:\n                if dist[u] + p < nxt[v]:\n                    nxt[v] = dist[u] + p\n            dist = nxt\n        return -1 if dist[dst] == inf else dist[dst]",
+     "javascript": "var findCheapestPrice = function(n, flights, src, dst, k) {\n    let dist = new Array(n).fill(Infinity);\n    dist[src] = 0;\n    for (let round = 0; round <= k; round++) {\n        const next = dist.slice();\n        for (const [u, v, p] of flights)\n            if (dist[u] + p < next[v]) next[v] = dist[u] + p;\n        dist = next;\n    }\n    return dist[dst] === Infinity ? -1 : dist[dst];\n};"
+    }
+   }
+  ]
+ },
+ "path-with-maximum-probability": {
+  "pattern": "Dijkstra for a \"best product\" path (max-heap; probabilities only shrink along a path)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Bellman–Ford style relaxation until nothing improves",
+    "idea": "Keep the best known probability for each node. Repeatedly go over every edge (both directions) and improve a node if reaching it through the edge gives a higher product. Stop when a full pass changes nothing.",
+    "steps": [
+     "Set `prob[start] = 1`, others 0.",
+     "Repeat up to n − 1 times: for each edge `(a, b, p)`, update `prob[b]` with `prob[a]·p` and `prob[a]` with `prob[b]·p` if larger.",
+     "Stop early when a pass makes no change; return `prob[end]`."
+    ],
+    "time": "O(V·E)",
+    "space": "O(V)",
+    "why": "At most n − 1 passes over E edges; the early stop makes it fast on most inputs.",
+    "code": {
+     "java": "class Solution {\n    public double maxProbability(int n, int[][] edges, double[] succProb, int start_node, int end_node) {\n        double[] prob = new double[n];\n        prob[start_node] = 1;\n        for (int round = 1; round < n; round++) {\n            boolean changed = false;\n            for (int i = 0; i < edges.length; i++) {\n                int a = edges[i][0], b = edges[i][1];\n                double p = succProb[i];\n                if (prob[a] * p > prob[b]) { prob[b] = prob[a] * p; changed = true; }\n                if (prob[b] * p > prob[a]) { prob[a] = prob[b] * p; changed = true; }\n            }\n            if (!changed) break;\n        }\n        return prob[end_node];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double maxProbability(int n, vector<vector<int>>& edges, vector<double>& succProb, int start_node, int end_node) {\n        vector<double> prob(n, 0.0);\n        prob[start_node] = 1;\n        for (int round = 1; round < n; round++) {\n            bool changed = false;\n            for (size_t i = 0; i < edges.size(); i++) {\n                int a = edges[i][0], b = edges[i][1];\n                double p = succProb[i];\n                if (prob[a] * p > prob[b]) { prob[b] = prob[a] * p; changed = true; }\n                if (prob[b] * p > prob[a]) { prob[a] = prob[b] * p; changed = true; }\n            }\n            if (!changed) break;\n        }\n        return prob[end_node];\n    }\n};",
+     "python": "class Solution:\n    def maxProbability(self, n: int, edges: List[List[int]], succProb: List[float], start_node: int, end_node: int) -> float:\n        prob = [0.0] * n\n        prob[start_node] = 1.0\n        for _ in range(n - 1):\n            changed = False\n            for (a, b), p in zip(edges, succProb):\n                if prob[a] * p > prob[b]:\n                    prob[b] = prob[a] * p\n                    changed = True\n                if prob[b] * p > prob[a]:\n                    prob[a] = prob[b] * p\n                    changed = True\n            if not changed:\n                break\n        return prob[end_node]",
+     "javascript": "var maxProbability = function(n, edges, succProb, start_node, end_node) {\n    const prob = new Array(n).fill(0);\n    prob[start_node] = 1;\n    for (let round = 1; round < n; round++) {\n        let changed = false;\n        edges.forEach(([a, b], i) => {\n            const p = succProb[i];\n            if (prob[a] * p > prob[b]) { prob[b] = prob[a] * p; changed = true; }\n            if (prob[b] * p > prob[a]) { prob[a] = prob[b] * p; changed = true; }\n        });\n        if (!changed) break;\n    }\n    return prob[end_node];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dijkstra with a max-heap",
+    "idea": "Multiplying by a probability ≤ 1 can only keep a value the same or make it smaller — the mirror image of adding a non-negative weight. So Dijkstra works with a max-heap: the node with the highest probability popped first is final.",
+    "steps": [
+     "Build adjacency lists with probabilities (both directions).",
+     "Push `(1, start)`; `best[start] = 1`.",
+     "Pop the largest probability; if it is the end node, return it; skip outdated entries.",
+     "For each neighbour, if `p·edge > best[nb]`, update and push. Return 0 if the end is never reached."
+    ],
+    "time": "O(E log V)",
+    "space": "O(V + E)",
+    "why": "Each edge can cause one push, at O(log V) per heap operation.",
+    "code": {
+     "java": "class Solution {\n    public double maxProbability(int n, int[][] edges, double[] succProb, int start_node, int end_node) {\n        List<List<double[]>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int i = 0; i < edges.length; i++) {\n            adj.get(edges[i][0]).add(new double[] { edges[i][1], succProb[i] });\n            adj.get(edges[i][1]).add(new double[] { edges[i][0], succProb[i] });\n        }\n        double[] best = new double[n];\n        best[start_node] = 1;\n        PriorityQueue<double[]> heap = new PriorityQueue<>((a, b) -> Double.compare(b[0], a[0]));\n        heap.add(new double[] { 1, start_node });\n        while (!heap.isEmpty()) {\n            double[] top = heap.poll();\n            double p = top[0];\n            int u = (int) top[1];\n            if (u == end_node) return p;\n            if (p < best[u]) continue;\n            for (double[] e : adj.get(u)) {\n                int v = (int) e[0];\n                if (p * e[1] > best[v]) { best[v] = p * e[1]; heap.add(new double[] { best[v], v }); }\n            }\n        }\n        return 0;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    double maxProbability(int n, vector<vector<int>>& edges, vector<double>& succProb, int start_node, int end_node) {\n        vector<vector<pair<int, double>>> adj(n);\n        for (size_t i = 0; i < edges.size(); i++) {\n            adj[edges[i][0]].push_back({edges[i][1], succProb[i]});\n            adj[edges[i][1]].push_back({edges[i][0], succProb[i]});\n        }\n        vector<double> best(n, 0.0);\n        best[start_node] = 1;\n        priority_queue<pair<double, int>> heap;\n        heap.push({1.0, start_node});\n        while (!heap.empty()) {\n            auto [p, u] = heap.top();\n            heap.pop();\n            if (u == end_node) return p;\n            if (p < best[u]) continue;\n            for (auto [v, q] : adj[u])\n                if (p * q > best[v]) { best[v] = p * q; heap.push({best[v], v}); }\n        }\n        return 0;\n    }\n};",
+     "python": "class Solution:\n    def maxProbability(self, n: int, edges: List[List[int]], succProb: List[float], start_node: int, end_node: int) -> float:\n        adj = defaultdict(list)\n        for (a, b), p in zip(edges, succProb):\n            adj[a].append((b, p))\n            adj[b].append((a, p))\n        best = [0.0] * n\n        best[start_node] = 1.0\n        heap = [(-1.0, start_node)]  # negated for a max-heap\n        while heap:\n            neg, u = heappop(heap)\n            p = -neg\n            if u == end_node:\n                return p\n            if p < best[u]:\n                continue\n            for v, q in adj[u]:\n                if p * q > best[v]:\n                    best[v] = p * q\n                    heappush(heap, (-best[v], v))\n        return 0.0",
+     "javascript": "var maxProbability = function(n, edges, succProb, start_node, end_node) {\n    const adj = Array.from({ length: n }, () => []);\n    edges.forEach(([a, b], i) => { adj[a].push([b, succProb[i]]); adj[b].push([a, succProb[i]]); });\n    const best = new Array(n).fill(0);\n    best[start_node] = 1;\n    const heap = new PriorityQueue((x, y) => y[0] - x[0]);\n    heap.enqueue([1, start_node]);\n    while (heap.size()) {\n        const [p, u] = heap.dequeue();\n        if (u === end_node) return p;\n        if (p < best[u]) continue;\n        for (const [v, q] of adj[u])\n            if (p * q > best[v]) { best[v] = p * q; heap.enqueue([best[v], v]); }\n    }\n    return 0;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-obstacle-removal-to-reach-corner": {
+  "pattern": "0-1 BFS: edges cost 0 or 1, so a deque replaces Dijkstra's heap",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Dijkstra: entering an obstacle costs 1",
+    "idea": "Treat each cell as a node; moving into a cell costs its value (1 for an obstacle, 0 for empty). The answer is the cheapest path cost from the top-left to the bottom-right.",
+    "steps": [
+     "Set `cost[0][0] = 0`; push it into a min-heap.",
+     "Pop the cheapest cell (skip outdated entries); if it is the target, return its cost.",
+     "For each neighbour, `cand = cost + grid[neighbour]`; if better, record and push."
+    ],
+    "time": "O(m·n·log(m·n))",
+    "space": "O(m·n)",
+    "why": "Standard Dijkstra over m·n cells with 4 edges each. Correct, but the heap is more than needed when costs are only 0 or 1.",
+    "code": {
+     "java": "class Solution {\n    public int minimumObstacles(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] cost = new int[m][n];\n        for (int[] row : cost) Arrays.fill(row, Integer.MAX_VALUE);\n        cost[0][0] = 0;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        heap.add(new int[] { 0, 0, 0 });\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!heap.isEmpty()) {\n            int[] top = heap.poll();\n            int c0 = top[0], r = top[1], c = top[2];\n            if (c0 > cost[r][c]) continue;\n            if (r == m - 1 && c == n - 1) return c0;\n            for (int[] d : dirs) {\n                int rr = r + d[0], cc = c + d[1];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = c0 + grid[rr][cc];\n                if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.add(new int[] { cand, rr, cc }); }\n            }\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumObstacles(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<vector<int>> cost(m, vector<int>(n, INT_MAX));\n        cost[0][0] = 0;\n        priority_queue<array<int, 3>, vector<array<int, 3>>, greater<>> heap;\n        heap.push({0, 0, 0});\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!heap.empty()) {\n            auto [c0, r, c] = heap.top();\n            heap.pop();\n            if (c0 > cost[r][c]) continue;\n            if (r == m - 1 && c == n - 1) return c0;\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dr[k], cc = c + dc[k];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = c0 + grid[rr][cc];\n                if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.push({cand, rr, cc}); }\n            }\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def minimumObstacles(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        cost = [[inf] * n for _ in range(m)]\n        cost[0][0] = 0\n        heap = [(0, 0, 0)]\n        while heap:\n            c0, r, c = heappop(heap)\n            if c0 > cost[r][c]:\n                continue\n            if (r, c) == (m - 1, n - 1):\n                return c0\n            for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= rr < m and 0 <= cc < n and c0 + grid[rr][cc] < cost[rr][cc]:\n                    cost[rr][cc] = c0 + grid[rr][cc]\n                    heappush(heap, (cost[rr][cc], rr, cc))\n        return -1",
+     "javascript": "var minimumObstacles = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const cost = Array.from({ length: m }, () => new Array(n).fill(Infinity));\n    cost[0][0] = 0;\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    heap.enqueue([0, 0, 0]);\n    while (heap.size()) {\n        const [c0, r, c] = heap.dequeue();\n        if (c0 > cost[r][c]) continue;\n        if (r === m - 1 && c === n - 1) return c0;\n        for (const [rr, cc] of [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]) {\n            if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n            const cand = c0 + grid[rr][cc];\n            if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.enqueue([cand, rr, cc]); }\n        }\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "0-1 BFS with a deque",
+    "idea": "When every edge costs 0 or 1, a deque keeps the frontier sorted for free: push a 0-cost neighbour to the front and a 1-cost neighbour to the back. Cells then leave the deque in order of cost, just as in Dijkstra.",
+    "steps": [
+     "Set `cost[0][0] = 0` and put it in a deque.",
+     "Pop from the front. For each neighbour, `cand = cost + grid[neighbour]`; if it improves the neighbour, record it.",
+     "Push the neighbour to the front if the step cost 0, otherwise to the back.",
+     "Return `cost` of the bottom-right cell."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Each cell is improved at most twice (its cost can only be one of two adjacent values while it waits), and deque operations are O(1).",
+    "code": {
+     "java": "class Solution {\n    public int minimumObstacles(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] cost = new int[m][n];\n        for (int[] row : cost) Arrays.fill(row, Integer.MAX_VALUE);\n        cost[0][0] = 0;\n        Deque<int[]> dq = new ArrayDeque<>();\n        dq.add(new int[] { 0, 0 });\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (!dq.isEmpty()) {\n            int[] cell = dq.pollFirst();\n            int r = cell[0], c = cell[1];\n            for (int[] d : dirs) {\n                int rr = r + d[0], cc = c + d[1];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = cost[r][c] + grid[rr][cc];\n                if (cand >= cost[rr][cc]) continue;\n                cost[rr][cc] = cand;\n                if (grid[rr][cc] == 0) dq.addFirst(new int[] { rr, cc });\n                else dq.addLast(new int[] { rr, cc });\n            }\n        }\n        return cost[m - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumObstacles(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<vector<int>> cost(m, vector<int>(n, INT_MAX));\n        cost[0][0] = 0;\n        deque<pair<int, int>> dq;\n        dq.push_back({0, 0});\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (!dq.empty()) {\n            auto [r, c] = dq.front();\n            dq.pop_front();\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dr[k], cc = c + dc[k];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = cost[r][c] + grid[rr][cc];\n                if (cand >= cost[rr][cc]) continue;\n                cost[rr][cc] = cand;\n                if (grid[rr][cc] == 0) dq.push_front({rr, cc});\n                else dq.push_back({rr, cc});\n            }\n        }\n        return cost[m - 1][n - 1];\n    }\n};",
+     "python": "class Solution:\n    def minimumObstacles(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        cost = [[inf] * n for _ in range(m)]\n        cost[0][0] = 0\n        dq = deque([(0, 0)])\n        while dq:\n            r, c = dq.popleft()\n            for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= rr < m and 0 <= cc < n:\n                    cand = cost[r][c] + grid[rr][cc]\n                    if cand < cost[rr][cc]:\n                        cost[rr][cc] = cand\n                        if grid[rr][cc] == 0:\n                            dq.appendleft((rr, cc))\n                        else:\n                            dq.append((rr, cc))\n        return cost[m - 1][n - 1]",
+     "javascript": "var minimumObstacles = function(grid) {\n    const m = grid.length, n = grid[0].length, size = m * n;\n    const cost = new Array(size).fill(Infinity);\n    // a deque as a ring buffer: each cell is pushed at most twice\n    const buf = new Int32Array(4 * size + 4);\n    let head = 2 * size + 2, tail = head;\n    cost[0] = 0;\n    buf[tail++] = 0;\n    while (head < tail) {\n        const cell = buf[head++], r = Math.floor(cell / n), c = cell % n;\n        for (const [rr, cc] of [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]) {\n            if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n            const next = rr * n + cc, cand = cost[cell] + grid[rr][cc];\n            if (cand >= cost[next]) continue;\n            cost[next] = cand;\n            if (grid[rr][cc] === 0) buf[--head] = next;\n            else buf[tail++] = next;\n        }\n    }\n    return cost[size - 1];\n};"
+    }
+   }
+  ]
+ },
+ "minimum-cost-to-make-at-least-one-valid-path-in-a-grid": {
+  "pattern": "0-1 BFS: following a sign costs 0, going any other way costs 1",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Dijkstra over cells",
+    "idea": "From each cell you may move in all four directions: moving where the sign points is free, any other direction costs 1 (changing the sign). The answer is the cheapest path cost.",
+    "steps": [
+     "Directions 1..4 = right, left, down, up.",
+     "Dijkstra from the top-left: pop the cheapest cell, skip outdated entries, stop at the bottom-right.",
+     "For each direction `k`, the step costs 0 if `k == grid[r][c]`, else 1; relax the neighbour."
+    ],
+    "time": "O(m·n·log(m·n))",
+    "space": "O(m·n)",
+    "why": "Each cell has 4 edges, giving O(m·n) heap operations of O(log(m·n)).",
+    "code": {
+     "java": "class Solution {\n    public int minCost(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } };\n        int[][] cost = new int[m][n];\n        for (int[] row : cost) Arrays.fill(row, Integer.MAX_VALUE);\n        cost[0][0] = 0;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        heap.add(new int[] { 0, 0, 0 });\n        while (!heap.isEmpty()) {\n            int[] top = heap.poll();\n            int c0 = top[0], r = top[1], c = top[2];\n            if (c0 > cost[r][c]) continue;\n            if (r == m - 1 && c == n - 1) return c0;\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dirs[k][0], cc = c + dirs[k][1];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = c0 + (grid[r][c] == k + 1 ? 0 : 1);\n                if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.add(new int[] { cand, rr, cc }); }\n            }\n        }\n        return -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minCost(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        int dr[] = {0, 0, 1, -1}, dc[] = {1, -1, 0, 0};\n        vector<vector<int>> cost(m, vector<int>(n, INT_MAX));\n        cost[0][0] = 0;\n        priority_queue<array<int, 3>, vector<array<int, 3>>, greater<>> heap;\n        heap.push({0, 0, 0});\n        while (!heap.empty()) {\n            auto [c0, r, c] = heap.top();\n            heap.pop();\n            if (c0 > cost[r][c]) continue;\n            if (r == m - 1 && c == n - 1) return c0;\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dr[k], cc = c + dc[k];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int cand = c0 + (grid[r][c] == k + 1 ? 0 : 1);\n                if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.push({cand, rr, cc}); }\n            }\n        }\n        return -1;\n    }\n};",
+     "python": "class Solution:\n    def minCost(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dirs = ((0, 1), (0, -1), (1, 0), (-1, 0))\n        cost = [[inf] * n for _ in range(m)]\n        cost[0][0] = 0\n        heap = [(0, 0, 0)]\n        while heap:\n            c0, r, c = heappop(heap)\n            if c0 > cost[r][c]:\n                continue\n            if (r, c) == (m - 1, n - 1):\n                return c0\n            for k, (dr, dc) in enumerate(dirs):\n                rr, cc = r + dr, c + dc\n                if 0 <= rr < m and 0 <= cc < n:\n                    cand = c0 + (0 if grid[r][c] == k + 1 else 1)\n                    if cand < cost[rr][cc]:\n                        cost[rr][cc] = cand\n                        heappush(heap, (cand, rr, cc))\n        return -1",
+     "javascript": "var minCost = function(grid) {\n    const m = grid.length, n = grid[0].length, dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];\n    const cost = Array.from({ length: m }, () => new Array(n).fill(Infinity));\n    cost[0][0] = 0;\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    heap.enqueue([0, 0, 0]);\n    while (heap.size()) {\n        const [c0, r, c] = heap.dequeue();\n        if (c0 > cost[r][c]) continue;\n        if (r === m - 1 && c === n - 1) return c0;\n        dirs.forEach(([dr, dc], k) => {\n            const rr = r + dr, cc = c + dc;\n            if (rr < 0 || cc < 0 || rr >= m || cc >= n) return;\n            const cand = c0 + (grid[r][c] === k + 1 ? 0 : 1);\n            if (cand < cost[rr][cc]) { cost[rr][cc] = cand; heap.enqueue([cand, rr, cc]); }\n        });\n    }\n    return -1;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "0-1 BFS with a deque",
+    "idea": "Edge costs are only 0 (follow the sign) or 1 (change it), so a deque gives the Dijkstra order without a heap: 0-cost moves go to the front, 1-cost moves to the back.",
+    "steps": [
+     "Set `cost[0][0] = 0` and push it.",
+     "Pop from the front; for each direction compute the step cost (0 if it matches the sign) and relax the neighbour.",
+     "On an improvement, push to the front for cost 0 and to the back for cost 1.",
+     "Return the bottom-right cost."
+    ],
+    "time": "O(m·n)",
+    "space": "O(m·n)",
+    "why": "Constant work per cell and edge, since deque operations are O(1).",
+    "code": {
+     "java": "class Solution {\n    public int minCost(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } };\n        int[][] cost = new int[m][n];\n        for (int[] row : cost) Arrays.fill(row, Integer.MAX_VALUE);\n        cost[0][0] = 0;\n        Deque<int[]> dq = new ArrayDeque<>();\n        dq.add(new int[] { 0, 0 });\n        while (!dq.isEmpty()) {\n            int[] cell = dq.pollFirst();\n            int r = cell[0], c = cell[1];\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dirs[k][0], cc = c + dirs[k][1];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int step = grid[r][c] == k + 1 ? 0 : 1;\n                if (cost[r][c] + step >= cost[rr][cc]) continue;\n                cost[rr][cc] = cost[r][c] + step;\n                if (step == 0) dq.addFirst(new int[] { rr, cc });\n                else dq.addLast(new int[] { rr, cc });\n            }\n        }\n        return cost[m - 1][n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minCost(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        int dr[] = {0, 0, 1, -1}, dc[] = {1, -1, 0, 0};\n        vector<vector<int>> cost(m, vector<int>(n, INT_MAX));\n        cost[0][0] = 0;\n        deque<pair<int, int>> dq;\n        dq.push_back({0, 0});\n        while (!dq.empty()) {\n            auto [r, c] = dq.front();\n            dq.pop_front();\n            for (int k = 0; k < 4; k++) {\n                int rr = r + dr[k], cc = c + dc[k];\n                if (rr < 0 || cc < 0 || rr >= m || cc >= n) continue;\n                int step = grid[r][c] == k + 1 ? 0 : 1;\n                if (cost[r][c] + step >= cost[rr][cc]) continue;\n                cost[rr][cc] = cost[r][c] + step;\n                if (step == 0) dq.push_front({rr, cc});\n                else dq.push_back({rr, cc});\n            }\n        }\n        return cost[m - 1][n - 1];\n    }\n};",
+     "python": "class Solution:\n    def minCost(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dirs = ((0, 1), (0, -1), (1, 0), (-1, 0))\n        cost = [[inf] * n for _ in range(m)]\n        cost[0][0] = 0\n        dq = deque([(0, 0)])\n        while dq:\n            r, c = dq.popleft()\n            for k, (dr, dc) in enumerate(dirs):\n                rr, cc = r + dr, c + dc\n                if 0 <= rr < m and 0 <= cc < n:\n                    step = 0 if grid[r][c] == k + 1 else 1\n                    if cost[r][c] + step < cost[rr][cc]:\n                        cost[rr][cc] = cost[r][c] + step\n                        if step == 0:\n                            dq.appendleft((rr, cc))\n                        else:\n                            dq.append((rr, cc))\n        return cost[m - 1][n - 1]",
+     "javascript": "var minCost = function(grid) {\n    const m = grid.length, n = grid[0].length, size = m * n, dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];\n    const cost = new Array(size).fill(Infinity);\n    // a deque as a ring buffer: each cell is pushed a bounded number of times\n    const buf = new Int32Array(10 * size + 10);\n    let head = 5 * size + 5, tail = head;\n    cost[0] = 0;\n    buf[tail++] = 0;\n    while (head < tail) {\n        const cell = buf[head++], r = Math.floor(cell / n), c = cell % n;\n        dirs.forEach(([dr, dc], k) => {\n            const rr = r + dr, cc = c + dc;\n            if (rr < 0 || cc < 0 || rr >= m || cc >= n) return;\n            const next = rr * n + cc, step = grid[r][c] === k + 1 ? 0 : 1;\n            if (cost[cell] + step >= cost[next]) return;\n            cost[next] = cost[cell] + step;\n            if (step === 0) buf[--head] = next;\n            else buf[tail++] = next;\n        });\n    }\n    return cost[size - 1];\n};"
+    }
+   }
+  ]
+ },
+ "swim-in-rising-water": {
+  "pattern": "Minimax path: Dijkstra on the highest cell so far (or binary search + BFS)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Binary search the time, check with BFS",
+    "idea": "At time `t` you may use every cell with height ≤ `t`. Being able to cross at time `t` means you can at any later time, so binary search the smallest `t` for which a BFS through cells ≤ `t` connects the corners.",
+    "steps": [
+     "Search `t` in `[grid[0][0], n² − 1]`.",
+     "BFS from `(0, 0)` through cells with height ≤ `t`; check whether `(n − 1, n − 1)` is reached.",
+     "If yes, `hi = t`; else `lo = t + 1`. Return `lo`."
+    ],
+    "time": "O(n²·log n)",
+    "space": "O(n²)",
+    "why": "About log₂(n²) BFS runs of O(n²) each.",
+    "code": {
+     "java": "class Solution {\n    public int swimInWater(int[][] grid) {\n        int n = grid.length, lo = grid[0][0], hi = n * n - 1;\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (reachable(grid, mid)) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n\n    private boolean reachable(int[][] g, int t) {\n        int n = g.length;\n        boolean[][] seen = new boolean[n][n];\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        Deque<int[]> queue = new ArrayDeque<>();\n        queue.add(new int[] { 0, 0 });\n        seen[0][0] = true;\n        while (!queue.isEmpty()) {\n            int[] c = queue.poll();\n            if (c[0] == n - 1 && c[1] == n - 1) return true;\n            for (int[] d : dirs) {\n                int r = c[0] + d[0], col = c[1] + d[1];\n                if (r >= 0 && col >= 0 && r < n && col < n && !seen[r][col] && g[r][col] <= t) {\n                    seen[r][col] = true;\n                    queue.add(new int[] { r, col });\n                }\n            }\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool reachable(vector<vector<int>>& g, int t) {\n        int n = g.size();\n        vector<vector<bool>> seen(n, vector<bool>(n, false));\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        queue<pair<int, int>> q;\n        q.push({0, 0});\n        seen[0][0] = true;\n        while (!q.empty()) {\n            auto [r0, c0] = q.front();\n            q.pop();\n            if (r0 == n - 1 && c0 == n - 1) return true;\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r >= 0 && c >= 0 && r < n && c < n && !seen[r][c] && g[r][c] <= t) {\n                    seen[r][c] = true;\n                    q.push({r, c});\n                }\n            }\n        }\n        return false;\n    }\npublic:\n    int swimInWater(vector<vector<int>>& grid) {\n        int n = grid.size(), lo = grid[0][0], hi = n * n - 1;\n        while (lo < hi) {\n            int mid = (lo + hi) / 2;\n            if (reachable(grid, mid)) hi = mid; else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+     "python": "class Solution:\n    def swimInWater(self, grid: List[List[int]]) -> int:\n        n = len(grid)\n        def reachable(t):\n            seen, queue = {(0, 0)}, deque([(0, 0)])\n            while queue:\n                r0, c0 = queue.popleft()\n                if (r0, c0) == (n - 1, n - 1):\n                    return True\n                for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                    if 0 <= r < n and 0 <= c < n and (r, c) not in seen and grid[r][c] <= t:\n                        seen.add((r, c))\n                        queue.append((r, c))\n            return False\n        lo, hi = grid[0][0], n * n - 1\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if reachable(mid):\n                hi = mid\n            else:\n                lo = mid + 1\n        return lo",
+     "javascript": "var swimInWater = function(grid) {\n    const n = grid.length;\n    const reachable = (t) => {\n        const seen = new Uint8Array(n * n), queue = [[0, 0]];\n        seen[0] = 1;\n        for (let h = 0; h < queue.length; h++) {\n            const [r0, c0] = queue[h];\n            if (r0 === n - 1 && c0 === n - 1) return true;\n            for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n                if (r >= 0 && c >= 0 && r < n && c < n && !seen[r * n + c] && grid[r][c] <= t) {\n                    seen[r * n + c] = 1;\n                    queue.push([r, c]);\n                }\n            }\n        }\n        return false;\n    };\n    let lo = grid[0][0], hi = n * n - 1;\n    while (lo < hi) {\n        const mid = Math.floor((lo + hi) / 2);\n        if (reachable(mid)) hi = mid; else lo = mid + 1;\n    }\n    return lo;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dijkstra on the highest cell on the path",
+    "idea": "The time a route needs is the highest cell on it. Expand cells in order of that value with a min-heap: the first time the bottom-right cell is popped, its value is the answer.",
+    "steps": [
+     "Push `(grid[0][0], 0, 0)`; mark `(0, 0)` visited.",
+     "Pop the cell with the lowest \"highest so far\" `t`; if it is the bottom-right, return `t`.",
+     "For each unvisited neighbour, mark it and push `(max(t, height), r, c)`."
+    ],
+    "time": "O(n²·log n)",
+    "space": "O(n²)",
+    "why": "Each of the n² cells is pushed once, with O(log n²) = O(log n) per heap operation.",
+    "code": {
+     "java": "class Solution {\n    public int swimInWater(int[][] grid) {\n        int n = grid.length;\n        boolean[][] seen = new boolean[n][n];\n        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        heap.add(new int[] { grid[0][0], 0, 0 });\n        seen[0][0] = true;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        while (true) {\n            int[] top = heap.poll();\n            int t = top[0], r0 = top[1], c0 = top[2];\n            if (r0 == n - 1 && c0 == n - 1) return t;\n            for (int[] d : dirs) {\n                int r = r0 + d[0], c = c0 + d[1];\n                if (r < 0 || c < 0 || r >= n || c >= n || seen[r][c]) continue;\n                seen[r][c] = true;\n                heap.add(new int[] { Math.max(t, grid[r][c]), r, c });\n            }\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int swimInWater(vector<vector<int>>& grid) {\n        int n = grid.size();\n        vector<vector<bool>> seen(n, vector<bool>(n, false));\n        priority_queue<array<int, 3>, vector<array<int, 3>>, greater<>> heap;\n        heap.push({grid[0][0], 0, 0});\n        seen[0][0] = true;\n        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};\n        while (true) {\n            auto [t, r0, c0] = heap.top();\n            heap.pop();\n            if (r0 == n - 1 && c0 == n - 1) return t;\n            for (int k = 0; k < 4; k++) {\n                int r = r0 + dr[k], c = c0 + dc[k];\n                if (r < 0 || c < 0 || r >= n || c >= n || seen[r][c]) continue;\n                seen[r][c] = true;\n                heap.push({max(t, grid[r][c]), r, c});\n            }\n        }\n    }\n};",
+     "python": "class Solution:\n    def swimInWater(self, grid: List[List[int]]) -> int:\n        n = len(grid)\n        seen = {(0, 0)}\n        heap = [(grid[0][0], 0, 0)]\n        while True:\n            t, r0, c0 = heappop(heap)\n            if (r0, c0) == (n - 1, n - 1):\n                return t\n            for r, c in ((r0 + 1, c0), (r0 - 1, c0), (r0, c0 + 1), (r0, c0 - 1)):\n                if 0 <= r < n and 0 <= c < n and (r, c) not in seen:\n                    seen.add((r, c))\n                    heappush(heap, (max(t, grid[r][c]), r, c))",
+     "javascript": "var swimInWater = function(grid) {\n    const n = grid.length, seen = new Uint8Array(n * n);\n    const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n    heap.enqueue([grid[0][0], 0, 0]);\n    seen[0] = 1;\n    while (true) {\n        const [t, r0, c0] = heap.dequeue();\n        if (r0 === n - 1 && c0 === n - 1) return t;\n        for (const [r, c] of [[r0 + 1, c0], [r0 - 1, c0], [r0, c0 + 1], [r0, c0 - 1]]) {\n            if (r < 0 || c < 0 || r >= n || c >= n || seen[r * n + c]) continue;\n            seen[r * n + c] = 1;\n            heap.enqueue([Math.max(t, grid[r][c]), r, c]);\n        }\n    }\n};"
+    }
+   }
+  ]
+ },
+ "find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance": {
+  "pattern": "All-pairs shortest paths (Floyd–Warshall, or Dijkstra from every city)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Floyd–Warshall",
+    "idea": "Compute the shortest distance between every pair of cities: for each possible middle city `k`, a route `i → k → j` may beat the best known `i → j`. Then count, for each city, the others within the threshold.",
+    "steps": [
+     "Initialise `dist[i][i] = 0`, `dist[u][v] = dist[v][u] = w` for each road, others ∞.",
+     "For `k`, then `i`, then `j`: `dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])`.",
+     "For each city, count `j != i` with `dist[i][j] <= threshold`; keep the smallest count, preferring the larger city number on ties (scan with `<=`)."
+    ],
+    "time": "O(n³)",
+    "space": "O(n²)",
+    "why": "n³ = 10⁶ relaxations for n = 100, and an n × n table. Simple and ideal for a small, dense graph.",
+    "code": {
+     "java": "class Solution {\n    public int findTheCity(int n, int[][] edges, int distanceThreshold) {\n        int INF = Integer.MAX_VALUE / 2;\n        int[][] dist = new int[n][n];\n        for (int i = 0; i < n; i++) { Arrays.fill(dist[i], INF); dist[i][i] = 0; }\n        for (int[] e : edges) { dist[e[0]][e[1]] = e[2]; dist[e[1]][e[0]] = e[2]; }\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                for (int j = 0; j < n; j++)\n                    if (dist[i][k] + dist[k][j] < dist[i][j]) dist[i][j] = dist[i][k] + dist[k][j];\n        int answer = -1, fewest = Integer.MAX_VALUE;\n        for (int i = 0; i < n; i++) {\n            int count = 0;\n            for (int j = 0; j < n; j++) if (j != i && dist[i][j] <= distanceThreshold) count++;\n            if (count <= fewest) { fewest = count; answer = i; }\n        }\n        return answer;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findTheCity(int n, vector<vector<int>>& edges, int distanceThreshold) {\n        const int INF = INT_MAX / 2;\n        vector<vector<int>> dist(n, vector<int>(n, INF));\n        for (int i = 0; i < n; i++) dist[i][i] = 0;\n        for (auto& e : edges) dist[e[0]][e[1]] = dist[e[1]][e[0]] = e[2];\n        for (int k = 0; k < n; k++)\n            for (int i = 0; i < n; i++)\n                for (int j = 0; j < n; j++)\n                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);\n        int answer = -1, fewest = INT_MAX;\n        for (int i = 0; i < n; i++) {\n            int count = 0;\n            for (int j = 0; j < n; j++) if (j != i && dist[i][j] <= distanceThreshold) count++;\n            if (count <= fewest) { fewest = count; answer = i; }\n        }\n        return answer;\n    }\n};",
+     "python": "class Solution:\n    def findTheCity(self, n: int, edges: List[List[int]], distanceThreshold: int) -> int:\n        dist = [[inf] * n for _ in range(n)]\n        for i in range(n):\n            dist[i][i] = 0\n        for u, v, w in edges:\n            dist[u][v] = dist[v][u] = w\n        for k in range(n):\n            dk = dist[k]\n            for i in range(n):\n                di, dik = dist[i], dist[i][k]\n                for j in range(n):\n                    if dik + dk[j] < di[j]:\n                        di[j] = dik + dk[j]\n        answer, fewest = -1, inf\n        for i in range(n):\n            count = sum(1 for j in range(n) if j != i and dist[i][j] <= distanceThreshold)\n            if count <= fewest:\n                fewest, answer = count, i\n        return answer",
+     "javascript": "var findTheCity = function(n, edges, distanceThreshold) {\n    const dist = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 0 : Infinity)));\n    for (const [u, v, w] of edges) { dist[u][v] = w; dist[v][u] = w; }\n    for (let k = 0; k < n; k++)\n        for (let i = 0; i < n; i++)\n            for (let j = 0; j < n; j++)\n                if (dist[i][k] + dist[k][j] < dist[i][j]) dist[i][j] = dist[i][k] + dist[k][j];\n    let answer = -1, fewest = Infinity;\n    for (let i = 0; i < n; i++) {\n        let count = 0;\n        for (let j = 0; j < n; j++) if (j !== i && dist[i][j] <= distanceThreshold) count++;\n        if (count <= fewest) { fewest = count; answer = i; }\n    }\n    return answer;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dijkstra from every city",
+    "idea": "Run Dijkstra from each city; it can stop expanding once distances exceed the threshold. Count the cities reached within it.",
+    "steps": [
+     "Build adjacency lists (roads go both ways).",
+     "For each city `s`, run Dijkstra, not pushing anything farther than the threshold; count settled cities other than `s`.",
+     "Return the city with the smallest count, choosing the larger number on ties."
+    ],
+    "time": "O(n·E·log n)",
+    "space": "O(n + E)",
+    "why": "n Dijkstra runs of O(E log n). For sparse graphs this beats O(n³); for this dense limit both are fast.",
+    "code": {
+     "java": "class Solution {\n    public int findTheCity(int n, int[][] edges, int distanceThreshold) {\n        List<List<int[]>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(new int[] { e[1], e[2] }); adj.get(e[1]).add(new int[] { e[0], e[2] }); }\n        int answer = -1, fewest = Integer.MAX_VALUE;\n        for (int s = 0; s < n; s++) {\n            int[] dist = new int[n];\n            Arrays.fill(dist, Integer.MAX_VALUE);\n            dist[s] = 0;\n            PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n            heap.add(new int[] { 0, s });\n            int count = 0;\n            while (!heap.isEmpty()) {\n                int[] top = heap.poll();\n                if (top[0] > dist[top[1]]) continue;\n                if (top[1] != s) count++;\n                for (int[] e : adj.get(top[1])) {\n                    int d = top[0] + e[1];\n                    if (d <= distanceThreshold && d < dist[e[0]]) { dist[e[0]] = d; heap.add(new int[] { d, e[0] }); }\n                }\n            }\n            if (count <= fewest) { fewest = count; answer = s; }\n        }\n        return answer;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int findTheCity(int n, vector<vector<int>>& edges, int distanceThreshold) {\n        vector<vector<pair<int, int>>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back({e[1], e[2]}); adj[e[1]].push_back({e[0], e[2]}); }\n        int answer = -1, fewest = INT_MAX;\n        for (int s = 0; s < n; s++) {\n            vector<int> dist(n, INT_MAX);\n            dist[s] = 0;\n            priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;\n            heap.push({0, s});\n            int count = 0;\n            while (!heap.empty()) {\n                auto [d0, u] = heap.top();\n                heap.pop();\n                if (d0 > dist[u]) continue;\n                if (u != s) count++;\n                for (auto [v, w] : adj[u]) {\n                    int d = d0 + w;\n                    if (d <= distanceThreshold && d < dist[v]) { dist[v] = d; heap.push({d, v}); }\n                }\n            }\n            if (count <= fewest) { fewest = count; answer = s; }\n        }\n        return answer;\n    }\n};",
+     "python": "class Solution:\n    def findTheCity(self, n: int, edges: List[List[int]], distanceThreshold: int) -> int:\n        adj = defaultdict(list)\n        for u, v, w in edges:\n            adj[u].append((v, w))\n            adj[v].append((u, w))\n        answer, fewest = -1, inf\n        for s in range(n):\n            dist = {}\n            heap = [(0, s)]\n            while heap:\n                d0, u = heappop(heap)\n                if u in dist:\n                    continue\n                dist[u] = d0\n                for v, w in adj[u]:\n                    if v not in dist and d0 + w <= distanceThreshold:\n                        heappush(heap, (d0 + w, v))\n            count = len(dist) - 1\n            if count <= fewest:\n                fewest, answer = count, s\n        return answer",
+     "javascript": "var findTheCity = function(n, edges, distanceThreshold) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [u, v, w] of edges) { adj[u].push([v, w]); adj[v].push([u, w]); }\n    let answer = -1, fewest = Infinity;\n    for (let s = 0; s < n; s++) {\n        const dist = new Array(n).fill(Infinity);\n        dist[s] = 0;\n        const heap = new PriorityQueue((a, b) => a[0] - b[0]);\n        heap.enqueue([0, s]);\n        let count = 0;\n        while (heap.size()) {\n            const [d0, u] = heap.dequeue();\n            if (d0 > dist[u]) continue;\n            if (u !== s) count++;\n            for (const [v, w] of adj[u]) {\n                const d = d0 + w;\n                if (d <= distanceThreshold && d < dist[v]) { dist[v] = d; heap.enqueue([d, v]); }\n            }\n        }\n        if (count <= fewest) { fewest = count; answer = s; }\n    }\n    return answer;\n};"
+    }
+   }
+  ]
+ }
+}
