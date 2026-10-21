@@ -1,0 +1,432 @@
+{
+ "maximum-depth-of-binary-tree": {
+  "pattern": "Tree DFS returning a value up (depth = 1 + max of the children's depths)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursive DFS",
+    "idea": "The depth of a tree is one more than the deeper of its two subtrees; an empty tree has depth 0.",
+    "steps": [
+     "If `root` is null, return 0.",
+     "Return `1 + max(maxDepth(root.left), maxDepth(root.right))`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Every node is visited once. The recursion stack is as deep as the tree height h: O(log n) when balanced, O(n) for a chain.",
+    "code": {
+     "java": "class Solution {\n    public int maxDepth(TreeNode root) {\n        if (root == null) return 0;\n        return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxDepth(TreeNode* root) {\n        if (!root) return 0;\n        return 1 + max(maxDepth(root->left), maxDepth(root->right));\n    }\n};",
+     "python": "class Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        if not root:\n            return 0\n        return 1 + max(self.maxDepth(root.left), self.maxDepth(root.right))",
+     "javascript": "var maxDepth = function(root) {\n    if (!root) return 0;\n    return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Level-order BFS, counting levels",
+    "idea": "Process the tree one level at a time with a queue; the number of levels is the depth. No recursion, so a very deep tree cannot overflow the call stack.",
+    "steps": [
+     "If `root` is null, return 0. Put `root` in a queue; `depth = 0`.",
+     "While the queue is not empty: take exactly the nodes currently in it (one level), adding their children.",
+     "Increase `depth` after each level; return it."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Every node is enqueued once. The queue holds at most one level, whose size w can be up to about n/2 in a full tree.",
+    "code": {
+     "java": "class Solution {\n    public int maxDepth(TreeNode root) {\n        if (root == null) return 0;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        int depth = 0;\n        while (!queue.isEmpty()) {\n            for (int k = queue.size(); k > 0; k--) {\n                TreeNode node = queue.poll();\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            depth++;\n        }\n        return depth;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxDepth(TreeNode* root) {\n        if (!root) return 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        int depth = 0;\n        while (!q.empty()) {\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            depth++;\n        }\n        return depth;\n    }\n};",
+     "python": "class Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        if not root:\n            return 0\n        queue, depth = deque([root]), 0\n        while queue:\n            for _ in range(len(queue)):\n                node = queue.popleft()\n                if node.left:\n                    queue.append(node.left)\n                if node.right:\n                    queue.append(node.right)\n            depth += 1\n        return depth",
+     "javascript": "var maxDepth = function(root) {\n    if (!root) return 0;\n    let level = [root], depth = 0;\n    while (level.length) {\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n        depth++;\n    }\n    return depth;\n};"
+    }
+   }
+  ]
+ },
+ "same-tree": {
+  "pattern": "Simultaneous DFS over two trees",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Serialise both trees and compare the strings",
+    "idea": "Write each tree as a preorder string that includes a marker for every missing child. Two trees are the same exactly when their strings are equal.",
+    "steps": [
+     "Serialise a tree: for null write `#`, otherwise write the value, then serialise left and right, separated by commas.",
+     "Serialise `p` and `q`.",
+     "Return whether the two strings are equal."
+    ],
+    "time": "O(n + m)",
+    "space": "O(n + m)",
+    "why": "Both trees are walked fully even if they differ at the root, and both strings are stored. The null markers matter: without them `[1,2]` and `[1,null,2]` would look the same.",
+    "code": {
+     "java": "class Solution {\n    public boolean isSameTree(TreeNode p, TreeNode q) {\n        return write(p, new StringBuilder()).toString().equals(write(q, new StringBuilder()).toString());\n    }\n\n    private StringBuilder write(TreeNode t, StringBuilder sb) {\n        if (t == null) return sb.append(\"#,\");\n        sb.append(t.val).append(',');\n        write(t.left, sb);\n        return write(t.right, sb);\n    }\n}",
+     "cpp": "class Solution {\n    void write(TreeNode* t, string& out) {\n        if (!t) { out += \"#,\"; return; }\n        out += to_string(t->val) + \",\";\n        write(t->left, out);\n        write(t->right, out);\n    }\npublic:\n    bool isSameTree(TreeNode* p, TreeNode* q) {\n        string a, b;\n        write(p, a);\n        write(q, b);\n        return a == b;\n    }\n};",
+     "python": "class Solution:\n    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:\n        def write(t):\n            return \"#\" if not t else f\"{t.val},{write(t.left)},{write(t.right)}\"\n        return write(p) == write(q)",
+     "javascript": "var isSameTree = function(p, q) {\n    const write = (t) => (t ? t.val + ',' + write(t.left) + ',' + write(t.right) : '#');\n    return write(p) === write(q);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Recursive comparison",
+    "idea": "Two trees are the same if both are empty, or both roots exist with equal values and their left subtrees and right subtrees are the same.",
+    "steps": [
+     "If both are null, return true; if exactly one is null, return false.",
+     "If the values differ, return false.",
+     "Return `same(p.left, q.left) && same(p.right, q.right)`."
+    ],
+    "time": "O(min(n, m))",
+    "space": "O(h)",
+    "why": "It stops at the first difference, so it visits at most the smaller tree. The stack is as deep as the tree height.",
+    "code": {
+     "java": "class Solution {\n    public boolean isSameTree(TreeNode p, TreeNode q) {\n        if (p == null || q == null) return p == q;\n        return p.val == q.val && isSameTree(p.left, q.left) && isSameTree(p.right, q.right);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isSameTree(TreeNode* p, TreeNode* q) {\n        if (!p || !q) return p == q;\n        return p->val == q->val && isSameTree(p->left, q->left) && isSameTree(p->right, q->right);\n    }\n};",
+     "python": "class Solution:\n    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:\n        if not p or not q:\n            return p is q\n        return p.val == q.val and self.isSameTree(p.left, q.left) and self.isSameTree(p.right, q.right)",
+     "javascript": "var isSameTree = function(p, q) {\n    if (!p || !q) return p === q;\n    return p.val === q.val && isSameTree(p.left, q.left) && isSameTree(p.right, q.right);\n};"
+    }
+   }
+  ]
+ },
+ "invert-binary-tree": {
+  "pattern": "Tree DFS (or BFS) visiting every node once and swapping its children",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursive DFS",
+    "idea": "Mirroring a tree means mirroring both subtrees and swapping them.",
+    "steps": [
+     "If `root` is null, return null.",
+     "Invert the left and right subtrees.",
+     "Swap `root.left` and `root.right`; return `root`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is visited once; the stack is as deep as the tree height h.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode invertTree(TreeNode root) {\n        if (root == null) return null;\n        TreeNode left = invertTree(root.left);\n        root.left = invertTree(root.right);\n        root.right = left;\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* invertTree(TreeNode* root) {\n        if (!root) return nullptr;\n        TreeNode* left = invertTree(root->left);\n        root->left = invertTree(root->right);\n        root->right = left;\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        if root:\n            root.left, root.right = self.invertTree(root.right), self.invertTree(root.left)\n        return root",
+     "javascript": "var invertTree = function(root) {\n    if (!root) return null;\n    [root.left, root.right] = [invertTree(root.right), invertTree(root.left)];\n    return root;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative BFS with a queue",
+    "idea": "The order in which nodes are visited does not matter: every node just needs its children swapped once. A queue visits them all without recursion.",
+    "steps": [
+     "If `root` is null, return it. Put `root` in a queue.",
+     "Pop a node, swap its children, and push the non-null children.",
+     "Repeat until the queue is empty; return `root`."
+    ],
+    "time": "O(n)",
+    "space": "O(w)",
+    "why": "Each node is processed once; the queue holds at most one level (width w).",
+    "code": {
+     "java": "class Solution {\n    public TreeNode invertTree(TreeNode root) {\n        if (root == null) return null;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            TreeNode node = queue.poll();\n            TreeNode t = node.left; node.left = node.right; node.right = t;\n            if (node.left != null) queue.add(node.left);\n            if (node.right != null) queue.add(node.right);\n        }\n        return root;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* invertTree(TreeNode* root) {\n        if (!root) return nullptr;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            TreeNode* node = q.front();\n            q.pop();\n            swap(node->left, node->right);\n            if (node->left) q.push(node->left);\n            if (node->right) q.push(node->right);\n        }\n        return root;\n    }\n};",
+     "python": "class Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        queue = deque([root] if root else [])\n        while queue:\n            node = queue.popleft()\n            node.left, node.right = node.right, node.left\n            if node.left:\n                queue.append(node.left)\n            if node.right:\n                queue.append(node.right)\n        return root",
+     "javascript": "var invertTree = function(root) {\n    const queue = root ? [root] : [];\n    for (let i = 0; i < queue.length; i++) {\n        const node = queue[i];\n        [node.left, node.right] = [node.right, node.left];\n        if (node.left) queue.push(node.left);\n        if (node.right) queue.push(node.right);\n    }\n    return root;\n};"
+    }
+   }
+  ]
+ },
+ "symmetric-tree": {
+  "pattern": "Mirror DFS: compare left.left with right.right and left.right with right.left",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Build a mirrored copy and compare",
+    "idea": "A tree is symmetric when it equals its own mirror image. Build a mirrored copy, then check the two trees are the same.",
+    "steps": [
+     "Build `mirror(t)`: a new node with the same value, whose left is `mirror(t.right)` and right is `mirror(t.left)`.",
+     "Compare `root` and `mirror(root)` with the Same Tree check."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "The copy has n new nodes; the comparison is O(n).",
+    "code": {
+     "java": "class Solution {\n    public boolean isSymmetric(TreeNode root) {\n        return same(root, mirror(root));\n    }\n\n    private TreeNode mirror(TreeNode t) {\n        return t == null ? null : new TreeNode(t.val, mirror(t.right), mirror(t.left));\n    }\n\n    private boolean same(TreeNode a, TreeNode b) {\n        if (a == null || b == null) return a == b;\n        return a.val == b.val && same(a.left, b.left) && same(a.right, b.right);\n    }\n}",
+     "cpp": "class Solution {\n    TreeNode* mirror(TreeNode* t) {\n        return t ? new TreeNode(t->val, mirror(t->right), mirror(t->left)) : nullptr;\n    }\n    bool same(TreeNode* a, TreeNode* b) {\n        if (!a || !b) return a == b;\n        return a->val == b->val && same(a->left, b->left) && same(a->right, b->right);\n    }\npublic:\n    bool isSymmetric(TreeNode* root) {\n        return same(root, mirror(root));\n    }\n};",
+     "python": "class Solution:\n    def isSymmetric(self, root: Optional[TreeNode]) -> bool:\n        def mirror(t):\n            return TreeNode(t.val, mirror(t.right), mirror(t.left)) if t else None\n        def same(a, b):\n            if not a or not b:\n                return a is b\n            return a.val == b.val and same(a.left, b.left) and same(a.right, b.right)\n        return same(root, mirror(root))",
+     "javascript": "var isSymmetric = function(root) {\n    const mirror = (t) => (t ? new TreeNode(t.val, mirror(t.right), mirror(t.left)) : null);\n    const same = (a, b) => {\n        if (!a || !b) return a === b;\n        return a.val === b.val && same(a.left, b.left) && same(a.right, b.right);\n    };\n    return same(root, mirror(root));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Compare the two halves as mirror images",
+    "idea": "The left and right subtrees mirror each other when their roots are equal, the outer children mirror each other (`a.left` with `b.right`), and the inner children do (`a.right` with `b.left`).",
+    "steps": [
+     "`mirror(a, b)`: if both are null, true; if one is null, false.",
+     "Return `a.val == b.val && mirror(a.left, b.right) && mirror(a.right, b.left)`.",
+     "Answer `mirror(root.left, root.right)`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is visited once with no copy; only the recursion stack (height h) is used.",
+    "code": {
+     "java": "class Solution {\n    public boolean isSymmetric(TreeNode root) {\n        return mirror(root.left, root.right);\n    }\n\n    private boolean mirror(TreeNode a, TreeNode b) {\n        if (a == null || b == null) return a == b;\n        return a.val == b.val && mirror(a.left, b.right) && mirror(a.right, b.left);\n    }\n}",
+     "cpp": "class Solution {\n    bool mirror(TreeNode* a, TreeNode* b) {\n        if (!a || !b) return a == b;\n        return a->val == b->val && mirror(a->left, b->right) && mirror(a->right, b->left);\n    }\npublic:\n    bool isSymmetric(TreeNode* root) {\n        return mirror(root->left, root->right);\n    }\n};",
+     "python": "class Solution:\n    def isSymmetric(self, root: Optional[TreeNode]) -> bool:\n        def mirror(a, b):\n            if not a or not b:\n                return a is b\n            return a.val == b.val and mirror(a.left, b.right) and mirror(a.right, b.left)\n        return mirror(root.left, root.right)",
+     "javascript": "var isSymmetric = function(root) {\n    const mirror = (a, b) => {\n        if (!a || !b) return a === b;\n        return a.val === b.val && mirror(a.left, b.right) && mirror(a.right, b.left);\n    };\n    return mirror(root.left, root.right);\n};"
+    }
+   }
+  ]
+ },
+ "path-sum": {
+  "pattern": "Top-down DFS carrying the remaining sum",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Collect every root-to-leaf sum",
+    "idea": "Walk the tree recording the sum of every root-to-leaf path, then check whether `targetSum` is among them.",
+    "steps": [
+     "DFS carrying the running sum; at a leaf, append the sum to a list.",
+     "Return whether `targetSum` is in the list (false for an empty tree)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every node is visited, and the list can hold up to about n/2 leaf sums even when the first path already matches.",
+    "code": {
+     "java": "class Solution {\n    public boolean hasPathSum(TreeNode root, int targetSum) {\n        List<Integer> sums = new ArrayList<>();\n        collect(root, 0, sums);\n        return sums.contains(targetSum);\n    }\n\n    private void collect(TreeNode t, int sum, List<Integer> sums) {\n        if (t == null) return;\n        sum += t.val;\n        if (t.left == null && t.right == null) sums.add(sum);\n        collect(t.left, sum, sums);\n        collect(t.right, sum, sums);\n    }\n}",
+     "cpp": "class Solution {\n    void collect(TreeNode* t, int sum, vector<int>& sums) {\n        if (!t) return;\n        sum += t->val;\n        if (!t->left && !t->right) sums.push_back(sum);\n        collect(t->left, sum, sums);\n        collect(t->right, sum, sums);\n    }\npublic:\n    bool hasPathSum(TreeNode* root, int targetSum) {\n        vector<int> sums;\n        collect(root, 0, sums);\n        return find(sums.begin(), sums.end(), targetSum) != sums.end();\n    }\n};",
+     "python": "class Solution:\n    def hasPathSum(self, root: Optional[TreeNode], targetSum: int) -> bool:\n        sums = []\n        def collect(t, s):\n            if not t:\n                return\n            s += t.val\n            if not t.left and not t.right:\n                sums.append(s)\n            collect(t.left, s)\n            collect(t.right, s)\n        collect(root, 0)\n        return targetSum in sums",
+     "javascript": "var hasPathSum = function(root, targetSum) {\n    const sums = [];\n    const collect = (t, s) => {\n        if (!t) return;\n        s += t.val;\n        if (!t.left && !t.right) sums.push(s);\n        collect(t.left, s);\n        collect(t.right, s);\n    };\n    collect(root, 0);\n    return sums.includes(targetSum);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS subtracting as you go",
+    "idea": "Pass down how much is still needed. At a leaf, the path works exactly when the remainder equals the leaf's value. Return as soon as one path works.",
+    "steps": [
+     "If `root` is null, return false.",
+     "If `root` is a leaf, return `root.val == targetSum`.",
+     "Otherwise return `hasPathSum(left, targetSum − root.val) || hasPathSum(right, targetSum − root.val)`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node at most once, stopping early on success; only the recursion stack is used.",
+    "code": {
+     "java": "class Solution {\n    public boolean hasPathSum(TreeNode root, int targetSum) {\n        if (root == null) return false;\n        if (root.left == null && root.right == null) return root.val == targetSum;\n        int rest = targetSum - root.val;\n        return hasPathSum(root.left, rest) || hasPathSum(root.right, rest);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool hasPathSum(TreeNode* root, int targetSum) {\n        if (!root) return false;\n        if (!root->left && !root->right) return root->val == targetSum;\n        int rest = targetSum - root->val;\n        return hasPathSum(root->left, rest) || hasPathSum(root->right, rest);\n    }\n};",
+     "python": "class Solution:\n    def hasPathSum(self, root: Optional[TreeNode], targetSum: int) -> bool:\n        if not root:\n            return False\n        if not root.left and not root.right:\n            return root.val == targetSum\n        rest = targetSum - root.val\n        return self.hasPathSum(root.left, rest) or self.hasPathSum(root.right, rest)",
+     "javascript": "var hasPathSum = function(root, targetSum) {\n    if (!root) return false;\n    if (!root.left && !root.right) return root.val === targetSum;\n    const rest = targetSum - root.val;\n    return hasPathSum(root.left, rest) || hasPathSum(root.right, rest);\n};"
+    }
+   }
+  ]
+ },
+ "balanced-binary-tree": {
+  "pattern": "Bottom-up DFS returning height, with −1 meaning \"already unbalanced\"",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Top-down: compute heights at every node",
+    "idea": "Check the definition directly: at each node, compute both subtree heights from scratch and compare them, then check both subtrees the same way.",
+    "steps": [
+     "`height(t)` = 0 for null, else `1 + max(height(left), height(right))`.",
+     "`isBalanced(t)`: true for null; otherwise `|height(left) − height(right)| <= 1` and both subtrees are balanced."
+    ],
+    "time": "O(n²)",
+    "space": "O(h)",
+    "why": "Each node's height is recomputed once for every ancestor: O(n·h), which is O(n²) for a chain-like tree.",
+    "code": {
+     "java": "class Solution {\n    public boolean isBalanced(TreeNode root) {\n        if (root == null) return true;\n        return Math.abs(height(root.left) - height(root.right)) <= 1 && isBalanced(root.left) && isBalanced(root.right);\n    }\n\n    private int height(TreeNode t) {\n        return t == null ? 0 : 1 + Math.max(height(t.left), height(t.right));\n    }\n}",
+     "cpp": "class Solution {\n    int height(TreeNode* t) {\n        return t ? 1 + max(height(t->left), height(t->right)) : 0;\n    }\npublic:\n    bool isBalanced(TreeNode* root) {\n        if (!root) return true;\n        return abs(height(root->left) - height(root->right)) <= 1 && isBalanced(root->left) && isBalanced(root->right);\n    }\n};",
+     "python": "class Solution:\n    def isBalanced(self, root: Optional[TreeNode]) -> bool:\n        def height(t):\n            return 1 + max(height(t.left), height(t.right)) if t else 0\n        if not root:\n            return True\n        return abs(height(root.left) - height(root.right)) <= 1 and self.isBalanced(root.left) and self.isBalanced(root.right)",
+     "javascript": "var isBalanced = function(root) {\n    const height = (t) => (t ? 1 + Math.max(height(t.left), height(t.right)) : 0);\n    if (!root) return true;\n    return Math.abs(height(root.left) - height(root.right)) <= 1 && isBalanced(root.left) && isBalanced(root.right);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up heights with an early stop",
+    "idea": "Compute each node's height once from its children's heights. If any subtree is unbalanced, return −1 and pass it straight up, skipping the rest of the work.",
+    "steps": [
+     "`check(t)`: return 0 for null.",
+     "`l = check(t.left)`; if −1, return −1. Same for `r = check(t.right)`.",
+     "If `|l − r| > 1`, return −1; otherwise return `1 + max(l, r)`.",
+     "The tree is balanced when `check(root) != −1`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is visited once and its height reused by its parent; the stack is as deep as the height.",
+    "code": {
+     "java": "class Solution {\n    public boolean isBalanced(TreeNode root) {\n        return check(root) != -1;\n    }\n\n    private int check(TreeNode t) {\n        if (t == null) return 0;\n        int l = check(t.left);\n        if (l == -1) return -1;\n        int r = check(t.right);\n        if (r == -1 || Math.abs(l - r) > 1) return -1;\n        return 1 + Math.max(l, r);\n    }\n}",
+     "cpp": "class Solution {\n    int check(TreeNode* t) {\n        if (!t) return 0;\n        int l = check(t->left);\n        if (l == -1) return -1;\n        int r = check(t->right);\n        if (r == -1 || abs(l - r) > 1) return -1;\n        return 1 + max(l, r);\n    }\npublic:\n    bool isBalanced(TreeNode* root) {\n        return check(root) != -1;\n    }\n};",
+     "python": "class Solution:\n    def isBalanced(self, root: Optional[TreeNode]) -> bool:\n        def check(t):\n            if not t:\n                return 0\n            l = check(t.left)\n            if l == -1:\n                return -1\n            r = check(t.right)\n            if r == -1 or abs(l - r) > 1:\n                return -1\n            return 1 + max(l, r)\n        return check(root) != -1",
+     "javascript": "var isBalanced = function(root) {\n    const check = (t) => {\n        if (!t) return 0;\n        const l = check(t.left);\n        if (l === -1) return -1;\n        const r = check(t.right);\n        if (r === -1 || Math.abs(l - r) > 1) return -1;\n        return 1 + Math.max(l, r);\n    };\n    return check(root) !== -1;\n};"
+    }
+   }
+  ]
+ },
+ "count-good-nodes-in-binary-tree": {
+  "pattern": "Top-down DFS carrying the path maximum",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep the whole path and scan it at every node",
+    "idea": "Walk the tree keeping the list of values on the current root-to-node path. At each node, scan that list to see whether anything is larger.",
+    "steps": [
+     "DFS with a `path` list: push the node's value before visiting its children and pop it afterwards.",
+     "At each node, if no value in `path` is greater than the node's value, count it.",
+     "Return the count."
+    ],
+    "time": "O(n·h)",
+    "space": "O(h)",
+    "why": "Each node scans a path of length up to the height h: O(n²) for a chain-like tree.",
+    "code": {
+     "java": "class Solution {\n    private final List<Integer> path = new ArrayList<>();\n\n    public int goodNodes(TreeNode root) {\n        if (root == null) return 0;\n        boolean good = true;\n        for (int v : path) if (v > root.val) { good = false; break; }\n        path.add(root.val);\n        int count = (good ? 1 : 0) + goodNodes(root.left) + goodNodes(root.right);\n        path.remove(path.size() - 1);\n        return count;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> path;\npublic:\n    int goodNodes(TreeNode* root) {\n        if (!root) return 0;\n        bool good = true;\n        for (int v : path) if (v > root->val) { good = false; break; }\n        path.push_back(root->val);\n        int count = (good ? 1 : 0) + goodNodes(root->left) + goodNodes(root->right);\n        path.pop_back();\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def goodNodes(self, root: TreeNode) -> int:\n        path = []\n        def dfs(t):\n            if not t:\n                return 0\n            good = all(v <= t.val for v in path)\n            path.append(t.val)\n            count = (1 if good else 0) + dfs(t.left) + dfs(t.right)\n            path.pop()\n            return count\n        return dfs(root)",
+     "javascript": "var goodNodes = function(root) {\n    const path = [];\n    const dfs = (t) => {\n        if (!t) return 0;\n        const good = path.every((v) => v <= t.val);\n        path.push(t.val);\n        const count = (good ? 1 : 0) + dfs(t.left) + dfs(t.right);\n        path.pop();\n        return count;\n    };\n    return dfs(root);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DFS carrying the maximum so far",
+    "idea": "Only the largest value on the path matters, so pass that one number down instead of the whole path.",
+    "steps": [
+     "`dfs(t, maxSoFar)`: return 0 for null.",
+     "The node is good if `t.val >= maxSoFar`.",
+     "Recurse into both children with `max(maxSoFar, t.val)` and add up the counts.",
+     "Start with `dfs(root, root.val)`."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "O(1) work per node; only the recursion stack is used.",
+    "code": {
+     "java": "class Solution {\n    public int goodNodes(TreeNode root) {\n        return dfs(root, root.val);\n    }\n\n    private int dfs(TreeNode t, int maxSoFar) {\n        if (t == null) return 0;\n        int max = Math.max(maxSoFar, t.val);\n        return (t.val >= maxSoFar ? 1 : 0) + dfs(t.left, max) + dfs(t.right, max);\n    }\n}",
+     "cpp": "class Solution {\n    int dfs(TreeNode* t, int maxSoFar) {\n        if (!t) return 0;\n        int mx = max(maxSoFar, t->val);\n        return (t->val >= maxSoFar ? 1 : 0) + dfs(t->left, mx) + dfs(t->right, mx);\n    }\npublic:\n    int goodNodes(TreeNode* root) {\n        return dfs(root, root->val);\n    }\n};",
+     "python": "class Solution:\n    def goodNodes(self, root: TreeNode) -> int:\n        def dfs(t, max_so_far):\n            if not t:\n                return 0\n            m = max(max_so_far, t.val)\n            return (1 if t.val >= max_so_far else 0) + dfs(t.left, m) + dfs(t.right, m)\n        return dfs(root, root.val)",
+     "javascript": "var goodNodes = function(root) {\n    const dfs = (t, maxSoFar) => {\n        if (!t) return 0;\n        const m = Math.max(maxSoFar, t.val);\n        return (t.val >= maxSoFar ? 1 : 0) + dfs(t.left, m) + dfs(t.right, m);\n    };\n    return dfs(root, root.val);\n};"
+    }
+   }
+  ]
+ },
+ "lowest-common-ancestor-of-a-binary-tree": {
+  "pattern": "Post-order DFS: the first node where p and q come from different sides (or it is one of them)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Find both root-to-node paths and compare them",
+    "idea": "Record the path from the root to `p` and from the root to `q`. Both paths start the same way; the last node they share is the lowest common ancestor.",
+    "steps": [
+     "DFS to find the path (list of nodes) from `root` to `p`, and likewise to `q`.",
+     "Walk both paths together while the nodes are the same.",
+     "Return the last shared node."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two DFS passes over the tree; each path can be up to n nodes long in a chain-like tree.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {\n        List<TreeNode> a = new ArrayList<>(), b = new ArrayList<>();\n        path(root, p, a);\n        path(root, q, b);\n        TreeNode lca = null;\n        for (int i = 0; i < Math.min(a.size(), b.size()) && a.get(i) == b.get(i); i++) lca = a.get(i);\n        return lca;\n    }\n\n    private boolean path(TreeNode t, TreeNode target, List<TreeNode> out) {\n        if (t == null) return false;\n        out.add(t);\n        if (t == target || path(t.left, target, out) || path(t.right, target, out)) return true;\n        out.remove(out.size() - 1);\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool path(TreeNode* t, TreeNode* target, vector<TreeNode*>& out) {\n        if (!t) return false;\n        out.push_back(t);\n        if (t == target || path(t->left, target, out) || path(t->right, target, out)) return true;\n        out.pop_back();\n        return false;\n    }\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        vector<TreeNode*> a, b;\n        path(root, p, a);\n        path(root, q, b);\n        TreeNode* lca = nullptr;\n        for (size_t i = 0; i < min(a.size(), b.size()) && a[i] == b[i]; i++) lca = a[i];\n        return lca;\n    }\n};",
+     "python": "class Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        def path(t, target, out):\n            if not t:\n                return False\n            out.append(t)\n            if t is target or path(t.left, target, out) or path(t.right, target, out):\n                return True\n            out.pop()\n            return False\n        a, b = [], []\n        path(root, p, a)\n        path(root, q, b)\n        lca = None\n        for x, y in zip(a, b):\n            if x is not y:\n                break\n            lca = x\n        return lca",
+     "javascript": "var lowestCommonAncestor = function(root, p, q) {\n    const path = (t, target, out) => {\n        if (!t) return false;\n        out.push(t);\n        if (t === target || path(t.left, target, out) || path(t.right, target, out)) return true;\n        out.pop();\n        return false;\n    };\n    const a = [], b = [];\n    path(root, p, a);\n    path(root, q, b);\n    let lca = null;\n    for (let i = 0; i < Math.min(a.length, b.length) && a[i] === b[i]; i++) lca = a[i];\n    return lca;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One recursive pass",
+    "idea": "Ask each subtree \"do you contain p or q?\" by returning the node found (or null). The first node where both the left and right answers are non-null is the LCA; if a node is itself `p` or `q`, it is the answer for its subtree.",
+    "steps": [
+     "If `root` is null, `p` or `q`, return `root`.",
+     "Recurse: `left = lca(root.left)`, `right = lca(root.right)`.",
+     "If both are non-null, `p` and `q` are on different sides: return `root`.",
+     "Otherwise return whichever one is non-null."
+    ],
+    "time": "O(n)",
+    "space": "O(h)",
+    "why": "Each node is visited once; the recursion stack is as deep as the tree height. Returning a node that is `p` (or `q`) handles the case where one is an ancestor of the other.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {\n        if (root == null || root == p || root == q) return root;\n        TreeNode left = lowestCommonAncestor(root.left, p, q);\n        TreeNode right = lowestCommonAncestor(root.right, p, q);\n        if (left != null && right != null) return root;\n        return left != null ? left : right;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        if (!root || root == p || root == q) return root;\n        TreeNode* left = lowestCommonAncestor(root->left, p, q);\n        TreeNode* right = lowestCommonAncestor(root->right, p, q);\n        if (left && right) return root;\n        return left ? left : right;\n    }\n};",
+     "python": "class Solution:\n    def lowestCommonAncestor(self, root: 'TreeNode', p: 'TreeNode', q: 'TreeNode') -> 'TreeNode':\n        if not root or root is p or root is q:\n            return root\n        left = self.lowestCommonAncestor(root.left, p, q)\n        right = self.lowestCommonAncestor(root.right, p, q)\n        if left and right:\n            return root\n        return left or right",
+     "javascript": "var lowestCommonAncestor = function(root, p, q) {\n    if (!root || root === p || root === q) return root;\n    const left = lowestCommonAncestor(root.left, p, q);\n    const right = lowestCommonAncestor(root.right, p, q);\n    if (left && right) return root;\n    return left ?? right;\n};"
+    }
+   }
+  ]
+ },
+ "construct-binary-tree-from-preorder-and-inorder-traversal": {
+  "pattern": "Divide and conquer: preorder gives the root, inorder splits left and right subtrees",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursion with a linear search for the root",
+    "idea": "The first preorder value is the root. Its position in the inorder list splits the inorder list into the left subtree (before it) and the right subtree (after it); the sizes tell how to split the preorder list too.",
+    "steps": [
+     "`build(preStart, inStart, inEnd)`: if the inorder range is empty, return null.",
+     "The root value is `preorder[preStart]`; scan `inorder[inStart..inEnd]` for it at index `k`.",
+     "The left subtree has `k − inStart` nodes: build it from `preStart + 1` and inorder `[inStart, k − 1]`.",
+     "Build the right subtree from `preStart + 1 + leftSize` and inorder `[k + 1, inEnd]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each of the n nodes scans its inorder range, which can be O(n) long in a skewed tree. Recursion depth is up to n.",
+    "code": {
+     "java": "class Solution {\n    public TreeNode buildTree(int[] preorder, int[] inorder) {\n        return build(preorder, inorder, 0, 0, inorder.length - 1);\n    }\n\n    private TreeNode build(int[] pre, int[] in, int preStart, int inStart, int inEnd) {\n        if (inStart > inEnd) return null;\n        TreeNode root = new TreeNode(pre[preStart]);\n        int k = inStart;\n        while (in[k] != root.val) k++;\n        int leftSize = k - inStart;\n        root.left = build(pre, in, preStart + 1, inStart, k - 1);\n        root.right = build(pre, in, preStart + 1 + leftSize, k + 1, inEnd);\n        return root;\n    }\n}",
+     "cpp": "class Solution {\n    TreeNode* build(vector<int>& pre, vector<int>& in, int preStart, int inStart, int inEnd) {\n        if (inStart > inEnd) return nullptr;\n        TreeNode* root = new TreeNode(pre[preStart]);\n        int k = inStart;\n        while (in[k] != root->val) k++;\n        int leftSize = k - inStart;\n        root->left = build(pre, in, preStart + 1, inStart, k - 1);\n        root->right = build(pre, in, preStart + 1 + leftSize, k + 1, inEnd);\n        return root;\n    }\npublic:\n    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {\n        return build(preorder, inorder, 0, 0, (int) inorder.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:\n        def build(pre_start, in_start, in_end):\n            if in_start > in_end:\n                return None\n            root = TreeNode(preorder[pre_start])\n            k = inorder.index(root.val, in_start, in_end + 1)\n            left_size = k - in_start\n            root.left = build(pre_start + 1, in_start, k - 1)\n            root.right = build(pre_start + 1 + left_size, k + 1, in_end)\n            return root\n        return build(0, 0, len(inorder) - 1)",
+     "javascript": "var buildTree = function(preorder, inorder) {\n    const build = (preStart, inStart, inEnd) => {\n        if (inStart > inEnd) return null;\n        const root = new TreeNode(preorder[preStart]);\n        let k = inStart;\n        while (inorder[k] !== root.val) k++;\n        const leftSize = k - inStart;\n        root.left = build(preStart + 1, inStart, k - 1);\n        root.right = build(preStart + 1 + leftSize, k + 1, inEnd);\n        return root;\n    };\n    return build(0, 0, inorder.length - 1);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Recursion with a value → inorder-index map",
+    "idea": "Same divide and conquer, but a hash map from value to inorder index finds each root in O(1) (values are distinct). Consuming preorder with a single moving index removes the size arithmetic.",
+    "steps": [
+     "Map every inorder value to its index; set `next = 0` (the next preorder position).",
+     "`build(lo, hi)`: if `lo > hi`, return null.",
+     "Take the root value `preorder[next++]` and its inorder index `k`.",
+     "Build the left subtree from `[lo, k − 1]` first (preorder lists the left subtree before the right), then the right from `[k + 1, hi]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node is created once with O(1) lookups. The map takes O(n) and the recursion is up to n deep for a skewed tree.",
+    "code": {
+     "java": "class Solution {\n    private final Map<Integer, Integer> index = new HashMap<>();\n    private int next = 0;\n\n    public TreeNode buildTree(int[] preorder, int[] inorder) {\n        for (int i = 0; i < inorder.length; i++) index.put(inorder[i], i);\n        return build(preorder, 0, inorder.length - 1);\n    }\n\n    private TreeNode build(int[] pre, int lo, int hi) {\n        if (lo > hi) return null;\n        TreeNode root = new TreeNode(pre[next++]);\n        int k = index.get(root.val);\n        root.left = build(pre, lo, k - 1);\n        root.right = build(pre, k + 1, hi);\n        return root;\n    }\n}",
+     "cpp": "class Solution {\n    unordered_map<int, int> index;\n    int next = 0;\n    TreeNode* build(vector<int>& pre, int lo, int hi) {\n        if (lo > hi) return nullptr;\n        TreeNode* root = new TreeNode(pre[next++]);\n        int k = index[root->val];\n        root->left = build(pre, lo, k - 1);\n        root->right = build(pre, k + 1, hi);\n        return root;\n    }\npublic:\n    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {\n        for (int i = 0; i < (int) inorder.size(); i++) index[inorder[i]] = i;\n        return build(preorder, 0, (int) inorder.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:\n        index = {v: i for i, v in enumerate(inorder)}\n        nxt = 0\n        def build(lo, hi):\n            nonlocal nxt\n            if lo > hi:\n                return None\n            root = TreeNode(preorder[nxt])\n            nxt += 1\n            k = index[root.val]\n            root.left = build(lo, k - 1)\n            root.right = build(k + 1, hi)\n            return root\n        return build(0, len(inorder) - 1)",
+     "javascript": "var buildTree = function(preorder, inorder) {\n    const index = new Map(inorder.map((v, i) => [v, i]));\n    let next = 0;\n    const build = (lo, hi) => {\n        if (lo > hi) return null;\n        const root = new TreeNode(preorder[next++]);\n        const k = index.get(root.val);\n        root.left = build(lo, k - 1);\n        root.right = build(k + 1, hi);\n        return root;\n    };\n    return build(0, inorder.length - 1);\n};"
+    }
+   }
+  ]
+ },
+ "serialize-and-deserialize-binary-tree": {
+  "pattern": "Preorder (or level-order) traversal with explicit null markers",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Level order (BFS) with null markers",
+    "idea": "Write the tree level by level, writing `#` for each missing child, like the test format. To rebuild, read values in the same order: each node read from the queue takes the next two tokens as its children.",
+    "steps": [
+     "Serialise: BFS from the root; for each dequeued node write its value and enqueue both children; for null write `#`.",
+     "Deserialise: split on commas. If the first token is `#`, the tree is empty.",
+     "Create the root and put it in a queue; for each dequeued node, the next two tokens are its left and right children (create and enqueue those that are not `#`)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node and each null marker (n + 1 of them) is written and read once. No recursion, so a 10⁵-deep chain is no problem.",
+    "code": {
+     "java": "class Codec {\n    public Codec() {\n    }\n\n    public String serialize(TreeNode root) {\n        StringBuilder sb = new StringBuilder();\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        if (root == null) return \"#\";\n        queue.add(root);\n        sb.append(root.val);\n        while (!queue.isEmpty()) {\n            TreeNode node = queue.poll();\n            for (TreeNode child : new TreeNode[] { node.left, node.right }) {\n                if (child == null) sb.append(\",#\");\n                else { sb.append(',').append(child.val); queue.add(child); }\n            }\n        }\n        return sb.toString();\n    }\n\n    public TreeNode deserialize(String data) {\n        String[] t = data.split(\",\");\n        if (t[0].equals(\"#\")) return null;\n        TreeNode root = new TreeNode(Integer.parseInt(t[0]));\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        int i = 1;\n        while (!queue.isEmpty()) {\n            TreeNode node = queue.poll();\n            if (!t[i].equals(\"#\")) { node.left = new TreeNode(Integer.parseInt(t[i])); queue.add(node.left); }\n            i++;\n            if (!t[i].equals(\"#\")) { node.right = new TreeNode(Integer.parseInt(t[i])); queue.add(node.right); }\n            i++;\n        }\n        return root;\n    }\n}",
+     "cpp": "class Codec {\npublic:\n    Codec() {}\n\n    string serialize(TreeNode* root) {\n        if (!root) return \"#\";\n        string out = to_string(root->val);\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            TreeNode* node = q.front();\n            q.pop();\n            for (TreeNode* child : {node->left, node->right}) {\n                if (!child) out += \",#\";\n                else { out += \",\" + to_string(child->val); q.push(child); }\n            }\n        }\n        return out;\n    }\n\n    TreeNode* deserialize(string data) {\n        vector<string> t;\n        stringstream ss(data);\n        string tok;\n        while (getline(ss, tok, ',')) t.push_back(tok);\n        if (t[0] == \"#\") return nullptr;\n        TreeNode* root = new TreeNode(stoi(t[0]));\n        queue<TreeNode*> q;\n        q.push(root);\n        size_t i = 1;\n        while (!q.empty()) {\n            TreeNode* node = q.front();\n            q.pop();\n            if (t[i] != \"#\") { node->left = new TreeNode(stoi(t[i])); q.push(node->left); }\n            i++;\n            if (t[i] != \"#\") { node->right = new TreeNode(stoi(t[i])); q.push(node->right); }\n            i++;\n        }\n        return root;\n    }\n};",
+     "python": "class Codec:\n\n    def __init__(self):\n        pass\n\n    def serialize(self, root: Optional[TreeNode]) -> str:\n        if not root:\n            return \"#\"\n        out, queue = [str(root.val)], deque([root])\n        while queue:\n            node = queue.popleft()\n            for child in (node.left, node.right):\n                if child:\n                    out.append(str(child.val))\n                    queue.append(child)\n                else:\n                    out.append(\"#\")\n        return \",\".join(out)\n\n    def deserialize(self, data: str) -> Optional[TreeNode]:\n        t = data.split(\",\")\n        if t[0] == \"#\":\n            return None\n        root = TreeNode(int(t[0]))\n        queue, i = deque([root]), 1\n        while queue:\n            node = queue.popleft()\n            if t[i] != \"#\":\n                node.left = TreeNode(int(t[i]))\n                queue.append(node.left)\n            if t[i + 1] != \"#\":\n                node.right = TreeNode(int(t[i + 1]))\n                queue.append(node.right)\n            i += 2\n        return root",
+     "javascript": "var serialize = function(root) {\n    if (!root) return '#';\n    const out = [String(root.val)], queue = [root];\n    for (let h = 0; h < queue.length; h++) {\n        for (const child of [queue[h].left, queue[h].right]) {\n            if (child) { out.push(String(child.val)); queue.push(child); }\n            else out.push('#');\n        }\n    }\n    return out.join(',');\n};\n\nvar deserialize = function(data) {\n    const t = data.split(',');\n    if (t[0] === '#') return null;\n    const root = new TreeNode(Number(t[0])), queue = [root];\n    let i = 1;\n    for (let h = 0; h < queue.length; h++) {\n        const node = queue[h];\n        if (t[i] !== '#') { node.left = new TreeNode(Number(t[i])); queue.push(node.left); }\n        i++;\n        if (t[i] !== '#') { node.right = new TreeNode(Number(t[i])); queue.push(node.right); }\n        i++;\n    }\n    return root;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Preorder DFS with null markers",
+    "idea": "Write the root, then the left subtree, then the right subtree, with `#` for every null. Because every null is marked, preorder alone pins down the tree: reading tokens in the same order rebuilds it recursively.",
+    "steps": [
+     "Serialise: `write(t)` writes `#` for null, else the value, then `write(t.left)`, `write(t.right)`.",
+     "Deserialise: keep a shared index into the tokens; `read()` takes the next token — `#` means null, otherwise make a node and set `left = read()`, `right = read()`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each node and null marker is handled once. The recursion goes as deep as the tree; the judge runs Java and Python with a large stack, but in other settings a very deep tree favours the BFS version.",
+    "code": {
+     "java": "class Codec {\n    private String[] tokens;\n    private int pos;\n\n    public Codec() {\n    }\n\n    public String serialize(TreeNode root) {\n        StringBuilder sb = new StringBuilder();\n        write(root, sb);\n        return sb.toString();\n    }\n\n    private void write(TreeNode t, StringBuilder sb) {\n        if (t == null) { sb.append(\"#,\"); return; }\n        sb.append(t.val).append(',');\n        write(t.left, sb);\n        write(t.right, sb);\n    }\n\n    public TreeNode deserialize(String data) {\n        tokens = data.split(\",\");\n        pos = 0;\n        return read();\n    }\n\n    private TreeNode read() {\n        String tok = tokens[pos++];\n        if (tok.equals(\"#\")) return null;\n        TreeNode node = new TreeNode(Integer.parseInt(tok));\n        node.left = read();\n        node.right = read();\n        return node;\n    }\n}",
+     "cpp": "class Codec {\n    vector<string> tokens;\n    size_t pos = 0;\n    void write(TreeNode* t, string& out) {\n        if (!t) { out += \"#,\"; return; }\n        out += to_string(t->val) + \",\";\n        write(t->left, out);\n        write(t->right, out);\n    }\n    TreeNode* read() {\n        string tok = tokens[pos++];\n        if (tok == \"#\") return nullptr;\n        TreeNode* node = new TreeNode(stoi(tok));\n        node->left = read();\n        node->right = read();\n        return node;\n    }\npublic:\n    Codec() {}\n\n    string serialize(TreeNode* root) {\n        string out;\n        write(root, out);\n        return out;\n    }\n\n    TreeNode* deserialize(string data) {\n        tokens.clear();\n        stringstream ss(data);\n        string tok;\n        while (getline(ss, tok, ',')) tokens.push_back(tok);\n        pos = 0;\n        return read();\n    }\n};",
+     "python": "class Codec:\n\n    def __init__(self):\n        pass\n\n    def serialize(self, root: Optional[TreeNode]) -> str:\n        out = []\n        def write(t):\n            if not t:\n                out.append(\"#\")\n                return\n            out.append(str(t.val))\n            write(t.left)\n            write(t.right)\n        write(root)\n        return \",\".join(out)\n\n    def deserialize(self, data: str) -> Optional[TreeNode]:\n        tokens = iter(data.split(\",\"))\n        def read():\n            tok = next(tokens)\n            if tok == \"#\":\n                return None\n            node = TreeNode(int(tok))\n            node.left = read()\n            node.right = read()\n            return node\n        return read()",
+     "javascript": "var serialize = function(root) {\n    const out = [];\n    const write = (t) => {\n        if (!t) { out.push('#'); return; }\n        out.push(String(t.val));\n        write(t.left);\n        write(t.right);\n    };\n    write(root);\n    return out.join(',');\n};\n\nvar deserialize = function(data) {\n    const tokens = data.split(',');\n    let pos = 0;\n    const read = () => {\n        const tok = tokens[pos++];\n        if (tok === '#') return null;\n        const node = new TreeNode(Number(tok));\n        node.left = read();\n        node.right = read();\n        return node;\n    };\n    return read();\n};"
+    }
+   }
+  ]
+ }
+}
