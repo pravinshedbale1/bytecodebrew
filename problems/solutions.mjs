@@ -5,8 +5,10 @@
  *
  * Every approach in every language goes through the same harness the judge uses and must pass every
  * correctness test of its problem; an approach named Optimal must also pass the large-input
- * performance test in Java. Only a lesson whose approaches all pass is written to
- * src/data/solutions/<lessonId>.json (shipped, loaded by the Solution tab).
+ * performance test in Java. A brute force that cannot finish a huge test (say, a linear scan up to
+ * 2^31) names those tests in `timesOut`; the Solution tab says so, and it must pass all the others.
+ * Only a lesson whose approaches all pass is written to src/data/solutions/<lessonId>.json (shipped,
+ * loaded by the Solution tab).
  *
  *   node problems/solutions.mjs                     every lesson
  *   node problems/solutions.mjs two-pointers        one lesson
@@ -74,6 +76,7 @@ function lint(lesson, slug, sol) {
     if (!Array.isArray(a.steps) || a.steps.length < 2) fail(`${at}: needs at least two steps`);
     for (const k of ['time', 'space']) if (a[k] && !/^O\(/.test(a[k])) fail(`${at}: ${k} should be big-O, like O(n log n)`);
     for (const id of LANG_IDS) if (!a.code?.[id]?.trim()) fail(`${at}: no ${id} code`);
+    if (a.timesOut && (a.level === 'Optimal' || !a.timesOut.length || a.timesOut.some((k) => !Number.isInteger(k)))) fail(`${at}: timesOut lists the test indices a slow (non-optimal) approach cannot finish`);
   });
   if (sol.approaches.at(-1).level !== 'Optimal') fail(`${where}: the last approach must be the optimal one`);
 }
@@ -82,9 +85,10 @@ const cache = existsSync(cacheFile) ? JSON.parse(readFileSync(cacheFile, 'utf8')
 const hash = (s) => createHash('sha256').update(s).digest('hex').slice(0, 24);
 
 /** Runs one approach in one language on every test; returns a list of problems (empty = passed). */
-async function judge(spec, langId, code, withPerf) {
+async function judge(spec, langId, code, withPerf, skip = []) {
   const lang = LANGS[langId];
-  const tests = spec.tests.filter((t) => !t.perf || (withPerf && lang.perf));
+  if (skip.some((k) => !spec.tests[k] || spec.tests[k].perf)) return [`timesOut lists ${skip.join(', ')}, which are not correctness tests of this problem`];
+  const tests = spec.tests.filter((t, k) => (!t.perf || (withPerf && lang.perf)) && !skip.includes(k));
   const { source, lineOffset, userLines } = lang.build(spec, code, tests);
   const key = hash(`${langId}\n${source}\n${tests.map((t) => t.out).join('\n')}`);
   if (cache[key]) return [];
@@ -146,7 +150,7 @@ for (const lesson of todo) {
       }
     });
   }
-  const verdicts = await pool(jobs, ({ slug, a, langId }) => judge(specs.get(slug), langId, a.code[langId], a.level === 'Optimal'));
+  const verdicts = await pool(jobs, ({ slug, a, langId }) => judge(specs.get(slug), langId, a.code[langId], a.level === 'Optimal', a.timesOut));
   jobs.forEach((j, k) => {
     for (const e of verdicts[k]) fail(`${lesson}/${j.slug} · ${j.a.level} (${j.a.name}) · ${j.langId}: ${e}`);
   });

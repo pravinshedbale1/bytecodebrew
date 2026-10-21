@@ -1,0 +1,397 @@
+{
+ "valid-parentheses": {
+  "pattern": "Stack of open brackets (the most recent opener must close first)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Keep deleting matched pairs",
+    "idea": "A valid string always contains an adjacent pair `()`, `[]` or `{}` somewhere. Delete such pairs until none is left; the string was valid exactly when it ends up empty.",
+    "steps": [
+     "Repeat: replace every `()`, `[]` and `{}` with nothing.",
+     "Stop when a round removes nothing.",
+     "Return whether the string is now empty."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each round is O(n) and removes at least one pair, so up to n/2 rounds. Each round builds a new string.",
+    "code": {
+     "java": "class Solution {\n    public boolean isValid(String s) {\n        String prev;\n        do {\n            prev = s;\n            s = s.replace(\"()\", \"\").replace(\"[]\", \"\").replace(\"{}\", \"\");\n        } while (!s.equals(prev));\n        return s.isEmpty();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isValid(string s) {\n        while (true) {\n            size_t before = s.size();\n            for (string pair : {\"()\", \"[]\", \"{}\"}) {\n                size_t at;\n                while ((at = s.find(pair)) != string::npos) s.erase(at, 2);\n            }\n            if (s.size() == before) break;\n        }\n        return s.empty();\n    }\n};",
+     "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        prev = None\n        while s != prev:\n            prev = s\n            s = s.replace(\"()\", \"\").replace(\"[]\", \"\").replace(\"{}\", \"\")\n        return s == \"\"",
+     "javascript": "var isValid = function(s) {\n    let prev;\n    do {\n        prev = s;\n        s = s.split('()').join('').split('[]').join('').split('{}').join('');\n    } while (s !== prev);\n    return s.length === 0;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack of expected closers",
+    "idea": "Read left to right. Every opening bracket must be closed before any bracket opened earlier, which is last-in-first-out order: push what each opener expects, and check each closer against the top of the stack.",
+    "steps": [
+     "For each character: if it is an opener, push its matching closer.",
+     "If it is a closer, the stack must be non-empty and its top must equal this character; pop it, otherwise return false.",
+     "At the end, return whether the stack is empty (no opener left unclosed)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One push or pop per character; the stack holds up to n openers (e.g. `((((`).",
+    "code": {
+     "java": "class Solution {\n    public boolean isValid(String s) {\n        Deque<Character> stack = new ArrayDeque<>();\n        for (char c : s.toCharArray()) {\n            if (c == '(') stack.push(')');\n            else if (c == '[') stack.push(']');\n            else if (c == '{') stack.push('}');\n            else if (stack.isEmpty() || stack.pop() != c) return false;\n        }\n        return stack.isEmpty();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isValid(string s) {\n        string stack;\n        for (char c : s) {\n            if (c == '(') stack.push_back(')');\n            else if (c == '[') stack.push_back(']');\n            else if (c == '{') stack.push_back('}');\n            else {\n                if (stack.empty() || stack.back() != c) return false;\n                stack.pop_back();\n            }\n        }\n        return stack.empty();\n    }\n};",
+     "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        closer = {\"(\": \")\", \"[\": \"]\", \"{\": \"}\"}\n        stack = []\n        for c in s:\n            if c in closer:\n                stack.append(closer[c])\n            elif not stack or stack.pop() != c:\n                return False\n        return not stack",
+     "javascript": "var isValid = function(s) {\n    const closer = { '(': ')', '[': ']', '{': '}' }, stack = [];\n    for (const c of s) {\n        if (c in closer) stack.push(closer[c]);\n        else if (stack.length === 0 || stack.pop() !== c) return false;\n    }\n    return stack.length === 0;\n};"
+    }
+   }
+  ]
+ },
+ "remove-all-adjacent-duplicates-in-string": {
+  "pattern": "Stack as the output buffer (compare each character with the top)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Remove one adjacent pair at a time",
+    "idea": "Simulate the rule literally: find any two equal neighbours, delete them, and start again until no pair is left.",
+    "steps": [
+     "Scan for the first index `i` with `s[i] == s[i + 1]`.",
+     "If found, remove those two characters and scan again from just before them.",
+     "When no pair is found, return the string."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Up to n/2 removals, each costing O(n) to rebuild the string. For n = 10⁵ this is too slow.",
+    "code": {
+     "java": "class Solution {\n    public String removeDuplicates(String s) {\n        StringBuilder sb = new StringBuilder(s);\n        int i = 0;\n        while (i + 1 < sb.length()) {\n            if (sb.charAt(i) == sb.charAt(i + 1)) {\n                sb.delete(i, i + 2);\n                i = Math.max(0, i - 1);\n            } else i++;\n        }\n        return sb.toString();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string removeDuplicates(string s) {\n        int i = 0;\n        while (i + 1 < (int) s.size()) {\n            if (s[i] == s[i + 1]) {\n                s.erase(i, 2);\n                i = max(0, i - 1);\n            } else i++;\n        }\n        return s;\n    }\n};",
+     "python": "class Solution:\n    def removeDuplicates(self, s: str) -> str:\n        i = 0\n        while i + 1 < len(s):\n            if s[i] == s[i + 1]:\n                s = s[:i] + s[i + 2:]\n                i = max(0, i - 1)\n            else:\n                i += 1\n        return s",
+     "javascript": "var removeDuplicates = function(s) {\n    let i = 0;\n    while (i + 1 < s.length) {\n        if (s[i] === s[i + 1]) {\n            s = s.slice(0, i) + s.slice(i + 2);\n            i = Math.max(0, i - 1);\n        } else i++;\n    }\n    return s;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack: cancel against the last kept character",
+    "idea": "Build the answer left to right. A new character either cancels the last kept character (if they are equal) or is kept. Cancelling can expose an older character, which is exactly what a stack handles.",
+    "steps": [
+     "Use a string builder as a stack.",
+     "For each character: if the builder is non-empty and its last character equals it, delete that last character; otherwise append it.",
+     "Return the builder's contents."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each character is pushed once and popped at most once; the builder holds up to n characters (the output).",
+    "code": {
+     "java": "class Solution {\n    public String removeDuplicates(String s) {\n        StringBuilder st = new StringBuilder();\n        for (char c : s.toCharArray()) {\n            int n = st.length();\n            if (n > 0 && st.charAt(n - 1) == c) st.deleteCharAt(n - 1);\n            else st.append(c);\n        }\n        return st.toString();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string removeDuplicates(string s) {\n        string st;\n        for (char c : s) {\n            if (!st.empty() && st.back() == c) st.pop_back();\n            else st.push_back(c);\n        }\n        return st;\n    }\n};",
+     "python": "class Solution:\n    def removeDuplicates(self, s: str) -> str:\n        st = []\n        for c in s:\n            if st and st[-1] == c:\n                st.pop()\n            else:\n                st.append(c)\n        return \"\".join(st)",
+     "javascript": "var removeDuplicates = function(s) {\n    const st = [];\n    for (const c of s) {\n        if (st.length && st[st.length - 1] === c) st.pop();\n        else st.push(c);\n    }\n    return st.join('');\n};"
+    }
+   }
+  ]
+ },
+ "backspace-string-compare": {
+  "pattern": "Stack simulation, or two pointers from the end that skip deleted characters",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Build both final texts with a stack",
+    "idea": "Type each string into a stack: a letter is pushed, `#` pops (if anything is there). Compare the two results.",
+    "steps": [
+     "For each string, push letters and pop on `#` when the stack is not empty.",
+     "Turn both stacks into strings.",
+     "Return whether they are equal."
+    ],
+    "time": "O(n + m)",
+    "space": "O(n + m)",
+    "why": "One pass per string; the two stacks hold up to n + m characters.",
+    "code": {
+     "java": "class Solution {\n    public boolean backspaceCompare(String s, String t) {\n        return type(s).equals(type(t));\n    }\n\n    private String type(String s) {\n        StringBuilder sb = new StringBuilder();\n        for (char c : s.toCharArray()) {\n            if (c != '#') sb.append(c);\n            else if (sb.length() > 0) sb.deleteCharAt(sb.length() - 1);\n        }\n        return sb.toString();\n    }\n}",
+     "cpp": "class Solution {\n    string type(const string& s) {\n        string out;\n        for (char c : s) {\n            if (c != '#') out.push_back(c);\n            else if (!out.empty()) out.pop_back();\n        }\n        return out;\n    }\npublic:\n    bool backspaceCompare(string s, string t) {\n        return type(s) == type(t);\n    }\n};",
+     "python": "class Solution:\n    def backspaceCompare(self, s: str, t: str) -> bool:\n        def typed(x):\n            st = []\n            for c in x:\n                if c != \"#\":\n                    st.append(c)\n                elif st:\n                    st.pop()\n            return st\n        return typed(s) == typed(t)",
+     "javascript": "var backspaceCompare = function(s, t) {\n    const type = (x) => {\n        const st = [];\n        for (const c of x) {\n            if (c !== '#') st.push(c);\n            else st.pop();\n        }\n        return st.join('');\n    };\n    return type(s) === type(t);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two pointers from the end",
+    "idea": "A `#` only affects characters before it, so read both strings backwards. Keep a count of pending backspaces and skip the characters they delete; then compare the next surviving character of each string.",
+    "steps": [
+     "Set `i` and `j` at the last index of `s` and `t`.",
+     "Move `i` left to the next surviving character: a `#` adds one to `skip`; a letter with `skip > 0` uses one up; otherwise stop. Do the same for `j`.",
+     "If both are in range, the characters must be equal; if exactly one is in range, return false; if neither, return true.",
+     "Step both left and repeat."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "Each index is passed once; only the two indices and two skip counters are stored.",
+    "code": {
+     "java": "class Solution {\n    public boolean backspaceCompare(String s, String t) {\n        int i = s.length() - 1, j = t.length() - 1;\n        while (true) {\n            i = next(s, i);\n            j = next(t, j);\n            if (i < 0 || j < 0) return i < 0 && j < 0;\n            if (s.charAt(i) != t.charAt(j)) return false;\n            i--;\n            j--;\n        }\n    }\n\n    // index of the next character (at or left of i) that survives the backspaces, or -1\n    private int next(String s, int i) {\n        int skip = 0;\n        while (i >= 0) {\n            if (s.charAt(i) == '#') skip++;\n            else if (skip > 0) skip--;\n            else break;\n            i--;\n        }\n        return i;\n    }\n}",
+     "cpp": "class Solution {\n    // index of the next character (at or left of i) that survives the backspaces, or -1\n    int next(const string& s, int i) {\n        int skip = 0;\n        while (i >= 0) {\n            if (s[i] == '#') skip++;\n            else if (skip > 0) skip--;\n            else break;\n            i--;\n        }\n        return i;\n    }\npublic:\n    bool backspaceCompare(string s, string t) {\n        int i = (int) s.size() - 1, j = (int) t.size() - 1;\n        while (true) {\n            i = next(s, i);\n            j = next(t, j);\n            if (i < 0 || j < 0) return i < 0 && j < 0;\n            if (s[i] != t[j]) return false;\n            i--;\n            j--;\n        }\n    }\n};",
+     "python": "class Solution:\n    def backspaceCompare(self, s: str, t: str) -> bool:\n        def nxt(x, i):\n            skip = 0\n            while i >= 0:\n                if x[i] == \"#\":\n                    skip += 1\n                elif skip:\n                    skip -= 1\n                else:\n                    break\n                i -= 1\n            return i\n        i, j = len(s) - 1, len(t) - 1\n        while True:\n            i, j = nxt(s, i), nxt(t, j)\n            if i < 0 or j < 0:\n                return i < 0 and j < 0\n            if s[i] != t[j]:\n                return False\n            i -= 1\n            j -= 1",
+     "javascript": "var backspaceCompare = function(s, t) {\n    const next = (x, i) => {\n        let skip = 0;\n        while (i >= 0) {\n            if (x[i] === '#') skip++;\n            else if (skip > 0) skip--;\n            else break;\n            i--;\n        }\n        return i;\n    };\n    let i = s.length - 1, j = t.length - 1;\n    while (true) {\n        i = next(s, i);\n        j = next(t, j);\n        if (i < 0 || j < 0) return i < 0 && j < 0;\n        if (s[i] !== t[j]) return false;\n        i--;\n        j--;\n    }\n};"
+    }
+   }
+  ]
+ },
+ "evaluate-reverse-polish-notation": {
+  "pattern": "Operand stack (an operator pops its two operands and pushes the result)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Repeatedly collapse the first operator",
+    "idea": "The first operator in the list always applies to the two values just before it. Replace those three tokens with their result and repeat until one value remains.",
+    "steps": [
+     "Copy the tokens into a list.",
+     "Find the first operator at index `i`; compute `list[i − 2] op list[i − 1]`.",
+     "Replace the three tokens with the result; repeat until one token is left, and return it."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each of up to n/2 operators needs a scan and a list removal, both O(n).",
+    "code": {
+     "java": "class Solution {\n    public int evalRPN(String[] tokens) {\n        List<String> list = new ArrayList<>(Arrays.asList(tokens));\n        while (list.size() > 1) {\n            int i = 0;\n            while (!\"+-*/\".contains(list.get(i)) || list.get(i).length() != 1) i++;\n            int a = Integer.parseInt(list.get(i - 2)), b = Integer.parseInt(list.get(i - 1));\n            int v = switch (list.get(i)) {\n                case \"+\" -> a + b;\n                case \"-\" -> a - b;\n                case \"*\" -> a * b;\n                default -> a / b;\n            };\n            list.subList(i - 2, i + 1).clear();\n            list.add(i - 2, String.valueOf(v));\n        }\n        return Integer.parseInt(list.get(0));\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int evalRPN(vector<string>& tokens) {\n        vector<string> list = tokens;\n        auto isOp = [](const string& t) { return t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\"; };\n        while (list.size() > 1) {\n            int i = 0;\n            while (!isOp(list[i])) i++;\n            int a = stoi(list[i - 2]), b = stoi(list[i - 1]), v;\n            if (list[i] == \"+\") v = a + b;\n            else if (list[i] == \"-\") v = a - b;\n            else if (list[i] == \"*\") v = a * b;\n            else v = a / b;\n            list.erase(list.begin() + i - 2, list.begin() + i + 1);\n            list.insert(list.begin() + i - 2, to_string(v));\n        }\n        return stoi(list[0]);\n    }\n};",
+     "python": "class Solution:\n    def evalRPN(self, tokens: List[str]) -> int:\n        items = list(tokens)\n        while len(items) > 1:\n            i = next(k for k, t in enumerate(items) if t in (\"+\", \"-\", \"*\", \"/\"))\n            a, b, op = int(items[i - 2]), int(items[i - 1]), items[i]\n            if op == \"+\":\n                v = a + b\n            elif op == \"-\":\n                v = a - b\n            elif op == \"*\":\n                v = a * b\n            else:\n                v = abs(a) // abs(b) * (1 if (a < 0) == (b < 0) else -1)  # truncate toward zero\n            items[i - 2:i + 1] = [str(v)]\n        return int(items[0])",
+     "javascript": "var evalRPN = function(tokens) {\n    const list = [...tokens], ops = new Set(['+', '-', '*', '/']);\n    while (list.length > 1) {\n        let i = 0;\n        while (!ops.has(list[i])) i++;\n        const a = Number(list[i - 2]), b = Number(list[i - 1]);\n        let v;\n        if (list[i] === '+') v = a + b;\n        else if (list[i] === '-') v = a - b;\n        else if (list[i] === '*') v = a * b;\n        else v = Math.trunc(a / b);\n        list.splice(i - 2, 3, String(v));\n    }\n    return Number(list[0]);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One pass with a stack",
+    "idea": "Push numbers. An operator applies to the two most recent values: pop the right operand, then the left, and push the result. The last value on the stack is the answer.",
+    "steps": [
+     "For each token: if it is a number, push it.",
+     "If it is an operator: pop `b`, then pop `a`, and push `a op b` (the order matters for `-` and `/`).",
+     "Division truncates toward zero.",
+     "Return the single value left on the stack."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One push or pop per token; the stack holds up to about n/2 numbers.",
+    "code": {
+     "java": "class Solution {\n    public int evalRPN(String[] tokens) {\n        Deque<Integer> st = new ArrayDeque<>();\n        for (String t : tokens) {\n            switch (t) {\n                case \"+\" -> st.push(st.pop() + st.pop());\n                case \"*\" -> st.push(st.pop() * st.pop());\n                case \"-\" -> { int b = st.pop(), a = st.pop(); st.push(a - b); }\n                case \"/\" -> { int b = st.pop(), a = st.pop(); st.push(a / b); }\n                default -> st.push(Integer.parseInt(t));\n            }\n        }\n        return st.pop();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int evalRPN(vector<string>& tokens) {\n        vector<long long> st;\n        for (auto& t : tokens) {\n            if (t == \"+\" || t == \"-\" || t == \"*\" || t == \"/\") {\n                long long b = st.back(); st.pop_back();\n                long long a = st.back(); st.pop_back();\n                if (t == \"+\") st.push_back(a + b);\n                else if (t == \"-\") st.push_back(a - b);\n                else if (t == \"*\") st.push_back(a * b);\n                else st.push_back(a / b);\n            } else st.push_back(stoll(t));\n        }\n        return (int) st.back();\n    }\n};",
+     "python": "class Solution:\n    def evalRPN(self, tokens: List[str]) -> int:\n        st = []\n        for t in tokens:\n            if t in (\"+\", \"-\", \"*\", \"/\"):\n                b, a = st.pop(), st.pop()\n                if t == \"+\":\n                    st.append(a + b)\n                elif t == \"-\":\n                    st.append(a - b)\n                elif t == \"*\":\n                    st.append(a * b)\n                else:\n                    q = abs(a) // abs(b)  # truncate toward zero, unlike //\n                    st.append(q if (a < 0) == (b < 0) else -q)\n            else:\n                st.append(int(t))\n        return st[0]",
+     "javascript": "var evalRPN = function(tokens) {\n    const st = [];\n    for (const t of tokens) {\n        if (t === '+' || t === '-' || t === '*' || t === '/') {\n            const b = st.pop(), a = st.pop();\n            if (t === '+') st.push(a + b);\n            else if (t === '-') st.push(a - b);\n            else if (t === '*') st.push(a * b);\n            else st.push(Math.trunc(a / b));\n        } else st.push(Number(t));\n    }\n    return st[0];\n};"
+    }
+   }
+  ]
+ },
+ "asteroid-collision": {
+  "pattern": "Stack of survivors (a left-mover collides with right-movers on top of the stack)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Resolve one collision at a time",
+    "idea": "A collision happens only where a right-mover is immediately followed by a left-mover. Find such a pair, resolve it, and repeat until none is left.",
+    "steps": [
+     "Keep the asteroids in a list.",
+     "Find the first `i` with `a[i] > 0` and `a[i + 1] < 0`.",
+     "Remove the smaller one, or both if equal sizes; repeat until no such pair exists.",
+     "Return the list."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each collision removes at least one asteroid (at most n collisions), and each search and removal is O(n).",
+    "code": {
+     "java": "class Solution {\n    public int[] asteroidCollision(int[] asteroids) {\n        List<Integer> a = new ArrayList<>();\n        for (int x : asteroids) a.add(x);\n        boolean changed = true;\n        while (changed) {\n            changed = false;\n            for (int i = 0; i + 1 < a.size(); i++) {\n                int l = a.get(i), r = a.get(i + 1);\n                if (l > 0 && r < 0) {\n                    if (l == -r) { a.remove(i + 1); a.remove(i); }\n                    else if (l > -r) a.remove(i + 1);\n                    else a.remove(i);\n                    changed = true;\n                    break;\n                }\n            }\n        }\n        return a.stream().mapToInt(Integer::intValue).toArray();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> asteroidCollision(vector<int>& asteroids) {\n        vector<int> a = asteroids;\n        bool changed = true;\n        while (changed) {\n            changed = false;\n            for (size_t i = 0; i + 1 < a.size(); i++) {\n                int l = a[i], r = a[i + 1];\n                if (l > 0 && r < 0) {\n                    if (l == -r) a.erase(a.begin() + i, a.begin() + i + 2);\n                    else if (l > -r) a.erase(a.begin() + i + 1);\n                    else a.erase(a.begin() + i);\n                    changed = true;\n                    break;\n                }\n            }\n        }\n        return a;\n    }\n};",
+     "python": "class Solution:\n    def asteroidCollision(self, asteroids: List[int]) -> List[int]:\n        a = list(asteroids)\n        changed = True\n        while changed:\n            changed = False\n            for i in range(len(a) - 1):\n                l, r = a[i], a[i + 1]\n                if l > 0 and r < 0:\n                    if l == -r:\n                        del a[i:i + 2]\n                    elif l > -r:\n                        del a[i + 1]\n                    else:\n                        del a[i]\n                    changed = True\n                    break\n        return a",
+     "javascript": "var asteroidCollision = function(asteroids) {\n    const a = [...asteroids];\n    let changed = true;\n    while (changed) {\n        changed = false;\n        for (let i = 0; i + 1 < a.length; i++) {\n            const l = a[i], r = a[i + 1];\n            if (l > 0 && r < 0) {\n                if (l === -r) a.splice(i, 2);\n                else if (l > -r) a.splice(i + 1, 1);\n                else a.splice(i, 1);\n                changed = true;\n                break;\n            }\n        }\n    }\n    return a;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack of survivors",
+    "idea": "Process asteroids left to right, keeping the survivors so far on a stack. Only a left-mover arriving while right-movers are on top can collide, so it fights the top until it is destroyed or nothing on top moves right.",
+    "steps": [
+     "For each asteroid `x`: set `alive = true`.",
+     "While `alive`, `x < 0`, and the top of the stack is positive: if `top < −x`, pop it and keep going; if `top == −x`, pop it and `x` dies too; if `top > −x`, `x` dies.",
+     "If `x` is still alive, push it.",
+     "The stack, bottom to top, is the answer."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every asteroid is pushed at most once and popped at most once, so all the while loops together do O(n) work.",
+    "code": {
+     "java": "class Solution {\n    public int[] asteroidCollision(int[] asteroids) {\n        int[] st = new int[asteroids.length];\n        int top = 0;\n        for (int x : asteroids) {\n            boolean alive = true;\n            while (alive && x < 0 && top > 0 && st[top - 1] > 0) {\n                if (st[top - 1] < -x) top--;\n                else {\n                    if (st[top - 1] == -x) top--;\n                    alive = false;\n                }\n            }\n            if (alive) st[top++] = x;\n        }\n        return Arrays.copyOf(st, top);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> asteroidCollision(vector<int>& asteroids) {\n        vector<int> st;\n        for (int x : asteroids) {\n            bool alive = true;\n            while (alive && x < 0 && !st.empty() && st.back() > 0) {\n                if (st.back() < -x) st.pop_back();\n                else {\n                    if (st.back() == -x) st.pop_back();\n                    alive = false;\n                }\n            }\n            if (alive) st.push_back(x);\n        }\n        return st;\n    }\n};",
+     "python": "class Solution:\n    def asteroidCollision(self, asteroids: List[int]) -> List[int]:\n        st = []\n        for x in asteroids:\n            alive = True\n            while alive and x < 0 and st and st[-1] > 0:\n                if st[-1] < -x:\n                    st.pop()\n                else:\n                    if st[-1] == -x:\n                        st.pop()\n                    alive = False\n            if alive:\n                st.append(x)\n        return st",
+     "javascript": "var asteroidCollision = function(asteroids) {\n    const st = [];\n    for (const x of asteroids) {\n        let alive = true;\n        while (alive && x < 0 && st.length && st[st.length - 1] > 0) {\n            const top = st[st.length - 1];\n            if (top < -x) st.pop();\n            else {\n                if (top === -x) st.pop();\n                alive = false;\n            }\n        }\n        if (alive) st.push(x);\n    }\n    return st;\n};"
+    }
+   }
+  ]
+ },
+ "simplify-path": {
+  "pattern": "Stack of directory names (\"..\" pops, \".\" and empty parts are ignored)",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Split on \"/\" and keep a stack of directories",
+    "idea": "Split the path into parts. Each real name goes deeper (push); `..` goes up one level (pop, if not at the root); `.` and the empty parts made by repeated slashes do nothing. The stack is the canonical path.",
+    "steps": [
+     "Split `path` on `/`.",
+     "For each part: skip it if it is empty or `.`; if it is `..`, pop when the stack is non-empty; otherwise push it.",
+     "Join the stack with `/` and put one `/` in front (the root alone is `/`)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Splitting and joining are linear in the path length; the parts and the stack hold O(n) characters. There is no slower approach worth writing: every character must be read once anyway.",
+    "code": {
+     "java": "class Solution {\n    public String simplifyPath(String path) {\n        Deque<String> st = new ArrayDeque<>();\n        for (String part : path.split(\"/\")) {\n            if (part.isEmpty() || part.equals(\".\")) continue;\n            if (part.equals(\"..\")) { if (!st.isEmpty()) st.pollLast(); }\n            else st.addLast(part);\n        }\n        return \"/\" + String.join(\"/\", st);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string simplifyPath(string path) {\n        vector<string> st;\n        stringstream ss(path);\n        string part;\n        while (getline(ss, part, '/')) {\n            if (part.empty() || part == \".\") continue;\n            if (part == \"..\") { if (!st.empty()) st.pop_back(); }\n            else st.push_back(part);\n        }\n        string out;\n        for (auto& d : st) out += \"/\" + d;\n        return out.empty() ? \"/\" : out;\n    }\n};",
+     "python": "class Solution:\n    def simplifyPath(self, path: str) -> str:\n        st = []\n        for part in path.split(\"/\"):\n            if part in (\"\", \".\"):\n                continue\n            if part == \"..\":\n                if st:\n                    st.pop()\n            else:\n                st.append(part)\n        return \"/\" + \"/\".join(st)",
+     "javascript": "var simplifyPath = function(path) {\n    const st = [];\n    for (const part of path.split('/')) {\n        if (part === '' || part === '.') continue;\n        if (part === '..') st.pop();\n        else st.push(part);\n    }\n    return '/' + st.join('/');\n};"
+    }
+   }
+  ]
+ },
+ "basic-calculator-ii": {
+  "pattern": "Stack of signed terms (apply * and / immediately, add everything at the end)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Stack of terms",
+    "idea": "Read each number together with the operator before it. `+x` and `−x` start a new term (push `x` or `−x`); `*x` and `/x` change the last term (pop, combine, push). The answer is the sum of the stack.",
+    "steps": [
+     "Keep `num = 0` and `op = \"+\"` (the operator before the current number).",
+     "For each character: digits extend `num`. When a non-space operator or the end of the string is reached, apply `op` to `num`: push `num` for `+`, `−num` for `−`, or pop and push `top * num` / `top / num` (truncating toward zero) for `*` and `/`.",
+     "Then remember the new operator as `op` and reset `num`.",
+     "Return the sum of the stack."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass over the string; the stack holds one entry per `+`/`−` term, up to O(n).",
+    "code": {
+     "java": "class Solution {\n    public int calculate(String s) {\n        Deque<Integer> st = new ArrayDeque<>();\n        int num = 0;\n        char op = '+';\n        for (int i = 0; i < s.length(); i++) {\n            char c = s.charAt(i);\n            if (Character.isDigit(c)) num = num * 10 + (c - '0');\n            if ((!Character.isDigit(c) && c != ' ') || i == s.length() - 1) {\n                if (op == '+') st.push(num);\n                else if (op == '-') st.push(-num);\n                else if (op == '*') st.push(st.pop() * num);\n                else st.push(st.pop() / num);\n                op = c;\n                num = 0;\n            }\n        }\n        int sum = 0;\n        for (int v : st) sum += v;\n        return sum;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int calculate(string s) {\n        vector<int> st;\n        int num = 0;\n        char op = '+';\n        for (size_t i = 0; i < s.size(); i++) {\n            char c = s[i];\n            if (isdigit(c)) num = num * 10 + (c - '0');\n            if ((!isdigit(c) && c != ' ') || i == s.size() - 1) {\n                if (op == '+') st.push_back(num);\n                else if (op == '-') st.push_back(-num);\n                else if (op == '*') st.back() *= num;\n                else st.back() /= num;\n                op = c;\n                num = 0;\n            }\n        }\n        long long sum = 0;\n        for (int v : st) sum += v;\n        return (int) sum;\n    }\n};",
+     "python": "class Solution:\n    def calculate(self, s: str) -> int:\n        st, num, op = [], 0, \"+\"\n        for i, c in enumerate(s):\n            if c.isdigit():\n                num = num * 10 + int(c)\n            if (not c.isdigit() and c != \" \") or i == len(s) - 1:\n                if op == \"+\":\n                    st.append(num)\n                elif op == \"-\":\n                    st.append(-num)\n                elif op == \"*\":\n                    st.append(st.pop() * num)\n                else:\n                    top = st.pop()\n                    st.append(abs(top) // num * (1 if top >= 0 else -1))  # truncate toward zero\n                op, num = c, 0\n        return sum(st)",
+     "javascript": "var calculate = function(s) {\n    const st = [];\n    let num = 0, op = '+';\n    for (let i = 0; i < s.length; i++) {\n        const c = s[i], digit = c >= '0' && c <= '9';\n        if (digit) num = num * 10 + (c.charCodeAt(0) - 48);\n        if ((!digit && c !== ' ') || i === s.length - 1) {\n            if (op === '+') st.push(num);\n            else if (op === '-') st.push(-num);\n            else if (op === '*') st.push(st.pop() * num);\n            else st.push(Math.trunc(st.pop() / num));\n            op = c;\n            num = 0;\n        }\n    }\n    return st.reduce((a, b) => a + b, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Running total plus the last term",
+    "idea": "Only the most recent term can still be changed by `*` or `/`; everything before it is final. So keep `total` (finished terms) and `last` (the current term) instead of a whole stack.",
+    "steps": [
+     "Keep `total = 0`, `last = 0`, `num = 0`, `op = \"+\"`.",
+     "When an operator or the end is reached: for `+`/`−`, add `last` to `total` and set `last = ±num`; for `*`/`/`, set `last = last * num` or `last / num` (truncating toward zero).",
+     "Then remember the new operator and reset `num`.",
+     "Return `total + last`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass; four variables replace the stack.",
+    "code": {
+     "java": "class Solution {\n    public int calculate(String s) {\n        int total = 0, last = 0, num = 0;\n        char op = '+';\n        for (int i = 0; i < s.length(); i++) {\n            char c = s.charAt(i);\n            if (Character.isDigit(c)) num = num * 10 + (c - '0');\n            if ((!Character.isDigit(c) && c != ' ') || i == s.length() - 1) {\n                if (op == '+' || op == '-') {\n                    total += last;\n                    last = op == '+' ? num : -num;\n                } else if (op == '*') last *= num;\n                else last /= num;\n                op = c;\n                num = 0;\n            }\n        }\n        return total + last;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int calculate(string s) {\n        long long total = 0, last = 0, num = 0;\n        char op = '+';\n        for (size_t i = 0; i < s.size(); i++) {\n            char c = s[i];\n            if (isdigit(c)) num = num * 10 + (c - '0');\n            if ((!isdigit(c) && c != ' ') || i == s.size() - 1) {\n                if (op == '+' || op == '-') {\n                    total += last;\n                    last = op == '+' ? num : -num;\n                } else if (op == '*') last *= num;\n                else last /= num;\n                op = c;\n                num = 0;\n            }\n        }\n        return (int) (total + last);\n    }\n};",
+     "python": "class Solution:\n    def calculate(self, s: str) -> int:\n        total = last = num = 0\n        op = \"+\"\n        for i, c in enumerate(s):\n            if c.isdigit():\n                num = num * 10 + int(c)\n            if (not c.isdigit() and c != \" \") or i == len(s) - 1:\n                if op in \"+-\":\n                    total += last\n                    last = num if op == \"+\" else -num\n                elif op == \"*\":\n                    last *= num\n                else:\n                    last = abs(last) // num * (1 if last >= 0 else -1)  # truncate toward zero\n                op, num = c, 0\n        return total + last",
+     "javascript": "var calculate = function(s) {\n    let total = 0, last = 0, num = 0, op = '+';\n    for (let i = 0; i < s.length; i++) {\n        const c = s[i], digit = c >= '0' && c <= '9';\n        if (digit) num = num * 10 + (c.charCodeAt(0) - 48);\n        if ((!digit && c !== ' ') || i === s.length - 1) {\n            if (op === '+' || op === '-') {\n                total += last;\n                last = op === '+' ? num : -num;\n            } else if (op === '*') last *= num;\n            else last = Math.trunc(last / num);\n            op = c;\n            num = 0;\n        }\n    }\n    return total + last;\n};"
+    }
+   }
+  ]
+ },
+ "decode-string": {
+  "pattern": "Stack of (partial string, repeat count) for nested brackets",
+  "approaches": [
+   {
+    "level": "Optimal",
+    "name": "Recursive descent",
+    "idea": "Decoding `k[...]` means decoding the inside first. A recursive function reads characters from a shared index until it meets `]` (or the end), and calls itself for every nested `k[`.",
+    "steps": [
+     "Keep a shared index `i`. `decode()` builds a result string.",
+     "While `i` is in range and `s[i] != \"]\"`: a letter is appended; digits are read into `k`, then skip `[`, call `decode()` for the inside, skip `]`, and append the inside `k` times.",
+     "Return the result; the top-level call decodes the whole string."
+    ],
+    "time": "O(n + L)",
+    "space": "O(n + L)",
+    "why": "Each input character is read once, and the work of copying is proportional to the output length L. The recursion depth is at most the nesting depth (≤ n), plus the output itself.",
+    "code": {
+     "java": "class Solution {\n    private int i;\n\n    public String decodeString(String s) {\n        i = 0;\n        return decode(s);\n    }\n\n    private String decode(String s) {\n        StringBuilder out = new StringBuilder();\n        while (i < s.length() && s.charAt(i) != ']') {\n            char c = s.charAt(i);\n            if (Character.isLetter(c)) { out.append(c); i++; continue; }\n            int k = 0;\n            while (Character.isDigit(s.charAt(i))) k = k * 10 + (s.charAt(i++) - '0');\n            i++; // '['\n            String inner = decode(s);\n            i++; // ']'\n            out.append(inner.repeat(k));\n        }\n        return out.toString();\n    }\n}",
+     "cpp": "class Solution {\n    size_t i = 0;\n    string decode(const string& s) {\n        string out;\n        while (i < s.size() && s[i] != ']') {\n            if (isalpha(s[i])) { out += s[i++]; continue; }\n            int k = 0;\n            while (isdigit(s[i])) k = k * 10 + (s[i++] - '0');\n            i++; // '['\n            string inner = decode(s);\n            i++; // ']'\n            while (k--) out += inner;\n        }\n        return out;\n    }\npublic:\n    string decodeString(string s) {\n        i = 0;\n        return decode(s);\n    }\n};",
+     "python": "class Solution:\n    def decodeString(self, s: str) -> str:\n        i = 0\n        def decode():\n            nonlocal i\n            out = []\n            while i < len(s) and s[i] != \"]\":\n                if s[i].isalpha():\n                    out.append(s[i])\n                    i += 1\n                    continue\n                k = 0\n                while s[i].isdigit():\n                    k = k * 10 + int(s[i])\n                    i += 1\n                i += 1  # '['\n                inner = decode()\n                i += 1  # ']'\n                out.append(inner * k)\n            return \"\".join(out)\n        return decode()",
+     "javascript": "var decodeString = function(s) {\n    let i = 0;\n    const decode = () => {\n        let out = '';\n        while (i < s.length && s[i] !== ']') {\n            if (/[a-z]/.test(s[i])) { out += s[i++]; continue; }\n            let k = 0;\n            while (s[i] >= '0' && s[i] <= '9') k = k * 10 + Number(s[i++]);\n            i++; // '['\n            const inner = decode();\n            i++; // ']'\n            out += inner.repeat(k);\n        }\n        return out;\n    };\n    return decode();\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Explicit stack of (text so far, count)",
+    "idea": "The same idea without recursion. On `[`, save the text built so far and the repeat count, and start a fresh piece. On `]`, the fresh piece is complete: repeat it and append it to the saved text.",
+    "steps": [
+     "Keep `cur` (text being built) and `k` (number being read), plus two stacks.",
+     "Digit: `k = k * 10 + digit`. Letter: append to `cur`.",
+     "`[`: push `cur` and `k`, then reset both.",
+     "`]`: pop `prev` and `count`; set `cur = prev + cur repeated count`. Return `cur` at the end."
+    ],
+    "time": "O(n + L)",
+    "space": "O(n + L)",
+    "why": "Same work as the recursive version: each character is read once and the copying is proportional to the output length L. The stacks hold at most one entry per nesting level.",
+    "code": {
+     "java": "class Solution {\n    public String decodeString(String s) {\n        Deque<StringBuilder> texts = new ArrayDeque<>();\n        Deque<Integer> counts = new ArrayDeque<>();\n        StringBuilder cur = new StringBuilder();\n        int k = 0;\n        for (char c : s.toCharArray()) {\n            if (Character.isDigit(c)) k = k * 10 + (c - '0');\n            else if (c == '[') {\n                texts.push(cur);\n                counts.push(k);\n                cur = new StringBuilder();\n                k = 0;\n            } else if (c == ']') {\n                StringBuilder prev = texts.pop();\n                prev.append(cur.toString().repeat(counts.pop()));\n                cur = prev;\n            } else cur.append(c);\n        }\n        return cur.toString();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string decodeString(string s) {\n        vector<string> texts;\n        vector<int> counts;\n        string cur;\n        int k = 0;\n        for (char c : s) {\n            if (isdigit(c)) k = k * 10 + (c - '0');\n            else if (c == '[') {\n                texts.push_back(cur);\n                counts.push_back(k);\n                cur.clear();\n                k = 0;\n            } else if (c == ']') {\n                string prev = texts.back(); texts.pop_back();\n                int count = counts.back(); counts.pop_back();\n                while (count--) prev += cur;\n                cur = prev;\n            } else cur += c;\n        }\n        return cur;\n    }\n};",
+     "python": "class Solution:\n    def decodeString(self, s: str) -> str:\n        stack, cur, k = [], \"\", 0\n        for c in s:\n            if c.isdigit():\n                k = k * 10 + int(c)\n            elif c == \"[\":\n                stack.append((cur, k))\n                cur, k = \"\", 0\n            elif c == \"]\":\n                prev, count = stack.pop()\n                cur = prev + cur * count\n            else:\n                cur += c\n        return cur",
+     "javascript": "var decodeString = function(s) {\n    const stack = [];\n    let cur = '', k = 0;\n    for (const c of s) {\n        if (c >= '0' && c <= '9') k = k * 10 + Number(c);\n        else if (c === '[') {\n            stack.push([cur, k]);\n            cur = '';\n            k = 0;\n        } else if (c === ']') {\n            const [prev, count] = stack.pop();\n            cur = prev + cur.repeat(count);\n        } else cur += c;\n    }\n    return cur;\n};"
+    }
+   }
+  ]
+ },
+ "longest-valid-parentheses": {
+  "pattern": "Stack of indices with a \"last unmatched\" base, or two counter scans",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check every even-length substring",
+    "idea": "Test every substring with a balance counter; keep the longest that is well-formed.",
+    "steps": [
+     "For each start `i`, walk `j` to the right keeping `balance` (+1 for `(`, −1 for `)`).",
+     "If `balance` drops below 0, no longer substring from `i` can be valid: stop.",
+     "Whenever `balance == 0`, `s[i..j]` is valid: update the best with `j − i + 1`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n starts, each scanning up to n characters. (Checking each substring from scratch would be O(n³); extending the balance avoids that.)",
+    "code": {
+     "java": "class Solution {\n    public int longestValidParentheses(String s) {\n        int n = s.length(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int balance = 0;\n            for (int j = i; j < n; j++) {\n                balance += s.charAt(j) == '(' ? 1 : -1;\n                if (balance < 0) break;\n                if (balance == 0) best = Math.max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        int n = s.size(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int balance = 0;\n            for (int j = i; j < n; j++) {\n                balance += s[j] == '(' ? 1 : -1;\n                if (balance < 0) break;\n                if (balance == 0) best = max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestValidParentheses(self, s: str) -> int:\n        n, best = len(s), 0\n        for i in range(n):\n            balance = 0\n            for j in range(i, n):\n                balance += 1 if s[j] == \"(\" else -1\n                if balance < 0:\n                    break\n                if balance == 0:\n                    best = max(best, j - i + 1)\n        return best",
+     "javascript": "var longestValidParentheses = function(s) {\n    const n = s.length;\n    let best = 0;\n    for (let i = 0; i < n; i++) {\n        let balance = 0;\n        for (let j = i; j < n; j++) {\n            balance += s[j] === '(' ? 1 : -1;\n            if (balance < 0) break;\n            if (balance === 0) best = Math.max(best, j - i + 1);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Stack of indices",
+    "idea": "Keep a stack of indices whose bottom is the last position that cannot be part of a valid run (start with −1). A `)` pops its matching `(`; the valid run ending here then starts right after the new top.",
+    "steps": [
+     "Push −1.",
+     "For each `i`: if `s[i] == \"(\"`, push `i`.",
+     "Otherwise pop. If the stack is now empty, this `)` is unmatched: push `i` as the new base. Otherwise update the best with `i − top`.",
+     "Return the best."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index is pushed and popped at most once; the stack can hold up to n indices.",
+    "code": {
+     "java": "class Solution {\n    public int longestValidParentheses(String s) {\n        Deque<Integer> st = new ArrayDeque<>();\n        st.push(-1);\n        int best = 0;\n        for (int i = 0; i < s.length(); i++) {\n            if (s.charAt(i) == '(') st.push(i);\n            else {\n                st.pop();\n                if (st.isEmpty()) st.push(i);\n                else best = Math.max(best, i - st.peek());\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        vector<int> st{-1};\n        int best = 0;\n        for (int i = 0; i < (int) s.size(); i++) {\n            if (s[i] == '(') st.push_back(i);\n            else {\n                st.pop_back();\n                if (st.empty()) st.push_back(i);\n                else best = max(best, i - st.back());\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestValidParentheses(self, s: str) -> int:\n        st, best = [-1], 0\n        for i, c in enumerate(s):\n            if c == \"(\":\n                st.append(i)\n            else:\n                st.pop()\n                if not st:\n                    st.append(i)\n                else:\n                    best = max(best, i - st[-1])\n        return best",
+     "javascript": "var longestValidParentheses = function(s) {\n    const st = [-1];\n    let best = 0;\n    for (let i = 0; i < s.length; i++) {\n        if (s[i] === '(') st.push(i);\n        else {\n            st.pop();\n            if (st.length === 0) st.push(i);\n            else best = Math.max(best, i - st[st.length - 1]);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two scans with open/close counters",
+    "idea": "Scanning left to right, count `(` and `)`. Equal counts mean a valid run; more `)` than `(` means the run is broken, so reset. This misses runs with extra `(` (like `(()`), so scan right to left too with the roles swapped.",
+    "steps": [
+     "Left to right: count `open` and `close`. If equal, update the best with `2·close`; if `close > open`, reset both to 0.",
+     "Right to left: same, but update when equal and reset when `open > close`.",
+     "Return the best."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two linear scans with two counters. Every valid run is caught by one of the two scans: a left-to-right scan only fails when there are unmatched `(` before the run ends, and those are exactly the cases the reverse scan handles.",
+    "code": {
+     "java": "class Solution {\n    public int longestValidParentheses(String s) {\n        int best = 0, open = 0, close = 0, n = s.length();\n        for (int i = 0; i < n; i++) {\n            if (s.charAt(i) == '(') open++; else close++;\n            if (open == close) best = Math.max(best, 2 * close);\n            else if (close > open) open = close = 0;\n        }\n        open = close = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s.charAt(i) == '(') open++; else close++;\n            if (open == close) best = Math.max(best, 2 * open);\n            else if (open > close) open = close = 0;\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        int best = 0, open = 0, close = 0, n = s.size();\n        for (int i = 0; i < n; i++) {\n            if (s[i] == '(') open++; else close++;\n            if (open == close) best = max(best, 2 * close);\n            else if (close > open) open = close = 0;\n        }\n        open = close = 0;\n        for (int i = n - 1; i >= 0; i--) {\n            if (s[i] == '(') open++; else close++;\n            if (open == close) best = max(best, 2 * open);\n            else if (open > close) open = close = 0;\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestValidParentheses(self, s: str) -> int:\n        best = 0\n        for chars, opener in ((s, \"(\"), (reversed(s), \")\")):\n            here = away = 0\n            for c in chars:\n                if c == opener:\n                    here += 1\n                else:\n                    away += 1\n                if here == away:\n                    best = max(best, 2 * away)\n                elif away > here:\n                    here = away = 0\n        return best",
+     "javascript": "var longestValidParentheses = function(s) {\n    let best = 0, open = 0, close = 0;\n    const n = s.length;\n    for (let i = 0; i < n; i++) {\n        if (s[i] === '(') open++; else close++;\n        if (open === close) best = Math.max(best, 2 * close);\n        else if (close > open) open = close = 0;\n    }\n    open = close = 0;\n    for (let i = n - 1; i >= 0; i--) {\n        if (s[i] === '(') open++; else close++;\n        if (open === close) best = Math.max(best, 2 * open);\n        else if (open > close) open = close = 0;\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ }
+}

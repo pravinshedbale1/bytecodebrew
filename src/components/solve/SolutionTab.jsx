@@ -94,11 +94,14 @@ export function SolutionTab({ spec, slug, solved, lang }) {
             <span><span className={styles.label}>Space</span> <span className={styles.mono}>{a.space}</span></span>
           </p>
           <p className={styles.why}><Inline text={a.why} /></p>
+          {a.timesOut && (
+            <p className={styles.slow}>Correct, but too slow for the largest test{a.timesOut.length > 1 ? 's' : ''}: Submit would time out with this approach.</p>
+          )}
 
           <CodeBlock code={a.code} lang={codeLang} setLang={setCodeLang} />
         </section>
       ))}
-      <p className={styles.footnote}>Every approach here passes all of this problem&apos;s tests in each language; the optimal one also passes the large-input test in Java.</p>
+      <p className={styles.footnote}>Every approach here is tested on this problem&apos;s tests in each language (a slow one on all the tests it can finish in time); the optimal one also passes the large-input test in Java.</p>
     </div>
   );
 }

@@ -1,0 +1,456 @@
+{
+ "reverse-linked-list": {
+  "pattern": "In-place pointer reversal (prev, current, next)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the values, write them back reversed",
+    "idea": "Read the values into an array, then walk the list again writing the values from the back of the array.",
+    "steps": [
+     "Walk the list and append each value to an array.",
+     "Walk the list again; write `values[n − 1]`, `values[n − 2]`, … into the nodes.",
+     "Return `head` (the same first node, now holding the last value)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two passes; the array holds n values. It changes values rather than links, which interviewers usually do not accept.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseList(ListNode head) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) vals.add(p.val);\n        int i = vals.size() - 1;\n        for (ListNode p = head; p != null; p = p.next) p.val = vals.get(i--);\n        return head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseList(ListNode* head) {\n        vector<int> vals;\n        for (ListNode* p = head; p; p = p->next) vals.push_back(p->val);\n        int i = (int) vals.size() - 1;\n        for (ListNode* p = head; p; p = p->next) p->val = vals[i--];\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        vals = []\n        p = head\n        while p:\n            vals.append(p.val)\n            p = p.next\n        p = head\n        while p:\n            p.val = vals.pop()\n            p = p.next\n        return head",
+     "javascript": "var reverseList = function(head) {\n    const vals = [];\n    for (let p = head; p; p = p.next) vals.push(p.val);\n    for (let p = head; p; p = p.next) p.val = vals.pop();\n    return head;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Recursion",
+    "idea": "Reverse the rest of the list first; then the node after `head` is the tail of that reversed part, so hang `head` after it.",
+    "steps": [
+     "If `head` is null or has no next node, return `head`.",
+     "Reverse the rest: `newHead = reverseList(head.next)`.",
+     "Set `head.next.next = head` and `head.next = null`.",
+     "Return `newHead`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One call per node; the call stack is n frames deep, which can overflow on very long lists.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseList(ListNode head) {\n        if (head == null || head.next == null) return head;\n        ListNode newHead = reverseList(head.next);\n        head.next.next = head;\n        head.next = null;\n        return newHead;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseList(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode* newHead = reverseList(head->next);\n        head->next->next = head;\n        head->next = nullptr;\n        return newHead;\n    }\n};",
+     "python": "class Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        if not head or not head.next:\n            return head\n        new_head = self.reverseList(head.next)\n        head.next.next = head\n        head.next = None\n        return new_head",
+     "javascript": "var reverseList = function(head) {\n    if (!head || !head.next) return head;\n    const newHead = reverseList(head.next);\n    head.next.next = head;\n    head.next = null;\n    return newHead;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative reversal with three pointers",
+    "idea": "Walk the list once, turning each node's `next` pointer back towards the previous node. Save the following node first so it is not lost.",
+    "steps": [
+     "Set `prev = null`, `cur = head`.",
+     "While `cur` is not null: save `next = cur.next`, set `cur.next = prev`, then `prev = cur`, `cur = next`.",
+     "Return `prev`, the old tail and new head."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass with three pointers; no recursion stack.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseList(ListNode head) {\n        ListNode prev = null, cur = head;\n        while (cur != null) {\n            ListNode next = cur.next;\n            cur.next = prev;\n            prev = cur;\n            cur = next;\n        }\n        return prev;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseList(ListNode* head) {\n        ListNode *prev = nullptr, *cur = head;\n        while (cur) {\n            ListNode* next = cur->next;\n            cur->next = prev;\n            prev = cur;\n            cur = next;\n        }\n        return prev;\n    }\n};",
+     "python": "class Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        prev, cur = None, head\n        while cur:\n            nxt = cur.next\n            cur.next = prev\n            prev, cur = cur, nxt\n        return prev",
+     "javascript": "var reverseList = function(head) {\n    let prev = null, cur = head;\n    while (cur) {\n        const next = cur.next;\n        cur.next = prev;\n        prev = cur;\n        cur = next;\n    }\n    return prev;\n};"
+    }
+   }
+  ]
+ },
+ "merge-two-sorted-lists": {
+  "pattern": "Two-pointer merge with a dummy head",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Collect all values, sort, build a new list",
+    "idea": "Ignore that the lists are already sorted: gather every value, sort, and create fresh nodes.",
+    "steps": [
+     "Append all values of both lists to an array.",
+     "Sort the array.",
+     "Build a new list from the sorted values and return its head."
+    ],
+    "time": "O((n + m) log(n + m))",
+    "space": "O(n + m)",
+    "why": "The sort dominates; the array and the new nodes take O(n + m). It also breaks the rule of reusing the existing nodes.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode p = list1; p != null; p = p.next) vals.add(p.val);\n        for (ListNode p = list2; p != null; p = p.next) vals.add(p.val);\n        Collections.sort(vals);\n        ListNode dummy = new ListNode(), tail = dummy;\n        for (int v : vals) tail = tail.next = new ListNode(v);\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {\n        vector<int> vals;\n        for (ListNode* p = list1; p; p = p->next) vals.push_back(p->val);\n        for (ListNode* p = list2; p; p = p->next) vals.push_back(p->val);\n        sort(vals.begin(), vals.end());\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        for (int v : vals) tail = tail->next = new ListNode(v);\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        vals = []\n        for p in (list1, list2):\n            while p:\n                vals.append(p.val)\n                p = p.next\n        dummy = tail = ListNode()\n        for v in sorted(vals):\n            tail.next = ListNode(v)\n            tail = tail.next\n        return dummy.next",
+     "javascript": "var mergeTwoLists = function(list1, list2) {\n    const vals = [];\n    for (let p = list1; p; p = p.next) vals.push(p.val);\n    for (let p = list2; p; p = p.next) vals.push(p.val);\n    vals.sort((a, b) => a - b);\n    const dummy = new ListNode();\n    let tail = dummy;\n    for (const v of vals) tail = tail.next = new ListNode(v);\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Recursive merge",
+    "idea": "The smaller of the two front nodes comes first; its `next` is the merge of everything that remains.",
+    "steps": [
+     "If either list is empty, return the other.",
+     "If `list1.val <= list2.val`, set `list1.next = merge(list1.next, list2)` and return `list1`.",
+     "Otherwise set `list2.next = merge(list1, list2.next)` and return `list2`."
+    ],
+    "time": "O(n + m)",
+    "space": "O(n + m)",
+    "why": "One call per node placed; the recursion goes n + m frames deep.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {\n        if (list1 == null) return list2;\n        if (list2 == null) return list1;\n        if (list1.val <= list2.val) {\n            list1.next = mergeTwoLists(list1.next, list2);\n            return list1;\n        }\n        list2.next = mergeTwoLists(list1, list2.next);\n        return list2;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {\n        if (!list1) return list2;\n        if (!list2) return list1;\n        if (list1->val <= list2->val) {\n            list1->next = mergeTwoLists(list1->next, list2);\n            return list1;\n        }\n        list2->next = mergeTwoLists(list1, list2->next);\n        return list2;\n    }\n};",
+     "python": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        if not list1 or not list2:\n            return list1 or list2\n        if list1.val <= list2.val:\n            list1.next = self.mergeTwoLists(list1.next, list2)\n            return list1\n        list2.next = self.mergeTwoLists(list1, list2.next)\n        return list2",
+     "javascript": "var mergeTwoLists = function(list1, list2) {\n    if (!list1) return list2;\n    if (!list2) return list1;\n    if (list1.val <= list2.val) {\n        list1.next = mergeTwoLists(list1.next, list2);\n        return list1;\n    }\n    list2.next = mergeTwoLists(list1, list2.next);\n    return list2;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative merge with a dummy node",
+    "idea": "Build the result behind a dummy node: repeatedly attach the smaller front node, and attach whatever remains when one list runs out.",
+    "steps": [
+     "Create `dummy` and set `tail = dummy`.",
+     "While both lists are non-empty, attach the smaller front node to `tail`, advance that list, and advance `tail`.",
+     "Attach the non-empty remainder (if any) in one step: `tail.next = list1 or list2`.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "Each node is attached once; only the dummy and a tail pointer are extra.",
+    "code": {
+     "java": "class Solution {\n    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {\n        ListNode dummy = new ListNode(), tail = dummy;\n        while (list1 != null && list2 != null) {\n            if (list1.val <= list2.val) { tail.next = list1; list1 = list1.next; }\n            else { tail.next = list2; list2 = list2.next; }\n            tail = tail.next;\n        }\n        tail.next = list1 != null ? list1 : list2;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        while (list1 && list2) {\n            if (list1->val <= list2->val) { tail->next = list1; list1 = list1->next; }\n            else { tail->next = list2; list2 = list2->next; }\n            tail = tail->next;\n        }\n        tail->next = list1 ? list1 : list2;\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = tail = ListNode()\n        while list1 and list2:\n            if list1.val <= list2.val:\n                tail.next, list1 = list1, list1.next\n            else:\n                tail.next, list2 = list2, list2.next\n            tail = tail.next\n        tail.next = list1 or list2\n        return dummy.next",
+     "javascript": "var mergeTwoLists = function(list1, list2) {\n    const dummy = new ListNode();\n    let tail = dummy;\n    while (list1 && list2) {\n        if (list1.val <= list2.val) { tail.next = list1; list1 = list1.next; }\n        else { tail.next = list2; list2 = list2.next; }\n        tail = tail.next;\n    }\n    tail.next = list1 ?? list2;\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "remove-linked-list-elements": {
+  "pattern": "Dummy head + unlink in place",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Build a new list of the values to keep",
+    "idea": "Walk the list and copy every value that is not `val` into a brand-new list.",
+    "steps": [
+     "Create a dummy node and a `tail` pointer.",
+     "For each node whose value is not `val`, append a new node with that value.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass, but it allocates up to n new nodes instead of reusing the existing ones.",
+    "code": {
+     "java": "class Solution {\n    public ListNode removeElements(ListNode head, int val) {\n        ListNode dummy = new ListNode(), tail = dummy;\n        for (ListNode p = head; p != null; p = p.next)\n            if (p.val != val) tail = tail.next = new ListNode(p.val);\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* removeElements(ListNode* head, int val) {\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        for (ListNode* p = head; p; p = p->next)\n            if (p->val != val) tail = tail->next = new ListNode(p->val);\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def removeElements(self, head: Optional[ListNode], val: int) -> Optional[ListNode]:\n        dummy = tail = ListNode()\n        while head:\n            if head.val != val:\n                tail.next = ListNode(head.val)\n                tail = tail.next\n            head = head.next\n        return dummy.next",
+     "javascript": "var removeElements = function(head, val) {\n    const dummy = new ListNode();\n    let tail = dummy;\n    for (let p = head; p; p = p.next)\n        if (p.val !== val) tail = tail.next = new ListNode(p.val);\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Recursion",
+    "idea": "Clean the rest of the list first, then decide whether the current node stays.",
+    "steps": [
+     "If `head` is null, return null.",
+     "Set `head.next = removeElements(head.next, val)`.",
+     "Return `head.next` if `head.val == val`, otherwise `head`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One call per node; the call stack is n deep.",
+    "code": {
+     "java": "class Solution {\n    public ListNode removeElements(ListNode head, int val) {\n        if (head == null) return null;\n        head.next = removeElements(head.next, val);\n        return head.val == val ? head.next : head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* removeElements(ListNode* head, int val) {\n        if (!head) return nullptr;\n        head->next = removeElements(head->next, val);\n        return head->val == val ? head->next : head;\n    }\n};",
+     "python": "class Solution:\n    def removeElements(self, head: Optional[ListNode], val: int) -> Optional[ListNode]:\n        if not head:\n            return None\n        head.next = self.removeElements(head.next, val)\n        return head.next if head.val == val else head",
+     "javascript": "var removeElements = function(head, val) {\n    if (!head) return null;\n    head.next = removeElements(head.next, val);\n    return head.val === val ? head.next : head;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Dummy node and in-place unlinking",
+    "idea": "Put a dummy node before the head so every node, including the head, has a predecessor. Then skip over matching nodes by relinking.",
+    "steps": [
+     "Create `dummy` with `dummy.next = head`; set `prev = dummy`.",
+     "While `prev.next` is not null: if `prev.next.val == val`, set `prev.next = prev.next.next` (do not move `prev`, the new next may match too); otherwise move `prev` forward.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each node is looked at once; only the dummy and one pointer are extra.",
+    "code": {
+     "java": "class Solution {\n    public ListNode removeElements(ListNode head, int val) {\n        ListNode dummy = new ListNode(0, head), prev = dummy;\n        while (prev.next != null) {\n            if (prev.next.val == val) prev.next = prev.next.next;\n            else prev = prev.next;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* removeElements(ListNode* head, int val) {\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        while (prev->next) {\n            if (prev->next->val == val) prev->next = prev->next->next;\n            else prev = prev->next;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def removeElements(self, head: Optional[ListNode], val: int) -> Optional[ListNode]:\n        dummy = prev = ListNode(0, head)\n        while prev.next:\n            if prev.next.val == val:\n                prev.next = prev.next.next\n            else:\n                prev = prev.next\n        return dummy.next",
+     "javascript": "var removeElements = function(head, val) {\n    const dummy = new ListNode(0, head);\n    let prev = dummy;\n    while (prev.next) {\n        if (prev.next.val === val) prev.next = prev.next.next;\n        else prev = prev.next;\n    }\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "add-two-numbers": {
+  "pattern": "Digit-by-digit addition with a carry, building the result behind a dummy node",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy the digits into arrays, add, then build the list",
+    "idea": "Converting to a built-in integer fails (numbers have up to 100 digits), so copy the digits into arrays and do schoolbook addition there, then turn the result into a list.",
+    "steps": [
+     "Copy the digits of `l1` and `l2` into arrays `a` and `b` (ones digit first).",
+     "For `i` from 0 to `max(len) − 1`, add `a[i] + b[i] + carry` (missing digits count as 0); store the last digit and keep the carry.",
+     "If a carry remains, add it as a final digit.",
+     "Build a list from the result digits and return it."
+    ],
+    "time": "O(n + m)",
+    "space": "O(n + m)",
+    "why": "A few linear passes; the two digit arrays are extra O(n + m) memory that the direct approach avoids.",
+    "code": {
+     "java": "class Solution {\n    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {\n        List<Integer> a = new ArrayList<>(), b = new ArrayList<>(), sum = new ArrayList<>();\n        for (ListNode p = l1; p != null; p = p.next) a.add(p.val);\n        for (ListNode p = l2; p != null; p = p.next) b.add(p.val);\n        int carry = 0;\n        for (int i = 0; i < Math.max(a.size(), b.size()); i++) {\n            int s = (i < a.size() ? a.get(i) : 0) + (i < b.size() ? b.get(i) : 0) + carry;\n            sum.add(s % 10);\n            carry = s / 10;\n        }\n        if (carry > 0) sum.add(carry);\n        ListNode dummy = new ListNode(), tail = dummy;\n        for (int d : sum) tail = tail.next = new ListNode(d);\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {\n        vector<int> a, b, sum;\n        for (ListNode* p = l1; p; p = p->next) a.push_back(p->val);\n        for (ListNode* p = l2; p; p = p->next) b.push_back(p->val);\n        int carry = 0;\n        for (size_t i = 0; i < max(a.size(), b.size()); i++) {\n            int s = (i < a.size() ? a[i] : 0) + (i < b.size() ? b[i] : 0) + carry;\n            sum.push_back(s % 10);\n            carry = s / 10;\n        }\n        if (carry) sum.push_back(carry);\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        for (int d : sum) tail = tail->next = new ListNode(d);\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        def digits(p):\n            out = []\n            while p:\n                out.append(p.val)\n                p = p.next\n            return out\n        a, b = digits(l1), digits(l2)\n        out, carry = [], 0\n        for i in range(max(len(a), len(b))):\n            s = (a[i] if i < len(a) else 0) + (b[i] if i < len(b) else 0) + carry\n            out.append(s % 10)\n            carry = s // 10\n        if carry:\n            out.append(carry)\n        dummy = tail = ListNode()\n        for d in out:\n            tail.next = ListNode(d)\n            tail = tail.next\n        return dummy.next",
+     "javascript": "var addTwoNumbers = function(l1, l2) {\n    const a = [], b = [], sum = [];\n    for (let p = l1; p; p = p.next) a.push(p.val);\n    for (let p = l2; p; p = p.next) b.push(p.val);\n    let carry = 0;\n    for (let i = 0; i < Math.max(a.length, b.length); i++) {\n        const s = (a[i] ?? 0) + (b[i] ?? 0) + carry;\n        sum.push(s % 10);\n        carry = Math.floor(s / 10);\n    }\n    if (carry) sum.push(carry);\n    const dummy = new ListNode();\n    let tail = dummy;\n    for (const d of sum) tail = tail.next = new ListNode(d);\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Walk both lists adding with a carry",
+    "idea": "The lists already hold the ones digit first, which is the order schoolbook addition works in. Walk both together, add digit + digit + carry, and append the last digit of that sum.",
+    "steps": [
+     "Create `dummy`, `tail = dummy`, `carry = 0`.",
+     "While `l1`, `l2` or `carry` is non-zero: `s = carry + (l1 ? l1.val : 0) + (l2 ? l2.val : 0)`.",
+     "Append a node with `s % 10`, set `carry = s / 10`, and advance whichever lists are not finished.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(max(n, m))",
+    "space": "O(1)",
+    "why": "One step per digit of the longer number (plus one for a final carry). Apart from the output list, only the carry and a few pointers are used.",
+    "code": {
+     "java": "class Solution {\n    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {\n        ListNode dummy = new ListNode(), tail = dummy;\n        int carry = 0;\n        while (l1 != null || l2 != null || carry != 0) {\n            int s = carry;\n            if (l1 != null) { s += l1.val; l1 = l1.next; }\n            if (l2 != null) { s += l2.val; l2 = l2.next; }\n            tail = tail.next = new ListNode(s % 10);\n            carry = s / 10;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {\n        ListNode dummy;\n        ListNode* tail = &dummy;\n        int carry = 0;\n        while (l1 || l2 || carry) {\n            int s = carry;\n            if (l1) { s += l1->val; l1 = l1->next; }\n            if (l2) { s += l2->val; l2 = l2->next; }\n            tail = tail->next = new ListNode(s % 10);\n            carry = s / 10;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = tail = ListNode()\n        carry = 0\n        while l1 or l2 or carry:\n            s = carry\n            if l1:\n                s += l1.val\n                l1 = l1.next\n            if l2:\n                s += l2.val\n                l2 = l2.next\n            tail.next = ListNode(s % 10)\n            tail = tail.next\n            carry = s // 10\n        return dummy.next",
+     "javascript": "var addTwoNumbers = function(l1, l2) {\n    const dummy = new ListNode();\n    let tail = dummy, carry = 0;\n    while (l1 || l2 || carry) {\n        let s = carry;\n        if (l1) { s += l1.val; l1 = l1.next; }\n        if (l2) { s += l2.val; l2 = l2.next; }\n        tail = tail.next = new ListNode(s % 10);\n        carry = Math.floor(s / 10);\n    }\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "reverse-linked-list-ii": {
+  "pattern": "Sublist reversal in one pass (head insertion behind a fixed predecessor)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy values, reverse the slice, write back",
+    "idea": "Read all values into an array, reverse positions `left..right` there, and write the values back into the nodes.",
+    "steps": [
+     "Copy the values into an array.",
+     "Reverse the array between indices `left − 1` and `right − 1`.",
+     "Walk the list again and write the array values back in order; return `head`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "A few linear passes and an array of n values. It swaps values rather than links.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseBetween(ListNode head, int left, int right) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) vals.add(p.val);\n        Collections.reverse(vals.subList(left - 1, right));\n        int i = 0;\n        for (ListNode p = head; p != null; p = p.next) p.val = vals.get(i++);\n        return head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseBetween(ListNode* head, int left, int right) {\n        vector<int> vals;\n        for (ListNode* p = head; p; p = p->next) vals.push_back(p->val);\n        reverse(vals.begin() + left - 1, vals.begin() + right);\n        int i = 0;\n        for (ListNode* p = head; p; p = p->next) p->val = vals[i++];\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def reverseBetween(self, head: Optional[ListNode], left: int, right: int) -> Optional[ListNode]:\n        vals = []\n        p = head\n        while p:\n            vals.append(p.val)\n            p = p.next\n        vals[left - 1:right] = vals[left - 1:right][::-1]\n        p = head\n        for v in vals:\n            p.val = v\n            p = p.next\n        return head",
+     "javascript": "var reverseBetween = function(head, left, right) {\n    const vals = [];\n    for (let p = head; p; p = p.next) vals.push(p.val);\n    const mid = vals.slice(left - 1, right).reverse();\n    vals.splice(left - 1, mid.length, ...mid);\n    let i = 0;\n    for (let p = head; p; p = p.next) p.val = vals[i++];\n    return head;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "One pass: move each node to the front of the sublist",
+    "idea": "Stop at the node before position `left` (`prev`). The node at `left` (`cur`) will end up last in the reversed part; repeatedly take the node right after `cur` and insert it directly after `prev`.",
+    "steps": [
+     "Create `dummy` before `head`; walk `prev` forward `left − 1` steps from `dummy`.",
+     "Set `cur = prev.next`.",
+     "Repeat `right − left` times: `move = cur.next`; `cur.next = move.next`; `move.next = prev.next`; `prev.next = move`.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "At most `right` steps in a single pass, each with O(1) relinking. The dummy covers `left = 1`, where the head changes.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseBetween(ListNode head, int left, int right) {\n        ListNode dummy = new ListNode(0, head), prev = dummy;\n        for (int i = 1; i < left; i++) prev = prev.next;\n        ListNode cur = prev.next;\n        for (int i = 0; i < right - left; i++) {\n            ListNode move = cur.next;\n            cur.next = move.next;\n            move.next = prev.next;\n            prev.next = move;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseBetween(ListNode* head, int left, int right) {\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        for (int i = 1; i < left; i++) prev = prev->next;\n        ListNode* cur = prev->next;\n        for (int i = 0; i < right - left; i++) {\n            ListNode* move = cur->next;\n            cur->next = move->next;\n            move->next = prev->next;\n            prev->next = move;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def reverseBetween(self, head: Optional[ListNode], left: int, right: int) -> Optional[ListNode]:\n        dummy = prev = ListNode(0, head)\n        for _ in range(left - 1):\n            prev = prev.next\n        cur = prev.next\n        for _ in range(right - left):\n            move = cur.next\n            cur.next = move.next\n            move.next = prev.next\n            prev.next = move\n        return dummy.next",
+     "javascript": "var reverseBetween = function(head, left, right) {\n    const dummy = new ListNode(0, head);\n    let prev = dummy;\n    for (let i = 1; i < left; i++) prev = prev.next;\n    const cur = prev.next;\n    for (let i = 0; i < right - left; i++) {\n        const move = cur.next;\n        cur.next = move.next;\n        move.next = prev.next;\n        prev.next = move;\n    }\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "swap-nodes-in-pairs": {
+  "pattern": "Pointer rewiring in fixed-size groups (dummy head)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Recursion",
+    "idea": "Swap the first two nodes, and let the recursive call handle the rest of the list.",
+    "steps": [
+     "If fewer than two nodes remain, return `head`.",
+     "Let `second = head.next`; set `head.next = swapPairs(second.next)`.",
+     "Set `second.next = head` and return `second`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One call per pair: n/2 calls, so the stack is O(n) deep.",
+    "code": {
+     "java": "class Solution {\n    public ListNode swapPairs(ListNode head) {\n        if (head == null || head.next == null) return head;\n        ListNode second = head.next;\n        head.next = swapPairs(second.next);\n        second.next = head;\n        return second;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* swapPairs(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode* second = head->next;\n        head->next = swapPairs(second->next);\n        second->next = head;\n        return second;\n    }\n};",
+     "python": "class Solution:\n    def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        if not head or not head.next:\n            return head\n        second = head.next\n        head.next = self.swapPairs(second.next)\n        second.next = head\n        return second",
+     "javascript": "var swapPairs = function(head) {\n    if (!head || !head.next) return head;\n    const second = head.next;\n    head.next = swapPairs(second.next);\n    second.next = head;\n    return second;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative with a dummy node",
+    "idea": "Keep `prev` just before the next pair. Rewire three links to put the pair's second node first, then move `prev` to the pair's new second node.",
+    "steps": [
+     "Create `dummy` before `head`; set `prev = dummy`.",
+     "While `prev.next` and `prev.next.next` exist: `a = prev.next`, `b = a.next`.",
+     "Rewire: `a.next = b.next`, `b.next = a`, `prev.next = b`; then `prev = a`.",
+     "Return `dummy.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each pair is rewired once with three pointer changes; no recursion.",
+    "code": {
+     "java": "class Solution {\n    public ListNode swapPairs(ListNode head) {\n        ListNode dummy = new ListNode(0, head), prev = dummy;\n        while (prev.next != null && prev.next.next != null) {\n            ListNode a = prev.next, b = a.next;\n            a.next = b.next;\n            b.next = a;\n            prev.next = b;\n            prev = a;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* swapPairs(ListNode* head) {\n        ListNode dummy(0, head);\n        ListNode* prev = &dummy;\n        while (prev->next && prev->next->next) {\n            ListNode *a = prev->next, *b = a->next;\n            a->next = b->next;\n            b->next = a;\n            prev->next = b;\n            prev = a;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = prev = ListNode(0, head)\n        while prev.next and prev.next.next:\n            a, b = prev.next, prev.next.next\n            a.next = b.next\n            b.next = a\n            prev.next = b\n            prev = a\n        return dummy.next",
+     "javascript": "var swapPairs = function(head) {\n    const dummy = new ListNode(0, head);\n    let prev = dummy;\n    while (prev.next && prev.next.next) {\n        const a = prev.next, b = a.next;\n        a.next = b.next;\n        b.next = a;\n        prev.next = b;\n        prev = a;\n    }\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "partition-list": {
+  "pattern": "Split into two lists behind two dummy heads, then join them",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Collect the nodes into two arrays",
+    "idea": "Put nodes with values below `x` in one array and the rest in another, each in original order, then relink them in that order.",
+    "steps": [
+     "Walk the list, appending each node to `small` or `large`.",
+     "Concatenate `small` and `large` and link each node to the next one; the last node points to null.",
+     "Return the first node (or null for an empty list)."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two linear passes; the arrays hold n node references.",
+    "code": {
+     "java": "class Solution {\n    public ListNode partition(ListNode head, int x) {\n        List<ListNode> all = new ArrayList<>(), large = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) (p.val < x ? all : large).add(p);\n        all.addAll(large);\n        for (int i = 0; i < all.size(); i++) all.get(i).next = i + 1 < all.size() ? all.get(i + 1) : null;\n        return all.isEmpty() ? null : all.get(0);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* partition(ListNode* head, int x) {\n        vector<ListNode*> all, large;\n        for (ListNode* p = head; p; p = p->next) (p->val < x ? all : large).push_back(p);\n        all.insert(all.end(), large.begin(), large.end());\n        for (size_t i = 0; i < all.size(); i++) all[i]->next = i + 1 < all.size() ? all[i + 1] : nullptr;\n        return all.empty() ? nullptr : all[0];\n    }\n};",
+     "python": "class Solution:\n    def partition(self, head: Optional[ListNode], x: int) -> Optional[ListNode]:\n        small, large = [], []\n        while head:\n            (small if head.val < x else large).append(head)\n            head = head.next\n        nodes = small + large\n        for a, b in zip(nodes, nodes[1:] + [None]):\n            a.next = b\n        return nodes[0] if nodes else None",
+     "javascript": "var partition = function(head, x) {\n    const small = [], large = [];\n    for (let p = head; p; p = p.next) (p.val < x ? small : large).push(p);\n    const all = small.concat(large);\n    for (let i = 0; i < all.length; i++) all[i].next = all[i + 1] ?? null;\n    return all.length ? all[0] : null;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two dummy-headed lists",
+    "idea": "Grow two lists as you walk: one for values below `x`, one for the rest. Appending at the tail keeps each group's order. Finally link the end of the first to the start of the second.",
+    "steps": [
+     "Create dummies `lessHead` and `moreHead` with tails `less` and `more`.",
+     "For each node, append it to `less` if its value is below `x`, else to `more`.",
+     "Set `more.next = null` (the last node may still point into the old list) and `less.next = moreHead.next`.",
+     "Return `lessHead.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass; only two dummies and two tails are extra. Forgetting to end the second list creates a cycle.",
+    "code": {
+     "java": "class Solution {\n    public ListNode partition(ListNode head, int x) {\n        ListNode lessHead = new ListNode(), moreHead = new ListNode(), less = lessHead, more = moreHead;\n        for (ListNode p = head; p != null; p = p.next) {\n            if (p.val < x) less = less.next = p;\n            else more = more.next = p;\n        }\n        more.next = null;\n        less.next = moreHead.next;\n        return lessHead.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* partition(ListNode* head, int x) {\n        ListNode lessHead, moreHead;\n        ListNode *less = &lessHead, *more = &moreHead;\n        for (ListNode* p = head; p; p = p->next) {\n            if (p->val < x) less = less->next = p;\n            else more = more->next = p;\n        }\n        more->next = nullptr;\n        less->next = moreHead.next;\n        return lessHead.next;\n    }\n};",
+     "python": "class Solution:\n    def partition(self, head: Optional[ListNode], x: int) -> Optional[ListNode]:\n        less_head = less = ListNode()\n        more_head = more = ListNode()\n        while head:\n            if head.val < x:\n                less.next = head\n                less = head\n            else:\n                more.next = head\n                more = head\n            head = head.next\n        more.next = None\n        less.next = more_head.next\n        return less_head.next",
+     "javascript": "var partition = function(head, x) {\n    const lessHead = new ListNode(), moreHead = new ListNode();\n    let less = lessHead, more = moreHead;\n    for (let p = head; p; p = p.next) {\n        if (p.val < x) less = less.next = p;\n        else more = more.next = p;\n    }\n    more.next = null;\n    less.next = moreHead.next;\n    return lessHead.next;\n};"
+    }
+   }
+  ]
+ },
+ "rotate-list": {
+  "pattern": "Close the list into a ring, then cut it at the new tail (k mod length)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Move the last node to the front, k mod n times",
+    "idea": "One rotation step moves the tail to the front. Rotating n times returns the original list, so only `k mod n` steps are needed; do them one by one.",
+    "steps": [
+     "If the list is empty, return it. Count its length `n` and set `k = k mod n`.",
+     "Repeat `k` times: walk to the second-to-last node, detach the last node, and put it in front of `head`.",
+     "Return `head`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Up to n − 1 rotation steps, each walking the list. Without the `mod n` it would be O(k·n) with k up to 2 × 10⁹.",
+    "code": {
+     "java": "class Solution {\n    public ListNode rotateRight(ListNode head, int k) {\n        if (head == null || head.next == null) return head;\n        int n = 0;\n        for (ListNode p = head; p != null; p = p.next) n++;\n        for (int step = 0; step < k % n; step++) {\n            ListNode prev = head;\n            while (prev.next.next != null) prev = prev.next;\n            ListNode last = prev.next;\n            prev.next = null;\n            last.next = head;\n            head = last;\n        }\n        return head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* rotateRight(ListNode* head, int k) {\n        if (!head || !head->next) return head;\n        int n = 0;\n        for (ListNode* p = head; p; p = p->next) n++;\n        for (int step = 0; step < k % n; step++) {\n            ListNode* prev = head;\n            while (prev->next->next) prev = prev->next;\n            ListNode* last = prev->next;\n            prev->next = nullptr;\n            last->next = head;\n            head = last;\n        }\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def rotateRight(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        if not head or not head.next:\n            return head\n        n, p = 0, head\n        while p:\n            n += 1\n            p = p.next\n        for _ in range(k % n):\n            prev = head\n            while prev.next.next:\n                prev = prev.next\n            last = prev.next\n            prev.next = None\n            last.next = head\n            head = last\n        return head",
+     "javascript": "var rotateRight = function(head, k) {\n    if (!head || !head.next) return head;\n    let n = 0;\n    for (let p = head; p; p = p.next) n++;\n    for (let step = 0; step < k % n; step++) {\n        let prev = head;\n        while (prev.next.next) prev = prev.next;\n        const last = prev.next;\n        prev.next = null;\n        last.next = head;\n        head = last;\n    }\n    return head;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Make a ring, then cut it",
+    "idea": "Rotating right by `k` makes node `n − k` (counting from 0) the new head. Join the tail to the head to form a ring, walk to the new tail, and break the ring there.",
+    "steps": [
+     "If the list is empty or has one node, return it. Find the tail and the length `n` in one pass.",
+     "Set `k = k mod n`; if it is 0, return `head`.",
+     "Link `tail.next = head` to make a ring.",
+     "Walk `n − k − 1` steps from `head` to reach the new tail; the new head is the node after it. Cut: `newTail.next = null`; return the new head."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass to measure and at most one more partial pass to find the cut; a few pointers of state.",
+    "code": {
+     "java": "class Solution {\n    public ListNode rotateRight(ListNode head, int k) {\n        if (head == null || head.next == null) return head;\n        int n = 1;\n        ListNode tail = head;\n        while (tail.next != null) { tail = tail.next; n++; }\n        k %= n;\n        if (k == 0) return head;\n        tail.next = head;\n        ListNode newTail = head;\n        for (int i = 0; i < n - k - 1; i++) newTail = newTail.next;\n        ListNode newHead = newTail.next;\n        newTail.next = null;\n        return newHead;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* rotateRight(ListNode* head, int k) {\n        if (!head || !head->next) return head;\n        int n = 1;\n        ListNode* tail = head;\n        while (tail->next) { tail = tail->next; n++; }\n        k %= n;\n        if (k == 0) return head;\n        tail->next = head;\n        ListNode* newTail = head;\n        for (int i = 0; i < n - k - 1; i++) newTail = newTail->next;\n        ListNode* newHead = newTail->next;\n        newTail->next = nullptr;\n        return newHead;\n    }\n};",
+     "python": "class Solution:\n    def rotateRight(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        if not head or not head.next:\n            return head\n        n, tail = 1, head\n        while tail.next:\n            tail = tail.next\n            n += 1\n        k %= n\n        if k == 0:\n            return head\n        tail.next = head\n        new_tail = head\n        for _ in range(n - k - 1):\n            new_tail = new_tail.next\n        new_head = new_tail.next\n        new_tail.next = None\n        return new_head",
+     "javascript": "var rotateRight = function(head, k) {\n    if (!head || !head.next) return head;\n    let n = 1, tail = head;\n    while (tail.next) { tail = tail.next; n++; }\n    k %= n;\n    if (k === 0) return head;\n    tail.next = head;\n    let newTail = head;\n    for (let i = 0; i < n - k - 1; i++) newTail = newTail.next;\n    const newHead = newTail.next;\n    newTail.next = null;\n    return newHead;\n};"
+    }
+   }
+  ]
+ },
+ "reverse-nodes-in-k-group": {
+  "pattern": "Reverse fixed-size groups in place, reconnecting each group to the previous one",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Recursion, one group per call",
+    "idea": "Check that k nodes are available; if so, reverse those k nodes, and attach the result of recursively processing the rest of the list to the end of the reversed group.",
+    "steps": [
+     "Walk k nodes from `head`; if the list ends first, return `head` unchanged.",
+     "Reverse the first k nodes with the usual prev/cur loop; `head` becomes the group's last node.",
+     "Set `head.next = reverseKGroup(nextGroupStart, k)`.",
+     "Return the group's new first node (`prev`)."
+    ],
+    "time": "O(n)",
+    "space": "O(n/k)",
+    "why": "Each node is visited twice (counting and reversing). One call per group means n/k stack frames, which breaks the O(1) memory rule.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseKGroup(ListNode head, int k) {\n        ListNode check = head;\n        for (int i = 0; i < k; i++) {\n            if (check == null) return head;\n            check = check.next;\n        }\n        ListNode prev = null, cur = head;\n        for (int i = 0; i < k; i++) {\n            ListNode next = cur.next;\n            cur.next = prev;\n            prev = cur;\n            cur = next;\n        }\n        head.next = reverseKGroup(cur, k);\n        return prev;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        ListNode* check = head;\n        for (int i = 0; i < k; i++) {\n            if (!check) return head;\n            check = check->next;\n        }\n        ListNode *prev = nullptr, *cur = head;\n        for (int i = 0; i < k; i++) {\n            ListNode* next = cur->next;\n            cur->next = prev;\n            prev = cur;\n            cur = next;\n        }\n        head->next = reverseKGroup(cur, k);\n        return prev;\n    }\n};",
+     "python": "class Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        check = head\n        for _ in range(k):\n            if not check:\n                return head\n            check = check.next\n        prev, cur = None, head\n        for _ in range(k):\n            nxt = cur.next\n            cur.next = prev\n            prev, cur = cur, nxt\n        head.next = self.reverseKGroup(cur, k)\n        return prev",
+     "javascript": "var reverseKGroup = function(head, k) {\n    let check = head;\n    for (let i = 0; i < k; i++) {\n        if (!check) return head;\n        check = check.next;\n    }\n    let prev = null, cur = head;\n    for (let i = 0; i < k; i++) {\n        const next = cur.next;\n        cur.next = prev;\n        prev = cur;\n        cur = next;\n    }\n    head.next = reverseKGroup(cur, k);\n    return prev;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Iterative, group by group behind a dummy node",
+    "idea": "Keep `groupPrev`, the node just before the next group. If k nodes follow it, reverse them in place, hook the reversed group between `groupPrev` and the rest, and move `groupPrev` to the group's new last node.",
+    "steps": [
+     "Create `dummy` before `head`; set `groupPrev = dummy`.",
+     "Find `kth`, the k-th node after `groupPrev`; if it does not exist, stop.",
+     "Reverse the nodes from `groupPrev.next` to `kth`, starting `prev` at `kth.next` so the group's old first node ends up pointing to the rest of the list.",
+     "Set `first = groupPrev.next` (old first, now last), `groupPrev.next = kth`, then `groupPrev = first`, and repeat. Return `dummy.next`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each node is visited a constant number of times (finding `kth` and reversing); only a handful of pointers are used.",
+    "code": {
+     "java": "class Solution {\n    public ListNode reverseKGroup(ListNode head, int k) {\n        ListNode dummy = new ListNode(0, head), groupPrev = dummy;\n        while (true) {\n            ListNode kth = groupPrev;\n            for (int i = 0; i < k && kth != null; i++) kth = kth.next;\n            if (kth == null) break;\n            ListNode after = kth.next, prev = after, cur = groupPrev.next;\n            while (cur != after) {\n                ListNode next = cur.next;\n                cur.next = prev;\n                prev = cur;\n                cur = next;\n            }\n            ListNode first = groupPrev.next;\n            groupPrev.next = kth;\n            groupPrev = first;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        ListNode dummy(0, head);\n        ListNode* groupPrev = &dummy;\n        while (true) {\n            ListNode* kth = groupPrev;\n            for (int i = 0; i < k && kth; i++) kth = kth->next;\n            if (!kth) break;\n            ListNode *after = kth->next, *prev = after, *cur = groupPrev->next;\n            while (cur != after) {\n                ListNode* next = cur->next;\n                cur->next = prev;\n                prev = cur;\n                cur = next;\n            }\n            ListNode* first = groupPrev->next;\n            groupPrev->next = kth;\n            groupPrev = first;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        dummy = group_prev = ListNode(0, head)\n        while True:\n            kth = group_prev\n            for _ in range(k):\n                kth = kth.next\n                if not kth:\n                    return dummy.next\n            after = kth.next\n            prev, cur = after, group_prev.next\n            while cur is not after:\n                nxt = cur.next\n                cur.next = prev\n                prev, cur = cur, nxt\n            first = group_prev.next\n            group_prev.next = kth\n            group_prev = first",
+     "javascript": "var reverseKGroup = function(head, k) {\n    const dummy = new ListNode(0, head);\n    let groupPrev = dummy;\n    while (true) {\n        let kth = groupPrev;\n        for (let i = 0; i < k && kth; i++) kth = kth.next;\n        if (!kth) break;\n        const after = kth.next;\n        let prev = after, cur = groupPrev.next;\n        while (cur !== after) {\n            const next = cur.next;\n            cur.next = prev;\n            prev = cur;\n            cur = next;\n        }\n        const first = groupPrev.next;\n        groupPrev.next = kth;\n        groupPrev = first;\n    }\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ }
+}
