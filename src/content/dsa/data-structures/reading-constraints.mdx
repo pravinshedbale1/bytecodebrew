@@ -16,22 +16,7 @@ A constraint is a limit on the input. Each line answers one of five questions:
 | **Which edge cases?** | the minimums, and what is guaranteed | `1 <= n` → never empty; "exactly one answer" → no "not found" case |
 | **How much memory?** | sizes you might store, recursion depth | `n <= 10^4` → an n × n int table is 400 MB, too big |
 
-Try it on a real problem before reading on. Guess what each line means, then open it.
-
-<ConstraintDecoder
-  title="Decode: Koko Eating Bananas"
-  problem="Koko has piles of bananas and h hours. Each hour she picks one pile and eats up to s bananas from it. Find the smallest speed s that lets her finish every pile within h hours."
-  lines={[
-    { code: '1 <= piles.length <= 10^4', tag: 'speed', says: 'Up to 10,000 piles. One pass over the piles costs 10^4, so we can afford to repeat that pass many times, but not 10^9 times.' },
-    { code: 'piles.length <= h <= 10^9', tag: 'edge', says: 'h is at least the number of piles, so an answer always exists: at speed max(piles) every pile takes one hour. That gives the top of the search range. h up to 10^9 also means simulating hour by hour is out.' },
-    { code: 'piles[i] <= 10^9', tag: 'speed', says: 'The answer (a speed) lies between 1 and 10^9. Trying every speed is 10^9 × 10^4 = 10^13 operations, far too slow. Binary search needs only about 30 tries, because log₂(10^9) ≈ 30.' },
-    { code: 'derived: sum(piles) <= 10^4 × 10^9 = 10^13', tag: 'type', says: 'Not printed in the problem, but it follows from the lines above. At speed 1 the hours add up to the sum of all piles, up to 10^13. That overflows int (about 2.1 × 10^9), so count the hours in a long.' },
-    { code: '1 <= piles[i]', tag: 'edge', says: 'No empty piles, and the speed starts at 1, so pile / speed never divides by zero and every pile takes at least one hour.' },
-  ]}
-  verdict="Binary search on the speed between 1 and max(piles): about 30 checks × 10^4 piles = 3 × 10^5 operations, with the hour count in a long. That is the pattern in Binary Search on the Answer."
-/>
-
-Five lines gave the algorithm, the search range, the data type and two edge cases. The rest of this lesson shows how to read each kind of line.
+You don't need to remember all of this now. The next two sections teach the one rule behind the first row, and then you'll decode a real problem line by line.
 
 ## The golden rule: about 10^8 operations a second
 
@@ -97,6 +82,25 @@ Two things in this table are easy to miss:
 <Callout type="note" title="Why the limits sit right at the edge">
 Problem setters choose n so the intended solution passes and the next slower one fails. n ≤ 10^5 is chosen because O(n log n) passes easily and O(n²) clearly fails. When n lands between two rows (n ≤ 10^4: O(n²) = 10^8 is borderline), both may pass on the judge, and the interviewer will still ask for the faster one.
 </Callout>
+
+## Your turn: decode a real problem
+
+You now have the rule and the table. Here is a real problem from the course. You don't need to solve it, just read its constraints.
+
+<ConstraintDecoder
+  title="Decode: Koko Eating Bananas"
+  problem="Koko has some piles of bananas and h hours. She picks an eating speed: s bananas an hour. Each hour she eats s bananas from one pile (if the pile has fewer, she finishes it and waits for the next hour). What is the slowest speed that lets her finish every pile in h hours?"
+  example="Piles of 4, 9 and 2 bananas, and 5 hours. At speed 3 she needs 2 + 3 + 1 = 6 hours: too slow. At speed 4 she needs 1 + 3 + 1 = 5 hours. So the answer is 4."
+  lines={[
+    { code: '1 <= piles.length <= 10^4', tag: 'speed', plain: 'There are between 1 and 10,000 piles.', so: 'Going through all the piles once takes about 10,000 steps. With roughly 100,000,000 steps a second to spend, we can go through the piles many times over, even thousands of times.' },
+    { code: 'piles.length <= h <= 10^9', tag: 'edge', plain: 'Koko has at least one hour for every pile, and at most a billion hours.', so: 'There is always an answer: if she eats as fast as the biggest pile, every pile takes exactly one hour. So the speed never needs to go above the biggest pile.' },
+    { code: '1 <= piles[i] <= 10^9', tag: 'speed', plain: 'Every pile has at least 1 banana and at most a billion.', so: 'The answer, a speed, is somewhere from 1 to 1,000,000,000. Trying them one by one is far too slow. But if a speed works, every faster speed works too, so binary search can find it: halving a billion about 30 times reaches 1, so about 30 tries are enough.' },
+    { code: 'total bananas <= 10^4 × 10^9 = 10^13', tag: 'type', derived: true, plain: 'Up to 10,000 piles, each with up to a billion bananas, is up to 10,000,000,000,000 bananas in total.', so: 'At speed 1, the hours needed equal the total number of bananas. An int stops at about 2,100,000,000, far below that, so add up the hours in a long.' },
+  ]}
+  verdict="Binary search on the speed, from 1 up to the biggest pile. For each speed you try, walk through the piles once and add up the hours, in a long. About 30 tries × 10,000 piles = 300,000 steps, far below the budget. This is the pattern in Binary Search on the Answer."
+/>
+
+Four short lines gave you the algorithm, the range to search, the data type and the guarantee that an answer exists. The rest of this lesson shows how to read each kind of line in more detail.
 
 ## One problem, four constraint sets
 

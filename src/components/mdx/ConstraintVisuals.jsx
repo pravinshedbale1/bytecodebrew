@@ -5,7 +5,8 @@ import styles from './ConstraintVisuals.module.css';
 /**
  * Visuals for the "Reading Constraints" lesson. All four are free (like the DSA step-throughs).
  *
- *   <ConstraintDecoder title="…" lines={[{ code: '1 <= n <= 10^5', tag: 'speed', says: '…' }]} verdict="…" />
+ *   <ConstraintDecoder title="…" problem="…" example="…" verdict="…"
+ *     lines={[{ code: '1 <= n <= 10^5', tag: 'speed', plain: 'n is at most 100,000.', so: '…', derived: false }]} />
  *   <ComplexityRuler />
  *   <MagnitudeBars title="…" max={19} limits={[{ at: 2147483647, label: 'int max', short: 'int', tone: 'warn' }]}
  *                  items={[{ label: 'sum of 10^5 values', value: 1e14, note: '…' }]} />
@@ -13,10 +14,10 @@ import styles from './ConstraintVisuals.module.css';
  */
 
 const TAGS = {
-  speed: 'Speed',
-  type: 'Data type',
+  speed: 'How fast',
+  type: 'int or long?',
   trick: 'Technique',
-  edge: 'Edge case',
+  edge: 'Tricky input',
   memory: 'Memory',
 };
 
@@ -62,31 +63,55 @@ function Choice({ label, value, options, onChange }) {
 
 // ---------------------------------------------------------------- 1. a constraint block, line by line
 
-/** A constraint block where each line opens to show what it tells you. Guess first, then reveal. */
-export function ConstraintDecoder({ title = 'Decode the constraints', problem, lines, verdict }) {
-  const [open, setOpen] = useState(() => new Set());
+/**
+ * A constraint block where each line opens to say what it means in plain words and what it tells you
+ * to do. The first line starts open as a worked example; the verdict appears once every line is open.
+ */
+export function ConstraintDecoder({ title = 'Decode the constraints', problem, example, lines, verdict }) {
+  const [open, setOpen] = useState(() => new Set([0]));
   const all = open.size === lines.length;
   const toggle = (i) => setOpen((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
   return (
     <Frame
       title={title}
-      badge="Guess, then reveal"
-      hint={problem}
-      footer={verdict && (all ? <p className={styles.verdict}><strong>Verdict:</strong> {verdict}</p> : <p className={styles.muted}>Open every line to see the verdict.</p>)}
+      badge="Tap each line"
+      footer={verdict && (all
+        ? <p className={styles.verdict}><strong>Putting it together:</strong> {verdict}</p>
+        : <p className={styles.muted}>Open every line ({open.size} of {lines.length} so far) and the plan for the whole problem appears here.</p>)}
     >
+      {problem && (
+        <div className={styles.problem}>
+          <p><strong>The problem.</strong> {problem}</p>
+          {example && <p className={styles.example}><strong>Example.</strong> {example}</p>}
+        </div>
+      )}
       <div className={styles.decoderTop}>
-        <button type="button" className={styles.btn} onClick={() => setOpen(all ? new Set() : new Set(lines.map((_, i) => i)))}>
-          {all ? 'Hide all' : 'Reveal all'}
+        <p className={styles.how}>These lines are the problem's constraints. Tap one to see what it means and what it tells you. The first is opened for you. Try to guess each one before you tap it.</p>
+        <button type="button" className={styles.btn} onClick={() => setOpen(all ? new Set([0]) : new Set(lines.map((_, i) => i)))}>
+          {all ? 'Close all' : 'Show all'}
         </button>
       </div>
       <ol className={styles.lines}>
         {lines.map((l, i) => (
-          <li key={i} className={open.has(i) ? styles.lineOpen : undefined}>
+          <li key={i} className={`${open.has(i) ? styles.lineOpen : ''} ${l.derived ? styles.lineDerived : ''}`}>
             <button type="button" className={styles.lineBtn} aria-expanded={open.has(i)} onClick={() => toggle(i)}>
-              <code className={styles.lineCode}>{l.code}</code>
-              <span className={`${styles.tag} ${styles[`tag_${l.tag}`] ?? ''}`}>{TAGS[l.tag] ?? l.tag}</span>
+              <span className={styles.lineMain}>
+                {l.derived && <span className={styles.derivedNote}>Not written in the problem: we work it out</span>}
+                <code className={styles.lineCode}>{l.code}</code>
+              </span>
+              <span className={styles.lineSide}>
+                <span className={`${styles.tag} ${styles[`tag_${l.tag}`] ?? ''}`}>{TAGS[l.tag] ?? l.tag}</span>
+                <span className={styles.chev} aria-hidden="true">{open.has(i) ? '▴' : '▾'}</span>
+              </span>
             </button>
-            {open.has(i) && <p className={styles.says}>{l.says}</p>}
+            {open.has(i) && (
+              <dl className={styles.answer}>
+                <dt>In plain words</dt>
+                <dd>{l.plain}</dd>
+                <dt>So…</dt>
+                <dd>{l.so}</dd>
+              </dl>
+            )}
           </li>
         ))}
       </ol>
