@@ -33,6 +33,8 @@ const checks = [
   ['/mock', 'is part of Premium'],
   ['/playground', 'is part of Premium'],
   ['/today', 'is part of Premium'],
+  ['/runway', 'is part of Premium'],
+  ['/climb', 'is part of Premium'],
   ['/settings', 'Default code language'],
   ['/admin', 'Page not found'],
   ['/premium', 'Everything in Free, plus'],

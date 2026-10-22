@@ -13,6 +13,7 @@ export const FEATURES = [
   { id: 'practice', label: 'Practice tasks' },
   { id: 'problem', label: 'Problems solved' },
   { id: 'coach', label: 'Daily Coach' },
+  { id: 'climb', label: 'Climb (rated problems)' },
   { id: 'mock', label: 'Mock interviews' },
   { id: 'drill', label: 'Behavioral drill' },
 ];
@@ -33,7 +34,7 @@ function weekOf(key) {
 
 /**
  * users      [{ uid, email, name }] (from Firebase Auth via the payments Worker)
- * docs       { uid: { progress, solved, quiz, activity, coach, runway, highlights, stories, profile, mocks, … } }
+ * docs       { uid: { progress, solved, quiz, activity, coach, climb, runway, highlights, stories, profile, mocks, … } }
  * premium    Set of lower-case emails with active Premium
  * patternOf  slug → pattern id (judged problems)
  * now        a Date
@@ -102,6 +103,7 @@ export function aggregate({ users = [], docs = {}, premium = new Set(), patternO
   const setups = [
     { label: 'Runway plan created', test: (d) => Boolean(d.runway?.plan) },
     { label: 'Daily Coach used', test: (d) => (d.coach?.events?.length ?? 0) > 0 },
+    { label: 'Climb started', test: (d) => (d.climb?.events?.length ?? 0) > 0 },
     { label: 'Highlights or notes', test: (d) => Object.keys(d.highlights ?? {}).length > 0 },
     { label: 'Story bank', test: (d) => (d.stories?.length ?? 0) > 0 },
     { label: 'LeetCode connected', test: (d) => Boolean(d.profile?.leetcode?.username) },

@@ -4,6 +4,10 @@ import { useCoach } from '../../lib/coach/store';
 import { useProgress } from '../../hooks/useProgress';
 import { useSolved } from '../../hooks/useSolved';
 import { isTaskDone } from '../../lib/runwayPlan';
+import { useReplan } from '../../hooks/useReplan';
+import { useClimbState } from '../../lib/climb/store';
+import { DEFAULT_GOAL } from '../../lib/climb/model';
+import { dayKey } from '../../lib/dates';
 import ui from '../common/ui.module.css';
 import styles from './Dashboard.module.css';
 
@@ -13,6 +17,10 @@ import styles from './Dashboard.module.css';
  */
 export function TodayCard({ compact = false }) {
   const { session, plan, context, day } = useCoach();
+  useReplan();
+  const climb = useClimbState();
+  const climbToday = climb.events.filter((e) => dayKey(new Date(e.t)) === day).length;
+  const climbGoal = climb.goal ?? DEFAULT_GOAL;
   const { isComplete } = useProgress();
   const { isSolved } = useSolved();
   const progress = { isComplete, isSolved };
@@ -32,6 +40,7 @@ export function TodayCard({ compact = false }) {
     !plan && { done: false, text: 'A lesson, a couple of problems, one answer out loud' },
     session && { done: answered >= drills, text: `${session.placement ? 'Placement' : 'Recognition'} drills: ${answered}/${drills}` },
     session?.resolve && { done: !resolveOpen, text: resolveOpen ? 'One re-solve from memory' : 'Re-solve done' },
+    climb.events.length > 0 && { done: climbToday >= climbGoal, text: `Climb: ${climbToday} of ${climbGoal} rated problems` },
   ].filter(Boolean);
 
   if (compact) {

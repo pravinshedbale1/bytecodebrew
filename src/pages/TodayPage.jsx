@@ -12,7 +12,10 @@ import { catalog, lessonPath } from '../lib/coach/catalog';
 import { PATTERNS, cxLabel } from '../lib/coach/patterns';
 import { retention, labelOf, changesSince, DAY, DRILL_SECONDS, RESOLVE_MINUTES, RESOLVE_GAPS, FAIL_GAP } from '../lib/coach/model';
 import { useDeck } from '../lib/reviewDeck';
-import { DayCard, useProgressFns } from './RunwayPage';
+import { DayCard } from './RunwayPage';
+import { useReplan } from '../hooks/useReplan';
+import { useClimb } from '../lib/climb/store';
+import { useStartNext } from '../components/climb/ClimbBanner';
 import { DailyPlan } from '../components/dashboard/DailyPlan';
 import { setRunway } from '../hooks/useRunway';
 import { PlaneTakeoff, Building2, CalendarCheck2 } from 'lucide-react';
@@ -122,6 +125,8 @@ function TodayInner() {
 
       <TodayPlan plan={plan} day={day} />
 
+      <ClimbToday />
+
       <HowItHelps defaultOpen={!finishedBefore} />
 
       <ol className={styles.steps} aria-label="Today's session">
@@ -177,9 +182,37 @@ function TodayInner() {
   );
 }
 
+/** Climb on Today: the rating, today's rated problems against the goal, and one click to the next one. */
+function ClimbToday() {
+  const { model, active, goal, todayCount } = useClimb();
+  const startNext = useStartNext();
+  const done = todayCount >= goal;
+  return (
+    <section className={`${ui.panel} ${styles.climb}`} aria-labelledby="today-climb">
+      <div className={styles.climbMain}>
+        <h2 id="today-climb" className={ui.panelTitle}><Mountain size={16} aria-hidden="true" /> Climb</h2>
+        <p className={styles.partLead}>
+          {model.n
+            ? <>Rating <strong>{model.rating}</strong> · {todayCount} of {goal} rated problem{goal === 1 ? '' : 's'} today{model.run > 1 ? ` · ${model.run} clean in a row` : ''}.</>
+            : 'Rated problems at your level, against the clock: the quickest way to see how ready you are.'}
+        </p>
+      </div>
+      {active ? (
+        <Link to={`/solve/${active.s}?climb=1`} className={`${ui.btn} ${ui.primary}`}>Continue your attempt <ChevronRight size={14} /></Link>
+      ) : (
+        <div className={ui.row}>
+          <Link to="/climb" className={`${ui.btn} ${ui.ghost}`}>Open Climb</Link>
+          <button type="button" className={`${ui.btn} ${done ? '' : ui.primary}`} onClick={() => startNext()}>{model.n ? (done ? 'One more' : 'Next rated problem') : 'Start climbing'} <ChevronRight size={14} /></button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** The day's tasks: the learner's Runway day when they have a plan, otherwise the small general plan. */
 function TodayPlan({ plan, day }) {
-  const progress = useProgressFns();
+  // opening Today re-plans the Runway for the day if no page has yet
+  const { progress } = useReplan();
   if (!plan) {
     return (
       <section className={ui.panel} aria-labelledby="today-plan">

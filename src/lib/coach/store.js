@@ -141,6 +141,17 @@ function stale(s, context) {
   return was.daysLeft !== context.daysLeft || was.focus.join() !== context.focus.join();
 }
 
+/** The skill model alone (no session), for pages that only need the pattern labels: Runway re-plans with it. */
+export function useCoachModel() {
+  const state = useSyncExternalStore(store.subscribe, store.get);
+  const { solved } = useSolved();
+  const quiz = useQuizResults();
+  return useMemo(
+    () => buildModel({ events: state.events, solved, quiz, patternOf, startedAt: state.startedAt, now: Date.now() }),
+    [state.events, state.startedAt, solved, quiz],
+  );
+}
+
 /**
  * The coach for the Today page: the state, the skill model and today's session (built on first
  * visit of the day and saved, so it stays the same all day and on every device).

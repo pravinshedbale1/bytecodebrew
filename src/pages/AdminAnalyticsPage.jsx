@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { BarChart3, RefreshCw, Eye, ArrowLeft, Users, Activity, Sparkles, BookOpen, Code2, Brain } from 'lucide-react';
+import { BarChart3, RefreshCw, Eye, ArrowLeft, Users, Activity, Sparkles, BookOpen, Code2, Brain, Mountain, Download } from 'lucide-react';
 import { PageLayout } from '../components/layout/PageLayout';
 import { useAccess } from '../hooks/useAccess';
 import { loadFirebase } from '../lib/firebase';
@@ -10,6 +10,8 @@ import { viewAsHref } from '../lib/viewAs';
 import { getLessonContext, getCourse } from '../curriculum';
 import { catalog, patternOf } from '../lib/coach/catalog';
 import { PATTERNS } from '../lib/coach/patterns';
+import { calibrate, replay } from '../lib/climb/model';
+import { seeds, ratings } from '../lib/climb/store';
 import { NotFoundPage } from './NotFoundPage';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
@@ -211,10 +213,51 @@ export function AdminAnalyticsPage() {
                 </table>
               )}
             </section>
+            <ClimbRatings docs={raw.docs} />
           </div>
         </>
       )}
       <p className={styles.note}><BarChart3 size={13} aria-hidden="true" /> Each refresh reads every learner’s study documents once. At a few thousand learners this belongs in a nightly summary instead.</p>
     </PageLayout>
+  );
+}
+
+/**
+ * Climb's problem ratings, recalibrated from every learner's rated attempts. Download the file and
+ * commit it as src/data/climbRatings.json; ratings are then the same for everyone after the next deploy.
+ */
+function ClimbRatings({ docs }) {
+  const users = Object.values(docs).map((d) => d.climb?.events ?? []).filter((e) => e.length);
+  const result = useMemo(() => calibrate({ users, seeds }), [docs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const attempts = users.reduce((n, e) => n + e.length, 0);
+  const rated = users.map((e) => replay(e)).filter((m) => m.n >= 10);
+  const changes = Object.entries(result).map(([slug, r]) => ({ slug, r, was: ratings[slug] ?? seeds[slug] })).filter((c) => c.r !== c.was).sort((a, b) => Math.abs(b.r - b.was) - Math.abs(a.r - a.was));
+  const download = () => {
+    const sorted = Object.fromEntries(Object.entries(result).sort(([a], [b]) => a.localeCompare(b)));
+    const url = URL.createObjectURL(new Blob([`${JSON.stringify(sorted, null, 2)}\n`], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'climbRatings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <section className={ui.panel}>
+      <h2 className={ui.panelTitle}><Mountain size={15} aria-hidden="true" /> Climb ratings</h2>
+      <p className={styles.muted}>
+        {users.length} learner{users.length === 1 ? '' : 's'} · {attempts} rated attempts · {rated.length} with 10+ (median rating {rated.length ? rated.map((m) => m.rating).sort((a, b) => a - b)[Math.floor(rated.length / 2)] : '–'}).
+        {' '}Problems with 8+ attempts get a rating fitted to how learners really did, pulled towards the current one while evidence is thin.
+      </p>
+      {changes.length === 0 ? <p className={styles.muted}>No problem has enough attempts to change yet.</p> : (
+        <>
+          <table className={styles.table}>
+            <thead><tr><th>Problem</th><th>Now</th><th>Fitted</th></tr></thead>
+            <tbody>{changes.slice(0, 12).map((c) => <tr key={c.slug}><td>{catalog.problems[c.slug]?.title ?? c.slug}</td><td>{c.was}</td><td>{c.r}</td></tr>)}</tbody>
+          </table>
+          <p className={styles.muted}>Download the file, replace src/data/climbRatings.json with it and deploy. npm run check validates it.</p>
+          <button type="button" className={`${ui.btn} ${ui.small}`} onClick={download}><Download size={13} aria-hidden="true" /> Download climbRatings.json ({Object.keys(result).length} problems)</button>
+        </>
+      )}
+    </section>
   );
 }

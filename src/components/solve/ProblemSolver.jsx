@@ -17,6 +17,8 @@ import { useSubmissions, readLocalSubs } from '../../lib/submissions';
 import { markSolved, useSolved } from '../../hooks/useSolved';
 import { recordSubmission, recordResolve, resolveStatus, noteHint } from '../../lib/coach/store';
 import { RESOLVE_MINUTES } from '../../lib/coach/model';
+import { useClimbState, noteAttempt, finishAttempt } from '../../lib/climb/store';
+import { ClimbBanner } from '../climb/ClimbBanner';
 import { isViewingAs } from '../../lib/viewAs';
 import ui from '../common/ui.module.css';
 import styles from './ProblemSolver.module.css';
@@ -81,6 +83,9 @@ export function ProblemSolver({ slug, compact = false }) {
   const resolving = resolve.active;
   const resolvingRef = useRef(resolving);
   resolvingRef.current = resolving;
+  // Climb: a rated attempt on this problem is open (never in a mock round)
+  const climbState = useClimbState();
+  const climbing = !compact && climbState.active?.s === slug;
 
   // the mock round has less room, so it keeps its own divider positions
   const where = compact ? 'mock' : 'solve';
@@ -176,6 +181,10 @@ export function ProblemSolver({ slug, compact = false }) {
         } else {
           recordSubmission(slug, { accepted, firstTry: !subs.some((x) => x.status !== 'accepted') });
         }
+        if (climbing) {
+          if (accepted) finishAttempt(slug, { ok: true });
+          else noteAttempt(slug, 'fail');
+        }
         if (accepted) markSolved(slug);
         addSub({
           at: Date.now(),
@@ -234,12 +243,13 @@ export function ProblemSolver({ slug, compact = false }) {
           {leftTab === 'description' ? (
             <>
               {coachMode && <CoachBanner mode={coachMode} resolve={resolve} />}
+              {!compact && <ClimbBanner slug={slug} />}
               <Description spec={spec} slug={slug} examples={examples} names={names} solved={isSolved(slug)} compact={compact} lang={lang} hideHints={resolving} />
             </>
           ) : leftTab === 'solution' ? (
             resolving
               ? <p className={styles.empty}>The solution is hidden until this re-solve ends.</p>
-              : <SolutionTab key={slug} spec={spec} slug={slug} solved={isSolved(slug)} lang={lang} />
+              : <SolutionTab key={slug} spec={spec} slug={slug} solved={isSolved(slug)} lang={lang} climbing={climbing} onReveal={() => { if (climbing) finishAttempt(slug, { peek: true }); }} />
           ) : resolving ? (
             <p className={styles.empty}>Your earlier submissions are hidden until this re-solve ends.</p>
           ) : (
@@ -395,7 +405,7 @@ function Description({ spec, slug, examples, names, solved, compact, lang, hideH
 
       {spec.hints?.length > 0 && (hideHints
         ? <p className={styles.hint}><Lightbulb size={14} aria-hidden="true" /> Hints are hidden during a re-solve from memory.</p>
-        : <Hints key={slug} hints={spec.hints} onReveal={() => noteHint(slug)} />)}
+        : <Hints key={slug} hints={spec.hints} onReveal={() => { noteHint(slug); noteAttempt(slug, 'hint'); }} />)}
 
       <div className={styles.judging}>
         <p className={styles.exampleTitle}>Judging</p>

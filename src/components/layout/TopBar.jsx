@@ -19,6 +19,7 @@ const PAGE_CRUMBS = {
   problems: 'Problems',
   admin: 'Admin',
   runway: 'Runway',
+  climb: 'Climb',
   companies: 'Companies',
   premium: 'Premium',
   contact: 'Contact us',

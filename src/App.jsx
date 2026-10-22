@@ -23,6 +23,7 @@ const CompanyPage = named(() => import('./pages/CompaniesPage'), 'CompanyPage');
 const AiRoundPage = named(() => import('./pages/AiRoundPage'), 'AiRoundPage');
 const RunwayPage = named(() => import('./pages/RunwayPage'), 'RunwayPage');
 const TodayPage = named(() => import('./pages/TodayPage'), 'TodayPage');
+const ClimbPage = named(() => import('./pages/ClimbPage'), 'ClimbPage');
 const SettingsPage = named(() => import('./pages/SettingsPage'), 'SettingsPage');
 const AdminAnalyticsPage = named(() => import('./pages/AdminAnalyticsPage'), 'AdminAnalyticsPage');
 const PricingPage = named(() => import('./pages/PricingPage'), 'PricingPage');
@@ -52,6 +53,7 @@ export function App() {
         <Route path="admin" element={page(<AdminPage />)} />
         <Route path="admin/analytics" element={page(<AdminAnalyticsPage />)} />
         <Route path="runway" element={page(<RunwayPage />)} />
+        <Route path="climb" element={page(<ClimbPage />)} />
         <Route path="companies" element={page(<CompaniesPage />)} />
         <Route path="companies/ai-assisted-round" element={page(<AiRoundPage />)} />
         <Route path="companies/:companyId" element={page(<CompanyPage />)} />

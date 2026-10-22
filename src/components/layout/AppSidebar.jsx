@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Lock, Sparkles } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Lock, Sparkles, Mountain } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
@@ -81,6 +81,12 @@ function GlobalNav({ activeTrackId }) {
       <NavLink to="/runway" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
         <PlaneTakeoff size={18} strokeWidth={1.75} aria-hidden="true" />
         Runway
+        {premium ? <span className={styles.newBadge}>New</span> : lock}
+      </NavLink>
+
+      <NavLink to="/climb" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
+        <Mountain size={18} strokeWidth={1.75} aria-hidden="true" />
+        Climb
         {premium ? <span className={styles.newBadge}>New</span> : lock}
       </NavLink>
 

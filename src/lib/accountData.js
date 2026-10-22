@@ -10,7 +10,7 @@ import { viewAs, noteReadOnly } from './viewAs';
  * What a learner's data is (erased by Delete, everywhere):
  *   - the synced stores (STATE_DOCS: browser copy + users/{uid}/state/{name}): lesson progress, solved
  *     problems, highlights and notes, quizzes, practice, activity and streak, review deck, mocks,
- *     LeetCode profile, behavioral drill, story bank, Runway plan, Daily Coach
+ *     LeetCode profile, behavioral drill, story bank, Runway plan, Daily Coach, Climb
  *   - code submissions (users/{uid}/submissions/* + bcb:subs:*), drafts, playground code, an unfinished mock,
  *     re-solve timers and every other "bcb:" key in this browser
  * What is kept:
@@ -31,14 +31,14 @@ const PRIVATE = new Set(['bcb:anthropic-key']);
  * premiumNames in firestore.rules, minus the reset marker. Deleted by name so nothing survives just
  * because the store that owns it wasn't loaded in this session. scripts/check.mjs keeps the lists in step.
  */
-export const STATE_DOCS = ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach'];
+export const STATE_DOCS = ['progress', 'solved', 'highlights', 'quiz', 'practice', 'activity', 'reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach', 'climb'];
 
 /** What Delete erases and keeps, in the learner's words (shown before they confirm). */
 export const ERASED = [
   'Lesson progress, highlights and notes',
   'Solved problems, code submissions and drafts',
   'Quiz answers, practice ratings and your review deck',
-  'Daily Coach skill map and sessions',
+  'Daily Coach skill map and sessions, Climb rating and attempts',
   'Mock interviews, behavioral drill and story bank',
   'Runway plan, LeetCode connection, streak and activity',
 ];

@@ -14,7 +14,7 @@ const LEVEL_CLASS = { 'Brute force': 'brute', Better: 'better', Optimal: 'optima
  * optimal) with its idea, steps, time and space complexity (and why), and tested code in each judge
  * language. Until the problem is solved it asks once before showing anything.
  */
-export function SolutionTab({ spec, slug, solved, lang }) {
+export function SolutionTab({ spec, slug, solved, lang, climbing = false, onReveal }) {
   const [sol, setSol] = useState(undefined);
   const [revealed, setRevealed] = useState(solved);
   const [codeLang, setCodeLang] = useState(lang);
@@ -28,16 +28,17 @@ export function SolutionTab({ spec, slug, solved, lang }) {
     return () => { alive = false; };
   }, [spec.lesson, slug]);
 
-  if (!revealed && !solved) {
+  if ((!revealed && !solved) || (climbing && !revealed)) {
     return (
       <div className={styles.gate}>
-        <p className={styles.gateTitle}>Have a go first?</p>
+        <p className={styles.gateTitle}>{climbing ? 'This is a rated attempt' : 'Have a go first?'}</p>
         <p className={styles.gateText}>
-          The Solution tab walks through every approach, from brute force to optimal, with code in each language.
-          You learn more if you try the problem (and the hints) before reading it.
+          {climbing
+            ? 'Opening the solution now ends your Climb attempt as not solved, and your rating drops as if you gave up. Hints cost much less.'
+            : 'The Solution tab walks through every approach, from brute force to optimal, with code in each language. You learn more if you try the problem (and the hints) before reading it.'}
         </p>
-        <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => setRevealed(true)}>
-          <Eye size={13} aria-hidden="true" /> Show the solution
+        <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => { onReveal?.(); setRevealed(true); }}>
+          <Eye size={13} aria-hidden="true" /> {climbing ? 'End the attempt and show the solution' : 'Show the solution'}
         </button>
       </div>
     );

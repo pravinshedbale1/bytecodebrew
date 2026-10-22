@@ -20,11 +20,12 @@ const docs = {
     runway: { plan: { days: 30 } },
   },
   b: {
-    activity: { [day(1)]: { lesson: 1, review: 4 }, [day(20)]: { mock: 1 } },
+    activity: { [day(1)]: { lesson: 1, review: 4, climb: 2 }, [day(20)]: { mock: 1 } },
     progress: { 'dsa/patterns/two-pointers': { completedAt: '2026-10-18' } },
     quiz: { 'dsa/patterns/two-pointers': { q1: { first: true }, q2: { first: true } } },
     solved: { 'two-sum': { at: '2026-10-12', by: 'leetcode' } },
     profile: { leetcode: { username: 'ravi' } },
+    climb: { goal: 3, active: null, events: [{ id: 'x', t: 1, s: 'two-sum', ok: true }] },
   },
   c: { activity: { [day(60)]: { lesson: 5 } } },
 };
@@ -41,6 +42,8 @@ const f = Object.fromEntries(r.features.map((x) => [x.id, x]));
 check(f.lesson.users30 === 2 && f.lesson.actions30 === 4, `lessons: 2 learners, 4 reads in 30 days (${f.lesson.users30}, ${f.lesson.actions30})`);
 check(f.mock.users30 === 1 && f.mock.users7 === 0, 'a mock 20 days ago counts for 30 days, not 7');
 check(f.coach.users7 === 1, 'Daily Coach used this week by one learner');
+check(f.climb.users7 === 1 && f.climb.actions30 === 2, 'Climb attempts count as a feature');
+check(r.setups.find((s) => s.label === 'Climb started').users === 1, 'Climb shows as set up');
 check(r.people[0].uid === 'a' && r.people[0].actions30 === 13, `most active learner first (${r.people[0].uid}, ${r.people[0].actions30})`);
 check(r.people.find((p) => p.uid === 'c').days30 === 0, 'activity older than 30 days does not count as active');
 check(r.lessons[0].key === 'dsa/patterns/two-pointers' && r.lessons[0].users === 2, 'most completed lesson');

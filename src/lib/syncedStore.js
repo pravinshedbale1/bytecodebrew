@@ -137,6 +137,8 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
   let firstSnapshot = true;
   let pending = null;            // debounce timer for remote writes
   let lastRemoteJson = null;
+  let authStatus = 'loading';
+  let loaded = false;           // the account's copy has been merged in (signed in) or there is none
 
   const emit = () => listeners.forEach((l) => l());
 
@@ -197,6 +199,7 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
       }
       if (firstSnapshot) {
         firstSnapshot = false;
+        loaded = true;
         const merged = remote == null ? state : merge(state, remote);
         lastRemoteJson = remote == null ? null : snap.data().json;
         applyLocal(merged);
@@ -225,6 +228,11 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
   }
 
   onAuth((auth) => {
+    const was = authStatus;
+    authStatus = auth.status;
+    if (auth.status !== 'signed-in') loaded = auth.status !== 'loading';
+    else if (auth.user.uid !== uid) loaded = false;
+    if (was !== authStatus) emit();
     if (auth.status === 'signed-in' && auth.user.uid !== uid) {
       disconnect();
       connect(auth.user);
@@ -238,6 +246,8 @@ export function createSyncedStore({ name, storageKey, initial, merge }) {
     storageKey,
     initial,
     get: () => state,
+    /** True once this browser's copy is all there is to know: signed out, or the account's copy is merged in. */
+    isSettled: () => loaded,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);

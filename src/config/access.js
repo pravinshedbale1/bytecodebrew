@@ -10,7 +10,7 @@ export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
 
 /** Synced stores that only premium accounts may write to (see firestore.rules → premiumNames). */
-export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach'];
+export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach', 'climb'];
 
 export const isAdminEmail = (email) => Boolean(email) && ADMIN_EMAILS.includes(email.toLowerCase());
 
@@ -38,7 +38,8 @@ export const PREMIUM_FEATURES = [
   ['Mock interviews', 'timed DSA, system design, LLD, behavioral and machine-coding rounds, with a rubric and one-click AI review'],
   ['Daily Coach', 'a 20-minute session every day built from your own skill map: recognition drills on unseen problems, re-solves from memory just before you forget, and a stretch problem where you are weakest'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],
-  ['Runway: your day-by-day interview plan', 'tell it your days, hours a day and target company; it plans lessons, problems, mocks and revision in that company\'s interview style, shows what to do today and keeps you on pace'],
+  ['Runway: your day-by-day interview plan', 'tell it your days, hours a day and target company; it plans lessons, problems, mocks and revision in that company\'s interview style, re-plans every day around what you did, and lets you set any day\'s hours, pin tasks and prioritise topics'],
+  ['Climb: rated problem solving', 'every problem picked just above your level and timed; your rating, overall and per pattern, shows how ready you are for your target company'],
   ['Company interview guides', 'how the 50 best-paying companies in India interview: rounds, AI rules, what to practise, plus the AI-assisted debugging round guide with ready-made LLM prompts'],
   ['Dashboard and LeetCode sync', 'streaks, weak areas, activity and your LeetCode history imported'],
   ['Code playground, behavioral drill and story bank', ''],

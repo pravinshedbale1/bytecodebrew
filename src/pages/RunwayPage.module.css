@@ -1114,3 +1114,358 @@ a.taskTitle:hover {
   color: var(--color-danger);
   background: var(--color-danger-soft);
 }
+
+/* ================================================================ Runway 2: controls */
+
+.diff {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.diff svg {
+  flex: none;
+  color: var(--color-accent);
+}
+
+/* ---- time strip: the next two weeks, each day tappable */
+
+.stripHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.stripHead .cardTitle {
+  margin-bottom: var(--space-2);
+}
+
+.stripPace {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.stripPace .segmented {
+  margin: 0;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(34px, 1fr));
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.stripDay {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.stripDay:hover {
+  border-color: var(--color-border-strong);
+}
+
+.stripToday {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+}
+
+.stripOn {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.stripBar {
+  position: relative;
+  width: 14px;
+  height: 56px;
+  border-radius: 4px;
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.stripCap,
+.stripPlanned {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px;
+}
+
+.stripCap {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.stripPlanned {
+  left: 3px;
+  right: 3px;
+  background: var(--color-accent);
+  opacity: 0.85;
+}
+
+.stripHours {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stripOwn {
+  margin-left: 1px;
+  color: var(--color-accent);
+}
+
+.stripDate {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.stripEdit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.stripEdit .segmented {
+  margin: 0;
+}
+
+.columns {
+  margin-top: var(--space-3);
+}
+
+.timeCard {
+  margin-bottom: var(--space-3);
+}
+
+/* ---- forecast and changes */
+
+.fixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sideCol .meter {
+  margin-bottom: var(--space-2);
+}
+
+.sideCol .meterText {
+  margin-bottom: var(--space-3);
+}
+
+.sideCol .cardLead:last-child {
+  margin-bottom: 0;
+}
+
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.noteDay {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--color-text-subtle);
+  text-transform: capitalize;
+}
+
+/* ---- tasks: pin and reason */
+
+.taskLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pinIcon {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.why {
+  color: var(--color-text-subtle);
+  font-style: italic;
+}
+
+/* ---- syllabus */
+
+.syllabus {
+  margin-top: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.syllabusHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.syllabusHead > svg:first-child {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.syllabusHead > span {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+
+.syllabusSub {
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.syllabusBody {
+  display: grid;
+  gap: var(--space-5);
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.sylTrackTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-md);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.sylList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.sylRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.sylRow:not(:has(.sylMove)) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sylSkip .sylName {
+  color: var(--color-text-subtle);
+  text-decoration: line-through;
+}
+
+.sylName {
+  display: grid;
+  gap: 1px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-width: 0;
+}
+
+.sylMeta {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+
+.sylMove {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.sylMove button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.sylMove button:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.sylChoice {
+  margin: 0;
+}
+
+.sylChoice button {
+  padding: 3px 9px;
+  font-size: var(--text-xs);
+}
+
+.sylApply {
+  position: sticky;
+  bottom: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+}
+
+.sylApply .diff {
+  flex: 1 1 260px;
+}
+
+@media (max-width: 640px) {
+  .sylRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sylChoice {
+    grid-column: 1 / -1;
+  }
+}
