@@ -33,6 +33,7 @@ import { ProblemTracker } from './ProblemTracker';
 import { Quiz } from './Quiz';
 import { FullCode } from './FullCode';
 import { InterviewScope } from './InterviewScope';
+import { ConstraintDecoder, ComplexityRuler, MagnitudeBars, ModClock } from './ConstraintVisuals';
 import { problemSlug } from '../../hooks/useSolved';
 import { useLessonKey } from '../lesson/LessonContext';
 import { openInPlayground } from '../../lib/playground';
@@ -154,4 +155,8 @@ export const mdxComponents = {
   Quiz,
   FullCode,
   InterviewScope,
+  ConstraintDecoder,
+  ComplexityRuler,
+  MagnitudeBars,
+  ModClock,
 };

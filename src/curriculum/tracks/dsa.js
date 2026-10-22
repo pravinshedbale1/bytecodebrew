@@ -56,6 +56,7 @@ const dataStructures = {
     'Name the types of each structure (singly vs doubly, BST vs heap, directed vs undirected…)',
     'Pick the right Java class for a job and avoid the legacy ones',
     'Choose a data structure from the operations a problem needs',
+    'Read the constraints to know the target complexity, the data type, the memory budget and the edge cases',
   ],
   modules: [
     {
@@ -82,9 +83,10 @@ const dataStructures = {
     {
       id: 'choosing',
       title: 'Putting It Together',
-      description: 'From "what operations do I need?" to the right structure.',
+      description: 'From "what operations do I need?" and "how big is the input?" to the right structure and complexity.',
       lessons: [
         L('choosing-a-data-structure', 'Choosing a Data Structure', 'One table of every structure and operation, and a decision guide for picking one.', 12, 'Beginner'),
+        L('reading-constraints', 'Reading Constraints', 'The problem\'s biggest hint: target complexity from n, int vs long, negatives, value ranges, memory, recursion depth and modulo 10^9 + 7.', 25, 'Beginner'),
       ],
     },
   ],

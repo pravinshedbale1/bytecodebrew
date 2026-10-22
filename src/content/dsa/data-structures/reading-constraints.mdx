@@ -1,0 +1,585 @@
+Every problem ends with a few lines like `1 <= n <= 10^5`. Most people skim them. They are the **biggest hint in the problem**: they tell you how fast your solution must be, which data type to use, which tricks are safe and which edge cases the tests will throw at you. You can do all of this before writing a line of code.
+
+Think of the price filter on a shopping site. Set a budget of ₹2,000 and most of the catalogue disappears before you start browsing. The constraints are the problem's budget. Read them first, and most of the approaches you could try disappear too.
+
+<Related ids={['choosing-a-data-structure', 'arrays-and-strings', 'hash-tables']} />
+
+## What a constraint block tells you
+
+A constraint is a limit on the input. Each line answers one of five questions:
+
+| Question | Read it from | Example |
+| --- | --- | --- |
+| **How fast** must it be? | the largest size: n, m, q, number of nodes or edges | `n <= 10^5` → O(n log n) or better |
+| **Which data type?** | the range of each value, and what you build from them | values up to 10^9, summed → `long` |
+| **Which technique?** | special shapes: sorted, small range, small k, values 1 to n | `0 <= nums[i] <= 100` → counting array |
+| **Which edge cases?** | the minimums, and what is guaranteed | `1 <= n` → never empty; "exactly one answer" → no "not found" case |
+| **How much memory?** | sizes you might store, recursion depth | `n <= 10^4` → an n × n int table is 400 MB, too big |
+
+Try it on a real problem before reading on. Guess what each line means, then open it.
+
+<ConstraintDecoder
+  title="Decode: Koko Eating Bananas"
+  problem="Koko has piles of bananas and h hours. Each hour she picks one pile and eats up to s bananas from it. Find the smallest speed s that lets her finish every pile within h hours."
+  lines={[
+    { code: '1 <= piles.length <= 10^4', tag: 'speed', says: 'Up to 10,000 piles. One pass over the piles costs 10^4, so we can afford to repeat that pass many times, but not 10^9 times.' },
+    { code: 'piles.length <= h <= 10^9', tag: 'edge', says: 'h is at least the number of piles, so an answer always exists: at speed max(piles) every pile takes one hour. That gives the top of the search range. h up to 10^9 also means simulating hour by hour is out.' },
+    { code: 'piles[i] <= 10^9', tag: 'speed', says: 'The answer (a speed) lies between 1 and 10^9. Trying every speed is 10^9 × 10^4 = 10^13 operations, far too slow. Binary search needs only about 30 tries, because log₂(10^9) ≈ 30.' },
+    { code: 'derived: sum(piles) <= 10^4 × 10^9 = 10^13', tag: 'type', says: 'Not printed in the problem, but it follows from the lines above. At speed 1 the hours add up to the sum of all piles, up to 10^13. That overflows int (about 2.1 × 10^9), so count the hours in a long.' },
+    { code: '1 <= piles[i]', tag: 'edge', says: 'No empty piles, and the speed starts at 1, so pile / speed never divides by zero and every pile takes at least one hour.' },
+  ]}
+  verdict="Binary search on the speed between 1 and max(piles): about 30 checks × 10^4 piles = 3 × 10^5 operations, with the hour count in a long. That is the pattern in Binary Search on the Answer."
+/>
+
+Five lines gave the algorithm, the search range, the data type and two edge cases. The rest of this lesson shows how to read each kind of line.
+
+## The golden rule: about 10^8 operations a second
+
+A judge (or an interviewer judging by eye) gives you about **1 to 2 seconds**. In that time, Java or C++ can do roughly **10^8 simple operations**: additions, comparisons, array reads. That is 10 crore. So:
+
+> Put the largest n into your solution's complexity. If the result is above about 10^8, the solution is too slow.
+
+With n = 10^5 (one lakh):
+
+| Approach | Operations at n = 10^5 | Result |
+| --- | --- | --- |
+| O(n²): every pair | 10^5 × 10^5 = 10^10 | 100 times over budget: Time Limit Exceeded |
+| O(n log n): sort, then one pass | 10^5 × 17 ≈ 1.7 × 10^6 | Fast |
+| O(n): one pass with a hash map | 10^5 | Fast |
+
+So when you see `n <= 10^5`, two nested loops over the input will not work. You don't need to write them to find out.
+
+### Where 10^8 comes from, and when to lower it
+
+10^8 is a planning number, not a law. A CPU runs a few billion cycles a second, but a real "operation" costs several cycles plus waits for memory. Here is what we measured while writing this lesson (Apple Silicon laptop, JDK 25):
+
+| Work | Time |
+| --- | --- |
+| 10^9 steps of a simple arithmetic loop | 0.66 s |
+| Sorting 10^7 ints with `Arrays.sort` | 0.68 s |
+| 10^7 `HashMap.merge` calls on Integer keys | 0.79 s |
+
+A simple loop step is cheap, but one `HashMap` operation costs about **ten times more** than one simple step. So adjust the budget to the kind of step you repeat:
+
+- Array reads, arithmetic, comparisons: budget about **10^8**.
+- Hash map operations, object creation, recursion with real work in each call: budget about **10^7**.
+- Python is roughly 10 to 50 times slower than Java for this kind of loop: budget about **10^7**.
+
+When several sizes appear, **multiply them**: n × m for two strings, q × n if each query scans the array, (V + E) for a graph traversal. The judge counts the total work.
+
+## How far each complexity reaches
+
+Turn the rule around: for each complexity, what is the largest n that fits in 10^8? The bars below answer that. Pick an n and see which complexities still reach it.
+
+<ComplexityRuler />
+
+Memorise the result as a table. Find the row for the largest n in the problem:
+
+| Largest n | Allowed complexity | What it usually points to |
+| --- | --- | --- |
+| n ≤ 10–11 | O(n!) | Every ordering: [backtracking](/dsa/patterns/backtracking) over permutations |
+| n ≤ 18–22 | O(2ⁿ · n) | Bitmask DP over subsets ([state-machine and bitmask DP](/dsa/patterns/dp-state-machine)) |
+| n ≤ 20–25 | O(2ⁿ) | Every subset: pick or skip each element |
+| n ≤ 40 | O(2^(n/2)) | Meet in the middle: all subsets of each half, then combine |
+| n ≤ 100 | O(n⁴) | Four nested loops; small 4D DP |
+| n ≤ 400–500 | O(n³) | [Interval DP](/dsa/patterns/dp-trees-intervals), Floyd–Warshall, three nested loops |
+| n ≤ 2,000–5,000 (up to 10^4) | O(n²) | Every pair, [2D DP over two strings](/dsa/patterns/dp-strings) |
+| n ≤ 10^5–2 × 10^5 | O(n log n), sometimes O(n√n) | Sorting, heaps, binary search, TreeMap, segment trees |
+| n ≤ 10^6 | O(n) or a light O(n log n) | [Hash maps](/dsa/patterns/hashing), [two pointers](/dsa/patterns/two-pointers), [sliding window](/dsa/patterns/sliding-window), [prefix sums](/dsa/patterns/prefix-sums) |
+| n ≤ 10^7–10^8 | O(n), small constant | One tight loop over an array; a sieve |
+| n ≤ 10^9–10^18 | O(log n), O(√n), O(1) | [Binary search on the answer](/dsa/patterns/binary-search-on-answer), fast power, a formula |
+
+Two things in this table are easy to miss:
+
+- **Read it backwards.** A tiny n is an invitation, not an accident. `n <= 15` says "trying every subset is fine". If you build something clever for n ≤ 15, you have probably misread the problem.
+- **n ≤ 10^9 is almost never the length of an array.** An int array that long is 4 GB. A limit that large is on a **value**: a speed, a capacity, a day number, a count. You can't loop up to it, so the answer comes from binary search over that range, or from maths.
+
+<Callout type="note" title="Why the limits sit right at the edge">
+Problem setters choose n so the intended solution passes and the next slower one fails. n ≤ 10^5 is chosen because O(n log n) passes easily and O(n²) clearly fails. When n lands between two rows (n ≤ 10^4: O(n²) = 10^8 is borderline), both may pass on the judge, and the interviewer will still ask for the faster one.
+</Callout>
+
+## One problem, four constraint sets
+
+The same question can need four different algorithms. Here it is: *can you choose some numbers from the array that add up to exactly `target`?*
+
+| Constraints | Work for each idea | The approach they point to |
+| --- | --- | --- |
+| n ≤ 20 | 2^20 ≈ 10^6 subsets | Try every subset with pick-or-skip recursion or a bitmask loop |
+| n ≤ 40 | 2^40 ≈ 10^12: too slow. Two halves of 2^20 each: fine | Meet in the middle: list every subset sum of each half, sort one list, binary search it for `target − x` |
+| n ≤ 200, each value ≤ 100 | total sum ≤ 20,000, so 200 × 20,000 = 4 × 10^6 | DP over sums: "which totals can I make?" ([knapsack](/dsa/patterns/dp-knapsack), like Partition Equal Subset Sum) |
+| n ≤ 10^5, values up to 10^9 | none of the above fit | No fast method exists for any subset. The problem must have extra structure: if it asks for a *contiguous* subarray of positive numbers, a sliding window does it in O(n) |
+
+Nothing changed in the question. Only the constraints changed, and each set of constraints made a different algorithm the right one. That is why you read them first.
+
+## Ruling out approaches: a worked example
+
+Find two numbers in the array that add up to `target`, with `1 <= n <= 10^5`:
+
+1. **Brute force** checks every pair: O(n²) = 10^10. Ruled out.
+2. n = 10^5 allows **O(n log n) or O(n)**. Look for one of those.
+3. **O(n log n)**: sort, then move two pointers inward. Works, if you only need the values (sorting loses the original indexes unless you store them too).
+4. **O(n)**: a HashMap. For each number, check whether `target − num` is already in the map, then store the number. Works, and keeps the indexes.
+
+You chose between two good answers and threw out the bad one before writing any code. Say this reasoning out loud in an interview. It shows you are working toward the target complexity on purpose, not guessing.
+
+## Value constraints: data types, negatives, ranges
+
+n tells you about **speed**. The range of each value tells you which **data type** to use and which **tricks are safe**.
+
+### Overflow: int or long?
+
+In Java, an `int` holds up to **2,147,483,647** (about 2.1 × 10^9) and a `long` up to about **9.2 × 10^18**. The values in the input usually fit in an int. The trouble is what you **build** from them: sums, products, counts of pairs. Here is where common quantities land:
+
+<MagnitudeBars
+  title="Where does your number land?"
+  hint="Each bar is a quantity you might compute, on a log scale. Past the first dashed line it no longer fits in an int; past the second, not even in a long."
+  max={20}
+  limits={[{ at: 2147483647, short: 'int max', label: 'int max ≈ 2.1 × 10⁹', tone: 'warn' }, { at: 9.223372036854776e18, short: 'long max', label: 'long max ≈ 9.2 × 10¹⁸', tone: 'danger' }]}
+  items={[
+    { label: 'One value, nums[i] ≤ 10^9', value: 1e9, note: 'Fits in an int.' },
+    { label: 'Two values added, each up to 10^9', value: 2e9, note: 'Just fits (2 × 10^9 < 2.147 × 10^9). Add a third and it overflows.' },
+    { label: 'Number of pairs for n = 10^5', value: 4999950000, display: '4,999,950,000', note: 'n(n − 1)/2. Computed in int, Java gives 704,982,704: wrong, and positive, so nothing looks broken.' },
+    { label: '10^5 × 10^5 (n², or two values ≤ 10^5 multiplied)', value: 1e10, note: 'In int this gives 1,410,065,408: again a wrong positive number.' },
+    { label: 'Sum of 10^5 values, each up to 10^9', value: 1e14, note: 'Needs a long. This is the Koko bug.' },
+    { label: 'Two values up to 10^9 multiplied', value: 1e18, note: 'Fits in a long. So does (10^9 + 7)², which is why modular code multiplies in long.' },
+    { label: '20!', value: 2432902008176640000, display: '2.4 × 10¹⁸', note: 'The largest factorial that fits in a long. 21! does not.' },
+    { label: 'Ways to climb 1,000 stairs (1 or 2 steps)', value: 1e30, display: '≈ 7 × 10²⁰⁸', note: 'A 209-digit number. Nothing fits it, which is why such problems ask for the answer modulo 10^9 + 7.' },
+  ]}
+/>
+
+The fix is to use `long` for anything that can grow:
+
+```java
+int[] nums = {1_000_000_000, 1_000_000_000, 1_000_000_000};
+int bad = 0;
+for (int x : nums) bad += x;             // overflow: gives -1,294,967,296
+```
+
+```java
+static long sum(int[] nums) {
+    long total = 0;                       // up to 10^5 values of 10^9 → 10^14: needs long
+    for (int x : nums) total += x;
+    return total;
+}
+```
+
+**Cast before you multiply.** Java computes the right-hand side in int first and widens afterwards, so the cast has to be on an operand:
+
+```java
+static long countPairs(int n) {
+    // (long) (n * (n - 1) / 2) is wrong: it multiplies in int, overflows, THEN widens
+    return (long) n * (n - 1) / 2;        // cast BEFORE multiplying; n = 10^5 gives 4,999,950,000
+}
+```
+
+Other places the same overflow hides:
+
+| Code | What goes wrong | Write instead |
+| --- | --- | --- |
+| `int mid = (low + high) / 2;` | `low + high` overflows when both are near 2^31 | `low + (high - low) / 2` |
+| `(a, b) -> a - b` as a comparator | With values of ±2 × 10^9 the difference overflows and the sort order is wrong | `Integer.compare(a, b)` |
+| `int INF = Integer.MAX_VALUE;` then `dist + w` | `INF + 1` wraps to −2,147,483,648, which looks like the best distance | `INF = 1_000_000_000`, or a long |
+| `Math.abs(x)` or `-x` when x can be −2^31 | `Math.abs(Integer.MIN_VALUE)` is still negative | Work in long when the full int range is allowed |
+| `(int) Math.sqrt(x)` or `Math.pow` for large x | A double is exact only up to 2^53 ≈ 9 × 10^15, so big results can be off by one | Integer binary search, or correct the result by ±1 |
+
+Here is how safe midpoints look in the course's tested code:
+
+```java
+static int mid(int low, int high) {
+    return low + (high - low) / 2;        // (low + high) / 2 overflows when both are near 2^31
+}
+```
+
+### Negative numbers allowed?
+
+A lower bound below zero changes which techniques work:
+
+- **Sliding window breaks** for "subarray sum equals k". With only positives, growing the window raises the sum and shrinking lowers it, so you know which way to move. With negatives you don't. Use [prefix sums with a hash map](/dsa/patterns/prefix-sums) instead.
+- **Kadane's algorithm** must handle an array where every number is negative. Start from `nums[0]`, not from 0, or you will return 0 for `[-3, -1, -2]`:
+
+```java
+static long maxSubarray(int[] nums) {     // Kadane: start from nums[0], not 0, so all-negative input works
+    long best = nums[0], cur = nums[0];
+    for (int i = 1; i < nums.length; i++) {
+        cur = Math.max(nums[i], cur + nums[i]);
+        best = Math.max(best, cur);
+    }
+    return best;
+}
+```
+
+- **Products flip sign.** For "maximum product subarray", track the smallest product too: a very negative number times a negative becomes the largest.
+- **Division and % round toward zero** in Java: `-7 / 2` is −3 and `-3 % 7` is −3. Use `Math.floorDiv` and `Math.floorMod` when you need the mathematical answer (−4 and 4). The clock in the modulo section below shows why.
+- **Counting arrays need an offset.** For values from −10^4 to 10^4, use `count[x + 10_000]` in an array of size 20,001.
+
+### A small value range: use the value as an index
+
+When values are small, an array beats a hash map. It is faster, uses less memory and the code is shorter:
+
+| Constraint | Use |
+| --- | --- |
+| Only lowercase letters | `int[] count = new int[26];` with `count[c - 'a']++` |
+| ASCII characters | `int[128]` |
+| `0 <= nums[i] <= 1000` | `int[] freq = new int[1001];`, or counting sort in O(n + 1000) |
+| Total sum ≤ 20,000 | DP over the sums: `boolean[] canMake = new boolean[sum + 1]` |
+| `1 <= nums[i] <= n` | The array is its own hash table: put value v at index v − 1, or mark index v − 1 as seen by making it negative. O(1) extra space ([First Missing Positive](https://leetcode.com/problems/first-missing-positive/) uses this) |
+| 26 letters, and you need sets of them | A bitmask in one int: bit i means letter i is present |
+
+### A huge value range with few values: compress it
+
+Values up to 10^9 can't index an array, but if there are only n = 10^5 of them, only the **order** usually matters. Replace each value with its rank among the distinct values. The ranks run from 0 to n − 1, so they can index an array or a [Fenwick tree](/dsa/patterns/range-queries).
+
+<ArrayViz title="Coordinate compression: values become ranks" frames={[
+  { arr: [100, 5, "10⁹", 5, 42], note: "Five values, one of them 10⁹. An array of size 10⁹ would be 4 GB, but there are only 4 distinct values." },
+  { arr: [100, 5, "10⁹", 5, 42], aux: { label: "sorted distinct values", items: [5, 42, 100, "10⁹"] }, note: "Sort the distinct values once: O(n log n). Each value's position in this list is its rank." },
+  { arr: [2, 5, "10⁹", 5, 42], highlight: [0], done: [0], aux: { label: "sorted distinct values", items: [5, 42, 100, "10⁹"] }, vars: { value: 100, rank: 2 }, note: "Binary search for 100 in the sorted list: index 2. Replace it." },
+  { arr: [2, 0, "10⁹", 0, 42], highlight: [1, 3], done: [0, 1, 3], aux: { label: "sorted distinct values", items: [5, 42, 100, "10⁹"] }, vars: { value: 5, rank: 0 }, note: "Both 5s become 0. Equal values get equal ranks." },
+  { arr: [2, 0, 3, 0, 1], highlight: [2, 4], done: [0, 1, 2, 3, 4], aux: { label: "sorted distinct values", items: [5, 42, 100, "10⁹"] }, vars: { ranks: "0 to 3" }, note: "Done: every value is now between 0 and 3, and their order is the same as before. An array of size 4 is enough." },
+]} />
+
+```java
+/** Replaces each value by its rank among the distinct values: {100, 5, 10^9, 5, 42} → {2, 0, 3, 0, 1}. */
+static int[] compress(int[] nums) {
+    int[] sorted = Arrays.stream(nums).distinct().sorted().toArray();
+    int[] rank = new int[nums.length];
+    for (int i = 0; i < nums.length; i++) rank[i] = Arrays.binarySearch(sorted, nums[i]);
+    return rank;
+}
+```
+
+### Strings and decimals
+
+- **The character set** sets the counting array: lowercase letters → 26, letters and digits → 62 (or 128 for any ASCII), "any Unicode" → a HashMap.
+- **A string length of 10^5** makes `s.substring(...)` or `s + c` inside a loop O(n²), because each one copies. Work with indexes and a `StringBuilder`.
+- **"Answers within 10^-5 of the correct answer are accepted"** means the answer is a decimal. Never compare doubles with `==`. Binary search on a double runs a fixed number of rounds (100 is plenty) instead of `while (low < high)`.
+
+## Structure words that are constraints too
+
+Some lines are not numbers but still decide the approach. The [Pattern Picker](/dsa/playbook/pattern-picker) covers the wording of the question itself; these are the ones found among the constraints:
+
+| You see | It tells you |
+| --- | --- |
+| The array is sorted | Binary search or two pointers. Using a hash map wastes the hint |
+| `q <= 10^5` queries on the same array | Precompute once, then answer each query fast: prefix sums, a sparse table, a segment tree. q × n = 10^10 is too slow |
+| Queries mixed with updates | A Fenwick tree or segment tree: O(log n) for both |
+| k is small (`k <= 10`, `k <= 50`) | Looping over k is fine: O(n · k), or even O(n · 2^k) |
+| Minimise the maximum, or maximise the minimum | Binary search on the answer |
+| Return the answer modulo 10^9 + 7 | The true answer is huge: a counting problem, usually DP or combinatorics |
+| n nodes and n − 1 edges, connected | It's a tree: no cycles, no visited set needed, but depth can reach n |
+| Edge weights ≥ 0 | Dijkstra works. Negative weights → Bellman–Ford. All weights equal → plain BFS |
+| The graph may be disconnected | Start a traversal from every unvisited node, not just node 0 |
+| Grid with m, n ≤ 300 | 9 × 10^4 cells: BFS or DFS over every cell is fine |
+| O(1) extra space, or "in place" | Two pointers, swaps, or reuse the input array as storage |
+| "Exactly one solution exists" | No "not found" case, and no ties to break |
+| "Return any valid answer" | The judge checks the answer, so a greedy that finds one valid answer is enough |
+| Data arrives as a stream | You can't sort it all first: keep a heap or a running state |
+| Sum of n over all test cases ≤ 2 × 10^5 | The budget is for the total. Don't clear a max-size array for every test case |
+
+## Memory limits
+
+Judges usually allow about **256 MB**. LeetCode doesn't print a limit, but huge tables still fail there. Know the sizes:
+
+| Type | Bytes each |
+| --- | --- |
+| `boolean`, `byte` | 1 |
+| `char`, `short` | 2 |
+| `int`, `float` | 4 |
+| `long`, `double` | 8 |
+| A boxed `Integer` in a list | about 20 (measured: `ArrayList<Integer>` of 10^6 took 21 MB, vs 4 MB for `int[10^6]`) |
+| One `HashMap<Integer, Integer>` entry | about 70 (measured: 73 MB for 10^6 entries) |
+
+<MagnitudeBars
+  title="Will it fit in 256 MB?"
+  hint="Memory for common allocations, on a log scale. The dashed line is a typical 256 MB limit."
+  min={5}
+  max={11}
+  limits={[{ at: 256e6, short: '256 MB', label: '256 MB limit', tone: 'danger' }]}
+  items={[
+    { label: 'boolean[10^6]', value: 1e6, display: '1 MB' },
+    { label: 'int[10^7]', value: 4e7, display: '40 MB', note: 'A sieve up to 10^7 fits easily.' },
+    { label: 'HashMap<Integer, Integer> with 10^6 entries', value: 73e6, display: '≈ 73 MB', note: 'Eighteen times the size of an int[10^6]. A counting array is far lighter when values are small.' },
+    { label: 'long[5000][5000]', value: 2e8, display: '200 MB', note: 'Fits, but only just. An O(n²) DP table at n = 5,000 is the most you can store.' },
+    { label: 'int[10^4][10^4]', value: 4e8, display: '400 MB', note: 'Too big. O(n²) time is fine at n = 10^4, but an O(n²) table is not.' },
+    { label: 'int[10^5][10^5]', value: 4e10, display: '40 GB', note: 'Never. If you need this, the problem needs a different idea.' },
+  ]}
+/>
+
+When a DP table is too big, notice that row i usually reads only row i − 1. Keep two rows and swap them. Longest Common Subsequence with this trick uses O(n) memory instead of O(m · n):
+
+```java
+static int lcs(String a, String b) {      // O(m·n) time, O(n) memory: only the previous row is kept
+    int[] prev = new int[b.length() + 1], cur = new int[b.length() + 1];
+    for (int i = 1; i <= a.length(); i++) {
+        for (int j = 1; j <= b.length(); j++) {
+            cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1] + 1 : Math.max(prev[j], cur[j - 1]);
+        }
+        int[] tmp = prev; prev = cur; cur = tmp;
+    }
+    return prev[b.length()];
+}
+```
+
+### Recursion depth is memory too
+
+Every pending recursive call sits on the **call stack**, and Java's default stack is small. We ran a plain recursive flood fill on an all-land 300 × 300 grid (Number of Islands allows exactly that). It crashed with `StackOverflowError` at a depth of **15,435** calls, out of 90,000 cells. Judges set their own stack size, so the same code may pass on one judge and crash on another.
+
+Watch for recursion whose depth can reach n:
+
+- DFS on a grid or graph with 10^4 or more nodes.
+- A tree with up to 10^5 nodes that may be shaped like a line (every node has one child).
+- Top-down DP (memoised recursion) where each call goes one step down, like `f(i)` calling `f(i + 1)`.
+
+The fix is to keep your own stack in an `ArrayDeque`, or to write the DP bottom-up:
+
+```java
+/** Number of islands with an explicit stack, so a 300 × 300 all-land grid can't overflow the call stack. */
+static int countIslands(char[][] grid) {
+    int rows = grid.length, cols = grid[0].length, islands = 0;
+    int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    boolean[][] seen = new boolean[rows][cols];
+    Deque<int[]> stack = new ArrayDeque<>();
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            if (grid[r][c] != '1' || seen[r][c]) continue;
+            islands++;
+            seen[r][c] = true;
+            stack.push(new int[]{r, c});
+            while (!stack.isEmpty()) {
+                int[] cell = stack.pop();
+                for (int[] d : dirs) {
+                    int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == '1' && !seen[nr][nc]) {
+                        seen[nr][nc] = true;
+                        stack.push(new int[]{nr, nc});
+                    }
+                }
+            }
+        }
+    }
+    return islands;
+}
+```
+
+In an interview, a recursive DFS is usually accepted. Mention the depth risk and the fix in one sentence. That is the senior-sounding part.
+
+## Modulo 10^9 + 7
+
+Some answers are too big for any type, like the 209-digit number of ways to climb 1,000 stairs. So the problem asks only for the **remainder after dividing by 10^9 + 7**. Every number you store then stays below about 10^9.
+
+The easiest way to picture a modulo is a clock. On a 12-hour clock, 9 o'clock plus 5 hours is 2 o'clock, not 14. Any number of hours lands on one of only 12 positions. Modulo m works the same way with m positions:
+
+<ModClock m={7} />
+
+### Why exactly 10^9 + 7 (1,000,000,007)?
+
+1. **It fits in an int**, because it is less than 2.1 × 10^9. Every stored answer fits in an int.
+2. **Two of them multiplied fit in a long**: about 10^18, less than 9.2 × 10^18. So `(long) a * b % MOD` never overflows.
+3. **It is a prime number**, which makes division possible (see below).
+
+You will also see **998,244,353**, another prime used for the same reasons (it also suits a fast polynomial-multiplication algorithm, which interviews don't need).
+
+<Callout type="warning" title="Don't write 10e9 + 7">
+In Java, `10e9` means 10 × 10^9 = 10^10, and it is a **double**. `1e9 + 7` is also a double. Both silently turn integer maths into floating-point maths. Always write `static final int MOD = 1_000_000_007;`.
+</Callout>
+
+### The rules of modulo arithmetic
+
+| Operation | Java | Why |
+| --- | --- | --- |
+| Add | `(a + b) % MOD` | Both are below MOD, so the sum is below 2.1 × 10^9 and fits in an int |
+| Multiply | `(int) ((long) a * b % MOD)` | int × int overflows before `%` runs, so cast first |
+| Subtract | `((a - b) % MOD + MOD) % MOD` | In Java, `-3 % 7` is −3, not 4. Adding MOD brings it back onto the clock |
+| Divide | `a * inverse(b) % MOD` | Plain `a / b` is wrong after a modulo. Multiply by the modular inverse instead |
+
+```java
+static int add(int a, int b) { return (a + b) % MOD; }                      // a, b < MOD, so a + b < 2^31
+static int sub(int a, int b) { return ((a - b) % MOD + MOD) % MOD; }        // Java: -3 % 7 == -3
+static int mul(int a, int b) { return (int) ((long) a * b % MOD); }         // cast first, or a * b overflows
+```
+
+**Division** works through Fermat's little theorem: when p is prime and b is not a multiple of p, b^(p − 2) mod p is the inverse of b. So dividing by b means multiplying by b^(MOD − 2), computed with fast power. Fast power squares the base and halves the exponent each step, so it takes O(log exp) steps, even for an exponent of 10^18:
+
+```java
+static long power(long base, long exp, long mod) {
+    long result = 1;
+    base %= mod;
+    while (exp > 0) {
+        if ((exp & 1) == 1) result = (result * base) % mod; // this bit of exp is set: multiply it in
+        base = (base * base) % mod;                         // base, base², base⁴, base⁸, …
+        exp >>= 1;                                          // move to the next bit
+    }
+    return result;
+}
+
+static int inverse(int b) { return (int) power(b, MOD - 2, MOD); }          // Fermat: b^(p-2) = 1/b mod p
+static int div(int a, int b) { return mul(a, inverse(b)); }
+```
+
+### Take the modulo at every step
+
+If you wait until the end, the number has already overflowed:
+
+```java
+static int climbStairs(int n) {           // ways to climb n stairs taking 1 or 2 steps, mod 10^9 + 7
+    long[] dp = new long[n + 1];
+    dp[0] = 1;
+    if (n >= 1) dp[1] = 1;
+    for (int i = 2; i <= n; i++) {
+        dp[i] = (dp[i - 1] + dp[i - 2]) % MOD;   // mod at every step, not once at the end
+    }
+    return (int) dp[n];
+}
+```
+
+One trap: **you can't compare values after taking the modulo**. 10^9 + 8 becomes 1 and looks smaller than 5. If the problem needs a maximum or a minimum, compare the real values (or a proxy such as their logarithms), and apply the modulo only to the number you return.
+
+## Constraints are your test plan
+
+The constraints also list the tests the judge will run. Every bound is an edge case waiting to be tried:
+
+| Constraint | Test it gives you |
+| --- | --- |
+| `1 <= n` | n = 1: a single element. Does your loop or window still work? |
+| `0 <= n`, or "may be empty" | The empty input: return before reading `nums[0]` |
+| `n <= 10^5` | The largest n: does it finish in time? Is any sum near 10^14? |
+| `-10^9 <= nums[i]` | All values negative, and all values at −10^9 |
+| `nums[i] <= 10^9` | All values at 10^9: does a sum or product overflow? |
+| Values may repeat | Every value equal |
+| `1 <= k <= n` | k = 1 and k = n |
+| A graph or grid | One node, no edges, a disconnected graph, a line-shaped tree, an all-land grid |
+
+Run through the table in your head before you say "I'm done". Interviewers often have exactly these tests in mind.
+
+## When the interviewer gives no constraints
+
+Interview problems are often stated loosely on purpose. Asking for the constraints is part of the test. Ask:
+
+1. "Roughly how large can the input be?" This sets the target complexity.
+2. "What range can the values have? Can they be negative or zero?" This sets the data type and rules out tricks.
+3. "Can there be duplicates? Is the input sorted?"
+4. "Does it fit in memory, or does it arrive as a stream?"
+5. "Is this called once, or many times on the same data?" Many calls → precompute.
+6. "What should I return if there is no answer?"
+
+<Callout type="interview" title="Say the conclusion out loud">
+Don't just ask. Turn the answer into a target: "With up to a million elements, quadratic is out, so I'm aiming for O(n log n) or better. And since values go up to 10^9, I'll keep sums in a long." That sentence shows the interviewer you plan before you code.
+</Callout>
+
+## Worked examples from the problem set
+
+Each row is a real problem from this course's judge, with its constraints exactly as the judge uses them:
+
+| Problem | Constraints | What they tell you |
+| --- | --- | --- |
+| [Two Sum](https://leetcode.com/problems/two-sum/) | n ≤ 10^4, values and target in ±10^9 | O(n²) = 10^8 is borderline and may even pass; the follow-up still asks for O(n) with a hash map. `target − nums[i]` reaches −2 × 10^9, which just fits in an int |
+| [Subarray Sum Equals K](https://leetcode.com/problems/subarray-sum-equals-k/) | n ≤ 2 × 10^4, values in ±1000 | O(n²) = 4 × 10^8 is too slow. Negatives rule out a sliding window, so use prefix sums with a hash map: O(n) |
+| [Partition Equal Subset Sum](https://leetcode.com/problems/partition-equal-subset-sum/) | n ≤ 200, values ≤ 100 | 2^200 subsets is impossible, but the sum is at most 20,000. DP over sums up to half of it: 200 × 10^4 = 2 × 10^6 |
+| [Partition to K Equal Sum Subsets](https://leetcode.com/problems/partition-to-k-equal-sum-subsets/) | n ≤ 16 | A tiny n is the hint: 2^16 = 65,536 masks, so bitmask DP or backtracking over subsets |
+| [Count Good Numbers](https://leetcode.com/problems/count-good-numbers/) | n ≤ 10^15, answer mod 10^9 + 7 | You can't loop to 10^15. The count is 5^(even positions) × 4^(odd positions), computed with fast power in O(log n) |
+| [Number of Islands](https://leetcode.com/problems/number-of-islands/) | grid up to 300 × 300 | 9 × 10^4 cells: one BFS or DFS over all cells. A recursive DFS can go 90,000 calls deep, so keep your own stack if the judge's is small |
+| [Count of Smaller Numbers After Self](https://leetcode.com/problems/count-of-smaller-numbers-after-self/) | n ≤ 10^5, values in ±10^4 | O(n log n). The value range is small, so shift each value by 10^4 and index a Fenwick tree of size 20,001 directly: no compression needed |
+| [Split Array Largest Sum](https://leetcode.com/problems/split-array-largest-sum/) | n ≤ 1000, k ≤ 50, values ≤ 10^6 | Two approaches fit: DP over (parts, prefix) in O(k · n²) = 5 × 10^7, or binary search on the answer in O(n log(sum)). The sum is at most 10^9, which fits in an int |
+
+## The routine
+
+Run these checks before you write code. They take a minute and save the forty minutes of writing the wrong solution:
+
+| # | Check | If yes |
+| --- | --- | --- |
+| 1 | What is the largest n (and m, q, k)? | Find its row in the table: that is the target complexity |
+| 2 | Is n tiny (25 or less)? | Brute force, backtracking or bitmask is expected |
+| 3 | Can a sum, product or count pass 2.1 × 10^9? | Use long, and cast before multiplying |
+| 4 | Can values be negative? | No plain sliding window; use floorMod and floorDiv |
+| 5 | Is the value range small? | A counting array, or DP over the values |
+| 6 | Many queries on the same data? | Precompute: prefix sums, a sparse table, a segment tree |
+| 7 | Answer modulo 10^9 + 7? | long, mod at every step, add MOD after subtracting, divide with the inverse |
+| 8 | Would a table or the recursion get too big? | Keep one DP row; replace deep recursion with your own stack |
+
+Then say the target out loud ("n is 10^5, so I'm aiming for O(n log n)") and start coding.
+
+<Callout type="warning" title="Common mistakes">
+
+- Writing the O(n²) brute force for `n <= 10^5` and hoping it passes.
+- Building something clever for n ≤ 15 when trying every subset was intended.
+- Summing values up to 10^9 in an int; casting after the multiplication instead of before.
+- A sliding window when values can be negative.
+- `10e9 + 7` instead of `1_000_000_007`; forgetting `+ MOD` after a subtraction; dividing after a modulo.
+- Comparing values after taking the modulo.
+- An n × n table at n = 10^4, or recursion 10^5 deep, in Java.
+- Ignoring `1 <= n` versus `0 <= n` and crashing on the empty input.
+
+</Callout>
+
+## Interview questions
+
+<QA q="The constraints say n is at most 10^5. What complexity do you aim for, and why?">
+O(n log n) or better. The budget is about 10^8 simple operations a second. O(n²) at n = 10^5 is 10^10, a hundred times over, while O(n log n) is about 1.7 × 10^6. That rules out checking every pair and points to sorting, hashing, two pointers, a heap or binary search.
+</QA>
+
+<QA q="Why might a problem have n at most 20, when it could easily allow more?">
+Because the intended solution is exponential. 2^20 is about 10^6, so trying every subset (or bitmask DP at 2^20 × 20 ≈ 2 × 10^7) fits the budget. The small limit is a deliberate hint. If the setter wanted a polynomial solution, they would have allowed a much larger n.
+</QA>
+
+<QA q="Values go up to 10^9 and n up to 10^5. Which variables need to be long?">
+Anything that accumulates or multiplies values: sums (up to 10^14), products (up to 10^18), counts of pairs or subarrays (n(n − 1)/2 ≈ 5 × 10^9), and differences used in comparators. The values themselves and the indexes can stay int. Cast an operand before multiplying, since Java multiplies two ints in int before widening.
+</QA>
+
+<QA q="Why is the modulus usually 10^9 + 7?">
+It fits in an int, so every stored answer does too. The product of two such numbers is below 9.2 × 10^18, so a multiplication in long never overflows before the modulo. And it is prime, so every non-zero number has a modular inverse (b^(p − 2) by Fermat), which makes division possible.
+</QA>
+
+<QA q="An O(n²) algorithm is fast enough for n = 10^4, but your solution runs out of memory. What happened, and how do you fix it?">
+The O(n²) table: 10^4 × 10^4 ints is 10^8 × 4 bytes = 400 MB, over a typical 256 MB limit. Time and memory are separate budgets. If each row of the DP depends only on the previous row, keep two rows and swap them, which brings memory down to O(n).
+</QA>
+
+<QA q="When would you replace a recursive DFS with an iterative one?">
+When the recursion depth can reach the input size and that size is large: a grid of 10^5 cells, or a tree with 10^5 nodes that may be shaped like a line. Java's default stack overflows after some tens of thousands of frames (a flood fill on a 300 × 300 grid crashed at about 15,000 deep in our test). An explicit stack in an ArrayDeque keeps the same order of work without the depth limit.
+</QA>
+
+## Practice
+
+Decide the approach from the constraints alone, then open the answer.
+
+<Practice task="n is at most 15. Find the subset of items with the best total score that satisfies a rule.">
+2^15 = 32,768 subsets, so try them all: a bitmask loop from 0 to 2^n − 1, or pick-or-skip recursion. Even with O(n) work per subset that is about 5 × 10^5 operations. Anything smarter is unnecessary.
+</Practice>
+
+<Practice task="n is at most 2 × 10^5 and each value is between −10^9 and 10^9. Find the maximum subarray sum.">
+O(n) with Kadane's algorithm, starting from nums[0] so that all-negative input works. The sum can reach 2 × 10^5 × 10^9 = 2 × 10^14, so keep it in a long.
+</Practice>
+
+<Practice task="x can be as large as 10^9. Find the smallest x for which a yes/no condition (that stays true once it becomes true) is true.">
+You can't try every x: 10^9 tries is already over budget before checking anything. Since the condition is monotonic, binary search on x: about 30 checks. The total is 30 × (cost of one check).
+</Practice>
+
+<Practice task="Two strings of up to 1000 characters each. Find their longest common subsequence.">
+1000 × 1000 = 10^6 states, so a 2D DP table is fine in both time (10^6 steps) and memory (4 MB of ints). At 10^5 characters each the time would be 10^10 and the problem would need a different idea.
+</Practice>
+
+<Practice task="An array of up to 10^5 values, each up to 10^9, and up to 10^5 queries. Each query asks for the sum of a range [l, r]. There are no updates.">
+Looping over each range costs up to q × n = 10^10. Precompute a prefix-sum array once in O(n), then answer each query as prefix[r + 1] − prefix[l] in O(1). Store the prefix sums in a long array, because they reach 10^14.
+</Practice>
+
+<Practice task="Count the number of ways to tile a 2 × n board with dominoes, for n up to 10^6, modulo 10^9 + 7.">
+n ≤ 10^6 allows O(n): a DP where ways(n) = ways(n − 1) + ways(n − 2). Store values in a long array (or just two variables), and take the modulo at every step. Without the modulo, the answer has about 200,000 digits.
+</Practice>
+
+<Takeaways>
+
+- Read the constraints before the examples: they give the target complexity, the data type, the techniques and the edge cases.
+- Budget about 10^8 simple operations a second (10^7 for hash-map-heavy work or Python), and multiply all the sizes involved.
+- n ≤ 20 invites subsets, n ≤ 500 allows O(n³), n ≤ 5,000 allows O(n²), n ≤ 10^5 needs O(n log n), and n ≤ 10^9 means binary search or maths.
+- Sums, products and pair counts outgrow int long before the inputs do: use long and cast before multiplying.
+- Negatives break sliding windows and Java's % and /; small value ranges invite counting arrays; huge ranges with few values invite compression.
+- Memory is a second budget: an n × n table at n = 10^4 is 400 MB, and deep recursion overflows Java's stack.
+- Modulo 10^9 + 7: long, mod at every step, add MOD after subtracting, divide with the inverse, never compare after the mod.
+
+</Takeaways>
+
+## Further reading
+
+- Next: start the patterns with [Hash Maps & Sets](/dsa/patterns/hashing).
+- [Big-O the Easy Way](/dsa/start-here/complexity-made-easy): how to count the complexity you plug into the rule.
+- Antti Laaksonen, [*Competitive Programmer's Handbook*](https://cses.fi/book/book.pdf), chapter 2, "Estimating efficiency": the input-size table that judges are built around.
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter VI "Big O", and the "best conceivable runtime" idea in Chapter VII.
+- *The Java Language Specification*, [§15.17 Multiplicative Operators](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.17): why `/` and `%` round toward zero.
