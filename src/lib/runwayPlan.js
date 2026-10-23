@@ -12,6 +12,7 @@
  *   level: 'new' | 'some' | 'strong',
  *   company: company id from data/companies.js, or null for a general plan,
  *   pace: 'light' | 'steady' | 'push' (how full each day is packed, see PACES),
+ *   missed: 'pile' | 'spread' (what happens to unfinished work, see MISSED; default 'pile'),
  *   capacity: { 'YYYY-MM-DD': minutes } (the learner's own hours for one day; 0 = day off),
  *   syllabus: { [group]: 'must' | 'normal' | 'later' | 'skip' } (see groupOf),
  *   patternOrder: [pattern id] (the learner's own order for DSA patterns),
@@ -53,6 +54,13 @@ export const PACES = [
   { id: 'steady', label: 'Steady', factor: 1, hint: 'Your hours, as you set them' },
   { id: 'push', label: 'Push', factor: 1.2, hint: 'About 20% more, while you have the energy' },
 ];
+
+/** What re-planning does with work left unfinished on a day that has passed. */
+export const MISSED = [
+  { id: 'pile', label: 'Pile up', hint: 'Unfinished work joins the next study day; the rest of the plan stays where it is' },
+  { id: 'spread', label: 'Spread out', hint: 'Unfinished work goes first and everything after it moves along, each day kept to its hours' },
+];
+export const missedOf = (settings) => settings.missed ?? 'pile';
 
 /** Syllabus priorities for a group of lessons (a DSA pattern with its problems, or a module). */
 export const PRIORITIES = [
@@ -586,10 +594,14 @@ const patternOfTask = (t, ctx) => (t.grp?.startsWith('p:') ? t.grp.slice(2) : t.
 
 /**
  * Re-plan from `today`. Work done stays on the day it was done and the daily reviews stay as history;
- * everything unfinished from earlier days comes forward. Pinned tasks stay on their day. Lessons,
- * problems and the learner's own tasks are packed again over today and the coming study days, up to
- * each day's minutes; mocks and other fixed tasks on a day off move to the next study day. What no
- * longer fits goes to spare time (the learner's own tasks never do: they land on the last study day).
+ * everything unfinished from earlier days comes forward. Pinned tasks stay on their day.
+ *   missed 'pile' (default): the unfinished work joins the next study day (normally today), on top of
+ *     that day's own tasks; every other day keeps its tasks. A day set to 0 hours passes its tasks on
+ *     to the next study day the same way.
+ *   missed 'spread': lessons, problems and the learner's own tasks are packed again over today and the
+ *     coming study days, up to each day's minutes, unfinished work first. What no longer fits goes to
+ *     spare time (the learner's own tasks never do: they land on the last study day).
+ * Either way mocks and other fixed tasks on a day off move to the next study day.
  *
  * ctx (all optional), so the plan follows the learner:
  *   speed            measured minutes per estimated minute on problems (Climb); problem estimates follow it
@@ -598,12 +610,14 @@ const patternOfTask = (t, ctx) => (t.grp?.startsWith('p:') ? t.grp.slice(2) : t.
  *   patternOf(slug)  pattern of a judged problem (for version 1 tasks, which have no group)
  *   titleOf(p)       a pattern's title, for the notes
  *   pick(task, planned)  a better-fitting problem for today's not-yet-started problem slots, or null
+ *   missed           'pile' or 'spread' for this re-plan only, instead of the plan's setting
  */
 export function reflow(input, progress, today, ctx = {}) {
   const plan = migrate(input);
   const s = plan.settings;
   if (today > s.end) return { ...plan, reflowedOn: today };
   const done = (t) => isTaskDone(plan, t, progress);
+  const pile = (ctx.missed ?? missedOf(s)) === 'pile';
   let pins = { ...(plan.pins ?? {}) };
   const notes = [];
   const late = [];
@@ -620,56 +634,80 @@ export function reflow(input, progress, today, ctx = {}) {
     }
     return { ...d, tasks: keep };
   });
-  if (late.length) notes.push(`${late.length} unfinished task${late.length === 1 ? '' : 's'} from earlier days moved into the coming days`);
+  if (late.length) {
+    notes.push(pile
+      ? `${late.length} unfinished task${late.length === 1 ? '' : 's'} from earlier days added to the next study day`
+      : `${late.length} unfinished task${late.length === 1 ? '' : 's'} from earlier days moved into the coming days`);
+  }
 
   // 2. today and later: what stays put, and the queue of everything that can move
   const future = days.filter((d) => d.date >= today && d.phase !== 'interview');
   const dates = new Set(future.map((d) => d.date));
   const capOf = Object.fromEntries(future.map((d) => [d.date, capacityFor(s, d.date)]));
-  const queue = [...late];
+  // spread: unfinished and movable work all go in one queue, packed again below; pile: work stays on
+  // its day, and what can't (from earlier days, or on a day off) is carried to the next study day
+  const queue = pile ? [] : [...late];
   const stay = Object.fromEntries(future.map((d) => [d.date, []]));
   const pinned = [];
-  let carry = [];
+  let carry = pile ? [...late] : [];
   for (const d of future) {
     if (capOf[d.date] > 0) { stay[d.date].push(...carry); carry = []; }
     for (const t of d.tasks) {
       if (done(t)) stay[d.date].push(t);
       else if (pins[t.id] && dates.has(pins[t.id])) pinned.push(t);
-      else if (MOVABLE.has(t.kind)) { pins = unpin(pins, t.id); queue.push(t); }
-      else if (capOf[d.date] === 0) carry.push(t);
+      else if (MOVABLE.has(t.kind) && !pile) { pins = unpin(pins, t.id); queue.push(t); }
+      else if (capOf[d.date] === 0) { pins = unpin(pins, t.id); carry.push(t); }
       else stay[d.date].push(t);
     }
   }
   for (const t of pinned) stay[pins[t.id]].push(t);
   queue.push(...carry);
 
-  // 3. follow the learner
+  // 3. follow the learner (work that can still move: the queue, and in pile mode the days' own tasks)
   let extras = [...plan.extras];
+  const open = (t) => MOVABLE.has(t.kind) && !done(t) && !pins[t.id];
+  const each = (fn) => {
+    for (let i = 0; i < queue.length; i += 1) queue[i] = fn(queue[i]);
+    if (pile) for (const d of future) stay[d.date] = stay[d.date].map((t) => (open(t) ? fn(t) : t));
+  };
   if (ctx.speed && ctx.speed !== 1) {
-    for (let i = 0; i < queue.length; i += 1) {
-      const t = queue[i];
-      if (t.kind !== 'problem') continue;
+    each((t) => {
+      if (t.kind !== 'problem') return t;
       const base = t.base ?? t.minutes;
-      queue[i] = { ...t, base, minutes: Math.max(10, Math.round((base * ctx.speed) / 5) * 5) };
-    }
+      return { ...t, base, minutes: Math.max(10, Math.round((base * ctx.speed) / 5) * 5) };
+    });
   }
   const adapted = { ...(plan.adapted ?? {}) };
   if (ctx.labelOf) {
     const name = (p) => ctx.titleOf?.(p) ?? p;
     // strong patterns: their recommended and stretch problems make room for weaker ones
     const strong = new Map();
-    for (let i = queue.length - 1; i >= 0; i -= 1) {
-      const t = queue[i];
+    const isStrong = (t) => {
       const p = patternOfTask(t, ctx);
-      if (t.kind !== 'problem' || !p || t.carried || (t.pri ?? 2) < 2 || ctx.labelOf(p) !== 'Strong') continue;
-      queue.splice(i, 1);
+      return t.kind === 'problem' && p && !t.carried && (t.pri ?? 2) >= 2 && ctx.labelOf(p) === 'Strong' ? p : null;
+    };
+    const drop = (t, p) => {
       extras.unshift({ ...t, why: `${name(p)} is strong`, parked: true });
       strong.set(p, (strong.get(p) ?? 0) + 1);
+    };
+    for (let i = queue.length - 1; i >= 0; i -= 1) {
+      const p = isStrong(queue[i]);
+      if (p) { drop(queue[i], p); queue.splice(i, 1); }
+    }
+    if (pile) {
+      for (const d of future) {
+        stay[d.date] = stay[d.date].filter((t) => {
+          const p = open(t) ? isStrong(t) : null;
+          if (p) drop(t, p);
+          return !p;
+        });
+      }
     }
     for (const [p, n] of strong) notes.push(`${name(p)} looks strong: ${n} problem${n === 1 ? '' : 's'} moved to spare time`);
     // weak patterns the learner has tried: one more problem, placed after that pattern's planned work
     const weekAgo = addDays(today, -7);
-    const weak = [...new Set(queue.map((t) => patternOfTask(t, ctx)).filter(Boolean))]
+    const planned = pile ? [...queue, ...future.flatMap((d) => stay[d.date].filter(open))] : queue;
+    const weak = [...new Set(planned.map((t) => patternOfTask(t, ctx)).filter(Boolean))]
       .filter((p) => ctx.labelOf(p) === 'Weak' && ctx.attempted?.(p) && !(adapted[p] > weekAgo))
       .slice(0, 2);
     for (const p of weak) {
@@ -723,7 +761,8 @@ export function reflow(input, progress, today, ctx = {}) {
   };
   const left = overflow.filter((t) => t.kind === 'lesson' || t.kind === 'problem');
   place(left);
-  const bar = Math.min(...left.filter((t) => !placed.has(t.id)).map((t) => t.pri ?? 2));
+  // (piling keeps every day as planned, so spare-time work stays where it is)
+  const bar = pile ? -Infinity : Math.min(...left.filter((t) => !placed.has(t.id)).map((t) => t.pri ?? 2));
   place(extras.filter((t) => !t.parked && (t.pri ?? 2) < bar && !isTaskDone(plan, t, progress)));
   const cameBack = [...placed].filter((id) => wasSpare.has(id)).length;
   if (cameBack) notes.push(`${cameBack} task${cameBack === 1 ? '' : 's'} from spare time fit${cameBack === 1 ? 's' : ''} in now`);

@@ -45,7 +45,8 @@ export function useReplan() {
     };
   }, [model, climb, solved]);
 
-  const replan = useCallback((p) => (p ? reflow(p, progress, todayKey(), ctx) : p), [progress, ctx]);
+  // `extra` overrides for this re-plan only, e.g. { missed: 'spread' } to spread a backlog once
+  const replan = useCallback((p, extra = {}) => (p ? reflow(p, progress, todayKey(), { ...ctx, ...extra }) : p), [progress, ctx]);
 
   useEffect(() => {
     if (!settled || !plan || plan.reflowedOn === day || day < plan.settings.start || day > plan.settings.end || isViewingAs()) return;

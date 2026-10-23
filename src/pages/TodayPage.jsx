@@ -212,7 +212,7 @@ function ClimbToday() {
 /** The day's tasks: the learner's Runway day when they have a plan, otherwise the small general plan. */
 function TodayPlan({ plan, day }) {
   // opening Today re-plans the Runway for the day if no page has yet
-  const { progress } = useReplan();
+  const { progress, replan } = useReplan();
   if (!plan) {
     return (
       <section className={ui.panel} aria-labelledby="today-plan">
@@ -242,7 +242,7 @@ function TodayPlan({ plan, day }) {
       ) : before ? (
         <DayCard plan={plan} day={plan.days[0]} title="Your plan starts" progress={progress} update={update} open />
       ) : todayDay ? (
-        <DayCard plan={plan} day={todayDay} title="Today" progress={progress} update={update} open highlight />
+        <DayCard plan={plan} day={todayDay} title="Today" progress={progress} update={update} onSpread={() => setRunway((p) => (p ? replan(p, { missed: 'spread' }) : p))} open highlight />
       ) : (
         <p className={styles.muted}>No Runway tasks today.{tomorrow ? ' Tomorrow’s are ready on the Runway page.' : ''}</p>
       )}

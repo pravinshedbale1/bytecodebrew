@@ -17,7 +17,7 @@ import { useReplan, useProgressFns } from '../hooks/useReplan';
 import { COMPANIES, GROUPS, AI_LABEL, companyPlan } from '../data/companies';
 import { ratings } from '../lib/climb/store';
 import {
-  TRACKS, PRESETS, LEVELS, PACES, PRIORITIES, generatePlan, planStats, isTaskDone, toggleDone, moveTask, removeTask, addCustomTask,
+  TRACKS, PRESETS, LEVELS, PACES, PRIORITIES, MISSED, missedOf, generatePlan, planStats, isTaskDone, toggleDone, moveTask, removeTask, addCustomTask,
   reorderTask, keepOnRebuild, addDays, daysBetween, capacityFor, hoursFor, budgetFor, pinTask, snoozeTask, swapTask, setCapacity,
   setPace, addDailyMinutes, forecast, diffPlans, syllabusGroups,
 } from '../lib/runwayPlan';
@@ -176,6 +176,7 @@ function Setup({ plan, wanted, onDone, onCancel }) {
   const [hours, setHours] = useState(prev?.hours ?? { weekday: 2, weekend: 4 });
   const [restDays, setRestDays] = useState(prev?.restDays ?? []);
   const [pace, setPaceChoice] = useState(prev?.pace ?? 'steady');
+  const [missed, setMissed] = useState(prev ? missedOf(prev) : 'pile');
   const [company, setCompany] = useState(wanted ?? prev?.company ?? null);
   const [mix, setMix] = useState(() => (wanted ? companyPlan(wanted).mix : prev?.mix ?? PRESETS[1].mix));
   const cp = company ? companyPlan(company) : null;
@@ -190,14 +191,14 @@ function Setup({ plan, wanted, onDone, onCancel }) {
   const pct = (id) => Math.round((mix[id] / mixTotal) * 100);
   // the learner's own day-by-day hours and syllabus choices carry over to a rebuild
   const settings = {
-    start: today, end, hours, restDays, mix, level, company, pace,
+    start: today, end, hours, restDays, mix, level, company, pace, missed,
     capacity: Object.fromEntries(Object.entries(prev?.capacity ?? {}).filter(([d]) => d >= today && d < end)),
     syllabus: prev?.syllabus ?? {}, patternOrder: prev?.patternOrder ?? [],
   };
   const valid = days >= 1 && days <= 365 && TRACKS.some((t) => mix[t.id] > 0) && (hours.weekday > 0 || hours.weekend > 0) && restDays.length < 7;
   const preview = useMemo(() => (valid ? generatePlan(settings, catalogue, progress, keepOnRebuild(plan)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [valid, end, hours, restDays, mix, level, company, pace, catalogue, progress]);
+    [valid, end, hours, restDays, mix, level, company, pace, missed, catalogue, progress]);
   const stats = preview && planStats(preview, progress, today);
   const diff = plan && preview ? diffPlans(plan, preview, today) : null;
   const weekly = [1, 2, 3, 4, 5, 6, 0].reduce((s, d) => s + (restDays.includes(d) ? 0 : d === 0 || d === 6 ? hours.weekend : hours.weekday), 0);
@@ -252,6 +253,11 @@ function Setup({ plan, wanted, onDone, onCancel }) {
           <div className={styles.restRow}>
             <span className={styles.subLabel}>Pace</span>
             <PacePicker value={pace} onChange={setPaceChoice} />
+          </div>
+          <div className={styles.restRow}>
+            <span className={styles.subLabel}>Missed a day?</span>
+            <MissedPicker value={missed} onChange={setMissed} />
+            <span className={styles.weekly}>{MISSED.find((m) => m.id === missed).hint}</span>
           </div>
         </Field>
 
@@ -343,6 +349,16 @@ function Setup({ plan, wanted, onDone, onCancel }) {
   );
 }
 
+function MissedPicker({ value, onChange }) {
+  return (
+    <div className={styles.segmented} role="group" aria-label="When you miss a day">
+      {MISSED.map((m) => (
+        <button key={m.id} type="button" aria-pressed={value === m.id} onClick={() => onChange(m.id)} title={m.hint}>{m.label}</button>
+      ))}
+    </div>
+  );
+}
+
 function PacePicker({ value, onChange }) {
   return (
     <div className={styles.segmented} role="group" aria-label="Pace">
@@ -368,6 +384,7 @@ function PlanView({ plan, onEdit }) {
   const update = (fn) => setRunway((p) => (p ? fn(p) : p));
   // changes to the time available re-plan from today straight away
   const retime = (fn) => setRunway((p) => (p ? replan(fn(p)) : p));
+  const spreadOnce = () => setRunway((p) => (p ? replan(p, { missed: 'spread' }) : p));
   const rebuild = (patch) => {
     const settings = { ...plan.settings, ...patch, start: today };
     setRunway(generatePlan(settings, catalogue, progress, keepOnRebuild(plan)));
@@ -409,7 +426,7 @@ function PlanView({ plan, onEdit }) {
       {stats.overdue.length > 0 && !over && (
         <div className={styles.overdue}>
           <AlertTriangle size={18} aria-hidden="true" />
-          <span><strong>{stats.overdue.length} unfinished task{stats.overdue.length === 1 ? '' : 's'}</strong> from earlier days. Runway moves them forward each morning; do it now, or pull them all into today.</span>
+          <span><strong>{stats.overdue.length} unfinished task{stats.overdue.length === 1 ? '' : 's'}</strong> from earlier days. Runway {missedOf(plan.settings) === 'pile' ? 'adds them to your next study day' : 'spreads them over the coming days'} each morning; do it now, or pull them all into today.</span>
           <div className={styles.overdueActions}>
             <button type="button" className={`${ui.btn} ${ui.primary} ${ui.small}`} onClick={() => update(replan)}>Re-plan now</button>
             <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => update((p) => stats.overdue.reduce((acc, t) => moveTask(acc, t.id, today), p))} disabled={!todayDay}>Move to today</button>
@@ -426,7 +443,7 @@ function PlanView({ plan, onEdit }) {
           {before ? (
             <DayCard plan={plan} day={plan.days[0]} title={`Starts ${fmtDay(plan.days[0].date)}`} progress={progress} update={update} open />
           ) : todayDay ? (
-            <DayCard plan={plan} day={todayDay} title="Today" progress={progress} update={update} open highlight />
+            <DayCard plan={plan} day={todayDay} title="Today" progress={progress} update={update} onSpread={spreadOnce} open highlight />
           ) : (
             !over && <p className={ui.help}>No tasks for today.</p>
           )}
@@ -467,9 +484,15 @@ function TimeStrip({ plan, today, retime }) {
     <section className={`${styles.card} ${styles.timeCard}`}>
       <div className={styles.stripHead}>
         <h2 className={styles.cardTitle}><Clock3 size={14} aria-hidden="true" /> Your time, next two weeks</h2>
-        <div className={styles.stripPace}>
-          <span className={styles.subLabel}>Pace</span>
-          <PacePicker value={s.pace ?? 'steady'} onChange={(pace) => retime((p) => setPace(p, pace))} />
+        <div className={styles.stripControls}>
+          <div className={styles.stripPace}>
+            <span className={styles.subLabel}>Pace</span>
+            <PacePicker value={s.pace ?? 'steady'} onChange={(pace) => retime((p) => setPace(p, pace))} />
+          </div>
+          <div className={styles.stripPace}>
+            <span className={styles.subLabel}>Missed a day?</span>
+            <MissedPicker value={missedOf(s)} onChange={(missed) => retime((p) => ({ ...p, settings: { ...p.settings, missed } }))} />
+          </div>
         </div>
       </div>
       <p className={styles.cardLead}>Busy day, trip or a free weekend? Tap the days (several if you like), then set the hours. The plan re-packs itself around them.</p>
@@ -662,11 +685,23 @@ function Syllabus({ plan, catalogue, progress, today }) {
   );
 }
 
-export function DayCard({ plan, day, title, progress, update, open: startOpen = false, highlight = false }) {
+export function DayCard({ plan, day, title, progress, update, onSpread, open: startOpen = false, highlight = false }) {
   const [open, setOpen] = useState(startOpen);
   const [adding, setAdding] = useState(false);
   const budget = day.phase === 'interview' ? 30 : capacityFor(plan.settings, day.date);
   const minutes = day.tasks.reduce((s, t) => s + t.minutes, 0);
+  // work carried from earlier days on top of this day's own: how much time the whole list needs
+  const isToday = day.date === todayKey();
+  const left = day.tasks.filter((t) => !isTaskDone(plan, t, progress));
+  const carried = left.filter((t) => t.carried && t.carried < day.date);
+  const needed = left.reduce((s, t) => s + t.minutes, 0);
+  const spent = day.tasks.filter((t) => isTaskDone(plan, t, progress)).reduce((s, t) => s + t.minutes, 0);
+  const short = needed - Math.max(0, budget - spent);
+  // shown where the page offers spreading (the main Today card), not again in the week view
+  const backlog = Boolean(onSpread) && isToday && day.phase !== 'interview' && carried.length > 0 && short > 10;
+  // the hours the learner would give, in quarter hours: the pace plans only a share of them (Light 80%)
+  const factor = PACES.find((p) => p.id === (plan.settings.pace ?? 'steady'))?.factor ?? 1;
+  const give = Math.ceil((spent + needed) / factor / 15) * 15;
   const done = day.tasks.filter((t) => isTaskDone(plan, t, progress)).length;
   const all = day.tasks.length > 0 && done === day.tasks.length;
   const own = plan.settings.capacity?.[day.date] != null;
@@ -684,6 +719,22 @@ export function DayCard({ plan, day, title, progress, update, open: startOpen = 
         {all && <Check size={16} className={styles.dayCheck} aria-label="All done" />}
         {open ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
       </button>
+      {open && backlog && (
+        <div className={styles.backlog} role="status">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>
+            <strong>Today needs about {hm(needed)}</strong> to finish: {hm(needed - carried.reduce((s, t) => s + t.minutes, 0))} of today's plan
+            {' '}plus {hm(carried.reduce((s, t) => s + t.minutes, 0))} carried from earlier days ({carried.length} task{carried.length === 1 ? '' : 's'}).
+            {' '}That's <strong>{hm(short)} more</strong> than the time you have left today.
+          </span>
+          <div className={styles.backlogActions}>
+            <button type="button" className={`${ui.btn} ${ui.primary} ${ui.small}`} onClick={() => update((p) => setCapacity(p, [day.date], give))}>
+              I'll give today {hm(give)}
+            </button>
+            {onSpread && <button type="button" className={`${ui.btn} ${ui.small}`} onClick={onSpread} title="Re-plan once: unfinished work first, every day kept to its hours">Spread it over the coming days</button>}
+          </div>
+        </div>
+      )}
       {open && (
         <div className={styles.dayBody}>
           {day.phase === 'rest' && !day.tasks.length && <p className={styles.rest}><Coffee size={15} aria-hidden="true" /> {own ? 'Day off, as you set it.' : 'Rest day. Recharging is part of the plan.'}</p>}

@@ -34,7 +34,7 @@ const none = { isComplete: () => false, isSolved: () => false };
 const START = '2026-11-02';   // a Monday
 const settings = (over = {}) => ({
   start: START, end: addDays(START, 21), hours: { weekday: 2, weekend: 4 }, restDays: [0],
-  mix: { dsa: 45, hld: 25, lld: 15, behavioral: 15 }, level: 'some', company: null, ...over,
+  mix: { dsa: 45, hld: 25, lld: 15, behavioral: 15 }, level: 'some', company: null, missed: 'spread', ...over,
 });
 
 const allTasks = (plan) => [...plan.days.flatMap((d) => d.tasks), ...plan.extras];
@@ -75,6 +75,33 @@ check(late.reflowedOn === day3, 're-planning records the day');
 fits(late, day3, 'after re-planning');
 const again = reflow(late, none, day3);
 check(JSON.stringify(again.days) === JSON.stringify(late.days), 're-planning twice on the same day changes nothing');
+
+// ---- missed work piles up (the default): it joins the next study day, every other day stays as it was
+{
+  const pilePlan = generatePlan(settings({ missed: undefined }), catalogue, none);
+  const piled = reflow(pilePlan, none, day3);
+  const before = (d) => pilePlan.days.filter((x) => x.date < day3).flatMap((x) => x.tasks).filter((t) => t.kind !== 'review' && t.kind !== 'warmup');
+  const missed = before().map((t) => t.id);
+  const today3 = piled.days.find((d) => d.date === day3);
+  check(missed.length > 0 && missed.every((id) => today3.tasks.some((t) => t.id === id)), 'piling: every unfinished task from earlier days is on the next study day');
+  check(pilePlan.days.find((d) => d.date === day3).tasks.every((t) => today3.tasks.some((x) => x.id === t.id)), "piling: that day keeps its own tasks too");
+  check(piled.days.filter((d) => d.date > day3).every((d) => JSON.stringify(d.tasks.map((t) => t.id)) === JSON.stringify(pilePlan.days.find((x) => x.date === d.date).tasks.map((t) => t.id))), 'piling: later days are untouched');
+  check([...ids(pilePlan)].every((id) => ids(piled).has(id)), 'piling loses no task');
+  const roomy = generatePlan(settings({ missed: undefined, hours: { weekday: 6, weekend: 6 }, end: addDays(START, 6) }), catalogue, none);
+  const roomyAfter = reflow(removeTask(roomy, roomy.days[4].tasks.find((t) => t.kind === 'lesson').id), none, day3);
+  check(roomyAfter.days.filter((d) => d.date > day3).every((d) => d.tasks.every((t) => roomy.days.some((x) => x.date === d.date && x.tasks.some((y) => y.id === t.id)))), 'piling never pulls spare-time work into later days');
+  check(today3.tasks.filter((t) => missed.includes(t.id)).every((t) => t.carried && t.carried < day3), 'piled tasks say which day they came from');
+  check(piled.notes.some((n) => /added to the next study day/.test(n.text)), 'piling notes what it added');
+  check(JSON.stringify(reflow(piled, none, day3).days) === JSON.stringify(piled.days), 'piling twice on the same day changes nothing');
+  const off = reflow(setCapacity(piled, [day3], 0), none, day3);
+  const next = off.days.find((d) => d.date > day3 && capacityFor(off.settings, d.date) > 0);
+  check(off.days.find((d) => d.date === day3).tasks.length === 0 && today3.tasks.every((t) => t.kind === 'review' || next.tasks.some((x) => x.id === t.id)), 'piling: a day set off passes its tasks to the next study day');
+  const once = reflow(pilePlan, none, day3, { missed: 'spread' });
+  fits(once, day3, 'spreading once on a piling plan');
+  check(once.settings.missed === undefined, 'spreading once leaves the setting alone');
+  const strongPile = reflow(pilePlan, none, START, { labelOf: (p) => (p === 'p1' ? 'Strong' : 'Not started'), patternOf });
+  check(!strongPile.days.some((d) => d.tasks.some((t) => t.grp === 'p:p1' && t.kind === 'problem' && t.pri >= 2)), 'piling still drops a strong pattern\'s recommended problems');
+}
 
 // ---- finished work stays where it was done
 const first = plan.days[0].tasks.find((t) => t.kind === 'lesson');
