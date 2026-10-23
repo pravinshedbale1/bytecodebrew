@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, isolateHistory } from '@codemirror/commands';
 import { indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxHighlighting, HighlightStyle, indentUnit } from '@codemirror/language';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
@@ -53,13 +53,13 @@ const NAMES = { java: 'Java', cpp: 'C++', python: 'Python', javascript: 'JavaScr
  * and Ctrl/⌘ Enter to run. Controlled: `value` replaces the document when it differs (e.g. Reset),
  * and `language` switches the highlighting in place.
  */
-export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)', language = 'java', label }) {
+export function CodeEditor({ value, onChange, onRun, onFormat, focusKey, height = 'min(60vh, 560px)', language = 'java', label }) {
   const host = useRef(null);
   const view = useRef(null);
   const langSlot = useRef(new Compartment());
   const labelSlot = useRef(new Compartment());
-  const handlers = useRef({ onChange, onRun });
-  handlers.current = { onChange, onRun };
+  const handlers = useRef({ onChange, onRun, onFormat });
+  handlers.current = { onChange, onRun, onFormat };
   const ariaLabel = label ?? `${NAMES[language] ?? 'Java'} source code`;
 
   useEffect(() => {
@@ -89,6 +89,8 @@ export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)'
           theme,
           keymap.of([
             { key: 'Mod-Enter', preventDefault: true, run: () => { handlers.current.onRun?.(); return true; } },
+            // the VS Code shortcut for formatting
+            { key: 'Shift-Alt-f', preventDefault: true, run: () => { if (!handlers.current.onFormat) return false; handlers.current.onFormat(); return true; } },
             ...closeBracketsKeymap,
             ...defaultKeymap,
             ...searchKeymap,
@@ -113,9 +115,24 @@ export function CodeEditor({ value, onChange, onRun, height = 'min(60vh, 560px)'
   useEffect(() => {
     const v = view.current;
     if (v && value !== v.state.doc.toString()) {
-      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value } });
+      // its own undo step, never merged with the typing just before it (Format, Reset, loading a submission);
+      // the cursor stays on the same line number, at its start, scrolled into view
+      const line = v.state.doc.lineAt(v.state.selection.main.head).number;
+      const lines = value.split('\n');
+      const at = lines.slice(0, Math.min(line, lines.length) - 1).reduce((n, l) => n + l.length + 1, 0);
+      v.dispatch({
+        changes: { from: 0, to: v.state.doc.length, insert: value },
+        selection: { anchor: at },
+        scrollIntoView: true,
+        annotations: isolateHistory.of('full'),
+      });
     }
   }, [value]);
+
+  // a new focusKey puts the cursor back in the editor (after Format, so Ctrl/⌘ Z works straight away)
+  useEffect(() => {
+    if (focusKey) view.current?.focus();
+  }, [focusKey]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: labelSlot.current.reconfigure(EditorView.contentAttributes.of({ 'aria-label': ariaLabel })) });

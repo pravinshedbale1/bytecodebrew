@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
   Play, Send, RotateCcw, ExternalLink, CheckCircle2, XCircle, AlertTriangle, BookOpen, Timer,
-  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb, Repeat, Mountain, Sunrise, BookOpenCheck,
+  FileText, History, Code2, SquareCheckBig, Terminal, Plus, X, Loader2, CircleDot, Lightbulb, Repeat, Mountain, Sunrise, BookOpenCheck, WandSparkles,
 } from 'lucide-react';
 import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
@@ -13,6 +13,7 @@ import { loadProblem, exampleCount } from '../../lib/judge/problems';
 import { runTests } from '../../lib/judge/runner';
 import { LANGS, LANG_IDS, langOf } from '../../lib/judge/langs';
 import { preferredLang, setPreferredLang, readDraft, writeDraft } from '../../lib/judge/drafts';
+import { formatCode } from '../../lib/judge/format';
 import { useSubmissions, readLocalSubs } from '../../lib/submissions';
 import { markSolved, useSolved } from '../../hooks/useSolved';
 import { recordSubmission, recordResolve, resolveStatus, noteHint } from '../../lib/coach/store';
@@ -64,6 +65,8 @@ export function ProblemSolver({ slug, compact = false }) {
   const [spec, setSpec] = useState(undefined);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(null);
+  const [formatting, setFormatting] = useState(false);
+  const [formatted, setFormatted] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [cases, setCases] = useState([]);
@@ -203,6 +206,24 @@ export function ProblemSolver({ slug, compact = false }) {
     }
   };
 
+  // format in the browser; the editor takes it as one edit, so Ctrl/⌘ Z undoes it
+  const format = async () => {
+    if (formatting) return;
+    setFormatting(true);
+    const before = code;
+    try {
+      const out = await formatCode(before, lang);
+      setError(null);
+      if (out !== before) setCode(out);
+      setFormatted((n) => n + 1);
+    } catch (e) {
+      setError(e.message);
+      setBottomTab('result');
+    } finally {
+      setFormatting(false);
+    }
+  };
+
   const reset = () => {
     if (window.confirm('Replace your code with the starter code?')) {
       setCode(langOf(lang).starter(spec));
@@ -279,6 +300,9 @@ export function ProblemSolver({ slug, compact = false }) {
               <button type="button" className={styles.iconBtn} onClick={reset} title="Reset to starter code" aria-label="Reset to starter code">
                 <RotateCcw size={14} />
               </button>
+              <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={format} disabled={formatting || Boolean(busy)} title="Format code (Shift Alt F)">
+                {formatting ? <Loader2 size={13} className={styles.spin} /> : <WandSparkles size={13} />} Format
+              </button>
               <button type="button" className={`${ui.btn} ${ui.small}`} onClick={() => run('run')} disabled={Boolean(busy)} title="Run the test cases (Ctrl/⌘ Enter)">
                 {busy === 'run' ? <Loader2 size={13} className={styles.spin} /> : <Play size={13} />} Run
               </button>
@@ -288,7 +312,7 @@ export function ProblemSolver({ slug, compact = false }) {
             </div>
           </div>
           <div className={styles.editorBody}>
-            <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} height="100%" language={lang} />
+            <CodeEditor value={code} onChange={setCode} onRun={() => run('run')} onFormat={format} focusKey={formatted} height="100%" language={lang} />
           </div>
         </section>
 
