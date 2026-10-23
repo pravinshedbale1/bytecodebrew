@@ -11,9 +11,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   seedRatings, scoreOf, replay, pickNext, bestFit, speedFactor, expired, calibrate, expected, deltaOf, tierOf,
-  START_RATING, TIME_LIMIT, ABANDON_HOURS, SEEN_DAYS, STYLE_TARGET,
+  patternRating, readinessSet, START_RATING, TIME_LIMIT, ABANDON_HOURS, SEEN_DAYS, STYLE_TARGET,
 } from '../src/lib/climb/model.js';
-import { STYLES } from '../src/data/companies.js';
+import { STYLES, CORE } from '../src/data/companies.js';
 import { dsa } from '../src/curriculum/tracks/dsa.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -96,21 +96,52 @@ const mixSeeds = new Set(Array.from({ length: 40 }, (_, i) => pickNext({ catalog
 check(mixSeeds.size === 3, 'a mix spreads over the studied patterns');
 check(bestFit({ catalog, model: fresh, ratings, pattern: 'hashing', exclude: new Set([pick.slug]) }) !== pick.slug, 'bestFit honours exclusions');
 
-// ---- a simulated learner settles near their real skill
+// ---- the overall rating needs breadth
+const clean = (s, p, i) => ({ id: `c${i}-${s}`, t: T0 + i * 60000, s, p, pr: ratings[s], lim: 35, ms: 600000, ok: true, fails: 0, hints: 0 });
+{
+  let model = replay([]);
+  const evs = [];
+  for (let i = 0; i < 4; i += 1) {
+    const p = pickNext({ catalog, model, ratings, pattern: 'hashing', seed: i });
+    evs.push(clean(p.slug, 'hashing', i));
+    model = replay(evs);
+  }
+  check(model.rating < 1100 && model.patterns.hashing.r > 1300, `four clean solves in one pattern raise that pattern, barely the overall (hashing ${model.patterns.hashing.r}, overall ${model.rating})`);
+  const two = replay(['hashing', 'two-pointers'].flatMap((p) => catalog.byPattern[p].map((s, i) => clean(s, p, i))));
+  check(two.rating < 1250, `two patterns solved perfectly can't carry the rating (${two.rating})`);
+  check(two.rated === 2 && two.set.length === CORE.length, 'the readiness set is the core patterns, two of them rated');
+  const google = replay([], readinessSet(['shortest-paths', 'hashing']));
+  check(google.set.length === CORE.length + 1, "a company's focus patterns join the set once");
+}
+for (const p of ['hashing', 'dp-linear']) {
+  const evs = catalog.byPattern[p].map((s, i) => clean(s, p, i));
+  const easiest = evs.filter((e) => catalog.problems[e.s].level === 'Easy');
+  const r = replay(easiest).patterns[p]?.r ?? START_RATING;
+  const hardest = Math.max(...easiest.map((e) => e.pr), START_RATING);
+  check(r <= hardest + 100, `${p}: solving only easy problems caps the pattern near the hardest of them (${r} vs ${hardest})`);
+}
+const attempts = [{ pr: 1200, score: 1, ok: true }, { pr: 1500, score: 0, ok: false }, { pr: 1350, score: 0.75, ok: true }];
+check(patternRating(attempts) === patternRating([...attempts].reverse()), 'a pattern rating does not depend on the order of attempts');
+check(patternRating([]) === START_RATING && patternRating([{ pr: 1300, score: 0, ok: false }]) < START_RATING, 'no attempts = the start; a miss pulls below it');
+
+// ---- simulated learners: the overall rating orders them by skill, conservatively
 function rng(seed) { let s = seed; return () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; }; }
+const settled = {};
 for (const skill of [1100, 1500, 1900]) {
   const r = rng(skill);
   const evs = [];
   let model = replay([]);
-  for (let i = 0; i < 160; i += 1) {
-    const p = pickNext({ catalog, model, ratings, studied: new Set(order), seed: i });
+  for (let i = 0; i < 200; i += 1) {
+    const p = pickNext({ catalog, model, ratings, studied: new Set(CORE), seed: i });
     if (p.empty) break;
     const ok = r() < expected(skill, p.pr);
     evs.push({ id: `s${skill}-${i}`, t: T0 + i * 3600000, s: p.slug, p: p.pattern, pr: p.pr, lim: p.lim, ms: 10 * 60000, ok, fails: 0, hints: 0 });
     model = replay(evs);
   }
-  check(Math.abs(model.rating - skill) <= 175, `a learner at ${skill} settles near it (rated ${model.rating} after ${model.n})`);
+  settled[skill] = model.rating;
+  check(model.rating <= skill + 100 && model.rating >= skill - 250, `a learner at ${skill} who works through the core patterns is rated a little under it (${model.rating} after ${model.n})`);
 }
+check(settled[1100] < settled[1500] && settled[1500] < settled[1900], 'stronger learners rate higher');
 
 // ---- speed, abandoned attempts
 check(speedFactor([]) === 1, 'no speed until there are enough attempts');
@@ -125,11 +156,11 @@ check(ex && ex.gave && !ex.ok && ex.t === T0 + ABANDON_HOURS * 3600000, `an atte
 const slug = catalog.byPattern['dp-linear'][0];
 const seedsHard = { ...seeds, [slug]: 1500 };
 const r2 = rng(7);
-// each learner first earns a rating that reflects their skill on 40 other problems, then meets this one
-const others = Object.keys(seeds).filter((s) => s !== slug);
+// each learner first earns a rating in the pattern from its other problems, then meets this one
+const others = catalog.byPattern['dp-linear'].filter((s) => s !== slug);
 const users = Array.from({ length: 60 }, (_, u) => {
   const skill = 1300 + (u % 7) * 100;
-  const history = others.slice(u, u + 40).map((s, i) => ({ id: `u${u}-${i}`, t: T0 + i * 60000, s, p: index[s], pr: seeds[s], lim: 35, ms: 600000, ok: r2() < expected(skill, seeds[s]), fails: 0, hints: 0 }));
+  const history = others.map((s, i) => ({ id: `u${u}-${i}`, t: T0 + i * 60000, s, p: 'dp-linear', pr: seeds[s], lim: 35, ms: 600000, ok: r2() < expected(skill, seeds[s]), fails: 0, hints: 0 }));
   return [...history, { id: `u${u}`, t: T0 + 3600000, s: slug, p: 'dp-linear', pr: 1500, lim: 35, ms: 600000, ok: r2() < expected(skill, 1900), fails: 0, hints: 0 }];
 });
 const cal = calibrate({ users, seeds: seedsHard });

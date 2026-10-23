@@ -68,15 +68,15 @@ export function ClimbBanner({ slug }) {
   // the result stays up for the session it was earned in, not every later visit
   const h = deltaOf(model, slug);
   if (!h || now - h.t > 6 * 3600000) return null;
-  const up = h.d >= 0;
-  const p = h.p ? model.patterns[h.p] : null;
+  const up = h.pd >= 0;
+  const sign = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`;
+  const counted = model.set.includes(h.p);
   return (
     <div className={`${styles.banner} ${h.ok ? styles.bannerOk : ''}`} role="status">
       {up ? <TrendingUp size={16} aria-hidden="true" /> : <TrendingDown size={16} aria-hidden="true" />}
       <span>
-        <strong className={up ? styles.up : styles.down}>{up ? '+' : '−'}{Math.abs(h.d)}</strong>
-        {' '}· rating <strong>{h.r}</strong>
-        {p && <> · {catalog.titles[h.p] ?? h.p} {p.r}</>}
+        {catalog.titles[h.p] ?? h.p} <strong>{h.pr - h.pd} → {h.pr}</strong> <strong className={up ? styles.up : styles.down}>({sign(h.pd)})</strong>
+        {' '}· overall <strong>{h.r}</strong>{counted ? ` (${h.d ? sign(h.d) : '±0'})` : ' (not one of your rated patterns)'}
         {h.ok ? (h.score >= 0.9 ? ' · clean solve' : ' · solved') : ' · not solved this time'}
         {model.run > 1 && h === model.history.at(-1) ? ` · ${model.run} clean in a row` : ''}
       </span>

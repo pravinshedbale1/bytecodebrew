@@ -1,11 +1,17 @@
 import { dayKey } from '../dates.js';
+import { CORE } from '../../data/companies.js';
 
 /**
  * Climb: rated problem solving. Pure functions (no React, no browser), so scripts/climb-check.mjs can
  * test them in Node.
  *
- * Every judged problem has a rating; so does the learner, overall and per DSA pattern. The next problem
- * is picked a little above the learner's rating, where they solve it most of the time but not always.
+ * Every judged problem has a rating; so does the learner in each DSA pattern. A pattern's rating is the
+ * one that best explains all of the learner's attempts in it (problem ratings and how each went), pulled
+ * towards START_RATING while there are few attempts and never far above the hardest problem solved there.
+ * The overall rating is the average over a readiness set: the core interview patterns plus the target
+ * company's focus patterns, a pattern not yet rated counting as START_RATING. So a high overall rating
+ * needs breadth: one strong pattern moves it by a tenth or less. The next problem is picked a little
+ * above the learner's rating in its pattern, where they solve it most of the time but not always.
  * A rated attempt is the learner's first go at a problem from the Climb page, against a time limit:
  *
  *   attempt event { id, t, s, p, pr, lim, ms, ok, fails, hints, peek?, gave?, seen? }
@@ -21,7 +27,9 @@ import { dayKey } from '../dates.js';
  */
 export const TIME_LIMIT = { Easy: 20, Medium: 35, Hard: 50 };
 export const LEVEL_BAND = { Easy: [1000, 1300], Medium: [1400, 1700], Hard: [1800, 2200] };
-export const START_RATING = 1200;
+export const START_RATING = 1000;   // a pattern with no rated attempts, and the prior every pattern starts from
+const PRIOR_SD = 350;                  // how firmly few attempts are held near START_RATING
+const CEILING = 100;                   // a pattern's rating stays within this of the hardest problem solved in it
 export const FLOOR_RATING = 400;
 export const ABANDON_HOURS = 72;
 export const DEFAULT_GOAL = 3;
@@ -40,9 +48,13 @@ export const TIERS = [
 ];
 export const tierOf = (r) => [...TIERS].reverse().find((t) => r >= t.min);
 
-/** Our guide to the rating that is comfortable for each interview style (data/companies.js STYLES). */
-export const STYLE_TARGET = { bank: 1450, practical: 1450, machine: 1550, systems: 1600, bigtech: 1700, quant: 1900 };
-export const GENERAL_TARGET = 1600;
+/**
+ * Our guide to the overall rating that is comfortable for each interview style (data/companies.js STYLES).
+ * Ratings are conservative (each pattern has a short ladder and few attempts are held near the start), so
+ * in simulation a learner's overall rating ends 100–200 below their true level: the targets allow for that.
+ */
+export const STYLE_TARGET = { bank: 1400, practical: 1400, machine: 1450, systems: 1500, bigtech: 1600, quant: 1800 };
+export const GENERAL_TARGET = 1500;
 
 /** Starting problem ratings: the level's band, spread by ladder position, nudged by where the pattern sits in the course. */
 export function seedRatings(catalog) {
@@ -72,22 +84,48 @@ export function scoreOf(a) {
   return Math.max(0.4, Math.round(s * 100) / 100);
 }
 
-const kOverall = (n) => (n < 10 ? 48 : n < 30 ? 32 : 20);
-const kPattern = (n) => (n < 5 ? 48 : 24);
 const effective = (a) => a.pr - (a.seen ? SEEN_DISCOUNT : 0);
 
+/** The patterns the overall rating averages over: the core ones and the target company's focus. */
+export const readinessSet = (focus = []) => [...new Set([...CORE, ...focus])];
+
 /**
- * Replay attempts into ratings.
- * Returns { rating, peak, n, history: [{ t, s, p, r, d, score, ok }], patterns: { p: { r, n, peak } },
- *           run, bestRun, byDay: { day: n }, attempted: Set }.
+ * A pattern's rating from its attempts [{ pr, score, ok }]: the most likely rating given every result
+ * (a logistic model, as in expected()), with a normal prior around START_RATING, capped at CEILING above
+ * the hardest problem solved. Doesn't depend on the order of the attempts.
  */
-export function replay(events = []) {
+export function patternRating(attempts) {
+  if (!attempts.length) return START_RATING;
+  const c = Math.LN10 / 400;
+  // the slope of the log-likelihood plus prior falls as r rises: find where it crosses zero
+  const slope = (r) => c * attempts.reduce((n, a) => n + a.score - expected(r, a.pr), 0) - (r - START_RATING) / PRIOR_SD ** 2;
+  let lo = FLOOR_RATING;
+  let hi = 3000;
+  for (let i = 0; i < 40; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (slope(mid) > 0) lo = mid; else hi = mid;
+  }
+  const solved = attempts.filter((a) => a.ok).map((a) => a.pr);
+  const cap = Math.max(START_RATING, ...solved) + CEILING;
+  return Math.round(Math.min((lo + hi) / 2, cap));
+}
+
+const average = (patterns, set) => Math.round(set.reduce((n, p) => n + (patterns[p]?.r ?? START_RATING), 0) / set.length);
+
+/**
+ * Replay attempts into ratings. `set` is the readiness set (readinessSet).
+ * Returns { rating, peak, n, set, rated, history: [{ t, s, p, r, d, pr, pd, score, ok }],
+ *           patterns: { p: { r, n, peak } }, run, bestRun, byDay: { day: n }, attempted: Set }
+ * where r/d are the overall rating and its change, pr/pd the pattern's.
+ */
+export function replay(events = [], set = readinessSet()) {
   const sorted = [...events].sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1));
   let rating = START_RATING;
   let peak = START_RATING;
   let run = 0;
   let bestRun = 0;
   const patterns = {};
+  const results = {};
   const history = [];
   const byDay = {};
   const attempted = new Set();
@@ -95,24 +133,26 @@ export function replay(events = []) {
     if (attempted.has(a.s)) continue;           // one rated attempt per problem
     attempted.add(a.s);
     const score = scoreOf(a);
-    const pr = effective(a);
-    const d = Math.round(kOverall(history.length) * (score - expected(rating, pr)));
-    rating = Math.max(FLOOR_RATING, rating + d);
-    peak = Math.max(peak, rating);
+    const before = rating;
+    let pr = null;
+    let pd = 0;
     if (a.p) {
-      const st = patterns[a.p] ?? { r: rating - d, n: 0, peak: 0 };
-      st.r = Math.max(FLOOR_RATING, Math.round(st.r + kPattern(st.n) * (score - expected(st.r, pr))));
-      st.n += 1;
-      st.peak = Math.max(st.peak, st.r);
-      patterns[a.p] = st;
+      const was = patterns[a.p]?.r ?? START_RATING;
+      (results[a.p] ??= []).push({ pr: effective(a), score, ok: a.ok });
+      pr = patternRating(results[a.p]);
+      pd = pr - was;
+      patterns[a.p] = { r: pr, n: results[a.p].length, peak: Math.max(patterns[a.p]?.peak ?? 0, pr) };
+      rating = average(patterns, set);
     }
+    peak = Math.max(peak, rating);
     run = score >= 0.9 ? run + 1 : 0;
     bestRun = Math.max(bestRun, run);
     const day = dayKey(new Date(a.t));
     byDay[day] = (byDay[day] ?? 0) + 1;
-    history.push({ t: a.t, s: a.s, p: a.p, r: rating, d, score, ok: a.ok });
+    history.push({ t: a.t, s: a.s, p: a.p, r: rating, d: rating - before, pr, pd, score, ok: a.ok });
   }
-  return { rating, peak, n: history.length, history, patterns, run, bestRun, byDay, attempted };
+  const rated = set.filter((p) => patterns[p]).length;
+  return { rating, peak, n: history.length, set, rated, history, patterns, run, bestRun, byDay, attempted };
 }
 
 /** Change to the rating from the attempt at `slug` (null if it wasn't rated). */
@@ -156,10 +196,13 @@ export function pickNext({ catalog, model, ratings, pattern = null, studied = ne
   if (!p) {
     const pool = catalog.order.filter((x) => studied.has(x) && candidates(x, ctx).length);
     if (!pool.length) return { empty: 'study' };
+    // weaker patterns, patterns not rated yet, the readiness set and the company's focus come up more often
+    const rated = Object.values(model.patterns);
+    const mean = rated.length ? rated.reduce((n, st) => n + st.r, 0) / rated.length : START_RATING;
     const weights = pool.map((x) => {
       const st = model.patterns[x];
-      const gap = st ? Math.max(0, (model.rating - st.r) / 100) : 0.5;
-      return 1 + gap + (focus.includes(x) ? 1 : 0);
+      const gap = st ? Math.max(0, (mean - st.r) / 100) : 0.75;
+      return 1 + gap + (model.set?.includes(x) ? 1 : 0) + (focus.includes(x) ? 1 : 0);
     });
     let roll = rng(seed)() * weights.reduce((a, b) => a + b, 0);
     p = pool[pool.length - 1];
@@ -170,7 +213,7 @@ export function pickNext({ catalog, model, ratings, pattern = null, studied = ne
   }
   const list = candidates(p, ctx);
   if (!list.length) return { empty: 'pattern', pattern: p };
-  const target = (model.patterns[p]?.r ?? model.rating) + AIM;
+  const target = (model.patterns[p]?.r ?? START_RATING) + AIM;
   const order = catalog.byPattern[p];
   const prOf = (c) => (ratings[c.slug] ?? START_RATING) - (c.seen ? SEEN_DISCOUNT : 0);
   const best = [...list].sort((a, b) => Math.abs(prOf(a) - target) - Math.abs(prOf(b) - target) || order.indexOf(a.slug) - order.indexOf(b.slug))[0];
@@ -185,7 +228,7 @@ export function pickNext({ catalog, model, ratings, pattern = null, studied = ne
 export function bestFit({ catalog, model, ratings, pattern, exclude = new Set(), solvedAt = () => null }) {
   const list = (catalog.byPattern[pattern] ?? []).filter((s) => !exclude.has(s) && solvedAt(s) == null && !model.attempted.has(s));
   if (!list.length) return null;
-  const target = (model.patterns[pattern]?.r ?? model.rating) + AIM;
+  const target = (model.patterns[pattern]?.r ?? START_RATING) + AIM;
   const order = catalog.byPattern[pattern];
   return [...list].sort((a, b) => Math.abs((ratings[a] ?? START_RATING) - target) - Math.abs((ratings[b] ?? START_RATING) - target) || order.indexOf(a) - order.indexOf(b))[0];
 }
@@ -219,8 +262,9 @@ export function calibrate({ users = [], seeds = {}, minAttempts = 8 }) {
     const model = replay(events);
     for (const h of model.history) {
       const e = events.find((x) => x.s === h.s && x.t === h.t);
-      if (!e || e.seen) continue;
-      (by[h.s] ??= []).push({ rb: h.r - h.d, score: h.score });
+      if (!e || e.seen || h.pr == null) continue;
+      // the learner's rating in that pattern just before the attempt
+      (by[h.s] ??= []).push({ rb: h.pr - h.pd, score: h.score });
     }
   }
   const out = {};

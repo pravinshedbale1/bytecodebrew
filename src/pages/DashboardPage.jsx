@@ -19,8 +19,7 @@ import { useProfile, updateProfile, goalsOf } from '../hooks/useProfile';
 import { useAuth, signIn } from '../hooks/useAuth';
 import { useDeck } from '../lib/reviewDeck';
 import { overallProgress } from '../lib/progressStats';
-import { useClimbState } from '../lib/climb/store';
-import { replay } from '../lib/climb/model';
+import { useClimbModel } from '../lib/climb/store';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from '../components/dashboard/Dashboard.module.css';
@@ -231,12 +230,11 @@ export function DashboardPage() {
 
 /** The Climb rating, or a way in when there isn't one yet. */
 function ClimbStat() {
-  const climb = useClimbState();
-  const model = useMemo(() => replay(climb.events), [climb.events]);
+  const { model } = useClimbModel();
   return (
     <Link to="/climb" className={`${ui.stat} ${styles.statLink}`}>
       <span className={ui.statValue}>{model.n ? model.rating : '–'}</span>
-      <span className={ui.statLabel}>{model.n ? `Climb rating · peak ${model.peak}` : 'Climb rating: start rated problems'}</span>
+      <span className={ui.statLabel}>{model.n ? `Climb rating · ${model.rated} of ${model.set.length} patterns rated` : 'Climb rating: start rated problems'}</span>
     </Link>
   );
 }

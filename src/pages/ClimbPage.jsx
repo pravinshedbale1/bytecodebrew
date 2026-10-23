@@ -7,7 +7,7 @@ import { useClimb, startAttempt, finishAttempt, setGoal } from '../lib/climb/sto
 import { readMode, writeMode, useStartNext } from '../components/climb/ClimbBanner';
 import { catalog, lessonPath } from '../lib/coach/catalog';
 import { PATTERNS } from '../lib/coach/patterns';
-import { tierOf, TIERS, STYLE_TARGET, GENERAL_TARGET, TIME_LIMIT, ABANDON_HOURS } from '../lib/climb/model';
+import { tierOf, TIERS, STYLE_TARGET, GENERAL_TARGET, TIME_LIMIT, ABANDON_HOURS, START_RATING } from '../lib/climb/model';
 import ui from '../components/common/ui.module.css';
 import page from './Page.module.css';
 import styles from './ClimbPage.module.css';
@@ -15,6 +15,7 @@ import styles from './ClimbPage.module.css';
 const nameOf = (p) => catalog.titles[p] ?? PATTERNS[p]?.name ?? p;
 const titleOf = (slug) => catalog.problems[slug]?.title ?? slug;
 const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const signed = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(n)}`;
 const outcome = (h, e) => (e?.peek ? 'Opened the solution' : e?.gave ? 'Gave up' : !h.ok ? 'Not solved' : h.score >= 0.9 ? 'Clean solve' : 'Solved');
 
 /** /climb — rated problem solving: a problem at your level, the clock, and how your rating moves. */
@@ -41,13 +42,14 @@ function ClimbInner() {
   const last = model.history.at(-1);
   const target = company ? STYLE_TARGET[company.style] ?? GENERAL_TARGET : GENERAL_TARGET;
   const tier = tierOf(model.rating);
-  const toward = Math.round(Math.min(100, Math.max(4, ((model.rating - 800) / (target - 800)) * 100)));
+  const toward = Math.round(Math.min(100, Math.max(4, ((model.rating - START_RATING) / (target - START_RATING)) * 100)));
   const nextTier = TIERS.find((t) => t.min > model.rating);
   const eventsBySlug = useMemo(() => Object.fromEntries(climb.state.events.map((e) => [e.s, e])), [climb.state.events]);
-  const patternRows = useMemo(
-    () => catalog.order.filter((p) => model.patterns[p]).map((p) => ({ p, ...model.patterns[p] })).sort((a, b) => a.r - b.r),
-    [model],
-  );
+  // the patterns the rating averages over (rated or not), then any others the learner has rated
+  const row = (p) => ({ p, r: model.patterns[p]?.r ?? START_RATING, n: model.patterns[p]?.n ?? 0, peak: model.patterns[p]?.peak ?? null });
+  const counted = useMemo(() => model.set.map(row).sort((a, b) => a.r - b.r || b.n - a.n), [model]); // eslint-disable-line react-hooks/exhaustive-deps
+  const others = useMemo(() => catalog.order.filter((p) => model.patterns[p] && !model.set.includes(p)).map(row).sort((a, b) => a.r - b.r), [model]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setLabel = company ? `the core patterns and ${company.name}'s focus` : 'the core interview patterns';
 
   const rail = (
     <>
@@ -69,7 +71,9 @@ function ClimbInner() {
       </RailCard>
       <RailCard title="How it works" icon={<Lightbulb size={14} aria-hidden="true" />}>
         <ul className={styles.how}>
-          <li>Each problem has a rating, and so do you. The next problem is picked a little above your rating, so you solve most but not all.</li>
+          <li>Each problem has a rating, and so do you in each pattern: the rating that best explains all your attempts there. It starts at {START_RATING}, moves slowly while you have few attempts, and stays close to the hardest problem you've solved in it.</li>
+          <li>Your overall rating is the average over {model.set.length} patterns ({setLabel}); a pattern you haven't rated counts as {START_RATING}. One strong pattern can't carry it: it takes breadth.</li>
+          <li>The next problem is picked a little above your rating in its pattern, so you solve most but not all.</li>
           <li>Accepted first try, without hints and inside the time ({TIME_LIMIT.Easy}/{TIME_LIMIT.Medium}/{TIME_LIMIT.Hard} min) counts fully. Failed submissions, hints and running over count a little less.</li>
           <li>Giving up or opening the Solution tab counts as not solved. Only your first go at a problem is rated; problems you solved recently aren't offered.</li>
           <li>An attempt left open for {ABANDON_HOURS} hours ends as given up.</li>
@@ -92,9 +96,10 @@ function ClimbInner() {
           <p className={styles.kicker}>Your rating</p>
           <p className={styles.rating}>
             {model.rating}
-            {last && <span className={last.d >= 0 ? styles.up : styles.down}>{last.d >= 0 ? '+' : '−'}{Math.abs(last.d)}</span>}
+            {last && last.d !== 0 && <span className={last.d >= 0 ? styles.up : styles.down}>{signed(last.d)}</span>}
           </p>
-          <p className={styles.tier}>{model.n ? tier.label : 'Provisional: your first problems move it a lot'}{nextTier && model.n ? ` · ${nextTier.min - model.rating} to “${nextTier.label}”` : ''}</p>
+          <p className={styles.tier}>{tier.label}{nextTier ? ` · ${nextTier.min - model.rating} to “${nextTier.label}”` : ''}</p>
+          <p className={styles.coverage}>Average of {model.set.length} patterns, {setLabel}: <strong>{model.rated}</strong> rated so far. Unrated ones count as {START_RATING}.</p>
         </div>
         <div className={styles.target}>
           <p className={styles.kicker}>{company ? <><Building2 size={12} aria-hidden="true" /> {company.name} target</> : <><Trophy size={12} aria-hidden="true" /> Product-company target</>}</p>
@@ -156,22 +161,21 @@ function ClimbInner() {
 
           <section className={ui.panel} aria-labelledby="climb-patterns">
             <h2 id="climb-patterns" className={ui.panelTitle}>By pattern, weakest first</h2>
-            <ul className={styles.patterns}>
-              {patternRows.map((r) => (
-                <li key={r.p}>
-                  <span className={styles.patName}>{nameOf(r.p)}<span className={styles.patMeta}>{r.n} rated · best {r.peak}</span></span>
-                  <span className={styles.patBar} aria-hidden="true"><span style={{ width: `${Math.max(3, Math.min(100, ((r.r - 800) / 1400) * 100))}%` }} /></span>
-                  <span className={styles.patNum}>{r.r}</span>
-                  <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => setMode(r.p)} disabled={Boolean(active)}>Focus</button>
-                </li>
-              ))}
-            </ul>
+            <p className={ui.help}>These {model.set.length} make up your rating. Raise the weakest ones first: each is worth a {model.set.length}th of it.</p>
+            <PatternList rows={counted} onFocus={setMode} busy={Boolean(active)} />
+            {others.length > 0 && (
+              <>
+                <h3 className={styles.subhead}>Other patterns you've rated</h3>
+                <p className={ui.help}>Good practice, but not part of {company ? `${company.name}'s` : 'the core'} set, so they don't move your rating.</p>
+                <PatternList rows={others} onFocus={setMode} busy={Boolean(active)} />
+              </>
+            )}
           </section>
 
           <section className={ui.panel} aria-labelledby="climb-recent">
             <h2 id="climb-recent" className={ui.panelTitle}>Recent problems</h2>
             <table className={styles.recent}>
-              <thead><tr><th>Problem</th><th>Result</th><th>Time</th><th>Change</th></tr></thead>
+              <thead><tr><th>Problem</th><th>Result</th><th>Time</th><th>Pattern</th><th>Overall</th></tr></thead>
               <tbody>
                 {[...model.history].reverse().slice(0, 12).map((h) => {
                   const e = eventsBySlug[h.s];
@@ -180,7 +184,8 @@ function ClimbInner() {
                       <td><Link to={`/solve/${h.s}`}>{titleOf(h.s)}</Link><span className={styles.patMeta}>{nameOf(h.p)}</span></td>
                       <td>{outcome(h, e)}</td>
                       <td>{e ? `${Math.round(e.ms / 60000)} / ${e.lim} min` : '—'}</td>
-                      <td className={h.d >= 0 ? styles.up : styles.down}>{h.d >= 0 ? '+' : '−'}{Math.abs(h.d)}</td>
+                      <td><span className={h.pd >= 0 ? styles.up : styles.down}>{signed(h.pd)}</span><span className={styles.patMeta}>now {h.pr}</span></td>
+                      <td className={h.d > 0 ? styles.up : h.d < 0 ? styles.down : styles.flat}>{h.d ? signed(h.d) : '±0'}</td>
                     </tr>
                   );
                 })}
@@ -194,6 +199,21 @@ function ClimbInner() {
         </section>
       )}
     </PageLayout>
+  );
+}
+
+function PatternList({ rows, onFocus, busy }) {
+  return (
+    <ul className={styles.patterns}>
+      {rows.map((r) => (
+        <li key={r.p}>
+          <span className={styles.patName}>{nameOf(r.p)}<span className={styles.patMeta}>{r.n ? `${r.n} rated · best ${r.peak}` : 'not rated yet'}</span></span>
+          <span className={styles.patBar} aria-hidden="true"><span style={{ width: `${Math.max(3, Math.min(100, ((r.r - 800) / 1400) * 100))}%`, opacity: r.n ? 1 : 0.35 }} /></span>
+          <span className={styles.patNum}>{r.r}</span>
+          <button type="button" className={`${ui.btn} ${ui.ghost} ${ui.small}`} onClick={() => onFocus(r.p)} disabled={busy}>Focus</button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -266,7 +286,7 @@ function RatingChart({ history, target }) {
       </svg>
       {h && (
         <div className={styles.tip} style={{ left: `${(x(hover) / W) * 100}%` }}>
-          {h.s ? <><strong>{h.r}</strong> ({h.d >= 0 ? '+' : '−'}{Math.abs(h.d)}) · {titleOf(h.s)}</> : <><strong>{h.r}</strong> · start</>}
+          {h.s ? <><strong>{h.r}</strong> ({signed(h.d)}) · {titleOf(h.s)}</> : <><strong>{h.r}</strong> · start</>}
         </div>
       )}
     </div>

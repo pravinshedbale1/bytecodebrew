@@ -9,7 +9,7 @@ import calibrated from '../../data/climbRatings.json';
 import { catalog } from '../coach/catalog';
 import { today, daySeed } from '../dates';
 import { isViewingAs } from '../viewAs';
-import { replay, seedRatings, pickNext, bestFit, expired, speedFactor, DEFAULT_GOAL, AIM, START_RATING } from './model.js';
+import { replay, seedRatings, pickNext, bestFit, expired, speedFactor, readinessSet, DEFAULT_GOAL, AIM, START_RATING } from './model.js';
 
 /**
  * Climb's synced store (Premium): { goal, active, events }.
@@ -80,13 +80,24 @@ const solvedTime = (v) => (v == null ? null : Date.parse(typeof v === 'string' ?
  * Climb for a page: the store, the replayed model, today's count, and what to pick from. An attempt
  * left open longer than ABANDON_HOURS ends here as given up.
  */
-export function useClimb() {
+/**
+ * The replayed ratings, averaged over the readiness set of the learner's Runway company (or the core
+ * patterns), so every page shows the same number.
+ */
+export function useClimbModel() {
   const state = useSyncExternalStore(store.subscribe, store.get);
-  const model = useMemo(() => replay(state.events), [state.events]);
-  const { solved } = useSolved();
-  const { isComplete } = useProgress();
   const plan = useRunway();
   const company = plan?.settings?.company ? companyPlan(plan.settings.company) : null;
+  const focusKey = (company?.focus ?? []).join();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const model = useMemo(() => replay(state.events, readinessSet(company?.focus ?? [])), [state.events, focusKey]);
+  return { state, model, company };
+}
+
+export function useClimb() {
+  const { state, model, company } = useClimbModel();
+  const { solved } = useSolved();
+  const { isComplete } = useProgress();
 
   useEffect(() => {
     const e = expired(state.active, Date.now());

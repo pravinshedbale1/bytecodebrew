@@ -10,7 +10,7 @@
 export const CHECKED = '2026-10-18';
 
 /** Pattern lesson ids (src/curriculum/tracks/dsa.js → patterns course). */
-const CORE = ['hashing', 'two-pointers', 'sliding-window', 'intervals', 'binary-search', 'tree-dfs', 'tree-bfs', 'graph-traversal', 'heap-patterns', 'dp-linear'];
+export const CORE = ['hashing', 'two-pointers', 'sliding-window', 'intervals', 'binary-search', 'tree-dfs', 'tree-bfs', 'graph-traversal', 'heap-patterns', 'dp-linear'];
 
 export const STYLES = {
   bigtech: {
