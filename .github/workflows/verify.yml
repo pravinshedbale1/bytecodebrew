@@ -14,6 +14,7 @@ jobs:
   site:
     name: Content, build and browser smoke test
     runs-on: ubuntu-latest
+    timeout-minutes: 30          # a normal run takes 1-9 minutes; a stuck runner fails here, not after GitHub's 6 hours
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,6 +38,7 @@ jobs:
   java:
     name: Lesson code and practice-problem references
     runs-on: ubuntu-latest
+    timeout-minutes: 30          # a normal run takes 1-9 minutes; a stuck runner fails here, not after GitHub's 6 hours
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
