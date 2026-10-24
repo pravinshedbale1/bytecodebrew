@@ -43,7 +43,7 @@ Prices are rough (October 2026); check the provider before buying.
 
 | Idea | Notes |
 | --- | --- |
-| **Prerendered pages for search engines** | The site is a single-page app; search engines see one page. Prerendering every lesson to static HTML at build time (vite-plugin-ssr / a custom prerender script) is free but is a larger change. |
+| **Fully prerendered lessons** | Done in part (`scripts/seo.mjs`): every page has its own file answering 200 with its title, description, structured data and a plain-HTML summary, plus sitemap.xml and robots.txt. Rendering each lesson's full MDX to HTML at build time (server-side rendering) would give crawlers the complete text; a larger change. |
 | **Error monitoring** | Sentry's free tier (5,000 errors a month) would report crashes from real learners' browsers. Needs an account and a DSN in the config. |
 | **Privacy-friendly analytics** | Cloudflare Web Analytics is free and cookie-less: which lessons are read and where people drop off. |
 | **Sync code drafts** | Solutions in the solver are saved per browser only. Syncing them would use more Firestore space (fine within the free tier for most learners). |

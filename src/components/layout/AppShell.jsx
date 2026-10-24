@@ -18,8 +18,14 @@ export function AppShell() {
     if (!hash) window.scrollTo(0, 0);
   }, [pathname, hash]);
 
-  // Each page gets its own tab title (better bookmarks, history and sharing).
+  // Each page gets its own tab title (better bookmarks, history and sharing). A page opened straight
+  // from its own file (scripts/seo.mjs) keeps that file's fuller title until the reader moves on.
   useEffect(() => {
+    if (document.querySelector('meta[name="bcb-route"]')?.content === pathname && !document.documentElement.dataset.navigated) {
+      document.documentElement.dataset.navigated = '1';
+      return;
+    }
+    document.documentElement.dataset.navigated = '1';
     const crumbs = crumbsFor(pathname);
     document.title = crumbs.length > 1 ? `${crumbs[crumbs.length - 1].label} · ${site.name}` : `${site.name} — Interview preparation, in depth`;
   }, [pathname]);
