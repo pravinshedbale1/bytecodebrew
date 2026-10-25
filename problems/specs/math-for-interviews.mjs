@@ -161,7 +161,7 @@ export default [
     ],
     ref: `class Solution {
     private final int[] original;
-    private final Random rnd = new Random();
+    private final Random rnd = new Random(7);
     public Solution(int[] nums) { original = nums.clone(); }
     public int[] reset() { return original.clone(); }
     public int[] shuffle() {
@@ -184,7 +184,7 @@ export default [
     ],
     ref: `class Solution {
     private final ListNode head;
-    private final Random rnd = new Random();
+    private final Random rnd = new Random(274);
     public Solution(ListNode head) { this.head = head; }
     public int getRandom() {
         int pick = 0, i = 0;
@@ -211,6 +211,137 @@ export default [
             int v = (rand7() - 1) * 7 + rand7();
             if (v <= 40) return (v - 1) % 10 + 1;
         }
+    }
+}`,
+  },
+  {
+    slug: 'plus-one', title: 'Plus One', level: 'Easy',
+    summary: 'digits holds a non-negative integer, most significant digit first, with no leading zeros. Return the digits of that integer plus one.',
+    method: 'plusOne', params: [['int[]', 'digits']], returns: 'int[]',
+    tests: [
+      { in: [[1, 2, 3]], out: [1, 2, 4] },
+      { in: [[4, 3, 2, 1]], out: [4, 3, 2, 2] },
+      { in: [[9]], out: [1, 0] },
+      { in: [[0]] },
+      { in: [[9, 9, 9]] },
+      { in: [[1, 9, 9]] },
+      { in: [[9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 9, 9]] },
+    ],
+    ref: `class Solution {
+    public int[] plusOne(int[] digits) {
+        for (int i = digits.length - 1; i >= 0; i--) {
+            if (digits[i] < 9) { digits[i]++; return digits; }
+            digits[i] = 0;
+        }
+        int[] out = new int[digits.length + 1];
+        out[0] = 1;
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'roman-to-integer', title: 'Roman to Integer', level: 'Easy',
+    summary: 'Convert a valid Roman numeral (I, V, X, L, C, D, M, with subtractive pairs like IV and CM) to an integer.',
+    method: 'romanToInt', params: [['String', 's']], returns: 'int',
+    tests: [
+      { in: ['III'], out: 3 },
+      { in: ['LVIII'], out: 58 },
+      { in: ['MCMXCIV'], out: 1994 },
+      { in: ['IV'] },
+      { in: ['MMMCMXCIX'] },
+      { in: ['XLIX'] },
+      { in: ['CDXLIV'] },
+    ],
+    ref: `class Solution {
+    public int romanToInt(String s) {
+        int total = 0;
+        for (int i = 0; i < s.length(); i++) {
+            int v = val(s.charAt(i));
+            if (i + 1 < s.length() && v < val(s.charAt(i + 1))) total -= v; else total += v;
+        }
+        return total;
+    }
+    private int val(char c) {
+        switch (c) {
+            case 'I': return 1; case 'V': return 5; case 'X': return 10; case 'L': return 50;
+            case 'C': return 100; case 'D': return 500; default: return 1000;
+        }
+    }
+}`,
+  },
+  {
+    slug: 'excel-sheet-column-title', title: 'Excel Sheet Column Title', level: 'Easy',
+    summary: 'Return the spreadsheet column title for columnNumber: 1 → "A", 26 → "Z", 27 → "AA", 28 → "AB", and so on.',
+    method: 'convertToTitle', params: [['int', 'columnNumber']], returns: 'String',
+    tests: [
+      { in: [1], out: 'A' },
+      { in: [28], out: 'AB' },
+      { in: [701], out: 'ZY' },
+      { in: [26] },
+      { in: [52] },
+      { in: [702] },
+      { in: [2147483647] },
+    ],
+    ref: `class Solution {
+    public String convertToTitle(int columnNumber) {
+        StringBuilder sb = new StringBuilder();
+        while (columnNumber > 0) {
+            columnNumber--;
+            sb.append((char) ('A' + columnNumber % 26));
+            columnNumber /= 26;
+        }
+        return sb.reverse().toString();
+    }
+}`,
+  },
+  {
+    slug: 'greatest-common-divisor-of-strings', title: 'Greatest Common Divisor of Strings', level: 'Easy',
+    summary: 'A string t divides s if s is t repeated one or more times. Return the longest string that divides both str1 and str2 ("" if none).',
+    method: 'gcdOfStrings', params: [['String', 'str1'], ['String', 'str2']], returns: 'String',
+    tests: [
+      { in: ['ABCABC', 'ABC'], out: 'ABC' },
+      { in: ['ABABAB', 'ABAB'], out: 'AB' },
+      { in: ['LEET', 'CODE'], out: '' },
+      { in: ['A', 'A'] },
+      { in: ['AAAAAA', 'AAAA'] },
+      { in: ['ABCABCABC', 'ABCAB'] },
+      { in: ['TAUXXTAUXXTAUXXTAUXXTAUXX', 'TAUXXTAUXXTAUXXTAUXXTAUXXTAUXXTAUXXTAUXXTAUXX'] },
+    ],
+    ref: `class Solution {
+    public String gcdOfStrings(String str1, String str2) {
+        if (!(str1 + str2).equals(str2 + str1)) return "";
+        return str1.substring(0, gcd(str1.length(), str2.length()));
+    }
+    private int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }
+}`,
+  },
+  {
+    slug: 'multiply-strings', title: 'Multiply Strings', level: 'Medium',
+    summary: 'Multiply two non-negative integers given as decimal strings and return the product as a string, without converting the inputs to built-in big numbers.',
+    method: 'multiply', params: [['String', 'num1'], ['String', 'num2']], returns: 'String',
+    tests: [
+      { in: ['2', '3'], out: '6' },
+      { in: ['123', '456'], out: '56088' },
+      { in: ['0', '52'] },
+      { in: ['9', '9'] },
+      { in: ['999', '999'] },
+      { in: ['123456789', '987654321'] },
+      { in: ['1', '100000000000000000000000000000'] },
+      { in: ['31415926535897932384626433832795028841971', '27182818284590452353602874713526624977572'] },
+    ],
+    ref: `class Solution {
+    public String multiply(String num1, String num2) {
+        int m = num1.length(), n = num2.length();
+        int[] pos = new int[m + n];
+        for (int i = m - 1; i >= 0; i--)
+            for (int j = n - 1; j >= 0; j--) {
+                int sum = (num1.charAt(i) - '0') * (num2.charAt(j) - '0') + pos[i + j + 1];
+                pos[i + j + 1] = sum % 10;
+                pos[i + j] += sum / 10;
+            }
+        StringBuilder sb = new StringBuilder();
+        for (int d : pos) if (sb.length() > 0 || d != 0) sb.append(d);
+        return sb.length() == 0 ? "0" : sb.toString();
     }
 }`,
   },

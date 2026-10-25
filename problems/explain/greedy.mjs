@@ -31,4 +31,23 @@ export default {
   candy: {
     explain: 'The children can get 2, 1 and 2 candies: each child rated higher than a neighbour gets more than that neighbour. That is 5 candies, the fewest possible.',
   },
+  'lemonade-change': {
+    explain: 'The first three customers pay $5, so you hold three $5 bills. The $10 customer gets one $5 back, and the $20 customer gets the $10 and a $5. Everyone got change, so the answer is `true`.',
+  },
+  'merge-triplets-to-form-target-triplet': {
+    explain: '[1,8,4] can never be used, because 8 overshoots the target\'s 7. Merging [2,5,3] with [1,7,5] gives [2,7,5], the target, so the answer is `true`.',
+  },
+  'valid-parenthesis-string': {
+    explain: '"()" is already balanced without any stars, so the answer is `true`.',
+    more: 'For example "(*))" is also valid: treat the "*" as "(" to get "(())".',
+  },
+  'hand-of-straights': {
+    explain: 'The cards split into [1,2,3], [2,3,4] and [6,7,8], each three consecutive values, so the answer is `true`.',
+  },
+  'dota2-senate': {
+    explain: 'The Radiant senator acts first and bans the Dire senator. In the next round only Radiant can vote, so "Radiant" announces victory.',
+  },
+  'jump-game-vii': {
+    explain: 'From index 0, jump 3 to index 3 (a "0"), then jump 2 to index 5, the last index. The answer is `true`.',
+  },
 };

@@ -34,4 +34,13 @@ export default {
     explain: '1 and 2 each appear twice; 3 and 5 appear once. XOR of everything is `3 ^ 5 = 6` (`110`); splitting the values by its lowest set bit separates 3 from 5. So the answer is `[3,5]`, in either order.',
     more: 'The two single values differ in at least one bit. Using that bit to split `nums` into two groups puts one single value in each group, and each group can then be XOR-ed on its own.',
   },
+  'add-binary': {
+    explain: '11 in binary is 3 and 1 is 1, so the sum is 4, which is "100" in binary.',
+  },
+  'bitwise-and-of-numbers-range': {
+    explain: '5 = 101, 6 = 110 and 7 = 111. Only the top bit is set in all three, so the AND is 100 in binary, which is 4.',
+  },
+  'minimum-array-end': {
+    explain: 'With x = 4 (100), each element must keep that bit. The smallest three such numbers are 4 (100), 5 (101) and 6 (110), so the last element is 6.',
+  },
 };

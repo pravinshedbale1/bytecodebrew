@@ -542,5 +542,134 @@
     }
    }
   ]
+ },
+ "single-threaded-cpu": {
+  "pattern": "Event simulation: sort by arrival, min-heap of available tasks",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan for the next task every time",
+    "idea": "Simulate the CPU. Each time it becomes free, scan all unprocessed tasks for the available one with the shortest time (smallest index on ties); if none is available, jump to the earliest arrival.",
+    "steps": [
+     "Keep `done[i]` flags and a 64-bit clock `time = 0`.",
+     "Repeat n times: scan every unprocessed task; among those with `enqueue <= time` pick the best by (processing time, index). If there is none, set `time` to the smallest unprocessed enqueue time and scan again.",
+     "Record the chosen task, mark it done and add its processing time to `time`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n picks, each scanning n tasks: 10¹⁰ steps for 10⁵ tasks, so it times out on the large test. It is a good way to make sure you understand the rules before optimising.",
+    "code": {
+     "java": "class Solution {\n    public int[] getOrder(int[][] tasks) {\n        int n = tasks.length;\n        boolean[] done = new boolean[n];\n        int[] order = new int[n];\n        long time = 0;\n        for (int w = 0; w < n; w++) {\n            int best = -1;\n            long earliest = Long.MAX_VALUE;\n            for (int i = 0; i < n; i++) {\n                if (done[i]) continue;\n                earliest = Math.min(earliest, tasks[i][0]);\n                if (tasks[i][0] <= time && (best < 0 || tasks[i][1] < tasks[best][1])) best = i;\n            }\n            if (best < 0) {\n                time = earliest;\n                for (int i = 0; i < n; i++)\n                    if (!done[i] && tasks[i][0] <= time && (best < 0 || tasks[i][1] < tasks[best][1])) best = i;\n            }\n            done[best] = true;\n            order[w] = best;\n            time += tasks[best][1];\n        }\n        return order;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> getOrder(vector<vector<int>>& tasks) {\n        int n = tasks.size();\n        vector<bool> done(n, false);\n        vector<int> order;\n        long long time = 0;\n        for (int w = 0; w < n; w++) {\n            int best = -1;\n            long long earliest = LLONG_MAX;\n            for (int i = 0; i < n; i++) {\n                if (done[i]) continue;\n                earliest = min(earliest, (long long) tasks[i][0]);\n                if (tasks[i][0] <= time && (best < 0 || tasks[i][1] < tasks[best][1])) best = i;\n            }\n            if (best < 0) {\n                time = earliest;\n                for (int i = 0; i < n; i++)\n                    if (!done[i] && tasks[i][0] <= time && (best < 0 || tasks[i][1] < tasks[best][1])) best = i;\n            }\n            done[best] = true;\n            order.push_back(best);\n            time += tasks[best][1];\n        }\n        return order;\n    }\n};",
+     "python": "class Solution:\n    def getOrder(self, tasks: List[List[int]]) -> List[int]:\n        n = len(tasks)\n        done = [False] * n\n        order, time = [], 0\n        for _ in range(n):\n            avail = [i for i in range(n) if not done[i] and tasks[i][0] <= time]\n            if not avail:\n                time = min(tasks[i][0] for i in range(n) if not done[i])\n                avail = [i for i in range(n) if not done[i] and tasks[i][0] <= time]\n            best = min(avail, key=lambda i: (tasks[i][1], i))\n            done[best] = True\n            order.append(best)\n            time += tasks[best][1]\n        return order",
+     "javascript": "var getOrder = function(tasks) {\n    const n = tasks.length, done = new Array(n).fill(false), order = [];\n    let time = 0;\n    const pick = () => {\n        let best = -1;\n        for (let i = 0; i < n; i++)\n            if (!done[i] && tasks[i][0] <= time && (best < 0 || tasks[i][1] < tasks[best][1])) best = i;\n        return best;\n    };\n    for (let w = 0; w < n; w++) {\n        let best = pick();\n        if (best < 0) {\n            time = Infinity;\n            for (let i = 0; i < n; i++) if (!done[i]) time = Math.min(time, tasks[i][0]);\n            best = pick();\n        }\n        done[best] = true;\n        order.push(best);\n        time += tasks[best][1];\n    }\n    return order;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sorted arrivals + min-heap",
+    "idea": "Sort task indices by enqueue time. Move every task that has arrived into a min-heap keyed by (processing time, index), and let the CPU always take the heap's top.",
+    "steps": [
+     "Sort indices by enqueue time; keep a pointer `k` into that order and a 64-bit clock.",
+     "Loop until all tasks are scheduled: if the heap is empty and the next task has not arrived, jump the clock to its enqueue time. Push every task with `enqueue <= time`.",
+     "Pop the top task, append its index and add its processing time to the clock."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Sorting is O(n log n), and each task is pushed and popped once at O(log n). Jumping the clock over idle gaps avoids stepping through up to 10⁹ empty time units, and the 64-bit clock avoids overflow after many long tasks.",
+    "code": {
+     "java": "class Solution {\n    public int[] getOrder(int[][] tasks) {\n        int n = tasks.length;\n        Integer[] idx = new Integer[n];\n        for (int i = 0; i < n; i++) idx[i] = i;\n        Arrays.sort(idx, (a, b) -> Integer.compare(tasks[a][0], tasks[b][0]));\n        PriorityQueue<Integer> ready = new PriorityQueue<>((a, b) -> tasks[a][1] != tasks[b][1] ? Integer.compare(tasks[a][1], tasks[b][1]) : Integer.compare(a, b));\n        int[] order = new int[n];\n        long time = 0;\n        int k = 0, w = 0;\n        while (w < n) {\n            if (ready.isEmpty() && time < tasks[idx[k]][0]) time = tasks[idx[k]][0];\n            while (k < n && tasks[idx[k]][0] <= time) ready.add(idx[k++]);\n            int t = ready.poll();\n            order[w++] = t;\n            time += tasks[t][1];\n        }\n        return order;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> getOrder(vector<vector<int>>& tasks) {\n        int n = tasks.size();\n        vector<int> idx(n);\n        iota(idx.begin(), idx.end(), 0);\n        sort(idx.begin(), idx.end(), [&](int a, int b) { return tasks[a][0] < tasks[b][0]; });\n        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> ready;\n        vector<int> order;\n        long long time = 0;\n        int k = 0;\n        while ((int) order.size() < n) {\n            if (ready.empty() && time < tasks[idx[k]][0]) time = tasks[idx[k]][0];\n            while (k < n && tasks[idx[k]][0] <= time) { ready.push({tasks[idx[k]][1], idx[k]}); k++; }\n            auto [p, t] = ready.top();\n            ready.pop();\n            order.push_back(t);\n            time += p;\n        }\n        return order;\n    }\n};",
+     "python": "class Solution:\n    def getOrder(self, tasks: List[List[int]]) -> List[int]:\n        n = len(tasks)\n        idx = sorted(range(n), key=lambda i: tasks[i][0])\n        ready, order = [], []\n        time, k = 0, 0\n        while len(order) < n:\n            if not ready and time < tasks[idx[k]][0]:\n                time = tasks[idx[k]][0]\n            while k < n and tasks[idx[k]][0] <= time:\n                heappush(ready, (tasks[idx[k]][1], idx[k]))\n                k += 1\n            p, t = heappop(ready)\n            order.append(t)\n            time += p\n        return order",
+     "javascript": "var getOrder = function(tasks) {\n    const n = tasks.length;\n    const idx = [...tasks.keys()].sort((a, b) => tasks[a][0] - tasks[b][0]);\n    const ready = new PriorityQueue((a, b) => (tasks[a][1] - tasks[b][1]) || (a - b));\n    const order = [];\n    let time = 0, k = 0;\n    while (order.length < n) {\n        if (ready.isEmpty() && time < tasks[idx[k]][0]) time = tasks[idx[k]][0];\n        while (k < n && tasks[idx[k]][0] <= time) ready.enqueue(idx[k++]);\n        const t = ready.dequeue();\n        order.push(t);\n        time += tasks[t][1];\n    }\n    return order;\n};"
+    }
+   }
+  ]
+ },
+ "reorganize-string": {
+  "pattern": "Greedy by frequency (heap, or fill even positions first)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Max-heap, holding back the last letter",
+    "idea": "Always write the most frequent remaining letter, but keep the letter you just wrote out of the heap for one step so it cannot be chosen twice in a row.",
+    "steps": [
+     "Count letters. If the top count exceeds `(n + 1) / 2`, return \"\".",
+     "Put (count, letter) pairs in a max-heap and keep `held = none`.",
+     "Repeat while the heap is not empty: pop the top, append its letter and decrement it; push `held` back if it still has copies; then hold the letter just written."
+    ],
+    "time": "O(n log k)",
+    "space": "O(k)",
+    "why": "k ≤ 26 is the number of distinct letters, so heap operations are effectively constant. The held-back letter is never the next one written, so no two neighbours match, and the feasibility check guarantees the heap never runs dry while letters are still held.",
+    "code": {
+     "java": "class Solution {\n    public String reorganizeString(String s) {\n        int[] cnt = new int[26];\n        for (char c : s.toCharArray()) cnt[c - 'a']++;\n        PriorityQueue<int[]> heap = new PriorityQueue<>((x, y) -> y[0] != x[0] ? y[0] - x[0] : x[1] - y[1]);\n        for (int i = 0; i < 26; i++) {\n            if (cnt[i] > (s.length() + 1) / 2) return \"\";\n            if (cnt[i] > 0) heap.add(new int[] { cnt[i], i });\n        }\n        StringBuilder sb = new StringBuilder();\n        int[] held = null;\n        while (!heap.isEmpty()) {\n            int[] cur = heap.poll();\n            sb.append((char) ('a' + cur[1]));\n            cur[0]--;\n            if (held != null && held[0] > 0) heap.add(held);\n            held = cur;\n        }\n        return sb.toString();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string reorganizeString(string s) {\n        int cnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        priority_queue<pair<int, int>> heap;\n        for (int i = 0; i < 26; i++) {\n            if (cnt[i] > ((int) s.size() + 1) / 2) return \"\";\n            if (cnt[i] > 0) heap.push({cnt[i], -i});\n        }\n        string out;\n        pair<int, int> held = {0, 0};\n        while (!heap.empty()) {\n            auto cur = heap.top(); heap.pop();\n            out += (char) ('a' - cur.second);\n            cur.first--;\n            if (held.first > 0) heap.push(held);\n            held = cur;\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def reorganizeString(self, s: str) -> str:\n        cnt = Counter(s)\n        if max(cnt.values()) > (len(s) + 1) // 2:\n            return \"\"\n        heap = [(-c, ch) for ch, c in cnt.items()]\n        heapify(heap)\n        out, held = [], None\n        while heap:\n            c, ch = heappop(heap)\n            out.append(ch)\n            if held and held[0] < 0:\n                heappush(heap, held)\n            held = (c + 1, ch)\n        return \"\".join(out)",
+     "javascript": "var reorganizeString = function(s) {\n    const cnt = new Array(26).fill(0);\n    for (const c of s) cnt[c.charCodeAt(0) - 97]++;\n    const heap = new PriorityQueue((x, y) => (y[0] - x[0]) || (x[1] - y[1]));\n    for (let i = 0; i < 26; i++) {\n        if (cnt[i] > Math.floor((s.length + 1) / 2)) return \"\";\n        if (cnt[i] > 0) heap.enqueue([cnt[i], i]);\n    }\n    let out = \"\", held = null;\n    while (!heap.isEmpty()) {\n        const cur = heap.dequeue();\n        out += String.fromCharCode(97 + cur[1]);\n        cur[0]--;\n        if (held && held[0] > 0) heap.enqueue(held);\n        held = cur;\n    }\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Most frequent letter on even indices",
+    "idea": "Write the most frequent letter at positions 0, 2, 4, … first, then keep filling even positions and wrap around to odd ones with all the other letters.",
+    "steps": [
+     "Count letters and find the most frequent one. If its count exceeds `(n + 1) / 2`, return \"\".",
+     "Place it at indices 0, 2, 4, … .",
+     "For every other letter, keep writing at the next even index; once past the end, continue from index 1 and step by 2."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Equal letters are always written two positions apart. Only the wrap from the last even slot to index 1 could put a letter next to itself, and that cannot happen because no other letter has more than ⌈n / 2⌉ copies and the most frequent one already took the start. The 26 counts are constant space besides the output.",
+    "code": {
+     "java": "class Solution {\n    public String reorganizeString(String s) {\n        int n = s.length();\n        int[] cnt = new int[26];\n        for (char c : s.toCharArray()) cnt[c - 'a']++;\n        int top = 0;\n        for (int i = 1; i < 26; i++) if (cnt[i] > cnt[top]) top = i;\n        if (cnt[top] > (n + 1) / 2) return \"\";\n        char[] out = new char[n];\n        int pos = 0;\n        while (cnt[top]-- > 0) { out[pos] = (char) ('a' + top); pos += 2; }\n        for (int i = 0; i < 26; i++) {\n            while (cnt[i] > 0) {\n                if (pos >= n) pos = 1;\n                out[pos] = (char) ('a' + i);\n                pos += 2;\n                cnt[i]--;\n            }\n        }\n        return new String(out);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string reorganizeString(string s) {\n        int n = s.size(), cnt[26] = {0};\n        for (char c : s) cnt[c - 'a']++;\n        int top = max_element(cnt, cnt + 26) - cnt;\n        if (cnt[top] > (n + 1) / 2) return \"\";\n        string out(n, ' ');\n        int pos = 0;\n        while (cnt[top]-- > 0) { out[pos] = 'a' + top; pos += 2; }\n        for (int i = 0; i < 26; i++) {\n            while (cnt[i] > 0) {\n                if (pos >= n) pos = 1;\n                out[pos] = 'a' + i;\n                pos += 2;\n                cnt[i]--;\n            }\n        }\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def reorganizeString(self, s: str) -> str:\n        n = len(s)\n        cnt = Counter(s)\n        top, c = cnt.most_common(1)[0]\n        if c > (n + 1) // 2:\n            return \"\"\n        out = [''] * n\n        pos = 0\n        for _ in range(c):\n            out[pos] = top\n            pos += 2\n        del cnt[top]\n        for ch, k in cnt.items():\n            for _ in range(k):\n                if pos >= n:\n                    pos = 1\n                out[pos] = ch\n                pos += 2\n        return \"\".join(out)",
+     "javascript": "var reorganizeString = function(s) {\n    const n = s.length, cnt = new Array(26).fill(0);\n    for (const c of s) cnt[c.charCodeAt(0) - 97]++;\n    let top = 0;\n    for (let i = 1; i < 26; i++) if (cnt[i] > cnt[top]) top = i;\n    if (cnt[top] > Math.floor((n + 1) / 2)) return \"\";\n    const out = new Array(n);\n    let pos = 0;\n    while (cnt[top]-- > 0) { out[pos] = String.fromCharCode(97 + top); pos += 2; }\n    for (let i = 0; i < 26; i++) {\n        while (cnt[i] > 0) {\n            if (pos >= n) pos = 1;\n            out[pos] = String.fromCharCode(97 + i);\n            pos += 2;\n            cnt[i]--;\n        }\n    }\n    return out.join(\"\");\n};"
+    }
+   }
+  ]
+ },
+ "longest-happy-string": {
+  "pattern": "Greedy: always use the most plentiful letter you are allowed to",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Max-heap of counts",
+    "idea": "Keep (count, letter) in a max-heap. Take the top letter unless the string already ends with two of it; then take the second one instead and put the first back.",
+    "steps": [
+     "Push each letter with a positive count.",
+     "Pop the top. If the last two characters are that letter, pop the next one (stop if there is none), use it, and push both back as needed.",
+     "Otherwise use the top letter and push it back if it still has copies. Repeat until the heap is empty or stuck."
+    ],
+    "time": "O(a + b + c)",
+    "space": "O(1)",
+    "why": "Each step writes one letter and does constant heap work on at most three entries. Always spending the largest pile first keeps the counts balanced, so letters run out together instead of one pile being stranded.",
+    "code": {
+     "java": "class Solution {\n    public String longestDiverseString(int a, int b, int c) {\n        PriorityQueue<int[]> heap = new PriorityQueue<>((x, y) -> y[0] != x[0] ? y[0] - x[0] : x[1] - y[1]);\n        if (a > 0) heap.add(new int[] { a, 0 });\n        if (b > 0) heap.add(new int[] { b, 1 });\n        if (c > 0) heap.add(new int[] { c, 2 });\n        StringBuilder sb = new StringBuilder();\n        while (!heap.isEmpty()) {\n            int[] first = heap.poll();\n            int len = sb.length();\n            char ch = (char) ('a' + first[1]);\n            if (len >= 2 && sb.charAt(len - 1) == ch && sb.charAt(len - 2) == ch) {\n                if (heap.isEmpty()) break;\n                int[] second = heap.poll();\n                sb.append((char) ('a' + second[1]));\n                if (--second[0] > 0) heap.add(second);\n                heap.add(first);\n            } else {\n                sb.append(ch);\n                if (--first[0] > 0) heap.add(first);\n            }\n        }\n        return sb.toString();\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestDiverseString(int a, int b, int c) {\n        priority_queue<pair<int, int>> heap;\n        if (a > 0) heap.push({a, 0});\n        if (b > 0) heap.push({b, -1});\n        if (c > 0) heap.push({c, -2});\n        string s;\n        while (!heap.empty()) {\n            auto first = heap.top(); heap.pop();\n            char ch = 'a' - first.second;\n            int len = s.size();\n            if (len >= 2 && s[len - 1] == ch && s[len - 2] == ch) {\n                if (heap.empty()) break;\n                auto second = heap.top(); heap.pop();\n                s += (char) ('a' - second.second);\n                if (--second.first > 0) heap.push(second);\n                heap.push(first);\n            } else {\n                s += ch;\n                if (--first.first > 0) heap.push(first);\n            }\n        }\n        return s;\n    }\n};",
+     "python": "class Solution:\n    def longestDiverseString(self, a: int, b: int, c: int) -> str:\n        heap = [(-cnt, ch) for cnt, ch in ((a, 'a'), (b, 'b'), (c, 'c')) if cnt > 0]\n        heapify(heap)\n        out = []\n        while heap:\n            c1, ch1 = heappop(heap)\n            if len(out) >= 2 and out[-1] == out[-2] == ch1:\n                if not heap:\n                    break\n                c2, ch2 = heappop(heap)\n                out.append(ch2)\n                if c2 + 1 < 0:\n                    heappush(heap, (c2 + 1, ch2))\n                heappush(heap, (c1, ch1))\n            else:\n                out.append(ch1)\n                if c1 + 1 < 0:\n                    heappush(heap, (c1 + 1, ch1))\n        return \"\".join(out)",
+     "javascript": "var longestDiverseString = function(a, b, c) {\n    const heap = new PriorityQueue((x, y) => (y[0] - x[0]) || x[1].localeCompare(y[1]));\n    if (a > 0) heap.enqueue([a, \"a\"]);\n    if (b > 0) heap.enqueue([b, \"b\"]);\n    if (c > 0) heap.enqueue([c, \"c\"]);\n    let s = \"\";\n    while (!heap.isEmpty()) {\n        const first = heap.dequeue();\n        const n = s.length;\n        if (n >= 2 && s[n - 1] === first[1] && s[n - 2] === first[1]) {\n            if (heap.isEmpty()) break;\n            const second = heap.dequeue();\n            s += second[1];\n            if (--second[0] > 0) heap.enqueue(second);\n            heap.enqueue(first);\n        } else {\n            s += first[1];\n            if (--first[0] > 0) heap.enqueue(first);\n        }\n    }\n    return s;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort three counts each step",
+    "idea": "With only three letters, a heap is overkill: each step, order the letters by remaining count and take the first one that would not make three in a row.",
+    "steps": [
+     "Repeat: order letters by count, largest first (ties by letter).",
+     "Take the first letter with a positive count that is not already the last two characters; append it and decrement its count.",
+     "If no letter qualifies, stop and return the string."
+    ],
+    "time": "O(a + b + c)",
+    "space": "O(1)",
+    "why": "Sorting three numbers is constant work, so the total is linear in the output length. The greedy is optimal because writing the most plentiful letter whenever possible delays the moment a single pile is left over, which is the only thing that can stop the string early.",
+    "code": {
+     "java": "class Solution {\n    public String longestDiverseString(int a, int b, int c) {\n        int[] cnt = { a, b, c };\n        StringBuilder sb = new StringBuilder();\n        while (true) {\n            Integer[] order = { 0, 1, 2 };\n            Arrays.sort(order, (x, y) -> cnt[x] != cnt[y] ? cnt[y] - cnt[x] : x - y);\n            boolean placed = false;\n            for (int k : order) {\n                if (cnt[k] == 0) break;\n                int len = sb.length();\n                char ch = (char) ('a' + k);\n                if (len >= 2 && sb.charAt(len - 1) == ch && sb.charAt(len - 2) == ch) continue;\n                sb.append(ch);\n                cnt[k]--;\n                placed = true;\n                break;\n            }\n            if (!placed) return sb.toString();\n        }\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string longestDiverseString(int a, int b, int c) {\n        int cnt[3] = {a, b, c};\n        string s;\n        while (true) {\n            int order[3] = {0, 1, 2};\n            sort(order, order + 3, [&](int x, int y) { return cnt[x] != cnt[y] ? cnt[x] > cnt[y] : x < y; });\n            bool placed = false;\n            for (int k : order) {\n                if (cnt[k] == 0) break;\n                char ch = 'a' + k;\n                int n = s.size();\n                if (n >= 2 && s[n - 1] == ch && s[n - 2] == ch) continue;\n                s += ch;\n                cnt[k]--;\n                placed = true;\n                break;\n            }\n            if (!placed) return s;\n        }\n    }\n};",
+     "python": "class Solution:\n    def longestDiverseString(self, a: int, b: int, c: int) -> str:\n        cnt = {'a': a, 'b': b, 'c': c}\n        out = []\n        while True:\n            for ch in sorted(cnt, key=lambda x: (-cnt[x], x)):\n                if cnt[ch] == 0:\n                    return \"\".join(out)\n                if len(out) >= 2 and out[-1] == out[-2] == ch:\n                    continue\n                out.append(ch)\n                cnt[ch] -= 1\n                break\n            else:\n                return \"\".join(out)",
+     "javascript": "var longestDiverseString = function(a, b, c) {\n    const cnt = [a, b, c];\n    let s = \"\";\n    while (true) {\n        const order = [0, 1, 2].sort((x, y) => (cnt[y] - cnt[x]) || (x - y));\n        let placed = false;\n        for (const k of order) {\n            if (cnt[k] === 0) break;\n            const ch = String.fromCharCode(97 + k), n = s.length;\n            if (n >= 2 && s[n - 1] === ch && s[n - 2] === ch) continue;\n            s += ch;\n            cnt[k]--;\n            placed = true;\n            break;\n        }\n        if (!placed) return s;\n    }\n};"
+    }
+   }
+  ]
  }
 }

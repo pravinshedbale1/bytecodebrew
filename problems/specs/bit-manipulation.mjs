@@ -139,4 +139,78 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'add-binary', title: 'Add Binary', level: 'Easy',
+    summary: 'a and b are binary numbers written as strings. Return their sum as a binary string.',
+    method: 'addBinary', params: [['String', 'a'], ['String', 'b']], returns: 'String',
+    tests: [
+      { in: ['11', '1'], out: '100' },
+      { in: ['1010', '1011'], out: '10101' },
+      { in: ['0', '0'] },
+      { in: ['1', '111'] },
+      { in: ['1111111111111111111111111111111111111111111111111111111111111111111111', '1'] },
+      { in: ['10100000100100110110010000010101111011011001101110111111111101000000101111001110001111100001101', '110101001011101110001111100110001010100001101011101010000011011011001011101111001100000011011110011'] },
+    ],
+    ref: `class Solution {
+    public String addBinary(String a, String b) {
+        StringBuilder sb = new StringBuilder();
+        int i = a.length() - 1, j = b.length() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry > 0) {
+            int s = carry;
+            if (i >= 0) s += a.charAt(i--) - '0';
+            if (j >= 0) s += b.charAt(j--) - '0';
+            sb.append(s & 1);
+            carry = s >> 1;
+        }
+        return sb.reverse().toString();
+    }
+}`,
+  },
+  {
+    slug: 'bitwise-and-of-numbers-range', title: 'Bitwise AND of Numbers Range', level: 'Medium',
+    summary: 'Return the bitwise AND of every integer from left to right, inclusive.',
+    method: 'rangeBitwiseAnd', params: [['int', 'left'], ['int', 'right']], returns: 'int',
+    tests: [
+      { in: [5, 7], out: 4 },
+      { in: [0, 0], out: 0 },
+      { in: [1, 2147483647], out: 0 },
+      { in: [12, 15] },
+      { in: [6, 6] },
+      { in: [2147483646, 2147483647] },
+      { in: [1073741824, 2147483647] },
+      { in: [600000000, 2147483645] },
+    ],
+    ref: `class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        int shift = 0;
+        while (left != right) { left >>= 1; right >>= 1; shift++; }
+        return left << shift;
+    }
+}`,
+  },
+  {
+    slug: 'minimum-array-end', title: 'Minimum Array End', level: 'Medium',
+    summary: 'Build a strictly increasing array of n positive integers whose bitwise AND equals x. Return the smallest possible value of the last element.',
+    method: 'minEnd', params: [['int', 'n'], ['int', 'x']], returns: 'long',
+    tests: [
+      { in: [3, 4], out: 6 },
+      { in: [2, 7], out: 15 },
+      { in: [1, 5] },
+      { in: [5, 1] },
+      { in: [6715154, 7193485] },
+      { in: [100000000, 100000000] },
+      { in: [100000000, 1] },
+    ],
+    ref: `class Solution {
+    public long minEnd(int n, int x) {
+        long result = x, rest = n - 1;
+        for (long bit = 1; rest > 0; bit <<= 1) {
+            if ((x & bit) != 0) continue;
+            if ((rest & 1) == 1) result |= bit;
+            rest >>= 1;
+        }
+        return result;
+    }
+}`,
+  },
 ];

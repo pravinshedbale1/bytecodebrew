@@ -60,6 +60,7 @@ public:
     return best(0, false);
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Better', name: 'DP table over (day, holding)',
@@ -586,6 +587,7 @@ public:
     return best(0, k, false);
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Better', name: 'DP table over (day, transactions left, holding)',
@@ -737,7 +739,7 @@ public:
         ],
         time: 'O(3ⁿ)', space: 'O(n)',
         why: 'It visits every eligible record one by one, and their number grows exponentially.',
-        timesOut: [2, 4],
+        timesOut: [2, 4, 'generated'],
         code: {
           java: r`class Solution {
     private static final int MOD = 1_000_000_007;
@@ -953,7 +955,7 @@ public:
         ],
         time: 'O(n!·n)', space: 'O(n)',
         why: 'All n! orders are built, each checked in O(n). n = 15 means 1.3·10¹² permutations — far too many.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     private int count = 0;
@@ -1823,6 +1825,7 @@ public:
     return best;
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Optimal', name: 'Multi-source BFS over (node, visited mask)',

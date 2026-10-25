@@ -25,4 +25,20 @@ export default {
   'first-missing-positive': {
     explain: '1 and 2 are present, so the smallest positive integer missing from `[1,2,0]` is 3.',
   },
+  'concatenation-of-array': {
+    explain: '`[1,2,1]` written twice in a row is `[1,2,1,1,2,1]`: positions 0–2 and 3–5 hold the same values.',
+  },
+  'majority-element': {
+    explain: '3 appears twice among three values, which is more than ⌊3 / 2⌋ = 1, so the answer is 3.',
+  },
+  'encode-and-decode-strings': {
+    explain: 'With length-prefixing, the list encodes to "4#neet4#code4#love3#you". Decoding reads 4, takes "neet", reads 4, takes "code", and so on, giving back `["neet","code","love","you"]`.',
+  },
+  'majority-element-ii': {
+    explain: 'n = 3, so a value needs more than ⌊3 / 3⌋ = 1 appearance. Only 3 (twice) qualifies, so the answer is `[3]`.',
+  },
+  'verifying-an-alien-dictionary': {
+    explain: 'The words first differ at their first letter, "h" against "l". In this alphabet h comes before l, so the pair is in order and the answer is `true`.',
+    more: 'For example `["word","world","row"]` is `false`: "word" and "world" first differ at d against l, and l comes before d in that alphabet.',
+  },
 };

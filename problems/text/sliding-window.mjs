@@ -94,4 +94,24 @@ For example, \`[1,2,3,1,2]\` has exactly 3 different values.`,
       'For atMost(k): slide a window, shrink it while it has more than k distinct values, and add (right − left + 1) for every right edge. That counts all valid subarrays ending at right.',
     ],
   },
+  'contains-duplicate-ii': {
+    statement: `Return \`true\` if there are two **different** indices \`i\` and \`j\` with \`nums[i] == nums[j]\` and \`|i − j| <= k\`. Otherwise return \`false\`.`,
+    constraints: ['1 <= nums.length <= 1e5', '-1e9 <= nums[i] <= 1e9', '0 <= k <= 1e5'],
+    hints: [
+      'Checking the next k elements after every position is O(n · k), up to 10¹⁰ steps.',
+      'You only ever care about the last k values you have seen. That is a window that slides one step at a time.',
+      'Keep the window\'s values in a HashSet. Before adding nums[i], if it is already there you found a pair; after adding, remove nums[i − k] once the set holds more than k values. (A map from value to last index works too.)',
+    ],
+  },
+  'find-k-closest-elements': {
+    statement: `\`arr\` is sorted in ascending order. Return the \`k\` values of \`arr\` closest to \`x\`, also sorted in ascending order.
+
+Value \`a\` is closer to \`x\` than value \`b\` if \`|a − x| < |b − x|\`, or if the distances are equal and \`a < b\`.`,
+    constraints: ['1 <= k <= arr.length', '1 <= arr.length <= 1e4', '`arr` is sorted in ascending order', '-1e4 <= arr[i], x <= 1e4'],
+    hints: [
+      'Because arr is sorted, the answer is always a contiguous block of k values. You only need to find where it starts.',
+      'Two pointers: start with the whole array and repeatedly drop whichever end is farther from x (dropping the right end on a tie) until k values remain. That is O(n).',
+      'Binary search the start index s in [0, n − k]. Compare x − arr[mid] with arr[mid + k] − x: if the left value is farther, the window should start later. That is O(log(n − k) + k).',
+    ],
+  },
 };

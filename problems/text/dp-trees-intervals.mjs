@@ -98,4 +98,28 @@ Return the minimum total cost.`,
       'best[i][j] = (pos[j] − pos[i]) + min over k between them of best[i][k] + best[k][j]. Fill by increasing width.',
     ],
   },
+  'stone-game': {
+    statement: `An even number of piles of stones is arranged in a row; pile \`i\` has \`piles[i]\` stones, and the total number of stones is **odd**, so there are no ties.
+
+Alice and Bob take turns, Alice first. On each turn a player takes the entire pile from **either end** of the row. When no piles remain, the player with more stones wins. Assuming both play optimally, return \`true\` if Alice wins and \`false\` if Bob wins.`,
+    constraints: ['2 <= piles.length <= 500', '`piles.length` is even', '1 <= piles[i] <= 500', '`sum(piles)` is odd'],
+    hints: [
+      'Interval DP: let dp[i][j] be the best (current player − other player) difference on piles i..j.',
+      'dp[i][j] = max(piles[i] − dp[i + 1][j], piles[j] − dp[i][j − 1]). Alice wins when dp[0][n − 1] > 0.',
+      'There is also a one-line answer. Colour the piles by even and odd index: Alice can always take all piles of one colour, and one colour has more stones because the total is odd.',
+    ],
+  },
+  'stone-game-ii': {
+    statement: `Piles of stones are arranged in a row, with \`piles[i]\` stones in pile \`i\`. Alice and Bob take turns, Alice first, and \`M\` starts at \`1\`.
+
+On each turn, the current player takes **all** the stones in the first \`X\` remaining piles, where \`1 <= X <= 2M\`. Then \`M\` becomes \`max(M, X)\`. The game ends when all piles are taken.
+
+Both players play optimally to get as many stones as possible. Return the maximum number of stones Alice can get.`,
+    constraints: ['1 <= piles.length <= 100', '1 <= piles[i] <= 1e4'],
+    hints: [
+      'The state is (index of the first remaining pile, M). Since every stone ends up with someone, maximising your stones is the same as minimising what your opponent gets from the rest.',
+      'With suffix sums: best(i, M) = max over X of suffix[i] − best(i + X, max(M, X)).',
+      'If 2M reaches the end (i + 2M >= n), take everything: best(i, M) = suffix[i]. Memoise or fill a table from the end; M never needs to exceed n.',
+    ],
+  },
 };

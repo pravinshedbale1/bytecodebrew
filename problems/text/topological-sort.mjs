@@ -76,4 +76,31 @@ Return an ordering of all items such that items of the same group are next to ea
       'Topologically sort both graphs. If either has a cycle, return []. Then output the groups in their sorted order, and within each group its items in their sorted order.',
     ],
   },
+  'alien-dictionary': {
+    statement: `An alien language uses lowercase English letters, but in an order you don't know. You are given \`words\`, a list of words in this language that is claimed to be **sorted** by its dictionary rules.
+
+Return a string containing every distinct letter that appears in \`words\`, ordered from first to last in the alien alphabet. If several orders are consistent with the list, return any of them. If the list cannot be sorted under any order, return \`""\`.
+
+As in English, two words are compared at their first differing letter, and a word comes before any longer word it is a prefix of. So \`["abc","ab"]\` is impossible.`,
+    constraints: ['1 <= words.length <= 100', '1 <= words[i].length <= 100', '`words[i]` has only lowercase English letters'],
+    hints: [
+      'Only neighbouring words carry information. Their first differing letters give one rule: the letter in the first word comes before the letter in the second.',
+      'Collect those rules as edges of a directed graph whose nodes are the letters that appear. A valid alphabet is a topological order of that graph.',
+      'Run Kahn\'s algorithm (or DFS with colours). If not every letter gets output, there is a cycle: return "". Check the prefix case ("abc" before "ab") separately: it is invalid even though it gives no edge.',
+    ],
+  },
+  'build-a-matrix-with-conditions': {
+    statement: `Build a \`k × k\` matrix that contains each number from \`1\` to \`k\` **exactly once**, with \`0\` in every other cell, such that:
+
+- for each \`rowConditions[i] = [above, below]\`, the row of \`above\` is strictly above the row of \`below\`;
+- for each \`colConditions[i] = [left, right]\`, the column of \`left\` is strictly to the left of the column of \`right\`.
+
+Return any matrix that satisfies all the conditions, or an empty matrix if none exists.`,
+    constraints: ['2 <= k <= 400', '1 <= rowConditions.length, colConditions.length <= 1e4', '1 <= rowConditions[i][j], colConditions[i][j] <= k', '`above != below` and `left != right`'],
+    hints: [
+      'Rows and columns don\'t interact: the row conditions only fix the order of rows, the column conditions only the order of columns.',
+      'Each set of conditions is a directed graph on 1..k. A topological order gives a row (or column) index to every number; a cycle means no answer.',
+      'Put number v at (rowIndex[v], colIndex[v]). Since every number gets a unique row and a unique column, no two numbers collide.',
+    ],
+  },
 };

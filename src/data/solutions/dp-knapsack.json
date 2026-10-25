@@ -141,7 +141,10 @@
      "cpp": "class Solution {\n    int best(vector<int>& s, size_t i, int sum) {\n        if (i == s.size()) return abs(sum);\n        return min(best(s, i + 1, sum + s[i]), best(s, i + 1, sum - s[i]));\n    }\npublic:\n    int lastStoneWeightII(vector<int>& stones) {\n        return best(stones, 0, 0);\n    }\n};",
      "python": "class Solution:\n    def lastStoneWeightII(self, stones: List[int]) -> int:\n        def best(i, s):\n            if i == len(stones):\n                return abs(s)\n            return min(best(i + 1, s + stones[i]), best(i + 1, s - stones[i]))\n        return best(0, 0)",
      "javascript": "var lastStoneWeightII = function(stones) {\n    const best = (i, sum) => {\n        if (i === stones.length) return Math.abs(sum);\n        return Math.min(best(i + 1, sum + stones[i]), best(i + 1, sum - stones[i]));\n    };\n    return best(0, 0);\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Optimal",
@@ -180,7 +183,8 @@
     "space": "O(a)",
     "why": "k branches per level and up to a levels deep (a = amount); amounts repeat endlessly.",
     "timesOut": [
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int coinChange(int[] coins, int amount) {\n        int best = fewest(coins, amount);\n        return best == Integer.MAX_VALUE ? -1 : best;\n    }\n\n    private int fewest(int[] coins, int a) {\n        if (a == 0) return 0;\n        int best = Integer.MAX_VALUE;\n        for (int c : coins) {\n            if (c > a) continue;\n            int sub = fewest(coins, a - c);\n            if (sub != Integer.MAX_VALUE) best = Math.min(best, sub + 1);\n        }\n        return best;\n    }\n}",
@@ -247,7 +251,10 @@
      "cpp": "class Solution {\n    int ways(vector<int>& coins, size_t i, int a) {\n        if (a == 0) return 1;\n        if (i == coins.size() || a < 0) return 0;\n        return ways(coins, i, a - coins[i]) + ways(coins, i + 1, a);\n    }\npublic:\n    int change(int amount, vector<int>& coins) {\n        return ways(coins, 0, amount);\n    }\n};",
      "python": "class Solution:\n    def change(self, amount: int, coins: List[int]) -> int:\n        def ways(i, a):\n            if a == 0:\n                return 1\n            if i == len(coins) or a < 0:\n                return 0\n            return ways(i, a - coins[i]) + ways(i + 1, a)\n        return ways(0, amount)",
      "javascript": "var change = function(amount, coins) {\n    const ways = (i, a) => {\n        if (a === 0) return 1;\n        if (i === coins.length || a < 0) return 0;\n        return ways(i, a - coins[i]) + ways(i + 1, a);\n    };\n    return ways(0, amount);\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Better",
@@ -304,7 +311,8 @@
     "space": "O(t)",
     "why": "It visits every sequence one by one, so the work is at least the answer (over a billion for one test).",
     "timesOut": [
-     3
+     3,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int combinationSum4(int[] nums, int target) {\n        if (target == 0) return 1;\n        int total = 0;\n        for (int x : nums) if (x <= target) total += combinationSum4(nums, target - x);\n        return total;\n    }\n}",
@@ -367,7 +375,8 @@
     "space": "O(n)",
     "why": "Branching by up to √n at every level with no reuse — hopeless beyond tiny n.",
     "timesOut": [
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int numSquares(int n) {\n        if (n == 0) return 0;\n        int best = Integer.MAX_VALUE;\n        for (int k = 1; k * k <= n; k++) best = Math.min(best, 1 + numSquares(n - k * k));\n        return best;\n    }\n}",

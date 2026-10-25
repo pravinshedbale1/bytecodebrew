@@ -171,7 +171,7 @@ export function PricingPage() {
           <h1 className={styles.heroTitle}>Prepare like it's the real interview</h1>
           <p className={styles.heroLead}>
             The free lessons teach the ideas. Premium adds the advanced topics, interactive simulations, step-through diagrams,
-            314 problems you solve here with tests, mock interviews and a review deck that keeps it all fresh.
+            390 problems you solve here with tests, mock interviews and a review deck that keeps it all fresh.
           </p>
         </header>
 

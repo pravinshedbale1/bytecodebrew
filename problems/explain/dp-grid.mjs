@@ -28,4 +28,7 @@ export default {
   'cherry-pickup': {
     explain: 'Going down, down, right, right picks the cherries at (1,0), (2,0), (2,1) and (2,2): 4 cherries. Coming back up the other side picks the remaining one at (0,1). That makes 5, the most possible.',
   },
+  'longest-increasing-path-in-a-matrix': {
+    explain: 'One longest path is 1 → 2 → 6 → 9: from the 1 in the bottom row, up to 2, up to 6, up to 9. No path is longer, so the answer is 4.',
+  },
 };

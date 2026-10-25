@@ -14,7 +14,7 @@ const DOC = {
   'List<Integer>': 'number[]', 'List<String>': 'string[]', 'List<List<Integer>>': 'number[][]',
   'List<List<String>>': 'string[][]', 'List<Boolean>': 'boolean[]', 'List<Double>': 'number[]',
   TreeNode: 'TreeNode', ListNode: 'ListNode', 'ListNode[]': 'ListNode[]', Node: '_Node',
-  'Iterator<Integer>': 'Iterator', 'List<NestedInteger>': 'NestedInteger[]',
+  'Iterator<Integer>': 'Iterator', 'List<NestedInteger>': 'NestedInteger[]', MountainArray: 'MountainArray',
 };
 
 function doc(t) {
@@ -360,6 +360,118 @@ class Iterator {
     pre: '\nlet __bcbSeed = 7;\nfunction rand7() { __bcbSeed = (__bcbSeed * 1103515245 + 12345) % 2147483648; return 1 + (Math.floor(__bcbSeed / 65536) % 7); }\n',
     comment: '/**\n * The rand7() API is already defined for you.\n * var rand7 = function() {}\n * @return {number} a random integer in the range 1 to 7\n */',
   },
+  GuessGame: {
+    pre: '\nlet __bcbPick = 0;\nvar guess = function(num) { return num > __bcbPick ? -1 : num < __bcbPick ? 1 : 0; };\n',
+    comment: `/**
+ * Forward declaration of guess API.
+ * @param {number} num   your guess
+ * @return               -1 if num is higher than the picked number
+ *                        1 if num is lower than the picked number
+ *                        otherwise return 0
+ * var guess = function(num) {}
+ */`,
+  },
+  MountainArray: {
+    pre: String.raw`
+function MountainArray(a) { this.__bcbA = a; this.__bcbCalls = 0; }
+MountainArray.prototype.get = function(index) {
+    if (++this.__bcbCalls > 100) throw new Error('more than 100 calls to MountainArray.get');
+    return this.__bcbA[index];
+};
+MountainArray.prototype.length = function() { return this.__bcbA.length; };
+`,
+    comment: `/**
+ * // This is the MountainArray's API interface (provided).
+ * // You should not implement it, or speculate about its implementation
+ * function MountainArray() {
+ *     @param {number} index
+ *     @return {number}
+ *     this.get = function(index) {   // at most 100 calls in total
+ *         ...
+ *     };
+ *
+ *     @return {number}
+ *     this.length = function() {
+ *         ...
+ *     };
+ * };
+ */`,
+  },
+  RandomNode: {
+    pre: String.raw`
+function _Node(val, next, random) {
+    this.val = val;
+    this.next = next === undefined ? null : next;
+    this.random = random === undefined ? null : random;
+}
+function __bcbRandomList(v) {
+    const n = v.map((x) => new _Node(x[0], null, null));
+    v.forEach((x, i) => {
+        if (i + 1 < n.length) n[i].next = n[i + 1];
+        if (x[1] !== null) n[i].random = n[x[1]];
+    });
+    return n.length ? n[0] : null;
+}
+function __bcbRandomDump(copy, original) {
+    const orig = new Set();
+    for (let t = original; t; t = t.next) orig.add(t);
+    const at = new Map(), order = [];
+    for (let t = copy; t && order.length < 100000; t = t.next) {
+        if (orig.has(t)) return 'copy shares nodes with the original';
+        at.set(t, order.length); order.push(t);
+    }
+    const out = [];
+    for (const t of order) {
+        if (t.random && orig.has(t.random)) return 'copy points into the original list';
+        out.push([t.val, t.random ? at.get(t.random) : null]);
+    }
+    return out;
+}
+`,
+    comment: `/**
+ * // Definition for a _Node.
+ * function _Node(val, next, random) {
+ *    this.val = val;
+ *    this.next = next;
+ *    this.random = random;
+ * };
+ */`,
+  },
+  QuadNode: {
+    pre: String.raw`
+function _Node(val, isLeaf, topLeft, topRight, bottomLeft, bottomRight) {
+    this.val = val;
+    this.isLeaf = isLeaf;
+    this.topLeft = topLeft === undefined ? null : topLeft;
+    this.topRight = topRight === undefined ? null : topRight;
+    this.bottomLeft = bottomLeft === undefined ? null : bottomLeft;
+    this.bottomRight = bottomRight === undefined ? null : bottomRight;
+}
+function __bcbQuadDump(root) {
+    const level = [root], out = [];
+    for (let i = 0; i < level.length && i < 2000000; i++) {
+        const n = level[i];
+        if (!n) { out.push(null); continue; }
+        out.push([n.isLeaf ? 1 : 0, n.isLeaf ? (n.val ? 1 : 0) : 1]);
+        if (n.isLeaf) level.push(null, null, null, null);
+        else level.push(n.topLeft, n.topRight, n.bottomLeft, n.bottomRight);
+    }
+    while (out.length && out[out.length - 1] === null) out.pop();
+    return out;
+}
+`,
+    comment: `/**
+ * // Definition for a QuadTree node.
+ * function _Node(val,isLeaf,topLeft,topRight,bottomLeft,bottomRight) {
+ *    this.val = val;
+ *    this.isLeaf = isLeaf;
+ *    this.topLeft = topLeft;
+ *    this.topRight = topRight;
+ *    this.bottomLeft = bottomLeft;
+ *    this.bottomRight = bottomRight;
+ * };
+ */`,
+  },
 };
 
 /** LeetCode's own JavaScript shape for problems where it isn't a plain function. */
@@ -378,6 +490,26 @@ var solution = function(isBadVersion) {
     return function(n) {
 
     };
+};
+`,
+  'encode-and-decode-strings': `/**
+ * Encodes a list of strings to a single string.
+ *
+ * @param {string[]} strs
+ * @return {string}
+ */
+var encode = function(strs) {
+
+};
+
+/**
+ * Decodes a single string to a list of strings.
+ *
+ * @param {string} s
+ * @return {string[]}
+ */
+var decode = function(s) {
+
 };
 `,
   'serialize-and-deserialize-binary-tree': `${EXTRAS.TreeNode.comment}
@@ -416,6 +548,12 @@ const CALLS = {
   'implement-rand10-using-rand7': ['const out = [];', 'for (let k = 0, n = JSON.parse($0); k < n; k++) out.push(rand10());', 'return out;'],
   'populating-next-right-pointers-in-each-node': ['return __bcbNextDump(connect(__bcbNextTree(JSON.parse($0))));'],
   'serialize-and-deserialize-binary-tree': ['const r = deserialize(serialize(__bcbTree(JSON.parse($0))));', 'return r == null ? [] : r;'],
+  'guess-number-higher-or-lower': ['__bcbPick = JSON.parse($1);', 'return guessNumber(JSON.parse($0));'],
+  'find-in-mountain-array': ['return findInMountainArray(JSON.parse($1), new MountainArray(JSON.parse($0)));'],
+  'copy-list-with-random-pointer': ['const o = __bcbRandomList(JSON.parse($0));', 'return __bcbRandomDump(copyRandomList(o), o);'],
+  'construct-quad-tree': ['return __bcbQuadDump(construct(JSON.parse($0)));'],
+  'encode-and-decode-strings': ['return decode(encode(JSON.parse($0)));'],
+  'remove-element': ['const a = JSON.parse($0);', 'const k = removeElement(a, JSON.parse($1));', 'return [k, a.slice(0, Math.max(0, Math.min(k, a.length))).sort((x, y) => x - y)];'],
   'remove-duplicates-from-sorted-array': ['const a = JSON.parse($0);', 'const k = removeDuplicates(a);', 'return [k, a.slice(0, Math.max(0, Math.min(k, a.length)))];'],
 };
 

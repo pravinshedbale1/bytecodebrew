@@ -571,5 +571,234 @@
     }
    }
   ]
+ },
+ "sum-of-all-subset-xor-totals": {
+  "pattern": "Subset enumeration (and a bit-counting shortcut)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Enumerate subsets as bitmasks",
+    "idea": "Every number from 0 to 2ⁿ − 1 describes a subset. Compute each subset's XOR from scratch and add it up.",
+    "steps": [
+     "For each `mask` from 0 to `2ⁿ − 1`, XOR together the `nums[i]` whose bit `i` is set.",
+     "Add that XOR to the total."
+    ],
+    "time": "O(n · 2ⁿ)",
+    "space": "O(1)",
+    "why": "2¹² masks times 12 bits is about 50,000 steps, which is tiny. It recomputes shared prefixes, which the recursive version avoids.",
+    "code": {
+     "java": "class Solution {\n    public int subsetXORSum(int[] nums) {\n        int n = nums.length, total = 0;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            int x = 0;\n            for (int i = 0; i < n; i++) if ((mask >> i & 1) == 1) x ^= nums[i];\n            total += x;\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int subsetXORSum(vector<int>& nums) {\n        int n = nums.size(), total = 0;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            int x = 0;\n            for (int i = 0; i < n; i++) if (mask >> i & 1) x ^= nums[i];\n            total += x;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def subsetXORSum(self, nums: List[int]) -> int:\n        n, total = len(nums), 0\n        for mask in range(1 << n):\n            x = 0\n            for i in range(n):\n                if mask >> i & 1:\n                    x ^= nums[i]\n            total += x\n        return total",
+     "javascript": "var subsetXORSum = function(nums) {\n    const n = nums.length;\n    let total = 0;\n    for (let mask = 0; mask < (1 << n); mask++) {\n        let x = 0;\n        for (let i = 0; i < n; i++) if ((mask >> i) & 1) x ^= nums[i];\n        total += x;\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Backtracking with a running XOR",
+    "idea": "Decide for each element whether to include it, carrying the XOR so far; each leaf of the recursion is one subset.",
+    "steps": [
+     "`dfs(i, x)`: if `i == n`, return `x`.",
+     "Otherwise return `dfs(i + 1, x ^ nums[i]) + dfs(i + 1, x)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Each subset costs O(1) extra because the XOR is updated incrementally. The recursion is n levels deep. This include/skip shape is the template for every subset problem.",
+    "code": {
+     "java": "class Solution {\n    public int subsetXORSum(int[] nums) { return dfs(nums, 0, 0); }\n    private int dfs(int[] nums, int i, int x) {\n        if (i == nums.length) return x;\n        return dfs(nums, i + 1, x ^ nums[i]) + dfs(nums, i + 1, x);\n    }\n}",
+     "cpp": "class Solution {\n    int dfs(vector<int>& nums, int i, int x) {\n        if (i == (int) nums.size()) return x;\n        return dfs(nums, i + 1, x ^ nums[i]) + dfs(nums, i + 1, x);\n    }\npublic:\n    int subsetXORSum(vector<int>& nums) { return dfs(nums, 0, 0); }\n};",
+     "python": "class Solution:\n    def subsetXORSum(self, nums: List[int]) -> int:\n        def dfs(i, x):\n            if i == len(nums):\n                return x\n            return dfs(i + 1, x ^ nums[i]) + dfs(i + 1, x)\n        return dfs(0, 0)",
+     "javascript": "var subsetXORSum = function(nums) {\n    const dfs = (i, x) => (i === nums.length ? x : dfs(i + 1, x ^ nums[i]) + dfs(i + 1, x));\n    return dfs(0, 0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "OR of everything × 2ⁿ⁻¹",
+    "idea": "Look at one bit at a time. If any element has that bit, then exactly half of the 2ⁿ subsets have an odd number of such elements, so the bit is set in exactly 2ⁿ⁻¹ subset XORs.",
+    "steps": [
+     "Compute `or` = the bitwise OR of all elements.",
+     "Return `or << (n − 1)`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Pair every subset with the one that toggles a fixed element having that bit: exactly one of each pair has the bit set, so half of all subsets do. Summing bit by bit gives or · 2ⁿ⁻¹. Expect the interviewer to ask you to justify the \"half\" claim.",
+    "code": {
+     "java": "class Solution {\n    public int subsetXORSum(int[] nums) {\n        int or = 0;\n        for (int x : nums) or |= x;\n        return or << (nums.length - 1);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int subsetXORSum(vector<int>& nums) {\n        int o = 0;\n        for (int x : nums) o |= x;\n        return o << (nums.size() - 1);\n    }\n};",
+     "python": "class Solution:\n    def subsetXORSum(self, nums: List[int]) -> int:\n        o = 0\n        for x in nums:\n            o |= x\n        return o << (len(nums) - 1)",
+     "javascript": "var subsetXORSum = function(nums) {\n    let o = 0;\n    for (const x of nums) o |= x;\n    return o << (nums.length - 1);\n};"
+    }
+   }
+  ]
+ },
+ "matchsticks-to-square": {
+  "pattern": "Backtracking into k buckets with pruning (or bitmask DP)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every side for every stick",
+    "idea": "Assign each stick in input order to one of the four sides, never letting a side exceed the target; succeed when all sticks are placed.",
+    "steps": [
+     "If the total is not divisible by 4, return `false`; the side is `total / 4`.",
+     "Recursively place stick `i` on each side `k` whose length plus the stick fits, undoing it on return.",
+     "Return `true` when every stick is placed."
+    ],
+    "time": "O(4ⁿ)",
+    "space": "O(n)",
+    "why": "Without ordering or symmetry pruning, the four sides are interchangeable and the search explores the same partial squares many times over. With 15 sticks that can mean around 10⁹ branches on a \"no\" instance, so it times out there.",
+    "code": {
+     "java": "class Solution {\n    public boolean makesquare(int[] matchsticks) {\n        long sum = 0;\n        for (int m : matchsticks) sum += m;\n        if (sum % 4 != 0) return false;\n        return place(matchsticks, 0, new long[4], sum / 4);\n    }\n    private boolean place(int[] s, int i, long[] sides, long side) {\n        if (i == s.length) return sides[0] == side && sides[1] == side && sides[2] == side;\n        for (int k = 0; k < 4; k++) {\n            if (sides[k] + s[i] > side) continue;\n            sides[k] += s[i];\n            if (place(s, i + 1, sides, side)) return true;\n            sides[k] -= s[i];\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool place(vector<int>& s, int i, long long* sides, long long side) {\n        if (i == (int) s.size()) return sides[0] == side && sides[1] == side && sides[2] == side;\n        for (int k = 0; k < 4; k++) {\n            if (sides[k] + s[i] > side) continue;\n            sides[k] += s[i];\n            if (place(s, i + 1, sides, side)) return true;\n            sides[k] -= s[i];\n        }\n        return false;\n    }\npublic:\n    bool makesquare(vector<int>& matchsticks) {\n        long long sum = accumulate(matchsticks.begin(), matchsticks.end(), 0LL);\n        if (sum % 4 != 0) return false;\n        long long sides[4] = {0, 0, 0, 0};\n        return place(matchsticks, 0, sides, sum / 4);\n    }\n};",
+     "python": "class Solution:\n    def makesquare(self, matchsticks: List[int]) -> bool:\n        total = sum(matchsticks)\n        if total % 4:\n            return False\n        side, sides = total // 4, [0] * 4\n        def place(i):\n            if i == len(matchsticks):\n                return sides[0] == sides[1] == sides[2] == side\n            for k in range(4):\n                if sides[k] + matchsticks[i] <= side:\n                    sides[k] += matchsticks[i]\n                    if place(i + 1):\n                        return True\n                    sides[k] -= matchsticks[i]\n            return False\n        return place(0)",
+     "javascript": "var makesquare = function(matchsticks) {\n    const total = matchsticks.reduce((a, b) => a + b, 0);\n    if (total % 4 !== 0) return false;\n    const side = total / 4, sides = [0, 0, 0, 0];\n    const place = (i) => {\n        if (i === matchsticks.length) return sides[0] === side && sides[1] === side && sides[2] === side;\n        for (let k = 0; k < 4; k++) {\n            if (sides[k] + matchsticks[i] > side) continue;\n            sides[k] += matchsticks[i];\n            if (place(i + 1)) return true;\n            sides[k] -= matchsticks[i];\n        }\n        return false;\n    };\n    return place(0);\n};"
+    },
+    "timesOut": [
+     6
+    ]
+   },
+   {
+    "level": "Better",
+    "name": "Backtracking with sorting and symmetry pruning",
+    "idea": "Place the longest sticks first so overfull sides are detected early, and never try a side with the same current length as an earlier side: that branch is identical.",
+    "steps": [
+     "Check the total is divisible by 4 and the longest stick fits in a side.",
+     "Sort sticks in descending order.",
+     "Place stick `i` on side `k` only if it fits and `sides[k] != sides[k − 1]`; recurse and undo."
+    ],
+    "time": "O(4ⁿ) worst case",
+    "space": "O(n)",
+    "why": "The worst case is still exponential, but the two prunings cut the search by orders of magnitude in practice, and this is the version most interviewers expect. All sums use 64-bit integers: 15 sticks of 10⁸ add up to more than 2³¹.",
+    "code": {
+     "java": "class Solution {\n    public boolean makesquare(int[] matchsticks) {\n        long sum = 0;\n        for (int m : matchsticks) sum += m;\n        if (matchsticks.length < 4 || sum % 4 != 0) return false;\n        long side = sum / 4;\n        Integer[] sticks = new Integer[matchsticks.length];\n        for (int i = 0; i < sticks.length; i++) sticks[i] = matchsticks[i];\n        Arrays.sort(sticks, Collections.reverseOrder());\n        if (sticks[0] > side) return false;\n        return place(sticks, 0, new long[4], side);\n    }\n    private boolean place(Integer[] s, int i, long[] sides, long side) {\n        if (i == s.length) return true;\n        for (int k = 0; k < 4; k++) {\n            if (sides[k] + s[i] > side) continue;\n            if (k > 0 && sides[k] == sides[k - 1]) continue;\n            sides[k] += s[i];\n            if (place(s, i + 1, sides, side)) return true;\n            sides[k] -= s[i];\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    bool place(vector<int>& s, int i, long long* sides, long long side) {\n        if (i == (int) s.size()) return true;\n        for (int k = 0; k < 4; k++) {\n            if (sides[k] + s[i] > side) continue;\n            if (k > 0 && sides[k] == sides[k - 1]) continue;\n            sides[k] += s[i];\n            if (place(s, i + 1, sides, side)) return true;\n            sides[k] -= s[i];\n        }\n        return false;\n    }\npublic:\n    bool makesquare(vector<int>& matchsticks) {\n        long long sum = accumulate(matchsticks.begin(), matchsticks.end(), 0LL);\n        if (matchsticks.size() < 4 || sum % 4 != 0) return false;\n        sort(matchsticks.rbegin(), matchsticks.rend());\n        long long side = sum / 4;\n        if (matchsticks[0] > side) return false;\n        long long sides[4] = {0, 0, 0, 0};\n        return place(matchsticks, 0, sides, side);\n    }\n};",
+     "python": "class Solution:\n    def makesquare(self, matchsticks: List[int]) -> bool:\n        total = sum(matchsticks)\n        if len(matchsticks) < 4 or total % 4:\n            return False\n        side = total // 4\n        sticks = sorted(matchsticks, reverse=True)\n        if sticks[0] > side:\n            return False\n        sides = [0] * 4\n        def place(i):\n            if i == len(sticks):\n                return True\n            for k in range(4):\n                if sides[k] + sticks[i] > side or (k > 0 and sides[k] == sides[k - 1]):\n                    continue\n                sides[k] += sticks[i]\n                if place(i + 1):\n                    return True\n                sides[k] -= sticks[i]\n            return False\n        return place(0)",
+     "javascript": "var makesquare = function(matchsticks) {\n    const total = matchsticks.reduce((a, b) => a + b, 0);\n    if (matchsticks.length < 4 || total % 4 !== 0) return false;\n    const side = total / 4;\n    const sticks = [...matchsticks].sort((a, b) => b - a);\n    if (sticks[0] > side) return false;\n    const sides = [0, 0, 0, 0];\n    const place = (i) => {\n        if (i === sticks.length) return true;\n        for (let k = 0; k < 4; k++) {\n            if (sides[k] + sticks[i] > side) continue;\n            if (k > 0 && sides[k] === sides[k - 1]) continue;\n            sides[k] += sticks[i];\n            if (place(i + 1)) return true;\n            sides[k] -= sticks[i];\n        }\n        return false;\n    };\n    return place(0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DP over subsets of used sticks",
+    "idea": "For a set of used sticks (a bitmask), the only thing that matters is how full the current side is: `sum(mask) % side`. Mark which masks are reachable while always filling one side at a time.",
+    "steps": [
+     "Let `side = total / 4` and `dp[mask]` be true if the sticks in `mask` can fill whole sides plus a partial one without overflowing.",
+     "From each reachable `mask`, compute its partial fill `r = sum(mask) % side`; for each unused stick with `r + stick <= side`, mark `mask | bit` reachable.",
+     "Return `dp[all sticks]`."
+    ],
+    "time": "O(n · 2ⁿ)",
+    "space": "O(2ⁿ)",
+    "why": "2¹⁵ masks times 15 sticks is under 500,000 steps, a guaranteed bound unlike backtracking. A mask's sum fixes how full the current side is, so masks never need to remember which sticks went on which earlier side.",
+    "code": {
+     "java": "class Solution {\n    public boolean makesquare(int[] matchsticks) {\n        int n = matchsticks.length;\n        long total = 0;\n        for (int m : matchsticks) total += m;\n        if (n < 4 || total % 4 != 0) return false;\n        long side = total / 4;\n        long[] sum = new long[1 << n];\n        boolean[] dp = new boolean[1 << n];\n        dp[0] = true;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (!dp[mask]) continue;\n            long r = sum[mask] % side;\n            for (int i = 0; i < n; i++) {\n                int next = mask | (1 << i);\n                if (next == mask || dp[next] || r + matchsticks[i] > side) continue;\n                sum[next] = sum[mask] + matchsticks[i];\n                dp[next] = true;\n            }\n        }\n        return dp[(1 << n) - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool makesquare(vector<int>& matchsticks) {\n        int n = matchsticks.size();\n        long long total = accumulate(matchsticks.begin(), matchsticks.end(), 0LL);\n        if (n < 4 || total % 4 != 0) return false;\n        long long side = total / 4;\n        vector<long long> sum(1 << n, 0);\n        vector<bool> dp(1 << n, false);\n        dp[0] = true;\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (!dp[mask]) continue;\n            long long r = sum[mask] % side;\n            for (int i = 0; i < n; i++) {\n                int next = mask | (1 << i);\n                if (next == mask || dp[next] || r + matchsticks[i] > side) continue;\n                sum[next] = sum[mask] + matchsticks[i];\n                dp[next] = true;\n            }\n        }\n        return dp[(1 << n) - 1];\n    }\n};",
+     "python": "class Solution:\n    def makesquare(self, matchsticks: List[int]) -> bool:\n        n, total = len(matchsticks), sum(matchsticks)\n        if n < 4 or total % 4:\n            return False\n        side = total // 4\n        size = 1 << n\n        sums = [0] * size\n        dp = [False] * size\n        dp[0] = True\n        for mask in range(size):\n            if not dp[mask]:\n                continue\n            r = sums[mask] % side\n            for i in range(n):\n                nxt = mask | (1 << i)\n                if nxt == mask or dp[nxt] or r + matchsticks[i] > side:\n                    continue\n                sums[nxt] = sums[mask] + matchsticks[i]\n                dp[nxt] = True\n        return dp[size - 1]",
+     "javascript": "var makesquare = function(matchsticks) {\n    const n = matchsticks.length;\n    const total = matchsticks.reduce((a, b) => a + b, 0);\n    if (n < 4 || total % 4 !== 0) return false;\n    const side = total / 4, size = 1 << n;\n    const sum = new Float64Array(size), dp = new Uint8Array(size);\n    dp[0] = 1;\n    for (let mask = 0; mask < size; mask++) {\n        if (!dp[mask]) continue;\n        const r = sum[mask] % side;\n        for (let i = 0; i < n; i++) {\n            const next = mask | (1 << i);\n            if (next === mask || dp[next] || r + matchsticks[i] > side) continue;\n            sum[next] = sum[mask] + matchsticks[i];\n            dp[next] = 1;\n        }\n    }\n    return dp[size - 1] === 1;\n};"
+    }
+   }
+  ]
+ },
+ "n-queens-ii": {
+  "pattern": "Row-by-row backtracking with column and diagonal sets",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check the board on every placement",
+    "idea": "Place one queen per row; before placing, scan the earlier rows to see whether any queen attacks this square.",
+    "steps": [
+     "Keep `col[r]`, the column of the queen in row `r`.",
+     "For row `r`, try each column `c`; it is safe if no earlier row `i` has `col[i] == c` or `|col[i] − c| == r − i`.",
+     "Count placements that reach row `n`."
+    ],
+    "time": "O(n! · n)",
+    "space": "O(n)",
+    "why": "The safety check costs O(n) per square. For n ≤ 9 it is fast, but the sets or bitmasks below make every check O(1).",
+    "code": {
+     "java": "class Solution {\n    public int totalNQueens(int n) { return place(new int[n], 0); }\n    private int place(int[] col, int r) {\n        int n = col.length;\n        if (r == n) return 1;\n        int total = 0;\n        for (int c = 0; c < n; c++) {\n            boolean ok = true;\n            for (int i = 0; i < r && ok; i++) if (col[i] == c || Math.abs(col[i] - c) == r - i) ok = false;\n            if (!ok) continue;\n            col[r] = c;\n            total += place(col, r + 1);\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    int place(vector<int>& col, int r) {\n        int n = col.size();\n        if (r == n) return 1;\n        int total = 0;\n        for (int c = 0; c < n; c++) {\n            bool ok = true;\n            for (int i = 0; i < r && ok; i++) if (col[i] == c || abs(col[i] - c) == r - i) ok = false;\n            if (!ok) continue;\n            col[r] = c;\n            total += place(col, r + 1);\n        }\n        return total;\n    }\npublic:\n    int totalNQueens(int n) {\n        vector<int> col(n);\n        return place(col, 0);\n    }\n};",
+     "python": "class Solution:\n    def totalNQueens(self, n: int) -> int:\n        col = [0] * n\n        def place(r):\n            if r == n:\n                return 1\n            total = 0\n            for c in range(n):\n                if all(col[i] != c and abs(col[i] - c) != r - i for i in range(r)):\n                    col[r] = c\n                    total += place(r + 1)\n            return total\n        return place(0)",
+     "javascript": "var totalNQueens = function(n) {\n    const col = new Array(n);\n    const place = (r) => {\n        if (r === n) return 1;\n        let total = 0;\n        for (let c = 0; c < n; c++) {\n            let ok = true;\n            for (let i = 0; i < r && ok; i++) if (col[i] === c || Math.abs(col[i] - c) === r - i) ok = false;\n            if (!ok) continue;\n            col[r] = c;\n            total += place(r + 1);\n        }\n        return total;\n    };\n    return place(0);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sets of used columns and diagonals",
+    "idea": "Keep three boolean arrays: used columns, used `r − c` diagonals and used `r + c` anti-diagonals. A square is safe in O(1).",
+    "steps": [
+     "For row `r`, try each column `c` with `cols[c]`, `d1[r − c + n − 1]` and `d2[r + c]` all free.",
+     "Mark the three, recurse into row `r + 1`, then unmark.",
+     "Return 1 when `r == n`, and sum the counts."
+    ],
+    "time": "O(n!)",
+    "space": "O(n)",
+    "why": "Each placement and check is constant time, so the cost is the size of the search tree, roughly n!. The offset `n − 1` keeps `r − c` non-negative as an index.",
+    "code": {
+     "java": "class Solution {\n    public int totalNQueens(int n) { return place(n, 0, new boolean[n], new boolean[2 * n], new boolean[2 * n]); }\n    private int place(int n, int r, boolean[] cols, boolean[] d1, boolean[] d2) {\n        if (r == n) return 1;\n        int total = 0;\n        for (int c = 0; c < n; c++) {\n            if (cols[c] || d1[r - c + n - 1] || d2[r + c]) continue;\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = true;\n            total += place(n, r + 1, cols, d1, d2);\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = false;\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    int n;\n    vector<bool> cols, d1, d2;\n    int place(int r) {\n        if (r == n) return 1;\n        int total = 0;\n        for (int c = 0; c < n; c++) {\n            if (cols[c] || d1[r - c + n - 1] || d2[r + c]) continue;\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = true;\n            total += place(r + 1);\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = false;\n        }\n        return total;\n    }\npublic:\n    int totalNQueens(int n) {\n        this->n = n;\n        cols.assign(n, false); d1.assign(2 * n, false); d2.assign(2 * n, false);\n        return place(0);\n    }\n};",
+     "python": "class Solution:\n    def totalNQueens(self, n: int) -> int:\n        cols, d1, d2 = set(), set(), set()\n        def place(r):\n            if r == n:\n                return 1\n            total = 0\n            for c in range(n):\n                if c in cols or r - c in d1 or r + c in d2:\n                    continue\n                cols.add(c); d1.add(r - c); d2.add(r + c)\n                total += place(r + 1)\n                cols.remove(c); d1.remove(r - c); d2.remove(r + c)\n            return total\n        return place(0)",
+     "javascript": "var totalNQueens = function(n) {\n    const cols = new Array(n).fill(false), d1 = new Array(2 * n).fill(false), d2 = new Array(2 * n).fill(false);\n    const place = (r) => {\n        if (r === n) return 1;\n        let total = 0;\n        for (let c = 0; c < n; c++) {\n            if (cols[c] || d1[r - c + n - 1] || d2[r + c]) continue;\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = true;\n            total += place(r + 1);\n            cols[c] = d1[r - c + n - 1] = d2[r + c] = false;\n        }\n        return total;\n    };\n    return place(0);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bitmask backtracking",
+    "idea": "Represent attacked columns and both diagonal directions as bitmasks. Shifting the diagonal masks by one per row moves the attacks down the board, and the free squares of a row are one bit expression.",
+    "steps": [
+     "`count(row, cols, d1, d2)`: if `row == n`, return 1.",
+     "`free = ~(cols | d1 | d2) & ((1 << n) − 1)`.",
+     "While `free` is not 0: take the lowest bit `b = free & −free`, remove it, and add `count(row + 1, cols | b, (d1 | b) << 1, (d2 | b) >> 1)`."
+    ],
+    "time": "O(n!)",
+    "space": "O(n)",
+    "why": "Same search tree as the sets version, but each step is a handful of CPU instructions and only free squares are visited, so it is many times faster in practice. Only the count is needed, so no board is ever built.",
+    "code": {
+     "java": "class Solution {\n    public int totalNQueens(int n) { return count(n, 0, 0, 0, 0); }\n    private int count(int n, int row, int cols, int d1, int d2) {\n        if (row == n) return 1;\n        int total = 0, free = ~(cols | d1 | d2) & ((1 << n) - 1);\n        while (free != 0) {\n            int bit = free & -free;\n            free -= bit;\n            total += count(n, row + 1, cols | bit, (d1 | bit) << 1, (d2 | bit) >> 1);\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    int count(int n, int row, int cols, int d1, int d2) {\n        if (row == n) return 1;\n        int total = 0, free = ~(cols | d1 | d2) & ((1 << n) - 1);\n        while (free) {\n            int bit = free & -free;\n            free -= bit;\n            total += count(n, row + 1, cols | bit, (d1 | bit) << 1, (d2 | bit) >> 1);\n        }\n        return total;\n    }\npublic:\n    int totalNQueens(int n) { return count(n, 0, 0, 0, 0); }\n};",
+     "python": "class Solution:\n    def totalNQueens(self, n: int) -> int:\n        full = (1 << n) - 1\n        def count(row, cols, d1, d2):\n            if row == n:\n                return 1\n            total, free = 0, ~(cols | d1 | d2) & full\n            while free:\n                bit = free & -free\n                free -= bit\n                total += count(row + 1, cols | bit, ((d1 | bit) << 1) & full, (d2 | bit) >> 1)\n            return total\n        return count(0, 0, 0, 0)",
+     "javascript": "var totalNQueens = function(n) {\n    const full = (1 << n) - 1;\n    const count = (row, cols, d1, d2) => {\n        if (row === n) return 1;\n        let total = 0, free = ~(cols | d1 | d2) & full;\n        while (free) {\n            const bit = free & -free;\n            free -= bit;\n            total += count(row + 1, cols | bit, ((d1 | bit) << 1) & full, (d2 | bit) >> 1);\n        }\n        return total;\n    };\n    return count(0, 0, 0, 0);\n};"
+    }
+   }
+  ]
+ },
+ "word-break-ii": {
+  "pattern": "Backtracking over prefixes, memoised by start index",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Plain backtracking",
+    "idea": "From position `i`, try every dictionary word that matches the text starting there, and recurse on the rest; when you reach the end, record the sentence.",
+    "steps": [
+     "Put the words in a hash set.",
+     "`dfs(i, path)`: if `i == n`, add `path` joined by spaces to the answer.",
+     "Otherwise, for each `j > i` with `s[i..j)` in the set, push that word, call `dfs(j)`, and pop it."
+    ],
+    "time": "O(2ⁿ · n)",
+    "space": "O(n)",
+    "why": "There can be up to 2ⁿ⁻¹ ways to cut a string of length n, and building each sentence costs O(n). Worse, strings like \"aaa…ab\" explore an exponential number of dead ends that produce no sentence at all. With n ≤ 20 it still finishes, but memoisation removes the repeated work.",
+    "code": {
+     "java": "class Solution {\n    public List<String> wordBreak(String s, List<String> wordDict) {\n        List<String> out = new ArrayList<>();\n        dfs(s, 0, new HashSet<>(wordDict), new ArrayList<>(), out);\n        return out;\n    }\n    private void dfs(String s, int i, Set<String> dict, List<String> path, List<String> out) {\n        if (i == s.length()) { out.add(String.join(\" \", path)); return; }\n        for (int j = i + 1; j <= s.length(); j++) {\n            String w = s.substring(i, j);\n            if (!dict.contains(w)) continue;\n            path.add(w);\n            dfs(s, j, dict, path, out);\n            path.remove(path.size() - 1);\n        }\n    }\n}",
+     "cpp": "class Solution {\n    unordered_set<string> dict;\n    vector<string> path, out;\n    void dfs(const string& s, int i) {\n        if (i == (int) s.size()) {\n            string sentence;\n            for (size_t k = 0; k < path.size(); k++) sentence += (k ? \" \" : \"\") + path[k];\n            out.push_back(sentence);\n            return;\n        }\n        for (int j = i + 1; j <= (int) s.size(); j++) {\n            string w = s.substr(i, j - i);\n            if (!dict.count(w)) continue;\n            path.push_back(w);\n            dfs(s, j);\n            path.pop_back();\n        }\n    }\npublic:\n    vector<string> wordBreak(string s, vector<string>& wordDict) {\n        dict = unordered_set<string>(wordDict.begin(), wordDict.end());\n        dfs(s, 0);\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> List[str]:\n        words, out, path = set(wordDict), [], []\n        def dfs(i):\n            if i == len(s):\n                out.append(\" \".join(path))\n                return\n            for j in range(i + 1, len(s) + 1):\n                if s[i:j] in words:\n                    path.append(s[i:j])\n                    dfs(j)\n                    path.pop()\n        dfs(0)\n        return out",
+     "javascript": "var wordBreak = function(s, wordDict) {\n    const dict = new Set(wordDict), out = [], path = [];\n    const dfs = (i) => {\n        if (i === s.length) { out.push(path.join(\" \")); return; }\n        for (let j = i + 1; j <= s.length; j++) {\n            const w = s.slice(i, j);\n            if (!dict.has(w)) continue;\n            path.push(w);\n            dfs(j);\n            path.pop();\n        }\n    };\n    dfs(0);\n    return out;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Memoised sentences per start index",
+    "idea": "The sentences for a suffix starting at `i` do not depend on how you got there. Compute them once per `i` and reuse them.",
+    "steps": [
+     "`go(i)` returns every sentence for `s[i..]`; `go(n)` is a list holding the empty sentence.",
+     "For each `j > i` with `s[i..j)` in the dictionary, prepend that word to each sentence of `go(j)`.",
+     "Cache `go(i)` in a map and return `go(0)`."
+    ],
+    "time": "O(n² + total output size)",
+    "space": "O(n · output)",
+    "why": "Each start index is solved once: O(n²) substring checks plus the cost of building the answers, which is unavoidable because they must all be returned. Dead-end suffixes cache an empty list, so \"aaa…ab\" collapses to polynomial work.",
+    "code": {
+     "java": "class Solution {\n    public List<String> wordBreak(String s, List<String> wordDict) {\n        return go(s, 0, new HashSet<>(wordDict), new HashMap<>());\n    }\n    private List<String> go(String s, int i, Set<String> dict, Map<Integer, List<String>> memo) {\n        if (memo.containsKey(i)) return memo.get(i);\n        List<String> out = new ArrayList<>();\n        if (i == s.length()) out.add(\"\");\n        for (int j = i + 1; j <= s.length(); j++) {\n            String w = s.substring(i, j);\n            if (!dict.contains(w)) continue;\n            for (String rest : go(s, j, dict, memo)) out.add(rest.isEmpty() ? w : w + \" \" + rest);\n        }\n        memo.put(i, out);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\n    unordered_set<string> dict;\n    unordered_map<int, vector<string>> memo;\n    const vector<string>& go(const string& s, int i) {\n        auto it = memo.find(i);\n        if (it != memo.end()) return it->second;\n        vector<string> out;\n        if (i == (int) s.size()) out.push_back(\"\");\n        for (int j = i + 1; j <= (int) s.size(); j++) {\n            string w = s.substr(i, j - i);\n            if (!dict.count(w)) continue;\n            for (const string& rest : go(s, j)) out.push_back(rest.empty() ? w : w + \" \" + rest);\n        }\n        return memo[i] = out;\n    }\npublic:\n    vector<string> wordBreak(string s, vector<string>& wordDict) {\n        dict = unordered_set<string>(wordDict.begin(), wordDict.end());\n        return go(s, 0);\n    }\n};",
+     "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> List[str]:\n        words = set(wordDict)\n        @lru_cache(maxsize=None)\n        def go(i):\n            if i == len(s):\n                return [\"\"]\n            out = []\n            for j in range(i + 1, len(s) + 1):\n                w = s[i:j]\n                if w in words:\n                    out += [w if not rest else w + \" \" + rest for rest in go(j)]\n            return out\n        return go(0)",
+     "javascript": "var wordBreak = function(s, wordDict) {\n    const dict = new Set(wordDict), memo = new Map();\n    const go = (i) => {\n        if (memo.has(i)) return memo.get(i);\n        const out = [];\n        if (i === s.length) out.push(\"\");\n        for (let j = i + 1; j <= s.length; j++) {\n            const w = s.slice(i, j);\n            if (!dict.has(w)) continue;\n            for (const rest of go(j)) out.push(rest === \"\" ? w : w + \" \" + rest);\n        }\n        memo.set(i, out);\n        return out;\n    };\n    return go(0);\n};"
+    }
+   }
+  ]
  }
 }

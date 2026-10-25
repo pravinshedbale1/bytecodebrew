@@ -12,7 +12,7 @@ const TYPES = {
   'List<Integer>': 'vector<int>', 'List<String>': 'vector<string>', 'List<List<Integer>>': 'vector<vector<int>>',
   'List<List<String>>': 'vector<vector<string>>', 'List<Boolean>': 'vector<bool>', 'List<Double>': 'vector<double>',
   TreeNode: 'TreeNode*', ListNode: 'ListNode*', 'ListNode[]': 'vector<ListNode*>', Node: 'Node*',
-  'Iterator<Integer>': 'vector<int>', 'List<NestedInteger>': 'vector<NestedInteger>',
+  'Iterator<Integer>': 'vector<int>', 'List<NestedInteger>': 'vector<NestedInteger>', MountainArray: 'MountainArray&',
 };
 
 function type(t) {
@@ -386,6 +386,145 @@ public:
     pre: 'int rand7() { static mt19937 g(7); return uniform_int_distribution<int>(1, 7)(g); }\n',
     comment: '// The rand7() API is already defined for you.\n// int rand7();\n// @return a random integer in the range 1 to 7',
   },
+  GuessGame: {
+    pre: 'int bcbPick = 0;\nint guess(int num) { return num > bcbPick ? -1 : num < bcbPick ? 1 : 0; }\n',
+    comment: `/**
+ * Forward declaration of guess API.
+ * @param  num   your guess
+ * @return       -1 if num is higher than the picked number
+ *               1 if num is lower than the picked number
+ *               otherwise return 0
+ * int guess(int num);
+ */`,
+  },
+  MountainArray: {
+    pre: String.raw`
+class MountainArray {
+    vector<int> bcbA; int bcbCalls = 0;
+public:
+    MountainArray(vector<int> a) : bcbA(std::move(a)) {}
+    int get(int index) {
+        if (++bcbCalls > 100) throw runtime_error("more than 100 calls to MountainArray.get");
+        return bcbA.at(index);
+    }
+    int length() { return (int) bcbA.size(); }
+};
+`,
+    comment: `/**
+ * // This is the MountainArray's API interface (provided).
+ * // You should not implement it, or speculate about its implementation
+ * class MountainArray {
+ *   public:
+ *     int get(int index);   // at most 100 calls in total
+ *     int length();
+ * };
+ */`,
+  },
+  RandomNode: {
+    pre: String.raw`
+class Node {
+public:
+    int val;
+    Node* next;
+    Node* random;
+    Node(int _val) { val = _val; next = NULL; random = NULL; }
+};
+namespace bcb {
+inline Node* randomList(const string& s) {
+    J v = parse(s);
+    vector<Node*> n;
+    for (const J& x : v.a) n.push_back(new Node((int) x.a.at(0).i));
+    for (size_t i = 0; i < n.size(); i++) {
+        if (i + 1 < n.size()) n[i]->next = n[i + 1];
+        if (v.a[i].a.at(1).t != 0) n[i]->random = n.at(v.a[i].a[1].i);
+    }
+    return n.empty() ? nullptr : n[0];
+}
+/** The copy as [[val, randomIndex or null], …], or an error string if it shares nodes with the original. */
+inline Raw randomDump(Node* copy, Node* original) {
+    set<Node*> orig;
+    for (Node* t = original; t; t = t->next) orig.insert(t);
+    map<Node*, int> at; vector<Node*> order;
+    for (Node* t = copy; t && order.size() < 100000; t = t->next) {
+        if (orig.count(t)) return {F(string("copy shares nodes with the original"))};
+        at[t] = (int) order.size(); order.push_back(t);
+    }
+    string o = "[";
+    for (size_t k = 0; k < order.size(); k++) {
+        Node* t = order[k];
+        if (t->random && orig.count(t->random)) return {F(string("copy points into the original list"))};
+        if (k) o += ',';
+        o += "[" + to_string(t->val) + "," + (t->random ? to_string(at[t->random]) : string("null")) + "]";
+    }
+    return {o + "]"};
+}
+}
+`,
+    comment: `/*
+// Definition for a Node.
+class Node {
+public:
+    int val;
+    Node* next;
+    Node* random;
+
+    Node(int _val) {
+        val = _val;
+        next = NULL;
+        random = NULL;
+    }
+};
+*/`,
+  },
+  QuadNode: {
+    pre: String.raw`
+class Node {
+public:
+    bool val;
+    bool isLeaf;
+    Node* topLeft;
+    Node* topRight;
+    Node* bottomLeft;
+    Node* bottomRight;
+    Node() : val(false), isLeaf(false), topLeft(NULL), topRight(NULL), bottomLeft(NULL), bottomRight(NULL) {}
+    Node(bool _val, bool _isLeaf) : val(_val), isLeaf(_isLeaf), topLeft(NULL), topRight(NULL), bottomLeft(NULL), bottomRight(NULL) {}
+    Node(bool _val, bool _isLeaf, Node* _topLeft, Node* _topRight, Node* _bottomLeft, Node* _bottomRight)
+        : val(_val), isLeaf(_isLeaf), topLeft(_topLeft), topRight(_topRight), bottomLeft(_bottomLeft), bottomRight(_bottomRight) {}
+};
+namespace bcb {
+/** LeetCode's level-order output: [isLeaf, val] per node (val shown as 1 on inner nodes, where it doesn't matter). */
+inline Raw quadDump(Node* root) {
+    vector<Node*> level{root}; vector<string> out;
+    for (size_t i = 0; i < level.size() && i < 2000000; i++) {
+        Node* n = level[i];
+        if (!n) { out.push_back("null"); continue; }
+        out.push_back(string("[") + (n->isLeaf ? "1" : "0") + "," + (n->isLeaf ? (n->val ? "1" : "0") : "1") + "]");
+        if (n->isLeaf) for (int k = 0; k < 4; k++) level.push_back(nullptr);
+        else { level.push_back(n->topLeft); level.push_back(n->topRight); level.push_back(n->bottomLeft); level.push_back(n->bottomRight); }
+    }
+    while (!out.empty() && out.back() == "null") out.pop_back();
+    string o = "[";
+    for (size_t k = 0; k < out.size(); k++) { if (k) o += ','; o += out[k]; }
+    return {o + "]"};
+}
+}
+`,
+    comment: `/*
+// Definition for a QuadTree node.
+class Node {
+public:
+    bool val;
+    bool isLeaf;
+    Node* topLeft;
+    Node* topRight;
+    Node* bottomLeft;
+    Node* bottomRight;
+
+    Node() / Node(bool _val, bool _isLeaf)
+    Node(bool _val, bool _isLeaf, Node* _topLeft, Node* _topRight, Node* _bottomLeft, Node* _bottomRight)
+};
+*/`,
+  },
 };
 
 /** Drivers for odd signatures (the Java ones are `call` in the spec): set `r`, using `s` (a new Solution) and $0, $1… */
@@ -400,6 +539,12 @@ const CALLS = {
   'implement-rand10-using-rand7': 'vector<int> r; int n = bcb::I($0); for (int k = 0; k < n; k++) r.push_back(s.rand10());',
   'populating-next-right-pointers-in-each-node': 'vector<string> r = bcb::nextDump(s.connect(bcb::nextTree($0)));',
   'serialize-and-deserialize-binary-tree': 'Codec ser, deser; TreeNode* r = deser.deserialize(ser.serialize(bcb::tree($0)));',
+  'guess-number-higher-or-lower': 'bcbPick = bcb::I($1); auto r = s.guessNumber(bcb::I($0));',
+  'find-in-mountain-array': 'MountainArray m(bcb::as<vector<int>>(bcb::parse($0))); auto r = s.findInMountainArray(bcb::I($1), m);',
+  'copy-list-with-random-pointer': 'Node* orig = bcb::randomList($0); bcb::Raw r = bcb::randomDump(s.copyRandomList(orig), orig);',
+  'construct-quad-tree': 'vector<vector<int>> g = bcb::as<vector<vector<int>>>(bcb::parse($0)); bcb::Raw r = bcb::quadDump(s.construct(g));',
+  'encode-and-decode-strings': 'vector<string> in = bcb::as<vector<string>>(bcb::parse($0)); Codec enc, dec; string wire = enc.encode(in); vector<string> r = dec.decode(wire);',
+  'remove-element': 'vector<int> a = bcb::as<vector<int>>(bcb::parse($0)); int k = s.removeElement(a, bcb::I($1)); vector<int> f(a.begin(), a.begin() + max(0, min(k, (int) a.size()))); sort(f.begin(), f.end()); bcb::Raw r{"[" + to_string(k) + "," + bcb::F(f) + "]"};',
   'remove-duplicates-from-sorted-array': 'vector<int> a = bcb::as<vector<int>>(bcb::parse($0)); int k = s.removeDuplicates(a); bcb::Raw r{"[" + to_string(k) + "," + bcb::F(vector<int>(a.begin(), a.begin() + max(0, min(k, (int) a.size())))) + "]"};',
 };
 

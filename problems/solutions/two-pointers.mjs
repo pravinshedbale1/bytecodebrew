@@ -1349,4 +1349,1003 @@ public:
       },
     ],
   },
+  'remove-element': {
+    pattern: 'Read and write pointers (overwrite instead of delete)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Shift left on every match',
+        idea: 'Each time `val` is found, shift everything after it one place left, the way deleting from an array really works.',
+        steps: [
+          'Keep the current length `n`, starting at `nums.length`, and an index `i = 0`.',
+          'If `nums[i] == val`, move `nums[i + 1..n − 1]` one place left and shrink `n`; do not advance `i`, since a new value now sits there.',
+          'Otherwise advance `i`. Return `n` at the end.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'Every removal shifts up to n values. Fine for 100 elements, but the shifting is wasted work: nothing beyond position k is checked, so the order of the tail never mattered.',
+        code: {
+          java: r`class Solution {
+    public int removeElement(int[] nums, int val) {
+        int n = nums.length, i = 0;
+        while (i < n) {
+            if (nums[i] == val) {
+                for (int j = i + 1; j < n; j++) nums[j - 1] = nums[j];
+                n--;
+            } else i++;
+        }
+        return n;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int removeElement(vector<int>& nums, int val) {
+        int n = nums.size(), i = 0;
+        while (i < n) {
+            if (nums[i] == val) {
+                for (int j = i + 1; j < n; j++) nums[j - 1] = nums[j];
+                n--;
+            } else i++;
+        }
+        return n;
+    }
+};`,
+          python: r`class Solution:
+    def removeElement(self, nums: List[int], val: int) -> int:
+        n, i = len(nums), 0
+        while i < n:
+            if nums[i] == val:
+                for j in range(i + 1, n):
+                    nums[j - 1] = nums[j]
+                n -= 1
+            else:
+                i += 1
+        return n`,
+          javascript: r`var removeElement = function(nums, val) {
+    let n = nums.length, i = 0;
+    while (i < n) {
+        if (nums[i] === val) {
+            for (let j = i + 1; j < n; j++) nums[j - 1] = nums[j];
+            n--;
+        } else i++;
+    }
+    return n;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Write index',
+        idea: 'Scan once with a read index and copy every value that is not `val` to the next free slot at the front.',
+        steps: [
+          'Set the write index `w = 0`.',
+          'For each value `x` in `nums`: if `x != val`, set `nums[w] = x` and increment `w`.',
+          'Return `w`: the first `w` slots hold exactly the kept values, in their original order.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'One pass, one write per kept value. `w` never passes the read position, so a value is always read before it can be overwritten. A variant swaps matches with the last element to do fewer writes when `val` is rare.',
+        code: {
+          java: r`class Solution {
+    public int removeElement(int[] nums, int val) {
+        int w = 0;
+        for (int x : nums) if (x != val) nums[w++] = x;
+        return w;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int removeElement(vector<int>& nums, int val) {
+        int w = 0;
+        for (int x : nums) if (x != val) nums[w++] = x;
+        return w;
+    }
+};`,
+          python: r`class Solution:
+    def removeElement(self, nums: List[int], val: int) -> int:
+        w = 0
+        for x in nums:
+            if x != val:
+                nums[w] = x
+                w += 1
+        return w`,
+          javascript: r`var removeElement = function(nums, val) {
+    let w = 0;
+    for (const x of nums) if (x !== val) nums[w++] = x;
+    return w;
+};`,
+        },
+      },
+    ],
+  },
+  'reverse-string': {
+    pattern: 'Opposite-end pointers (swap and move inwards)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Copy into a reversed buffer',
+        idea: 'Write the characters into a new array back to front, then copy them back into `s`.',
+        steps: [
+          'Create a buffer `t` of the same length.',
+          'Set `t[i] = s[n − 1 − i]` for every `i`.',
+          'Copy `t` back into `s`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Linear time, but it breaks the O(1) memory rule the problem sets. Interviewers ask this question precisely to see the in-place swap.',
+        code: {
+          java: r`class Solution {
+    public void reverseString(char[] s) {
+        int n = s.length;
+        char[] t = new char[n];
+        for (int i = 0; i < n; i++) t[i] = s[n - 1 - i];
+        System.arraycopy(t, 0, s, 0, n);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void reverseString(vector<char>& s) {
+        int n = s.size();
+        vector<char> t(n);
+        for (int i = 0; i < n; i++) t[i] = s[n - 1 - i];
+        s = t;
+    }
+};`,
+          python: r`class Solution:
+    def reverseString(self, s: List[str]) -> None:
+        t = [s[len(s) - 1 - i] for i in range(len(s))]
+        s[:] = t`,
+          javascript: r`var reverseString = function(s) {
+    const n = s.length, t = new Array(n);
+    for (let i = 0; i < n; i++) t[i] = s[n - 1 - i];
+    for (let i = 0; i < n; i++) s[i] = t[i];
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Swap from both ends',
+        idea: 'Swap the outermost pair, then step both pointers inwards until they meet.',
+        steps: [
+          'Set `i = 0` and `j = n − 1`.',
+          'While `i < j`, swap `s[i]` and `s[j]`, then do `i++` and `j--`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'n/2 swaps and two index variables. The middle character of an odd-length array is never touched, which is correct: it stays in place.',
+        code: {
+          java: r`class Solution {
+    public void reverseString(char[] s) {
+        for (int i = 0, j = s.length - 1; i < j; i++, j--) {
+            char t = s[i]; s[i] = s[j]; s[j] = t;
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void reverseString(vector<char>& s) {
+        for (int i = 0, j = (int) s.size() - 1; i < j; i++, j--) swap(s[i], s[j]);
+    }
+};`,
+          python: r`class Solution:
+    def reverseString(self, s: List[str]) -> None:
+        i, j = 0, len(s) - 1
+        while i < j:
+            s[i], s[j] = s[j], s[i]
+            i += 1
+            j -= 1`,
+          javascript: r`var reverseString = function(s) {
+    for (let i = 0, j = s.length - 1; i < j; i++, j--) [s[i], s[j]] = [s[j], s[i]];
+};`,
+        },
+      },
+    ],
+  },
+  'valid-palindrome-ii': {
+    pattern: 'Opposite-end pointers with one branch at the first mismatch',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Try deleting each character',
+        idea: 'If the string is already a palindrome, answer true. Otherwise delete each position in turn and test whether what is left is a palindrome.',
+        steps: [
+          'If `s` is a palindrome, return `true`.',
+          'For each index `k`, check whether `s` without `s[k]` is a palindrome (compare characters while skipping index `k`).',
+          'Return `true` if any deletion works, otherwise `false`.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'n candidate deletions, each checked in O(n). With 10⁵ characters that is about 10¹⁰ steps, far too slow. The skip is done with index arithmetic so no new strings are built.',
+        code: {
+          java: r`class Solution {
+    public boolean validPalindrome(String s) {
+        int n = s.length();
+        if (isPalSkip(s, -1)) return true;
+        for (int k = 0; k < n; k++) if (isPalSkip(s, k)) return true;
+        return false;
+    }
+    private boolean isPalSkip(String s, int skip) {
+        int i = 0, j = s.length() - 1;
+        while (i < j) {
+            if (i == skip) { i++; continue; }
+            if (j == skip) { j--; continue; }
+            if (s.charAt(i) != s.charAt(j)) return false;
+            i++; j--;
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+    bool isPalSkip(const string& s, int skip) {
+        int i = 0, j = (int) s.size() - 1;
+        while (i < j) {
+            if (i == skip) { i++; continue; }
+            if (j == skip) { j--; continue; }
+            if (s[i] != s[j]) return false;
+            i++; j--;
+        }
+        return true;
+    }
+public:
+    bool validPalindrome(string s) {
+        if (isPalSkip(s, -1)) return true;
+        for (int k = 0; k < (int) s.size(); k++) if (isPalSkip(s, k)) return true;
+        return false;
+    }
+};`,
+          python: r`class Solution:
+    def validPalindrome(self, s: str) -> bool:
+        def is_pal_skip(skip):
+            i, j = 0, len(s) - 1
+            while i < j:
+                if i == skip:
+                    i += 1
+                    continue
+                if j == skip:
+                    j -= 1
+                    continue
+                if s[i] != s[j]:
+                    return False
+                i += 1
+                j -= 1
+            return True
+        if is_pal_skip(-1):
+            return True
+        return any(is_pal_skip(k) for k in range(len(s)))`,
+          javascript: r`var validPalindrome = function(s) {
+    const isPalSkip = (skip) => {
+        let i = 0, j = s.length - 1;
+        while (i < j) {
+            if (i === skip) { i++; continue; }
+            if (j === skip) { j--; continue; }
+            if (s[i] !== s[j]) return false;
+            i++; j--;
+        }
+        return true;
+    };
+    if (isPalSkip(-1)) return true;
+    for (let k = 0; k < s.length; k++) if (isPalSkip(k)) return true;
+    return false;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two pointers, branch once',
+        idea: 'Move inwards from both ends while the characters match. At the first mismatch, one of those two characters must be the one to delete, so try skipping each.',
+        steps: [
+          'Set `i = 0`, `j = n − 1`. While `i < j` and `s[i] == s[j]`, move both inwards.',
+          'If they meet, `s` is already a palindrome: return `true`.',
+          'Otherwise return whether `s[i + 1..j]` or `s[i..j − 1]` is a palindrome.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'The outer pairs that matched stay matched whichever character is deleted, so only the two characters at the mismatch are candidates. Each of the two final checks is O(n). Trying only one side is the classic bug: in "cbbcc" the first mismatch is b against c, and only skipping the right-hand c works.',
+        code: {
+          java: r`class Solution {
+    public boolean validPalindrome(String s) {
+        int i = 0, j = s.length() - 1;
+        while (i < j) {
+            if (s.charAt(i) != s.charAt(j)) return isPal(s, i + 1, j) || isPal(s, i, j - 1);
+            i++; j--;
+        }
+        return true;
+    }
+    private boolean isPal(String s, int i, int j) {
+        while (i < j) if (s.charAt(i++) != s.charAt(j--)) return false;
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+    bool isPal(const string& s, int i, int j) {
+        while (i < j) if (s[i++] != s[j--]) return false;
+        return true;
+    }
+public:
+    bool validPalindrome(string s) {
+        int i = 0, j = (int) s.size() - 1;
+        while (i < j) {
+            if (s[i] != s[j]) return isPal(s, i + 1, j) || isPal(s, i, j - 1);
+            i++; j--;
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def validPalindrome(self, s: str) -> bool:
+        def is_pal(i, j):
+            while i < j:
+                if s[i] != s[j]:
+                    return False
+                i += 1
+                j -= 1
+            return True
+        i, j = 0, len(s) - 1
+        while i < j:
+            if s[i] != s[j]:
+                return is_pal(i + 1, j) or is_pal(i, j - 1)
+            i += 1
+            j -= 1
+        return True`,
+          javascript: r`var validPalindrome = function(s) {
+    const isPal = (i, j) => {
+        while (i < j) if (s[i++] !== s[j--]) return false;
+        return true;
+    };
+    let i = 0, j = s.length - 1;
+    while (i < j) {
+        if (s[i] !== s[j]) return isPal(i + 1, j) || isPal(i, j - 1);
+        i++; j--;
+    }
+    return true;
+};`,
+        },
+      },
+    ],
+  },
+  'merge-strings-alternately': {
+    pattern: 'Two pointers walking two sequences in step',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Concatenate strings directly',
+        idea: 'Build the answer with plain string `+`, one letter at a time.',
+        steps: [
+          'Start with an empty string `out`.',
+          'For `i` from 0 to the longer length − 1, add `word1[i]` and then `word2[i]` when they exist.',
+          'Return `out`.',
+        ],
+        time: 'O((m + n)²)', space: 'O(m + n)',
+        why: 'In Java and JavaScript, strings are immutable, so each `+` may copy everything built so far. With 100-letter words it is fast anyway, but it is a habit to avoid; Python and C++ handle `+=` on a growing string better.',
+        code: {
+          java: r`class Solution {
+    public String mergeAlternately(String word1, String word2) {
+        String out = "";
+        for (int i = 0; i < Math.max(word1.length(), word2.length()); i++) {
+            if (i < word1.length()) out += word1.charAt(i);
+            if (i < word2.length()) out += word2.charAt(i);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string mergeAlternately(string word1, string word2) {
+        string out = "";
+        for (size_t i = 0; i < max(word1.size(), word2.size()); i++) {
+            if (i < word1.size()) out = out + word1[i];
+            if (i < word2.size()) out = out + word2[i];
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def mergeAlternately(self, word1: str, word2: str) -> str:
+        out = ""
+        for i in range(max(len(word1), len(word2))):
+            if i < len(word1):
+                out = out + word1[i]
+            if i < len(word2):
+                out = out + word2[i]
+        return out`,
+          javascript: r`var mergeAlternately = function(word1, word2) {
+    let out = "";
+    for (let i = 0; i < Math.max(word1.length, word2.length); i++) {
+        if (i < word1.length) out = out + word1[i];
+        if (i < word2.length) out = out + word2[i];
+    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two pointers into a builder',
+        idea: 'Advance one pointer in each word, appending alternately to a string builder; then append whatever is left of the longer word.',
+        steps: [
+          'Set `i = 0`, `j = 0` and an empty builder.',
+          'While both words have letters left, append `word1[i++]` then `word2[j++]`.',
+          'Append the rest of `word1` from `i` and the rest of `word2` from `j` (one of them is empty) and return the result.',
+        ],
+        time: 'O(m + n)', space: 'O(m + n)',
+        why: 'Each letter is appended once, and a builder grows in amortised O(1) per character. The output itself needs m + n characters, so that space is unavoidable.',
+        code: {
+          java: r`class Solution {
+    public String mergeAlternately(String word1, String word2) {
+        StringBuilder sb = new StringBuilder();
+        int i = 0, j = 0;
+        while (i < word1.length() && j < word2.length()) {
+            sb.append(word1.charAt(i++)).append(word2.charAt(j++));
+        }
+        sb.append(word1, i, word1.length()).append(word2, j, word2.length());
+        return sb.toString();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string mergeAlternately(string word1, string word2) {
+        string out;
+        out.reserve(word1.size() + word2.size());
+        size_t i = 0, j = 0;
+        while (i < word1.size() && j < word2.size()) {
+            out += word1[i++];
+            out += word2[j++];
+        }
+        out += word1.substr(i);
+        out += word2.substr(j);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def mergeAlternately(self, word1: str, word2: str) -> str:
+        out = []
+        i = j = 0
+        while i < len(word1) and j < len(word2):
+            out.append(word1[i])
+            out.append(word2[j])
+            i += 1
+            j += 1
+        out.append(word1[i:])
+        out.append(word2[j:])
+        return "".join(out)`,
+          javascript: r`var mergeAlternately = function(word1, word2) {
+    const out = [];
+    let i = 0, j = 0;
+    while (i < word1.length && j < word2.length) out.push(word1[i++], word2[j++]);
+    return out.join("") + word1.slice(i) + word2.slice(j);
+};`,
+        },
+      },
+    ],
+  },
+  'merge-sorted-array': {
+    pattern: 'Two pointers merging from the back',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Copy in, then sort',
+        idea: 'Put the values of `nums2` into the spare slots of `nums1` and sort the whole array.',
+        steps: [
+          'For each `j`, set `nums1[m + j] = nums2[j]`.',
+          'Sort `nums1`.',
+        ],
+        time: 'O((m + n) log(m + n))', space: 'O(1)',
+        why: 'Correct and short, but it ignores that both halves are already sorted. (Library sorts may use O(log n) extra stack.) The interviewer will ask for the linear merge next.',
+        code: {
+          java: r`class Solution {
+    public void merge(int[] nums1, int m, int[] nums2, int n) {
+        for (int j = 0; j < n; j++) nums1[m + j] = nums2[j];
+        Arrays.sort(nums1);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void merge(vector<int>& nums1, int m, vector<int>& nums2, int n) {
+        for (int j = 0; j < n; j++) nums1[m + j] = nums2[j];
+        sort(nums1.begin(), nums1.end());
+    }
+};`,
+          python: r`class Solution:
+    def merge(self, nums1: List[int], m: int, nums2: List[int], n: int) -> None:
+        nums1[m:] = nums2
+        nums1.sort()`,
+          javascript: r`var merge = function(nums1, m, nums2, n) {
+    for (let j = 0; j < n; j++) nums1[m + j] = nums2[j];
+    nums1.sort((a, b) => a - b);
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Merge forwards with a copy',
+        idea: 'Copy the first `m` values of `nums1` aside, then do the standard merge of two sorted lists into `nums1` from the front.',
+        steps: [
+          'Copy `nums1[0..m − 1]` into `a`.',
+          'With `i` in `a` and `j` in `nums2`, repeatedly write the smaller front value to `nums1[w++]`.',
+          'When one runs out, copy the rest of the other.',
+        ],
+        time: 'O(m + n)', space: 'O(m)',
+        why: 'Linear time. The copy is needed because writing at the front would overwrite values of `nums1` that have not been merged yet.',
+        code: {
+          java: r`class Solution {
+    public void merge(int[] nums1, int m, int[] nums2, int n) {
+        int[] a = Arrays.copyOf(nums1, m);
+        int i = 0, j = 0, w = 0;
+        while (i < m && j < n) nums1[w++] = a[i] <= nums2[j] ? a[i++] : nums2[j++];
+        while (i < m) nums1[w++] = a[i++];
+        while (j < n) nums1[w++] = nums2[j++];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void merge(vector<int>& nums1, int m, vector<int>& nums2, int n) {
+        vector<int> a(nums1.begin(), nums1.begin() + m);
+        int i = 0, j = 0, w = 0;
+        while (i < m && j < n) nums1[w++] = a[i] <= nums2[j] ? a[i++] : nums2[j++];
+        while (i < m) nums1[w++] = a[i++];
+        while (j < n) nums1[w++] = nums2[j++];
+    }
+};`,
+          python: r`class Solution:
+    def merge(self, nums1: List[int], m: int, nums2: List[int], n: int) -> None:
+        a = nums1[:m]
+        i = j = w = 0
+        while i < m and j < n:
+            if a[i] <= nums2[j]:
+                nums1[w] = a[i]
+                i += 1
+            else:
+                nums1[w] = nums2[j]
+                j += 1
+            w += 1
+        nums1[w:] = a[i:] + nums2[j:]`,
+          javascript: r`var merge = function(nums1, m, nums2, n) {
+    const a = nums1.slice(0, m);
+    let i = 0, j = 0, w = 0;
+    while (i < m && j < n) nums1[w++] = a[i] <= nums2[j] ? a[i++] : nums2[j++];
+    while (i < m) nums1[w++] = a[i++];
+    while (j < n) nums1[w++] = nums2[j++];
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Merge from the back',
+        idea: 'The free space is at the end of `nums1`, so fill it from the end with the largest remaining value.',
+        steps: [
+          'Set `i = m − 1`, `j = n − 1` and `w = m + n − 1`.',
+          'While `j >= 0`: if `i >= 0` and `nums1[i] > nums2[j]`, write `nums1[i--]` to `nums1[w--]`; otherwise write `nums2[j--]`.',
+          'When `nums2` is used up, the rest of `nums1` is already in place.',
+        ],
+        time: 'O(m + n)', space: 'O(1)',
+        why: 'The write position `w` always stays at or after `i` (there are `j + 1` free slots between them), so no unread value of `nums1` is overwritten. Looping only while `j >= 0` handles `m = 0` and `n = 0` naturally.',
+        code: {
+          java: r`class Solution {
+    public void merge(int[] nums1, int m, int[] nums2, int n) {
+        int i = m - 1, j = n - 1, w = m + n - 1;
+        while (j >= 0) nums1[w--] = i >= 0 && nums1[i] > nums2[j] ? nums1[i--] : nums2[j--];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void merge(vector<int>& nums1, int m, vector<int>& nums2, int n) {
+        int i = m - 1, j = n - 1, w = m + n - 1;
+        while (j >= 0) nums1[w--] = i >= 0 && nums1[i] > nums2[j] ? nums1[i--] : nums2[j--];
+    }
+};`,
+          python: r`class Solution:
+    def merge(self, nums1: List[int], m: int, nums2: List[int], n: int) -> None:
+        i, j, w = m - 1, n - 1, m + n - 1
+        while j >= 0:
+            if i >= 0 and nums1[i] > nums2[j]:
+                nums1[w] = nums1[i]
+                i -= 1
+            else:
+                nums1[w] = nums2[j]
+                j -= 1
+            w -= 1`,
+          javascript: r`var merge = function(nums1, m, nums2, n) {
+    let i = m - 1, j = n - 1, w = m + n - 1;
+    while (j >= 0) nums1[w--] = i >= 0 && nums1[i] > nums2[j] ? nums1[i--] : nums2[j--];
+};`,
+        },
+      },
+    ],
+  },
+  '4sum': {
+    pattern: 'Sort, fix two values, two pointers for the last pair',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Four nested loops with a set',
+        idea: 'Sort the array, try every combination of four positions, and keep the matching quadruplets in a set so duplicates disappear.',
+        steps: [
+          'Sort `nums` so each quadruplet comes out in a canonical order.',
+          'Loop over `a < b < c < d`; if the sum (as a 64-bit value) equals `target`, add the four values to a set.',
+          'Return the set as a list.',
+        ],
+        time: 'O(n⁴)', space: 'O(q)',
+        why: 'With n = 200 there are about 6.6 × 10⁷ combinations of four: slow but it finishes. q is the number of answers kept in the set. The sum must be 64-bit: 4 × 10⁹ overflows a 32-bit int.',
+        code: {
+          java: r`class Solution {
+    public List<List<Integer>> fourSum(int[] nums, int target) {
+        Arrays.sort(nums);
+        int n = nums.length;
+        Set<List<Integer>> found = new HashSet<>();
+        for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++)
+                for (int c = b + 1; c < n; c++)
+                    for (int d = c + 1; d < n; d++)
+                        if ((long) nums[a] + nums[b] + nums[c] + nums[d] == target)
+                            found.add(Arrays.asList(nums[a], nums[b], nums[c], nums[d]));
+        return new ArrayList<>(found);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<vector<int>> fourSum(vector<int>& nums, int target) {
+        sort(nums.begin(), nums.end());
+        int n = nums.size();
+        set<vector<int>> found;
+        for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++)
+                for (int c = b + 1; c < n; c++)
+                    for (int d = c + 1; d < n; d++)
+                        if ((long long) nums[a] + nums[b] + nums[c] + nums[d] == target)
+                            found.insert({nums[a], nums[b], nums[c], nums[d]});
+        return vector<vector<int>>(found.begin(), found.end());
+    }
+};`,
+          python: r`class Solution:
+    def fourSum(self, nums: List[int], target: int) -> List[List[int]]:
+        nums.sort()
+        found = set()
+        for quad in combinations(nums, 4):
+            if sum(quad) == target:
+                found.add(quad)
+        return [list(q) for q in found]`,
+          javascript: r`var fourSum = function(nums, target) {
+    nums.sort((x, y) => x - y);
+    const n = nums.length, found = new Set(), out = [];
+    for (let a = 0; a < n; a++)
+        for (let b = a + 1; b < n; b++)
+            for (let c = b + 1; c < n; c++)
+                for (let d = c + 1; d < n; d++)
+                    if (nums[a] + nums[b] + nums[c] + nums[d] === target) {
+                        const key = nums[a] + "," + nums[b] + "," + nums[c] + "," + nums[d];
+                        if (!found.has(key)) { found.add(key); out.push([nums[a], nums[b], nums[c], nums[d]]); }
+                    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Three loops and a hash set for the last value',
+        idea: 'Fix three values and look up the fourth in a set of values seen to the right, like Two Sum with a hash set.',
+        steps: [
+          'Sort `nums`. For each pair `a < b`, scan `c` from `b + 1` with an empty set `seen`.',
+          'If `target − nums[a] − nums[b] − nums[c]` is in `seen`, record the sorted quadruplet in a result set.',
+          'Add `nums[c]` to `seen` and continue.',
+        ],
+        time: 'O(n³)', space: 'O(n + q)',
+        why: 'One loop fewer than brute force, at the cost of a hash set per pair. Duplicates still need a result set; the sorted two-pointer version avoids that entirely.',
+        code: {
+          java: r`class Solution {
+    public List<List<Integer>> fourSum(int[] nums, int target) {
+        Arrays.sort(nums);
+        int n = nums.length;
+        Set<List<Integer>> found = new HashSet<>();
+        for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++) {
+                Set<Long> seen = new HashSet<>();
+                for (int c = b + 1; c < n; c++) {
+                    long need = (long) target - nums[a] - nums[b] - nums[c];
+                    if (seen.contains(need)) found.add(Arrays.asList(nums[a], nums[b], (int) need, nums[c]));
+                    seen.add((long) nums[c]);
+                }
+            }
+        return new ArrayList<>(found);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<vector<int>> fourSum(vector<int>& nums, int target) {
+        sort(nums.begin(), nums.end());
+        int n = nums.size();
+        set<vector<int>> found;
+        for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++) {
+                unordered_set<long long> seen;
+                for (int c = b + 1; c < n; c++) {
+                    long long need = (long long) target - nums[a] - nums[b] - nums[c];
+                    if (seen.count(need)) found.insert({nums[a], nums[b], (int) need, nums[c]});
+                    seen.insert(nums[c]);
+                }
+            }
+        return vector<vector<int>>(found.begin(), found.end());
+    }
+};`,
+          python: r`class Solution:
+    def fourSum(self, nums: List[int], target: int) -> List[List[int]]:
+        nums.sort()
+        n = len(nums)
+        found = set()
+        for a in range(n):
+            for b in range(a + 1, n):
+                seen = set()
+                for c in range(b + 1, n):
+                    need = target - nums[a] - nums[b] - nums[c]
+                    if need in seen:
+                        found.add((nums[a], nums[b], need, nums[c]))
+                    seen.add(nums[c])
+        return [list(q) for q in found]`,
+          javascript: r`var fourSum = function(nums, target) {
+    nums.sort((x, y) => x - y);
+    const n = nums.length, found = new Set(), out = [];
+    for (let a = 0; a < n; a++)
+        for (let b = a + 1; b < n; b++) {
+            const seen = new Set();
+            for (let c = b + 1; c < n; c++) {
+                const need = target - nums[a] - nums[b] - nums[c];
+                if (seen.has(need)) {
+                    const key = nums[a] + "," + nums[b] + "," + need + "," + nums[c];
+                    if (!found.has(key)) { found.add(key); out.push([nums[a], nums[b], need, nums[c]]); }
+                }
+                seen.add(nums[c]);
+            }
+        }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Sort + two fixed values + two pointers',
+        idea: 'After sorting, fix the first two values with nested loops and find the last two with pointers moving inwards, skipping repeated values at every level.',
+        steps: [
+          'Sort `nums`. Loop `a`, skipping a value equal to the previous `a`; inside, loop `b > a`, skipping repeats the same way.',
+          'Set `i = b + 1`, `j = n − 1`. Compute the 64-bit sum of the four values.',
+          'On a match, record it, then move `i` and `j` past any copies of their values. If the sum is too small move `i` right, if too large move `j` left.',
+        ],
+        time: 'O(n³)', space: 'O(1)',
+        why: 'O(n²) pairs times an O(n) pointer sweep. Skipping repeats at each level means every quadruplet is produced once, so no set is needed (sorting may use O(log n) stack). The same idea generalises to kSum by recursing down to the two-pointer base case.',
+        code: {
+          java: r`class Solution {
+    public List<List<Integer>> fourSum(int[] nums, int target) {
+        Arrays.sort(nums);
+        List<List<Integer>> out = new ArrayList<>();
+        int n = nums.length;
+        for (int a = 0; a < n - 3; a++) {
+            if (a > 0 && nums[a] == nums[a - 1]) continue;
+            for (int b = a + 1; b < n - 2; b++) {
+                if (b > a + 1 && nums[b] == nums[b - 1]) continue;
+                int i = b + 1, j = n - 1;
+                while (i < j) {
+                    long sum = (long) nums[a] + nums[b] + nums[i] + nums[j];
+                    if (sum == target) {
+                        out.add(Arrays.asList(nums[a], nums[b], nums[i], nums[j]));
+                        while (i < j && nums[i] == nums[i + 1]) i++;
+                        while (i < j && nums[j] == nums[j - 1]) j--;
+                        i++; j--;
+                    } else if (sum < target) i++;
+                    else j--;
+                }
+            }
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<vector<int>> fourSum(vector<int>& nums, int target) {
+        sort(nums.begin(), nums.end());
+        vector<vector<int>> out;
+        int n = nums.size();
+        for (int a = 0; a < n - 3; a++) {
+            if (a > 0 && nums[a] == nums[a - 1]) continue;
+            for (int b = a + 1; b < n - 2; b++) {
+                if (b > a + 1 && nums[b] == nums[b - 1]) continue;
+                int i = b + 1, j = n - 1;
+                while (i < j) {
+                    long long sum = (long long) nums[a] + nums[b] + nums[i] + nums[j];
+                    if (sum == target) {
+                        out.push_back({nums[a], nums[b], nums[i], nums[j]});
+                        while (i < j && nums[i] == nums[i + 1]) i++;
+                        while (i < j && nums[j] == nums[j - 1]) j--;
+                        i++; j--;
+                    } else if (sum < target) i++;
+                    else j--;
+                }
+            }
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def fourSum(self, nums: List[int], target: int) -> List[List[int]]:
+        nums.sort()
+        n, out = len(nums), []
+        for a in range(n - 3):
+            if a > 0 and nums[a] == nums[a - 1]:
+                continue
+            for b in range(a + 1, n - 2):
+                if b > a + 1 and nums[b] == nums[b - 1]:
+                    continue
+                i, j = b + 1, n - 1
+                while i < j:
+                    total = nums[a] + nums[b] + nums[i] + nums[j]
+                    if total == target:
+                        out.append([nums[a], nums[b], nums[i], nums[j]])
+                        while i < j and nums[i] == nums[i + 1]:
+                            i += 1
+                        while i < j and nums[j] == nums[j - 1]:
+                            j -= 1
+                        i += 1
+                        j -= 1
+                    elif total < target:
+                        i += 1
+                    else:
+                        j -= 1
+        return out`,
+          javascript: r`var fourSum = function(nums, target) {
+    nums.sort((x, y) => x - y);
+    const out = [], n = nums.length;
+    for (let a = 0; a < n - 3; a++) {
+        if (a > 0 && nums[a] === nums[a - 1]) continue;
+        for (let b = a + 1; b < n - 2; b++) {
+            if (b > a + 1 && nums[b] === nums[b - 1]) continue;
+            let i = b + 1, j = n - 1;
+            while (i < j) {
+                const sum = nums[a] + nums[b] + nums[i] + nums[j];
+                if (sum === target) {
+                    out.push([nums[a], nums[b], nums[i], nums[j]]);
+                    while (i < j && nums[i] === nums[i + 1]) i++;
+                    while (i < j && nums[j] === nums[j - 1]) j--;
+                    i++; j--;
+                } else if (sum < target) i++;
+                else j--;
+            }
+        }
+    }
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'rotate-array': {
+    pattern: 'In-place reversal (reverse all, then reverse each part)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Rotate one step, k times',
+        idea: 'Move the last value to the front, shifting everything else right by one, and repeat `k % n` times.',
+        steps: [
+          'Reduce `k` to `k % n`.',
+          'Repeat `k` times: save `nums[n − 1]`, shift `nums[0..n − 2]` one place right, put the saved value at `nums[0]`.',
+        ],
+        time: 'O(n · k)', space: 'O(1)',
+        why: 'Each single step costs O(n). With n and k both up to 10⁵ that is up to 10¹⁰ moves, which times out on the large test.',
+        code: {
+          java: r`class Solution {
+    public void rotate(int[] nums, int k) {
+        int n = nums.length;
+        k %= n;
+        for (int step = 0; step < k; step++) {
+            int last = nums[n - 1];
+            for (int i = n - 1; i > 0; i--) nums[i] = nums[i - 1];
+            nums[0] = last;
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void rotate(vector<int>& nums, int k) {
+        int n = nums.size();
+        k %= n;
+        for (int step = 0; step < k; step++) {
+            int last = nums[n - 1];
+            for (int i = n - 1; i > 0; i--) nums[i] = nums[i - 1];
+            nums[0] = last;
+        }
+    }
+};`,
+          python: r`class Solution:
+    def rotate(self, nums: List[int], k: int) -> None:
+        n = len(nums)
+        for _ in range(k % n):
+            last = nums[n - 1]
+            for i in range(n - 1, 0, -1):
+                nums[i] = nums[i - 1]
+            nums[0] = last`,
+          javascript: r`var rotate = function(nums, k) {
+    const n = nums.length;
+    k %= n;
+    for (let step = 0; step < k; step++) {
+        const last = nums[n - 1];
+        for (let i = n - 1; i > 0; i--) nums[i] = nums[i - 1];
+        nums[0] = last;
+    }
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Extra array',
+        idea: 'Each value at index `i` belongs at `(i + k) % n`. Place everything in a new array, then copy it back.',
+        steps: [
+          'Create `out` of length `n`.',
+          'Set `out[(i + k) % n] = nums[i]` for every `i`.',
+          'Copy `out` back into `nums`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Linear time and easy to get right, but it uses a second array. The follow-up asks for O(1) extra space.',
+        code: {
+          java: r`class Solution {
+    public void rotate(int[] nums, int k) {
+        int n = nums.length;
+        int[] out = new int[n];
+        for (int i = 0; i < n; i++) out[(i + k) % n] = nums[i];
+        System.arraycopy(out, 0, nums, 0, n);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void rotate(vector<int>& nums, int k) {
+        int n = nums.size();
+        vector<int> out(n);
+        for (int i = 0; i < n; i++) out[(i + k) % n] = nums[i];
+        nums = out;
+    }
+};`,
+          python: r`class Solution:
+    def rotate(self, nums: List[int], k: int) -> None:
+        n = len(nums)
+        out = [0] * n
+        for i in range(n):
+            out[(i + k) % n] = nums[i]
+        nums[:] = out`,
+          javascript: r`var rotate = function(nums, k) {
+    const n = nums.length, out = new Array(n);
+    for (let i = 0; i < n; i++) out[(i + k) % n] = nums[i];
+    for (let i = 0; i < n; i++) nums[i] = out[i];
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Three reversals',
+        idea: 'Reversing the whole array puts the last `k` values at the front, but backwards. Reverse those `k` values, then reverse the rest, and both parts read forwards again.',
+        steps: [
+          'Set `k = k % n`.',
+          'Reverse `nums[0..n − 1]`.',
+          'Reverse `nums[0..k − 1]`, then reverse `nums[k..n − 1]`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each value is swapped at most twice. Example with k = 3: `[1..7]` → `[7,6,5,4,3,2,1]` → `[5,6,7,4,3,2,1]` → `[5,6,7,1,2,3,4]`. Forgetting `k % n` breaks the case k ≥ n; a cyclic-replacement method also works in O(1) space but is harder to get right.',
+        code: {
+          java: r`class Solution {
+    public void rotate(int[] nums, int k) {
+        k %= nums.length;
+        reverse(nums, 0, nums.length - 1);
+        reverse(nums, 0, k - 1);
+        reverse(nums, k, nums.length - 1);
+    }
+    private void reverse(int[] a, int i, int j) {
+        while (i < j) { int t = a[i]; a[i++] = a[j]; a[j--] = t; }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void rotate(vector<int>& nums, int k) {
+        k %= nums.size();
+        reverse(nums.begin(), nums.end());
+        reverse(nums.begin(), nums.begin() + k);
+        reverse(nums.begin() + k, nums.end());
+    }
+};`,
+          python: r`class Solution:
+    def rotate(self, nums: List[int], k: int) -> None:
+        def reverse(i, j):
+            while i < j:
+                nums[i], nums[j] = nums[j], nums[i]
+                i += 1
+                j -= 1
+        n = len(nums)
+        k %= n
+        reverse(0, n - 1)
+        reverse(0, k - 1)
+        reverse(k, n - 1)`,
+          javascript: r`var rotate = function(nums, k) {
+    const reverse = (i, j) => {
+        while (i < j) { const t = nums[i]; nums[i++] = nums[j]; nums[j--] = t; }
+    };
+    const n = nums.length;
+    k %= n;
+    reverse(0, n - 1);
+    reverse(0, k - 1);
+    reverse(k, n - 1);
+};`,
+        },
+      },
+    ],
+  },
 };

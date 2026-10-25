@@ -205,4 +205,113 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'single-threaded-cpu', title: 'Single-Threaded CPU', level: 'Medium',
+    summary: 'tasks[i] = [enqueueTime, processingTime]. A single CPU, whenever idle, starts the available task with the shortest processing time (smallest index on ties) and runs it to completion. Return the order in which tasks are processed.',
+    method: 'getOrder', params: [['int[][]', 'tasks']], returns: 'int[]',
+    tests: [
+      { in: [[[1, 2], [2, 4], [3, 2], [4, 1]]], out: [0, 2, 3, 1] },
+      { in: [[[7, 10], [7, 12], [7, 5], [7, 4], [7, 2]]], out: [4, 3, 2, 0, 1] },
+      { in: [[[5, 3]]] },
+      { in: [[[1, 1], [100, 1], [50, 1]]] },
+      { in: [[[1, 5], [1, 5], [1, 5]]] },
+      { in: [[[19, 13], [16, 9], [21, 10], [32, 25], [37, 4], [49, 24], [2, 15], [38, 41], [37, 34], [33, 6], [45, 4], [18, 18], [46, 39], [12, 24]]] },
+      { in: [[[1000000000, 1000000000], [1000000000, 999999999], [1, 1000000000]]] },
+    ],
+    ref: `class Solution {
+    public int[] getOrder(int[][] tasks) {
+        int n = tasks.length;
+        Integer[] idx = new Integer[n];
+        for (int i = 0; i < n; i++) idx[i] = i;
+        Arrays.sort(idx, (a, b) -> Integer.compare(tasks[a][0], tasks[b][0]));
+        PriorityQueue<Integer> ready = new PriorityQueue<>((a, b) -> tasks[a][1] != tasks[b][1] ? Integer.compare(tasks[a][1], tasks[b][1]) : Integer.compare(a, b));
+        int[] order = new int[n];
+        long time = 0;
+        int k = 0, w = 0;
+        while (w < n) {
+            if (ready.isEmpty() && time < tasks[idx[k]][0]) time = tasks[idx[k]][0];
+            while (k < n && tasks[idx[k]][0] <= time) ready.add(idx[k++]);
+            int t = ready.poll();
+            order[w++] = t;
+            time += tasks[t][1];
+        }
+        return order;
+    }
+}`,
+  },
+  {
+    slug: 'reorganize-string', title: 'Reorganize String', level: 'Medium',
+    summary: 'Rearrange the letters of s so that no two adjacent letters are equal, and return any such arrangement, or "" if none exists.',
+    method: 'reorganizeString', params: [['String', 's']], returns: 'String', check: 'custom:reorganize',
+    tests: [
+      { in: ['aab'], out: 'aba' },
+      { in: ['aaab'], out: '' },
+      { in: ['a'] },
+      { in: ['aa'] },
+      { in: ['vvvlo'] },
+      { in: ['abbabbaaab'] },
+      { in: ['zhmyo'] },
+      { in: ['aaabbbccc'] },
+      { in: ['zzzaa'] },
+    ],
+    ref: `class Solution {
+    public String reorganizeString(String s) {
+        int n = s.length();
+        int[] cnt = new int[26];
+        for (char c : s.toCharArray()) cnt[c - 'a']++;
+        int top = 0;
+        for (int i = 1; i < 26; i++) if (cnt[i] > cnt[top]) top = i;
+        if (cnt[top] > (n + 1) / 2) return "";
+        char[] out = new char[n];
+        int pos = 0;
+        while (cnt[top]-- > 0) { out[pos] = (char) ('a' + top); pos += 2; }
+        for (int i = 0; i < 26; i++) {
+            while (cnt[i] > 0) {
+                if (pos >= n) pos = 1;
+                out[pos] = (char) ('a' + i);
+                pos += 2;
+                cnt[i]--;
+            }
+        }
+        return new String(out);
+    }
+}`,
+  },
+  {
+    slug: 'longest-happy-string', title: 'Longest Happy String', level: 'Medium',
+    summary: 'Build the longest string using at most a letters "a", b letters "b" and c letters "c" that never contains "aaa", "bbb" or "ccc". Return any longest one ("" if none).',
+    method: 'longestDiverseString', params: [['int', 'a'], ['int', 'b'], ['int', 'c']], returns: 'String', check: 'custom:happyString',
+    tests: [
+      { in: [1, 1, 7], out: 'ccaccbcc' },
+      { in: [7, 1, 0], out: 'aabaa' },
+      { in: [0, 0, 1] },
+      { in: [2, 2, 1] },
+      { in: [0, 8, 11] },
+      { in: [100, 100, 100] },
+      { in: [1, 0, 0] },
+      { in: [4, 42, 7] },
+    ],
+    ref: `class Solution {
+    public String longestDiverseString(int a, int b, int c) {
+        int[] cnt = { a, b, c };
+        StringBuilder sb = new StringBuilder();
+        while (true) {
+            Integer[] order = { 0, 1, 2 };
+            Arrays.sort(order, (x, y) -> cnt[x] != cnt[y] ? cnt[y] - cnt[x] : x - y);
+            boolean placed = false;
+            for (int k : order) {
+                if (cnt[k] == 0) break;
+                int len = sb.length();
+                char ch = (char) ('a' + k);
+                if (len >= 2 && sb.charAt(len - 1) == ch && sb.charAt(len - 2) == ch) continue;
+                sb.append(ch);
+                cnt[k]--;
+                placed = true;
+                break;
+            }
+            if (!placed) return sb.toString();
+        }
+    }
+}`,
+  },
 ];

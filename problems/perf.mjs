@@ -28,6 +28,8 @@ export default {
   'container-with-most-water': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 0, 10000);'),
   '3sum': P('n = 3,000', 'int[] a0 = BCB.ints(3000, -100000, 100000);'),
   'trapping-rain-water': P('n = 20,000', 'int[] a0 = BCB.ints(20000, 0, 100000);'),
+  'valid-palindrome-ii': P('a 99,999-character string', 'String h = BCB.str(49999, "ab"); String a0 = h.substring(0, h.length() - 1) + "z" + h.charAt(h.length() - 1) + new StringBuilder(h).reverse();'),
+  'rotate-array': P('n = 100,000, k = 54,321', 'int[] a0 = BCB.ints(100000, -1000000000, 1000000000); int a1 = 54321;'),
 
   // ---- hashing
   'contains-duplicate': P('n = 100,000, all distinct', 'int[] a0 = BCB.distinct(100000, -1000000000, 1000000000);'),
@@ -36,8 +38,11 @@ export default {
   'group-anagrams': P('10,000 words', 'String[] a0 = BCB.words(10000, 1, 30, "abc");'),
   'longest-consecutive-sequence': P('n = 100,000', 'int[] a0 = BCB.perm(100000, -50000);'),
   'first-missing-positive': P('n = 100,000', 'int[] a0 = BCB.perm(100000, 1);'),
+  'majority-element': P('n = 50,000', 'int[] d = BCB.distinct(24999, -1000000000, 1000000000); int[] a0 = new int[50000]; for (int i = 0; i < 24999; i++) a0[i] = d[i] == 7 ? 8 : d[i]; for (int i = 24999; i < 50000; i++) a0[i] = 7;'),
+  'majority-element-ii': P('n = 50,000', 'int[] d = BCB.distinct(33331, -1000000000, 1000000000); int[] a0 = new int[50000]; for (int i = 0; i < 33331; i++) a0[i] = d[i] == 5 ? 6 : d[i]; for (int i = 33331; i < 50000; i++) a0[i] = 5;'),
 
   // ---- sliding window
+  'contains-duplicate-ii': P('n = 100,000, k = 100,000', 'int[] a0 = BCB.distinct(100000, -1000000000, 1000000000); int a1 = 100000;'),
   'maximum-average-subarray-i': P('n = 100,000, k = 50,000', 'int[] a0 = BCB.ints(100000, -10000, 10000); int a1 = 50000;'),
   'longest-substring-without-repeating-characters': P('a 50,000-character string', 'String a0 = BCB.str(50000, " !abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");'),
   'minimum-size-subarray-sum': P('n = 100,000', 'int a0 = 50000000; int[] a1 = BCB.ints(100000, 1, 10000);'),
@@ -57,6 +62,7 @@ export default {
   'number-of-submatrices-that-sum-to-target': P('a 100×100 matrix', 'int[][] a0 = BCB.grid(100, 100, -1, 1); int a1 = 0;'),
 
   // ---- intervals
+  'meeting-rooms-iii': P('100,000 meetings, 3 rooms (end times pass 2³¹)', 'int a0 = 3; int[][] a1 = new int[100000][]; for (int i = 0; i < a1.length; i++) a1[i] = new int[] { i, BCB.rnd(i + 1, 500000) };'),
   'merge-intervals': P('10,000 intervals', 'int[][] a0 = BCB.intervals(10000, 0, 1000000, 100);'),
   'non-overlapping-intervals': P('100,000 intervals', 'int[][] a0 = BCB.intervals(100000, -50000, 50000, 1000);'),
   'minimum-number-of-arrows-to-burst-balloons': P('100,000 balloons', 'int[][] a0 = BCB.intervals(100000, -1000000000, 1000000000, 1000000);'),
@@ -78,6 +84,7 @@ export default {
   'find-the-duplicate-number': P('n = 100,000', 'int[] a0 = Arrays.copyOf(BCB.perm(100000, 1), 100001); a0[100000] = 77777;'),
 
   // ---- stacks
+  'car-fleet': P('n = 100,000', 'int a0 = 1000000; int[] a1 = BCB.distinct(100000, 0, 999999); int[] a2 = BCB.ints(100000, 1, 1000000);'),
   'remove-all-adjacent-duplicates-in-string': P('a 100,000-character string', `String h = BCB.str(50000, "${AZ}"); String a0 = h + new StringBuilder(h).reverse();`),
   'basic-calculator-ii': P('an expression of about 200,000 characters', 'StringBuilder sb = new StringBuilder("1"); for (int i = 0; i < 50000; i++) sb.append(BCB.R.nextBoolean() ? \'+\' : \'-\').append(BCB.rnd(0, 9)).append(BCB.R.nextBoolean() ? \'*\' : \'/\').append(BCB.rnd(1, 9)); String a0 = sb.toString();'),
   'longest-valid-parentheses': P('a 30,000-character string', 'String a0 = BCB.str(30000, "()");'),
@@ -92,6 +99,7 @@ export default {
   'maximal-rectangle': P('a 200×200 matrix', 'char[][] a0 = BCB.charGrid(200, 200, "1110");'),
 
   // ---- heaps
+  'single-threaded-cpu': P('n = 100,000', 'int[][] a0 = new int[100000][]; for (int i = 0; i < a0.length; i++) a0[i] = new int[] { BCB.rnd(1, 1000000000), BCB.rnd(1, 20000) };'),
   'kth-largest-element-in-a-stream': P('10,000 adds, k = 5,000', '', 'KthLargest kl = new KthLargest(5000, BCB.ints(10000, -10000, 10000)); long sum = 0; for (int i = 0; i < 10000; i++) sum += kl.add(BCB.rnd(-10000, 10000)); Object r = sum;'),
   'kth-largest-element-in-an-array': P('n = 100,000', 'int[] a0 = BCB.ints(100000, -10000, 10000); int a1 = 50000;'),
   'top-k-frequent-elements': P('80,200 values, k = 50', 'List<Integer> l = new ArrayList<>(); for (int v = 1; v <= 400; v++) for (int c = 0; c < v; c++) l.add(v); Collections.shuffle(l, BCB.R); int[] a0 = l.stream().mapToInt(x -> x).toArray(); int a1 = 50;'),
@@ -101,6 +109,8 @@ export default {
   'ipo': P('100,000 projects, k = 50,000', 'int a0 = 50000; int a1 = 0; int[] a2 = BCB.ints(100000, 0, 10000); int[] a3 = BCB.ints(100000, 0, 100000); a3[0] = 0;'),
 
   // ---- designing data structures
+  'detect-squares': P('1,500 adds then 1,500 counts on a 21 × 21 grid', '', 'DetectSquares d = new DetectSquares(); long sum = 0; for (int i = 0; i < 1500; i++) d.add(new int[] { BCB.rnd(0, 20), BCB.rnd(0, 20) }); for (int i = 0; i < 1500; i++) sum += d.count(new int[] { BCB.rnd(0, 20), BCB.rnd(0, 20) }); Object r = sum;'),
+  'maximum-frequency-stack': P('20,000 operations', '', 'FreqStack f = new FreqStack(); long sum = 0; int size = 0; for (int i = 0; i < 20000; i++) { if (i < 10000 || size == 0 || BCB.rnd(0, 2) == 0) { f.push(BCB.rnd(0, 300)); size++; } else { sum = sum * 31 + f.pop(); size--; } } Object r = sum;'),
   'design-hashmap': P('100,000 operations on keys up to 10⁶', '', 'MyHashMap m = new MyHashMap(); long sum = 0; for (int i = 0; i < 100000; i++) { int k = BCB.rnd(0, 1000000), op = BCB.rnd(0, 2); if (op == 0) m.put(k, i); else if (op == 1) sum += m.get(k); else m.remove(k); } Object r = sum;'),
   'min-stack': P('150,000 operations', '', 'MinStack ms = new MinStack(); long sum = 0; for (int i = 0; i < 100000; i++) { ms.push(BCB.rnd(-1000000, 1000000)); sum += ms.getMin(); } for (int i = 0; i < 50000; i++) { ms.pop(); sum += ms.getMin() + ms.top(); } Object r = sum;'),
   'lru-cache': P('200,000 operations, capacity 10,000', '', 'LRUCache c = new LRUCache(10000); long sum = 0; for (int i = 0; i < 200000; i++) { int k = BCB.rnd(0, 30000); if (BCB.R.nextBoolean()) c.put(k, i); else sum += c.get(k); } Object r = sum;'),
@@ -136,6 +146,8 @@ export default {
   'word-search-ii': P('a 12×12 board and 30,000 words', 'char[][] a0 = BCB.charGrid(12, 12, "abcde"); Set<String> ws = new LinkedHashSet<>(); while (ws.size() < 30000) ws.add(BCB.str(BCB.rnd(1, 10), "abcde")); String[] a1 = ws.toArray(new String[0]);'),
 
   // ---- graphs
+  'greatest-common-divisor-traversal': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 2, 100000);'),
+  'walls-and-gates': P('a 250 × 250 grid with about 3,000 gates', 'int[][] a0 = new int[250][250]; for (int[] row : a0) for (int j = 0; j < 250; j++) { int v = BCB.rnd(0, 99); row[j] = v < 10 ? -1 : v < 15 ? 0 : 2147483647; }'),
   '01-matrix': P('a 100×100 matrix with a single 0', 'int[][] a0 = new int[100][100]; for (int[] row : a0) Arrays.fill(row, 1); a0[0][0] = 0;'),
   'pacific-atlantic-water-flow': P('a 200×200 grid', 'int[][] a0 = BCB.grid(200, 200, 0, 100000);'),
   'minimum-height-trees': P('a tree of 20,000 nodes', 'int a0 = 20000; int[][] a1 = BCB.treeEdges(20000, 0);'),
@@ -147,6 +159,12 @@ export default {
   'minimum-cost-to-make-at-least-one-valid-path-in-a-grid': P('a 100×100 grid', 'int[][] a0 = BCB.grid(100, 100, 1, 4);'),
 
   // ---- dynamic programming
+  'maximum-sum-circular-subarray': P('n = 30,000', 'int[] a0 = BCB.ints(30000, -30000, 30000);'),
+  'longest-turbulent-subarray': P('n = 40,000, fully turbulent', 'int[] a0 = new int[40000]; for (int i = 0; i < a0.length; i++) a0[i] = i % 2 == 0 ? BCB.rnd(0, 499999999) : BCB.rnd(500000000, 1000000000);'),
+  'stone-game-iii': DP('n = 50,000', 'int[] a0 = BCB.ints(50000, -1000, 1000);'),
+  'stone-game': DP('500 piles', 'int[] a0 = BCB.ints(500, 1, 499); int sum = 0; for (int x : a0) sum += x; if (sum % 2 == 0) a0[0]++;'),
+  'stone-game-ii': DP('100 piles', 'int[] a0 = BCB.ints(100, 1, 10000);'),
+  'longest-increasing-path-in-a-matrix': DP('a 200 × 200 snake-shaped matrix', 'int[][] a0 = new int[200][200]; for (int i = 0; i < 200; i++) for (int j = 0; j < 200; j++) a0[i][j] = i * 200 + (i % 2 == 0 ? j : 199 - j);'),
   'min-cost-climbing-stairs': DP('1,000 stairs', 'int[] a0 = BCB.ints(1000, 0, 999);'),
   'house-robber': DP('100 houses', 'int[] a0 = BCB.ints(100, 0, 400);'),
   'house-robber-ii': DP('100 houses', 'int[] a0 = BCB.ints(100, 0, 1000);'),
@@ -183,6 +201,8 @@ export default {
   'minimum-cost-to-cut-a-stick': DP('100 cuts on a stick of 10⁶', 'int a0 = 1000000; int[] a1 = BCB.distinct(100, 1, 999999);'),
 
   // ---- greedy
+  'lemonade-change': P('100,000 customers', 'int[] a0 = new int[100000]; for (int i = 0; i < a0.length; i++) a0[i] = i < 50000 ? 5 : BCB.rnd(0, 3) == 0 ? 20 : 10;'),
+  'jump-game-vii': P('s of 100,000 characters, maxJump = 60,000', 'String a0 = "0" + BCB.str(99998, "0001") + "0"; int a1 = 2, a2 = 60000;'),
   'assign-cookies': P('30,000 children and cookies', 'int[] a0 = BCB.ints(30000, 1, 100000); int[] a1 = BCB.ints(30000, 1, 100000);'),
   'best-time-to-buy-and-sell-stock': P('100,000 days', 'int[] a0 = BCB.ints(100000, 0, 10000);'),
   'jump-game': P('10,000 positions, end unreachable', 'int[] a0 = new int[10000]; Arrays.fill(a0, 3); for (int i = 9995; i <= 9998; i++) a0[i] = 0;'),

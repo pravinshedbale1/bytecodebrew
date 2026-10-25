@@ -315,4 +315,121 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'sum-of-all-subset-xor-totals', title: 'Sum of All Subset XOR Totals', level: 'Easy',
+    summary: 'The XOR total of a subset is the XOR of its elements (0 for the empty subset). Return the sum of the XOR totals of every subset of nums.',
+    method: 'subsetXORSum', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[1, 3]], out: 6 },
+      { in: [[5, 1, 6]], out: 28 },
+      { in: [[3, 4, 5, 6, 7, 8]], out: 480 },
+      { in: [[1]] },
+      { in: [[20, 20]] },
+      { in: [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]] },
+    ],
+    ref: `class Solution {
+    public int subsetXORSum(int[] nums) {
+        int or = 0;
+        for (int x : nums) or |= x;
+        return or << (nums.length - 1);
+    }
+}`,
+  },
+  {
+    slug: 'matchsticks-to-square', title: 'Matchsticks to Square', level: 'Medium',
+    summary: 'Return true if all the matchsticks can be used, each exactly once and unbroken, to form a square.',
+    method: 'makesquare', params: [['int[]', 'matchsticks']], returns: 'boolean',
+    tests: [
+      { in: [[1, 1, 2, 2, 2]], out: true },
+      { in: [[3, 3, 3, 3, 4]], out: false },
+      { in: [[5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3]] },
+      { in: [[1, 1, 1]] },
+      { in: [[100000000, 100000000, 100000000, 100000000]] },
+      { in: [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 5, 4, 3, 2, 1]] },
+      { in: [[5969561, 8742425, 2513572, 3352059, 9084275, 2194427, 1017540, 2324577, 6810719, 8936380, 7868365, 2755770, 9954463, 9912280, 4713511]] },
+      { in: [[10, 6, 5, 5, 5, 3, 3, 3, 2, 2, 2, 2]] },
+    ],
+    ref: `class Solution {
+    public boolean makesquare(int[] matchsticks) {
+        long sum = 0;
+        for (int m : matchsticks) sum += m;
+        if (matchsticks.length < 4 || sum % 4 != 0) return false;
+        long side = sum / 4;
+        Integer[] sticks = new Integer[matchsticks.length];
+        for (int i = 0; i < sticks.length; i++) sticks[i] = matchsticks[i];
+        Arrays.sort(sticks, Collections.reverseOrder());
+        if (sticks[0] > side) return false;
+        return place(sticks, 0, new long[4], side);
+    }
+    private boolean place(Integer[] s, int i, long[] sides, long side) {
+        if (i == s.length) return true;
+        for (int k = 0; k < 4; k++) {
+            if (sides[k] + s[i] > side) continue;
+            if (k > 0 && sides[k] == sides[k - 1]) continue;
+            sides[k] += s[i];
+            if (place(s, i + 1, sides, side)) return true;
+            sides[k] -= s[i];
+        }
+        return false;
+    }
+}`,
+  },
+  {
+    slug: 'n-queens-ii', title: 'N-Queens II', level: 'Hard',
+    summary: 'Return the number of ways to place n queens on an n × n chessboard so that no two attack each other.',
+    method: 'totalNQueens', params: [['int', 'n']], returns: 'int',
+    tests: [
+      { in: [4], out: 2 },
+      { in: [1], out: 1 },
+      { in: [2] },
+      { in: [3] },
+      { in: [6] },
+      { in: [8] },
+      { in: [9] },
+    ],
+    ref: `class Solution {
+    public int totalNQueens(int n) { return count(n, 0, 0, 0, 0); }
+    private int count(int n, int row, int cols, int d1, int d2) {
+        if (row == n) return 1;
+        int total = 0, free = ~(cols | d1 | d2) & ((1 << n) - 1);
+        while (free != 0) {
+            int bit = free & -free;
+            free -= bit;
+            total += count(n, row + 1, cols | bit, (d1 | bit) << 1, (d2 | bit) >> 1);
+        }
+        return total;
+    }
+}`,
+  },
+  {
+    slug: 'word-break-ii', title: 'Word Break II', level: 'Hard',
+    summary: 'Insert spaces into s so that every piece is a dictionary word, and return all such sentences in any order. Words may be reused.',
+    method: 'wordBreak', params: [['String', 's'], ['List<String>', 'wordDict']], returns: 'List<String>', check: 'any-order',
+    tests: [
+      { in: ['catsanddog', ['cat', 'cats', 'and', 'sand', 'dog']], out: ['cats and dog', 'cat sand dog'] },
+      { in: ['pineapplepenapple', ['apple', 'pen', 'applepen', 'pine', 'pineapple']], out: ['pine apple pen apple', 'pineapple pen apple', 'pine applepen apple'] },
+      { in: ['catsandog', ['cats', 'dog', 'sand', 'and', 'cat']], out: [] },
+      { in: ['a', ['a']] },
+      { in: ['aaaa', ['a', 'aa']] },
+      { in: ['abcd', ['a', 'abc', 'b', 'cd']] },
+      { in: ['aaaaaaaaaaaaaaaaaaab', ['a', 'aa', 'aaa', 'aaaa', 'aaaaa']] },
+    ],
+    ref: `class Solution {
+    public List<String> wordBreak(String s, List<String> wordDict) {
+        return go(s, 0, new HashSet<>(wordDict), new HashMap<>());
+    }
+    private List<String> go(String s, int i, Set<String> dict, Map<Integer, List<String>> memo) {
+        if (memo.containsKey(i)) return memo.get(i);
+        List<String> out = new ArrayList<>();
+        if (i == s.length()) out.add("");
+        for (int j = i + 1; j <= s.length(); j++) {
+            String w = s.substring(i, j);
+            if (!dict.contains(w)) continue;
+            for (String rest : go(s, j, dict, memo)) out.add(rest.isEmpty() ? w : w + " " + rest);
+        }
+        memo.put(i, out);
+        return out;
+    }
+}`,
+  },
 ];

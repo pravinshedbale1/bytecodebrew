@@ -14,7 +14,7 @@ export default {
         ],
         time: 'O(n·M)', space: 'O(1)',
         why: 'M is the largest pile (up to 10⁹); each speed costs a pass over the n piles.',
-        timesOut: [3],
+        timesOut: [3, 'generated'],
         code: {
           java: r`class Solution {
     public int minEatingSpeed(int[] piles, int h) {
@@ -552,7 +552,7 @@ public:
         ],
         time: 'O(n·T)', space: 'O(1)',
         why: 'T is the answer itself, which can reach 10¹⁴ (one slow bus making 10⁷ trips).',
-        timesOut: [3],
+        timesOut: [3, 'generated'],
         code: {
           java: r`class Solution {
     public long minimumTime(int[] time, int totalTrips) {
@@ -734,6 +734,7 @@ public:
     return d;
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Optimal', name: 'Binary search the largest feasible gap',

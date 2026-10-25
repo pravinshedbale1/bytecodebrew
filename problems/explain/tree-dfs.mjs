@@ -36,4 +36,23 @@ export default {
   'serialize-and-deserialize-binary-tree': {
     explain: 'The tests turn the tree into a string with your serialize, rebuild it with your deserialize, and compare. The rebuilt tree must be the same as the original, `[1,2,3,null,null,4,5]`.',
   },
+  'binary-tree-inorder-traversal': {
+    explain: 'Node 1 has no left child, so it comes first. Then its right subtree: 2 has left child 3, so 3 comes before 2. The answer is `[1,3,2]`.',
+  },
+  'binary-tree-preorder-traversal': {
+    explain: 'Preorder visits 1 first, then its right subtree rooted at 2, where 2 comes before its left child 3. The answer is `[1,2,3]`.',
+  },
+  'binary-tree-postorder-traversal': {
+    explain: 'Postorder finishes the deepest node first: 3 (left child of 2), then 2, then the root 1. The answer is `[3,2,1]`.',
+  },
+  'subtree-of-another-tree': {
+    explain: 'The node 4 in `root` has children 1 and 2 and nothing below them, which is exactly `subRoot`, so the answer is `true`.',
+    more: 'For example, if node 2 had an extra child 0 underneath, the subtree at 4 would no longer match, because a subtree must include every descendant.',
+  },
+  'construct-quad-tree': {
+    explain: 'The 2 × 2 grid mixes 0s and 1s, so the root is an inner node, shown as [0,1]. Each quarter is a single cell and so a leaf: 0, 1, 1, 0. The output is `[[0,1],[1,0],[1,1],[1,1],[1,0]]`.',
+  },
+  'delete-leaves-with-a-given-value': {
+    explain: 'The leaves with value 2 (under node 2 on the left, and under node 3) are deleted. The left 2 then becomes a leaf with value 2, so it goes too. What is left is 1 → 3 → 4: `[1,null,3,null,4]`.',
+  },
 };

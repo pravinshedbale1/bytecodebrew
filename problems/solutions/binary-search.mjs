@@ -199,7 +199,7 @@ public:
         ],
         time: 'O(n)', space: 'O(1)',
         why: 'Up to n API calls. With n near 2³¹ that is billions of calls.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`/* The isBadVersion API is defined in the parent class VersionControl:
       boolean isBadVersion(int version); */
@@ -1363,6 +1363,373 @@ public:
         }
     }
     return 0;
+};`,
+        },
+      },
+    ],
+  },
+  'guess-number-higher-or-lower': {
+    pattern: 'Binary search on a range of numbers, driven by an API',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Guess 1, 2, 3, …',
+        idea: 'Call `guess` on every number from 1 upwards until it returns 0.',
+        steps: [
+          'Start at `num = 1`.',
+          'Call `guess(num)`; if it returns 0, return `num`, otherwise move on to `num + 1`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Up to n calls, about 2 · 10⁹ when the pick is near 2³¹ − 1. It ignores the "higher or lower" information completely.',
+        code: {
+          java: r`class Solution extends GuessGame {
+    public int guessNumber(int n) {
+        for (int num = 1; ; num++) if (guess(num) == 0) return num;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int guessNumber(int n) {
+        for (int num = 1; ; num++) if (guess(num) == 0) return num;
+    }
+};`,
+          python: r`class Solution:
+    def guessNumber(self, n: int) -> int:
+        num = 1
+        while guess(num) != 0:
+            num += 1
+        return num`,
+          javascript: r`var guessNumber = function(n) {
+    let num = 1;
+    while (guess(num) !== 0) num++;
+    return num;
+};`,
+        },
+        timesOut: [4, 5, 'generated'],
+      },
+      {
+        level: 'Optimal', name: 'Binary search',
+        idea: 'Keep the range `[lo, hi]` that still contains the pick and guess its middle; the answer tells you which half to keep.',
+        steps: [
+          'Set `lo = 1`, `hi = n`.',
+          'Let `mid = lo + (hi − lo) / 2` and `g = guess(mid)`. If `g == 0`, return `mid`.',
+          'If `g == -1` (too high), set `hi = mid − 1`; otherwise set `lo = mid + 1`. Repeat.',
+        ],
+        time: 'O(log n)', space: 'O(1)',
+        why: 'Each call halves the range, so at most 31 calls for n up to 2³¹ − 1. Writing `(lo + hi) / 2` overflows a 32-bit int when both are near 2³¹ − 1 (the last test); `lo + (hi − lo) / 2` cannot.',
+        code: {
+          java: r`class Solution extends GuessGame {
+    public int guessNumber(int n) {
+        int lo = 1, hi = n;
+        while (true) {
+            int mid = lo + (hi - lo) / 2, g = guess(mid);
+            if (g == 0) return mid;
+            if (g < 0) hi = mid - 1; else lo = mid + 1;
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int guessNumber(int n) {
+        int lo = 1, hi = n;
+        while (true) {
+            int mid = lo + (hi - lo) / 2, g = guess(mid);
+            if (g == 0) return mid;
+            if (g < 0) hi = mid - 1; else lo = mid + 1;
+        }
+    }
+};`,
+          python: r`class Solution:
+    def guessNumber(self, n: int) -> int:
+        lo, hi = 1, n
+        while True:
+            mid = (lo + hi) // 2
+            g = guess(mid)
+            if g == 0:
+                return mid
+            if g < 0:
+                hi = mid - 1
+            else:
+                lo = mid + 1`,
+          javascript: r`var guessNumber = function(n) {
+    let lo = 1, hi = n;
+    while (true) {
+        const mid = lo + Math.floor((hi - lo) / 2), g = guess(mid);
+        if (g === 0) return mid;
+        if (g < 0) hi = mid - 1; else lo = mid + 1;
+    }
+};`,
+        },
+      },
+    ],
+  },
+  'search-in-rotated-sorted-array-ii': {
+    pattern: 'Binary search on the sorted half, shrinking ends on ties',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Linear scan',
+        idea: 'Look at every element.',
+        steps: [
+          'For each `x` in `nums`, return `true` if `x == target`.',
+          'Return `false`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Always correct. Interestingly, its worst case matches the binary search below, because duplicates can hide which half is sorted. The interviewer still wants the O(log n) average behaviour and a clear explanation of the worst case.',
+        code: {
+          java: r`class Solution {
+    public boolean search(int[] nums, int target) {
+        for (int x : nums) if (x == target) return true;
+        return false;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool search(vector<int>& nums, int target) {
+        return find(nums.begin(), nums.end(), target) != nums.end();
+    }
+};`,
+          python: r`class Solution:
+    def search(self, nums: List[int], target: int) -> bool:
+        return target in nums`,
+          javascript: r`var search = function(nums, target) {
+    return nums.includes(target);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Modified binary search',
+        idea: 'As in the no-duplicates version, one side of `mid` is sorted; check whether the target lies within it. When `nums[lo]`, `nums[mid]` and `nums[hi]` are all equal you cannot tell which side is sorted, so drop both ends.',
+        steps: [
+          'While `lo <= hi`: `mid = (lo + hi) / 2`; if `nums[mid] == target`, return `true`.',
+          'If `nums[lo] == nums[mid] == nums[hi]`, do `lo++` and `hi--`.',
+          'Else if `nums[lo] <= nums[mid]` (left half sorted): go left when `nums[lo] <= target < nums[mid]`, otherwise right. Else (right half sorted): go right when `nums[mid] < target <= nums[hi]`, otherwise left.',
+        ],
+        time: 'O(log n) average, O(n) worst', space: 'O(1)',
+        why: 'Dropping the ends is safe: they equal `nums[mid]`, which is not the target. On arrays like `[1,1,1,…,13,1,1]` every step only drops two elements, so the worst case is linear, and no algorithm can do better there, since the 13 could be anywhere.',
+        code: {
+          java: r`class Solution {
+    public boolean search(int[] nums, int target) {
+        int lo = 0, hi = nums.length - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (nums[mid] == target) return true;
+            if (nums[lo] == nums[mid] && nums[mid] == nums[hi]) { lo++; hi--; }
+            else if (nums[lo] <= nums[mid]) {
+                if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;
+            } else {
+                if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;
+            }
+        }
+        return false;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool search(vector<int>& nums, int target) {
+        int lo = 0, hi = (int) nums.size() - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2;
+            if (nums[mid] == target) return true;
+            if (nums[lo] == nums[mid] && nums[mid] == nums[hi]) { lo++; hi--; }
+            else if (nums[lo] <= nums[mid]) {
+                if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;
+            } else {
+                if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;
+            }
+        }
+        return false;
+    }
+};`,
+          python: r`class Solution:
+    def search(self, nums: List[int], target: int) -> bool:
+        lo, hi = 0, len(nums) - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if nums[mid] == target:
+                return True
+            if nums[lo] == nums[mid] == nums[hi]:
+                lo += 1
+                hi -= 1
+            elif nums[lo] <= nums[mid]:
+                if nums[lo] <= target < nums[mid]:
+                    hi = mid - 1
+                else:
+                    lo = mid + 1
+            else:
+                if nums[mid] < target <= nums[hi]:
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
+        return False`,
+          javascript: r`var search = function(nums, target) {
+    let lo = 0, hi = nums.length - 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (nums[mid] === target) return true;
+        if (nums[lo] === nums[mid] && nums[mid] === nums[hi]) { lo++; hi--; }
+        else if (nums[lo] <= nums[mid]) {
+            if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;
+        } else {
+            if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;
+        }
+    }
+    return false;
+};`,
+        },
+      },
+    ],
+  },
+  'find-in-mountain-array': {
+    pattern: 'Three binary searches: find the peak, then search each slope',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Scan from the left',
+        idea: 'Read values left to right and return the first index equal to `target`.',
+        steps: [
+          'For `i` from 0 to `length() − 1`: if `get(i) == target`, return `i`.',
+          'Return -1.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Correct, and scanning from the left gives the smallest index. But it needs up to n = 10⁴ calls to `get`, far above the limit of 100, so it fails on the large tests.',
+        code: {
+          java: r`class Solution {
+    public int findInMountainArray(int target, MountainArray mountainArr) {
+        for (int i = 0; i < mountainArr.length(); i++) if (mountainArr.get(i) == target) return i;
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int findInMountainArray(int target, MountainArray &mountainArr) {
+        for (int i = 0; i < mountainArr.length(); i++) if (mountainArr.get(i) == target) return i;
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def findInMountainArray(self, target: int, mountainArr: 'MountainArray') -> int:
+        for i in range(mountainArr.length()):
+            if mountainArr.get(i) == target:
+                return i
+        return -1`,
+          javascript: r`var findInMountainArray = function(target, mountainArr) {
+    for (let i = 0; i < mountainArr.length(); i++) if (mountainArr.get(i) === target) return i;
+    return -1;
+};`,
+        },
+        timesOut: [6, 7, 8],
+      },
+      {
+        level: 'Optimal', name: 'Peak, then ascending, then descending',
+        idea: 'Binary-search the peak by comparing neighbours. Then binary-search the increasing side; only if the target is not there, search the decreasing side with the comparison flipped.',
+        steps: [
+          'Peak: with `lo = 0`, `hi = n − 1`, while `lo < hi` take `mid`; if `get(mid) < get(mid + 1)` set `lo = mid + 1`, else `hi = mid`. Now `peak = lo`.',
+          'Search `[0, peak]` as an ascending array; return the index if found.',
+          'Search `[peak + 1, n − 1]` as a descending array (go right when the value is greater than `target`); return the index or -1.',
+        ],
+        time: 'O(log n)', space: 'O(1)',
+        why: 'About 2 · log₂(10⁴) ≈ 28 calls for the peak plus 14 for each slope: roughly 56, inside the 100-call budget. Searching the left slope first returns the smaller index when the value appears on both sides. Caching values you have already read would save a few more calls.',
+        code: {
+          java: r`class Solution {
+    public int findInMountainArray(int target, MountainArray mountainArr) {
+        int n = mountainArr.length();
+        int lo = 0, hi = n - 1;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (mountainArr.get(mid) < mountainArr.get(mid + 1)) lo = mid + 1; else hi = mid;
+        }
+        int peak = lo;
+        lo = 0; hi = peak;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v < target) lo = mid + 1; else hi = mid - 1;
+        }
+        lo = peak + 1; hi = n - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v > target) lo = mid + 1; else hi = mid - 1;
+        }
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int findInMountainArray(int target, MountainArray &mountainArr) {
+        int n = mountainArr.length();
+        int lo = 0, hi = n - 1;
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            if (mountainArr.get(mid) < mountainArr.get(mid + 1)) lo = mid + 1; else hi = mid;
+        }
+        int peak = lo;
+        lo = 0; hi = peak;
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v < target) lo = mid + 1; else hi = mid - 1;
+        }
+        lo = peak + 1; hi = n - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v > target) lo = mid + 1; else hi = mid - 1;
+        }
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def findInMountainArray(self, target: int, mountainArr: 'MountainArray') -> int:
+        n = mountainArr.length()
+        lo, hi = 0, n - 1
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if mountainArr.get(mid) < mountainArr.get(mid + 1):
+                lo = mid + 1
+            else:
+                hi = mid
+        peak = lo
+        lo, hi = 0, peak
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            v = mountainArr.get(mid)
+            if v == target:
+                return mid
+            if v < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        lo, hi = peak + 1, n - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            v = mountainArr.get(mid)
+            if v == target:
+                return mid
+            if v > target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return -1`,
+          javascript: r`var findInMountainArray = function(target, mountainArr) {
+    const n = mountainArr.length();
+    let lo = 0, hi = n - 1;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (mountainArr.get(mid) < mountainArr.get(mid + 1)) lo = mid + 1; else hi = mid;
+    }
+    const peak = lo;
+    lo = 0; hi = peak;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1, v = mountainArr.get(mid);
+        if (v === target) return mid;
+        if (v < target) lo = mid + 1; else hi = mid - 1;
+    }
+    lo = peak + 1; hi = n - 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1, v = mountainArr.get(mid);
+        if (v === target) return mid;
+        if (v > target) lo = mid + 1; else hi = mid - 1;
+    }
+    return -1;
 };`,
         },
       },

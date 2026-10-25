@@ -1,6 +1,6 @@
 # Practice problems with tests
 
-Every problem on the DSA practice ladders (314) can be solved on the site, LeetCode style, in Java,
+Every problem on the DSA practice ladders (390) can be solved on the site, LeetCode style, in Java,
 C++, Python or JavaScript: a starter `Solution` (or design class), **Run** on the examples and
 **Submit** on every test. Passing all tests marks the problem solved. The browser sends code to Judge0
 (`src/lib/judge0.js`). Specs and reference solutions are Java; the other languages share the tests
@@ -9,6 +9,7 @@ and expected outputs.
 ```
 problems/
   specs/<lessonId>.mjs   one file per DSA pattern lesson: problem specs + reference solutions
+  fuzz/<lessonId>.mjs    generated hidden tests (about 40 per problem), see "Generated tests"
   build.mjs              compiles every reference, runs the tests, writes src/data/problems/*.json
 src/lib/judge/
   support.js             Java added to every submission (input parsing, output formatting, TreeNode, ListNode…)
@@ -70,6 +71,33 @@ node problems/langs/check.mjs --solutions .py # only the Python solutions
 It uses g++ when present, else clang++ with `problems/langs/include/bits/stdc++.h`. Judge0 runs
 GCC 14 (C++20), Python 3.13 and Node.js 22.
 
+## Generated tests
+
+Hand-written tests (examples plus a few edge cases) are not enough: a solution can pass five tests and
+still fail LeetCode's hundreds. So every problem also has a seeded generator in
+`problems/fuzz/<lessonId>.mjs` (helpers in `problems/fuzz/lib.mjs`) that adds about 40 hidden tests,
+leaning on what breaks solutions: the smallest and largest sizes, boundary values (±2³¹, 0, 10⁹),
+duplicates, all-equal and sorted input, skewed trees, disconnected graphs, impossible cases.
+
+```js
+// problems/fuzz/two-pointers.mjs
+export default {
+  'sort-colors': (g) => [g.ints(g.len(1, 300, 30), 0, 2)],          // returns one test's argument list
+  'merge-sorted-array': (g) => { …; return m + n ? [a, m, b, n] : null; },  // null = try again
+  'spiral-matrix-ii': { all: [[1], [2], …, [20]] },                  // tiny domains: test every input
+};
+```
+
+- The reference solution computes every expected output, and the seed comes from the slug, so builds
+  are reproducible. Generated tests come after the spec's own tests and are tagged `g: 1`.
+- Inputs must respect the problem's promises (a unique answer, a valid tree, a connected graph, an
+  answer that fits in 32 bits…). The generator enforces those; `problems/text.mjs` then checks every test
+  against the checkable constraints, and `problems/solutions.mjs` runs every Solution-tab approach in all
+  four languages on every test, so a bad input or a wrong reference shows up as a disagreement.
+- Keep inputs small (lengths around 20–60): the hidden tests catch logic errors; `perf.mjs` catches slow code.
+- A deliberately slow approach on the Solution tab can skip them all with `timesOut: ['generated']`.
+- `node problems/build.mjs --check` (CI) fails if a problem has no generator.
+
 ## Performance tests
 
 `problems/perf.mjs` adds a large generated input to problems where brute force would otherwise pass:
@@ -106,7 +134,8 @@ interviews and re-solves) lists its approaches from brute force to optimal. They
       time: 'O(n²)', space: 'O(1)',     // both start with O(
       why: 'Where the complexity comes from, edge cases, trade-offs.',
       code: { java, cpp, python, javascript },  // written as r`…` (String.raw)
-      timesOut: [4],                   // optional, not on Optimal: tests this approach is too slow for
+      timesOut: [4],                   // optional, not on Optimal: hand-written test indices this approach is too slow for,
+                                       // and/or 'generated' to skip every generated test (problems/fuzz)
     },
   ],
 },

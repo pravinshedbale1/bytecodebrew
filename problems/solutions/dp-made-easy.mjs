@@ -189,7 +189,7 @@ public:
         ],
         time: 'O(2ⁿ)', space: 'O(n)',
         why: 'The call tree doubles at every level with massive repetition: n = 45 needs billions of calls.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     public int climbStairs(int n) {
@@ -565,7 +565,7 @@ public:
         ],
         time: 'O(3ⁿ)', space: 'O(n)',
         why: 'Three calls per level with heavy repetition — the call count itself grows like the sequence (about 1.84ⁿ), billions for n = 37.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     public int tribonacci(int n) {

@@ -24,4 +24,17 @@ export default {
   'largest-component-size-by-common-factor': {
     explain: '4 and 6 share the factor 2, 6 and 15 share 3, and 15 and 35 share 5. That chains all four numbers into one component of size 4.',
   },
+  'graph-valid-tree': {
+    explain: 'There are 4 edges for 5 nodes, and they connect everything without a loop: 0 joins 1, 2 and 3, and 1 joins 4. So the answer is `true`.',
+    more: 'For example `[[0,1],[1,2],[2,3],[1,3],[1,4]]` is `false`: 1, 2 and 3 form a cycle.',
+  },
+  'number-of-connected-components-in-an-undirected-graph': {
+    explain: 'Nodes 0, 1 and 2 are linked into one group, and 3 and 4 form another. That is 2 components.',
+  },
+  'find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree': {
+    explain: 'The MST weighs 7. Edges 0 and 1 (weight 1) are in every MST, so they are critical. Edges 2 and 3 (weight 2) are interchangeable, as are 4 and 5 (weight 3), so those four are pseudo-critical; edge 6 is in no MST. The answer is `[[0,1],[2,3,4,5]]`.',
+  },
+  'greatest-common-divisor-traversal': {
+    explain: '2 and 6 share the factor 2, and 3 and 6 share the factor 3, so every index can reach every other through index 2. The answer is `true`.',
+  },
 };

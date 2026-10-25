@@ -22,4 +22,7 @@ export default {
   'word-search-ii': {
     explain: '"oath" can be traced from the top-left "o" down and across neighbouring cells, and "eat" can be traced on the right side. "pea" has no "p" on the board, and "rain" cannot be connected, so the answer is `["oath","eat"]`.',
   },
+  'extra-characters-in-a-string': {
+    explain: 'Take "leet" (indices 0–3) and "code" (indices 5–8). Only the "s" at index 4 is not covered, so the answer is 1.',
+  },
 };

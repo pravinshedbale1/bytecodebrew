@@ -96,4 +96,13 @@ Return the maximum number of cherries you can collect, or \`0\` if there is no v
       'For each state, take the best of the four combinations of previous moves, and add the cherries at both cells (only once if they are on the same cell). Thorns make a state invalid.',
     ],
   },
+  'longest-increasing-path-in-a-matrix': {
+    statement: `Return the length of the longest **strictly increasing** path in \`matrix\`. From each cell you can move left, right, up or down (not diagonally, and not outside the matrix), and each step must go to a strictly larger value.`,
+    constraints: ['m == matrix.length', 'n == matrix[i].length', '1 <= matrix.length, matrix[0].length <= 200', '0 <= matrix[i][j] <= 2^31 - 1'],
+    hints: [
+      'Let f(r, c) be the longest increasing path starting at (r, c). It is 1 plus the best f over neighbours with a larger value.',
+      'Increasing paths can never loop back, so f has no cycles and can be memoised: each cell is computed once.',
+      'Without recursion: count each cell\'s larger neighbours, peel off the cells with none (local maxima) layer by layer like Kahn\'s algorithm; the number of layers is the answer.',
+    ],
+  },
 };

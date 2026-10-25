@@ -76,7 +76,7 @@ function lint(lesson, slug, sol) {
     if (!Array.isArray(a.steps) || a.steps.length < 2) fail(`${at}: needs at least two steps`);
     for (const k of ['time', 'space']) if (a[k] && !/^O\(/.test(a[k])) fail(`${at}: ${k} should be big-O, like O(n log n)`);
     for (const id of LANG_IDS) if (!a.code?.[id]?.trim()) fail(`${at}: no ${id} code`);
-    if (a.timesOut && (a.level === 'Optimal' || !a.timesOut.length || a.timesOut.some((k) => !Number.isInteger(k)))) fail(`${at}: timesOut lists the test indices a slow (non-optimal) approach cannot finish`);
+    if (a.timesOut && (a.level === 'Optimal' || !a.timesOut.length || a.timesOut.some((k) => !Number.isInteger(k) && k !== 'generated'))) fail(`${at}: timesOut lists the test indices (or 'generated') a slow (non-optimal) approach cannot finish`);
   });
   if (sol.approaches.at(-1).level !== 'Optimal') fail(`${where}: the last approach must be the optimal one`);
 }
@@ -87,8 +87,8 @@ const hash = (s) => createHash('sha256').update(s).digest('hex').slice(0, 24);
 /** Runs one approach in one language on every test; returns a list of problems (empty = passed). */
 async function judge(spec, langId, code, withPerf, skip = []) {
   const lang = LANGS[langId];
-  if (skip.some((k) => !spec.tests[k] || spec.tests[k].perf)) return [`timesOut lists ${skip.join(', ')}, which are not correctness tests of this problem`];
-  const tests = spec.tests.filter((t, k) => (!t.perf || (withPerf && lang.perf)) && !skip.includes(k));
+  if (skip.some((k) => k !== 'generated' && (!spec.tests[k] || spec.tests[k].perf || spec.tests[k].g))) return [`timesOut lists ${skip.join(', ')}, which are not hand-written correctness tests of this problem`];
+  const tests = spec.tests.filter((t, k) => (!t.perf || (withPerf && lang.perf)) && !skip.includes(k) && !(t.g && skip.includes('generated')));
   const { source, lineOffset, userLines } = lang.build(spec, code, tests);
   const key = hash(`${langId}\n${source}\n${tests.map((t) => t.out).join('\n')}`);
   if (cache[key]) return [];

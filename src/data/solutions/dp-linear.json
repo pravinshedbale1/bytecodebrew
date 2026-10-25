@@ -563,5 +563,220 @@
     }
    }
   ]
+ },
+ "integer-break": {
+  "pattern": "Unbounded split DP (or the \"use 3s\" observation)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every first piece recursively",
+    "idea": "Choose the first piece `j`, then either keep the rest whole or break it further; take the best product over all choices.",
+    "steps": [
+     "`f(m)` = best product for a number that must be split at least once.",
+     "`f(m) = max over j in [1, m − 1] of j · max(m − j, f(m − j))`.",
+     "Return `f(n)`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Without memoisation the same `f(m)` is recomputed along many paths, roughly doubling with each extra unit of n, so n = 58 is far out of reach.",
+    "code": {
+     "java": "class Solution {\n    public int integerBreak(int n) {\n        int best = 0;\n        for (int j = 1; j < n; j++) best = Math.max(best, j * Math.max(n - j, integerBreak2(n - j)));\n        return best;\n    }\n    private int integerBreak2(int m) { return m < 2 ? 0 : integerBreak(m); }\n}",
+     "cpp": "class Solution {\npublic:\n    int integerBreak(int n) {\n        int best = 0;\n        for (int j = 1; j < n; j++) best = max(best, j * max(n - j, n - j >= 2 ? integerBreak(n - j) : 0));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def integerBreak(self, n: int) -> int:\n        def f(m):\n            best = 0\n            for j in range(1, m):\n                best = max(best, j * max(m - j, f(m - j) if m - j >= 2 else 0))\n            return best\n        return f(n)",
+     "javascript": "var integerBreak = function(n) {\n    const f = (m) => {\n        let best = 0;\n        for (let j = 1; j < m; j++) best = Math.max(best, j * Math.max(m - j, m - j >= 2 ? f(m - j) : 0));\n        return best;\n    };\n    return f(n);\n};"
+    },
+    "timesOut": [
+     5,
+     6,
+     "generated"
+    ]
+   },
+   {
+    "level": "Better",
+    "name": "Bottom-up DP",
+    "idea": "Compute the best product for every value up to n, reusing smaller answers.",
+    "steps": [
+     "`best[1] = 1`.",
+     "For `i` from 2 to `n`: `best[i] = max over j in [1, i − 1] of max(j, best[j]) · max(i − j, best[i − j])`.",
+     "Return `best[n]`, where `n` itself must be split, so the loop for `n` never leaves it whole."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "n values, each trying up to n split points. `max(x, best[x])` lets a part stay whole (for parts, not splitting is allowed); `best[n]` is built only from genuine splits.",
+    "code": {
+     "java": "class Solution {\n    public int integerBreak(int n) {\n        int[] best = new int[n + 1];\n        best[1] = 1;\n        for (int i = 2; i <= n; i++)\n            for (int j = 1; j < i; j++)\n                best[i] = Math.max(best[i], Math.max(j, best[j]) * Math.max(i - j, best[i - j]));\n        return best[n];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int integerBreak(int n) {\n        vector<int> best(n + 1, 0);\n        best[1] = 1;\n        for (int i = 2; i <= n; i++)\n            for (int j = 1; j < i; j++)\n                best[i] = max(best[i], max(j, best[j]) * max(i - j, best[i - j]));\n        return best[n];\n    }\n};",
+     "python": "class Solution:\n    def integerBreak(self, n: int) -> int:\n        best = [0] * (n + 1)\n        best[1] = 1\n        for i in range(2, n + 1):\n            for j in range(1, i):\n                best[i] = max(best[i], max(j, best[j]) * max(i - j, best[i - j]))\n        return best[n]",
+     "javascript": "var integerBreak = function(n) {\n    const best = new Array(n + 1).fill(0);\n    best[1] = 1;\n    for (let i = 2; i <= n; i++)\n        for (let j = 1; j < i; j++)\n            best[i] = Math.max(best[i], Math.max(j, best[j]) * Math.max(i - j, best[i - j]));\n    return best[n];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "As many 3s as possible",
+    "idea": "Any piece of 5 or more is better split (2 · (k − 2) > k), 4 = 2 + 2 changes nothing, and three 2s are worse than two 3s. So the best split uses 3s, plus one 2 or one 4 at the end.",
+    "steps": [
+     "If `n <= 3`, return `n − 1` (the split is forced: 1 + 1 or 1 + 2).",
+     "While `n > 4`, multiply the product by 3 and subtract 3 from `n`.",
+     "Multiply by what is left (2, 3 or 4) and return."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "The loop runs n / 3 times; using fast exponentiation on 3 would make it O(log n). Stopping at 4 avoids leaving a 1 (3 + 1 is worse than 2 + 2). The answer for n = 58 is 3¹⁸ · 4, which still fits in an int.",
+    "code": {
+     "java": "class Solution {\n    public int integerBreak(int n) {\n        if (n <= 3) return n - 1;\n        int product = 1;\n        while (n > 4) { product *= 3; n -= 3; }\n        return product * n;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int integerBreak(int n) {\n        if (n <= 3) return n - 1;\n        int product = 1;\n        while (n > 4) { product *= 3; n -= 3; }\n        return product * n;\n    }\n};",
+     "python": "class Solution:\n    def integerBreak(self, n: int) -> int:\n        if n <= 3:\n            return n - 1\n        product = 1\n        while n > 4:\n            product *= 3\n            n -= 3\n        return product * n",
+     "javascript": "var integerBreak = function(n) {\n    if (n <= 3) return n - 1;\n    let product = 1;\n    while (n > 4) { product *= 3; n -= 3; }\n    return product * n;\n};"
+    }
+   }
+  ]
+ },
+ "maximum-sum-circular-subarray": {
+  "pattern": "Kadane for the maximum and the minimum (wrap = total − min)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every start, every length",
+    "idea": "For each start index, extend the subarray one element at a time around the circle (up to n elements) and track the best running sum.",
+    "steps": [
+     "For each `start`, set `sum = 0`.",
+     "For `len` from 1 to `n`, add `nums[(start + len − 1) % n]` to `sum` and update the best.",
+     "Return the best."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n starts times n lengths: about 9 · 10⁸ steps at n = 3 · 10⁴, which times out on the large test.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubarraySumCircular(int[] nums) {\n        int n = nums.length, best = Integer.MIN_VALUE;\n        for (int start = 0; start < n; start++) {\n            int sum = 0;\n            for (int len = 0; len < n; len++) {\n                sum += nums[(start + len) % n];\n                best = Math.max(best, sum);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxSubarraySumCircular(vector<int>& nums) {\n        int n = nums.size(), best = INT_MIN;\n        for (int start = 0; start < n; start++) {\n            int sum = 0;\n            for (int len = 0; len < n; len++) {\n                sum += nums[(start + len) % n];\n                best = max(best, sum);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxSubarraySumCircular(self, nums: List[int]) -> int:\n        n, best = len(nums), -inf\n        for start in range(n):\n            total = 0\n            for length in range(n):\n                total += nums[(start + length) % n]\n                best = max(best, total)\n        return best",
+     "javascript": "var maxSubarraySumCircular = function(nums) {\n    const n = nums.length;\n    let best = -Infinity;\n    for (let start = 0; start < n; start++) {\n        let sum = 0;\n        for (let len = 0; len < n; len++) {\n            sum += nums[(start + len) % n];\n            best = Math.max(best, sum);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Kadane + best prefix and suffix",
+    "idea": "A wrapping subarray is a suffix plus a prefix that do not overlap. Precompute the best prefix sum ending at or before each index, then combine it with every suffix.",
+    "steps": [
+     "Run Kadane for the best non-wrapping sum.",
+     "Build `bestPrefix[i]` = the largest prefix sum using `nums[0..i]`.",
+     "For each split, combine the suffix sum `nums[i..n − 1]` with `bestPrefix[i − 1]`, and return the overall maximum."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Linear time, and easy to reason about, but it needs an extra array. The total − minimum trick below gets the same answer with O(1) memory.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubarraySumCircular(int[] nums) {\n        int n = nums.length, cur = 0, best = Integer.MIN_VALUE;\n        for (int x : nums) { cur = Math.max(cur + x, x); best = Math.max(best, cur); }\n        int[] bestPrefix = new int[n];\n        int prefix = nums[0];\n        bestPrefix[0] = prefix;\n        for (int i = 1; i < n; i++) { prefix += nums[i]; bestPrefix[i] = Math.max(bestPrefix[i - 1], prefix); }\n        int suffix = 0;\n        for (int i = n - 1; i >= 1; i--) {\n            suffix += nums[i];\n            best = Math.max(best, suffix + bestPrefix[i - 1]);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxSubarraySumCircular(vector<int>& nums) {\n        int n = nums.size(), cur = 0, best = INT_MIN;\n        for (int x : nums) { cur = max(cur + x, x); best = max(best, cur); }\n        vector<int> bestPrefix(n);\n        int prefix = nums[0];\n        bestPrefix[0] = prefix;\n        for (int i = 1; i < n; i++) { prefix += nums[i]; bestPrefix[i] = max(bestPrefix[i - 1], prefix); }\n        int suffix = 0;\n        for (int i = n - 1; i >= 1; i--) {\n            suffix += nums[i];\n            best = max(best, suffix + bestPrefix[i - 1]);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxSubarraySumCircular(self, nums: List[int]) -> int:\n        n = len(nums)\n        cur, best = 0, -inf\n        for x in nums:\n            cur = max(cur + x, x)\n            best = max(best, cur)\n        best_prefix, prefix = [0] * n, 0\n        for i, x in enumerate(nums):\n            prefix += x\n            best_prefix[i] = prefix if i == 0 else max(best_prefix[i - 1], prefix)\n        suffix = 0\n        for i in range(n - 1, 0, -1):\n            suffix += nums[i]\n            best = max(best, suffix + best_prefix[i - 1])\n        return best",
+     "javascript": "var maxSubarraySumCircular = function(nums) {\n    const n = nums.length;\n    let cur = 0, best = -Infinity;\n    for (const x of nums) { cur = Math.max(cur + x, x); best = Math.max(best, cur); }\n    const bestPrefix = new Array(n);\n    let prefix = nums[0];\n    bestPrefix[0] = prefix;\n    for (let i = 1; i < n; i++) { prefix += nums[i]; bestPrefix[i] = Math.max(bestPrefix[i - 1], prefix); }\n    let suffix = 0;\n    for (let i = n - 1; i >= 1; i--) {\n        suffix += nums[i];\n        best = Math.max(best, suffix + bestPrefix[i - 1]);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "max(Kadane max, total − Kadane min)",
+    "idea": "A wrapping subarray leaves out one contiguous middle block, so its sum is `total − middle`. The best wrap removes the minimum-sum subarray. Track the maximum and minimum subarray sums in the same pass.",
+    "steps": [
+     "In one pass, maintain Kadane's running maximum and running minimum, plus the total.",
+     "If the best maximum is negative (all numbers negative), return it.",
+     "Otherwise return `max(best, total − worst)`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "When every number is negative, the minimum subarray is the whole array, and `total − worst = 0` would describe an empty subarray, which is not allowed. That guard is the classic trap.",
+    "code": {
+     "java": "class Solution {\n    public int maxSubarraySumCircular(int[] nums) {\n        int total = 0, curMax = 0, best = Integer.MIN_VALUE, curMin = 0, worst = Integer.MAX_VALUE;\n        for (int x : nums) {\n            total += x;\n            curMax = Math.max(curMax + x, x); best = Math.max(best, curMax);\n            curMin = Math.min(curMin + x, x); worst = Math.min(worst, curMin);\n        }\n        return best < 0 ? best : Math.max(best, total - worst);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxSubarraySumCircular(vector<int>& nums) {\n        int total = 0, curMax = 0, best = INT_MIN, curMin = 0, worst = INT_MAX;\n        for (int x : nums) {\n            total += x;\n            curMax = max(curMax + x, x); best = max(best, curMax);\n            curMin = min(curMin + x, x); worst = min(worst, curMin);\n        }\n        return best < 0 ? best : max(best, total - worst);\n    }\n};",
+     "python": "class Solution:\n    def maxSubarraySumCircular(self, nums: List[int]) -> int:\n        total, cur_max, best, cur_min, worst = 0, 0, -inf, 0, inf\n        for x in nums:\n            total += x\n            cur_max = max(cur_max + x, x)\n            best = max(best, cur_max)\n            cur_min = min(cur_min + x, x)\n            worst = min(worst, cur_min)\n        return best if best < 0 else max(best, total - worst)",
+     "javascript": "var maxSubarraySumCircular = function(nums) {\n    let total = 0, curMax = 0, best = -Infinity, curMin = 0, worst = Infinity;\n    for (const x of nums) {\n        total += x;\n        curMax = Math.max(curMax + x, x); best = Math.max(best, curMax);\n        curMin = Math.min(curMin + x, x); worst = Math.min(worst, curMin);\n    }\n    return best < 0 ? best : Math.max(best, total - worst);\n};"
+    }
+   }
+  ]
+ },
+ "longest-turbulent-subarray": {
+  "pattern": "DP on the last comparison (up / down run lengths)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "From each start index, extend to the right while the comparison sign keeps flipping, and record the longest run.",
+    "steps": [
+     "For each `i`, set `len = 1` and walk `j = i + 1, i + 2, …`.",
+     "Stop at an equal pair, or when the sign of `arr[j] − arr[j − 1]` does not flip relative to the previous step.",
+     "Track the maximum `len`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "On a fully turbulent array every start extends to the end, giving about n² / 2 = 8 · 10⁸ steps for n = 4 · 10⁴, so it times out on the large test.",
+    "code": {
+     "java": "class Solution {\n    public int maxTurbulenceSize(int[] arr) {\n        int n = arr.length, best = 1;\n        for (int i = 0; i < n; i++) {\n            int len = 1, prev = 0;\n            for (int j = i + 1; j < n; j++) {\n                int s = Integer.compare(arr[j], arr[j - 1]);\n                if (s == 0 || s == prev) break;\n                len++; prev = s;\n            }\n            best = Math.max(best, len);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxTurbulenceSize(vector<int>& arr) {\n        int n = arr.size(), best = 1;\n        for (int i = 0; i < n; i++) {\n            int len = 1, prev = 0;\n            for (int j = i + 1; j < n; j++) {\n                int s = (arr[j] > arr[j - 1]) - (arr[j] < arr[j - 1]);\n                if (s == 0 || s == prev) break;\n                len++; prev = s;\n            }\n            best = max(best, len);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxTurbulenceSize(self, arr: List[int]) -> int:\n        n, best = len(arr), 1\n        for i in range(n):\n            length, prev = 1, 0\n            for j in range(i + 1, n):\n                s = (arr[j] > arr[j - 1]) - (arr[j] < arr[j - 1])\n                if s == 0 or s == prev:\n                    break\n                length += 1\n                prev = s\n            best = max(best, length)\n        return best",
+     "javascript": "var maxTurbulenceSize = function(arr) {\n    const n = arr.length;\n    let best = 1;\n    for (let i = 0; i < n; i++) {\n        let len = 1, prev = 0;\n        for (let j = i + 1; j < n; j++) {\n            const s = Math.sign(arr[j] - arr[j - 1]);\n            if (s === 0 || s === prev) break;\n            len++; prev = s;\n        }\n        best = Math.max(best, len);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Up and down run lengths",
+    "idea": "Keep two numbers: the longest turbulent subarray ending here whose last step went up, and the one whose last step went down. Each new step extends the opposite one.",
+    "steps": [
+     "Start with `up = down = best = 1`.",
+     "If `arr[i] > arr[i − 1]`: `up = down + 1`, `down = 1`. If smaller: `down = up + 1`, `up = 1`. If equal: both become 1.",
+     "Update `best` with the larger of the two after each step."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "A step up can only follow a step down in a turbulent run, so the new up-length is the old down-length + 1. This is a two-state DP, the same idea as \"wiggle subsequence\" but for contiguous runs. A sliding window over sign changes is an equivalent view.",
+    "code": {
+     "java": "class Solution {\n    public int maxTurbulenceSize(int[] arr) {\n        int best = 1, up = 1, down = 1;\n        for (int i = 1; i < arr.length; i++) {\n            if (arr[i] > arr[i - 1]) { up = down + 1; down = 1; }\n            else if (arr[i] < arr[i - 1]) { down = up + 1; up = 1; }\n            else { up = 1; down = 1; }\n            best = Math.max(best, Math.max(up, down));\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxTurbulenceSize(vector<int>& arr) {\n        int best = 1, up = 1, down = 1;\n        for (size_t i = 1; i < arr.size(); i++) {\n            if (arr[i] > arr[i - 1]) { up = down + 1; down = 1; }\n            else if (arr[i] < arr[i - 1]) { down = up + 1; up = 1; }\n            else { up = 1; down = 1; }\n            best = max(best, max(up, down));\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def maxTurbulenceSize(self, arr: List[int]) -> int:\n        best = up = down = 1\n        for i in range(1, len(arr)):\n            if arr[i] > arr[i - 1]:\n                up, down = down + 1, 1\n            elif arr[i] < arr[i - 1]:\n                down, up = up + 1, 1\n            else:\n                up = down = 1\n            best = max(best, up, down)\n        return best",
+     "javascript": "var maxTurbulenceSize = function(arr) {\n    let best = 1, up = 1, down = 1;\n    for (let i = 1; i < arr.length; i++) {\n        if (arr[i] > arr[i - 1]) { up = down + 1; down = 1; }\n        else if (arr[i] < arr[i - 1]) { down = up + 1; up = 1; }\n        else { up = 1; down = 1; }\n        best = Math.max(best, up, down);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "stone-game-iii": {
+  "pattern": "Game DP on score difference (minimax as max of negatives)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursive minimax",
+    "idea": "Let `diff(i)` be the best score difference (player to move minus opponent) from stone `i` on. Try taking 1, 2 or 3 stones and subtract the opponent's best difference afterwards.",
+    "steps": [
+     "`diff(n) = 0`.",
+     "`diff(i) = max over k in 1..3 (with i + k <= n) of (sum of stones i..i + k − 1) − diff(i + k)`.",
+     "Compare `diff(0)` with 0 to name the winner."
+    ],
+    "time": "O(3ⁿ)",
+    "space": "O(n)",
+    "why": "Each call branches three ways and nothing is cached, so it is exponential and only survives tiny inputs.",
+    "code": {
+     "java": "class Solution {\n    public String stoneGameIII(int[] stoneValue) {\n        int d = diff(stoneValue, 0);\n        return d > 0 ? \"Alice\" : d < 0 ? \"Bob\" : \"Tie\";\n    }\n    private int diff(int[] v, int i) {\n        if (i == v.length) return 0;\n        int best = Integer.MIN_VALUE, take = 0;\n        for (int k = 0; k < 3 && i + k < v.length; k++) {\n            take += v[i + k];\n            best = Math.max(best, take - diff(v, i + k + 1));\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\n    int diff(vector<int>& v, int i) {\n        if (i == (int) v.size()) return 0;\n        int best = INT_MIN, take = 0;\n        for (int k = 0; k < 3 && i + k < (int) v.size(); k++) {\n            take += v[i + k];\n            best = max(best, take - diff(v, i + k + 1));\n        }\n        return best;\n    }\npublic:\n    string stoneGameIII(vector<int>& stoneValue) {\n        int d = diff(stoneValue, 0);\n        return d > 0 ? \"Alice\" : d < 0 ? \"Bob\" : \"Tie\";\n    }\n};",
+     "python": "class Solution:\n    def stoneGameIII(self, stoneValue: List[int]) -> str:\n        n = len(stoneValue)\n        def diff(i):\n            if i == n:\n                return 0\n            best, take = -inf, 0\n            for k in range(3):\n                if i + k >= n:\n                    break\n                take += stoneValue[i + k]\n                best = max(best, take - diff(i + k + 1))\n            return best\n        d = diff(0)\n        return \"Alice\" if d > 0 else \"Bob\" if d < 0 else \"Tie\"",
+     "javascript": "var stoneGameIII = function(stoneValue) {\n    const n = stoneValue.length;\n    const diff = (i) => {\n        if (i === n) return 0;\n        let best = -Infinity, take = 0;\n        for (let k = 0; k < 3 && i + k < n; k++) {\n            take += stoneValue[i + k];\n            best = Math.max(best, take - diff(i + k + 1));\n        }\n        return best;\n    };\n    const d = diff(0);\n    return d > 0 ? \"Alice\" : d < 0 ? \"Bob\" : \"Tie\";\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Bottom-up difference DP",
+    "idea": "Fill `dp[i]` from the end of the row backwards. Each entry depends only on the next three, so every position is solved once.",
+    "steps": [
+     "Set `dp[n] = 0` (and treat positions past the end as unavailable).",
+     "For `i` from `n − 1` down to 0: `dp[i] = max over k = 1..3 of (stones i..i + k − 1) − dp[i + k]`.",
+     "Return \"Alice\" if `dp[0] > 0`, \"Bob\" if `< 0`, otherwise \"Tie\"."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Three choices per position. Storing the difference instead of both scores turns a two-player game into one maximisation: the opponent's best outcome is subtracted. Only dp[i + 1..i + 3] are read, so four rolling variables would make it O(1) space.",
+    "code": {
+     "java": "class Solution {\n    public String stoneGameIII(int[] stoneValue) {\n        int n = stoneValue.length;\n        int[] dp = new int[n + 4];\n        for (int i = n - 1; i >= 0; i--) {\n            int take = 0;\n            dp[i] = Integer.MIN_VALUE;\n            for (int k = 0; k < 3 && i + k < n; k++) {\n                take += stoneValue[i + k];\n                dp[i] = Math.max(dp[i], take - dp[i + k + 1]);\n            }\n        }\n        return dp[0] > 0 ? \"Alice\" : dp[0] < 0 ? \"Bob\" : \"Tie\";\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string stoneGameIII(vector<int>& stoneValue) {\n        int n = stoneValue.size();\n        vector<int> dp(n + 4, 0);\n        for (int i = n - 1; i >= 0; i--) {\n            int take = 0;\n            dp[i] = INT_MIN;\n            for (int k = 0; k < 3 && i + k < n; k++) {\n                take += stoneValue[i + k];\n                dp[i] = max(dp[i], take - dp[i + k + 1]);\n            }\n        }\n        return dp[0] > 0 ? \"Alice\" : dp[0] < 0 ? \"Bob\" : \"Tie\";\n    }\n};",
+     "python": "class Solution:\n    def stoneGameIII(self, stoneValue: List[int]) -> str:\n        n = len(stoneValue)\n        dp = [0] * (n + 4)\n        for i in range(n - 1, -1, -1):\n            take, best = 0, -inf\n            for k in range(3):\n                if i + k >= n:\n                    break\n                take += stoneValue[i + k]\n                best = max(best, take - dp[i + k + 1])\n            dp[i] = best\n        return \"Alice\" if dp[0] > 0 else \"Bob\" if dp[0] < 0 else \"Tie\"",
+     "javascript": "var stoneGameIII = function(stoneValue) {\n    const n = stoneValue.length, dp = new Array(n + 4).fill(0);\n    for (let i = n - 1; i >= 0; i--) {\n        let take = 0;\n        dp[i] = -Infinity;\n        for (let k = 0; k < 3 && i + k < n; k++) {\n            take += stoneValue[i + k];\n            dp[i] = Math.max(dp[i], take - dp[i + k + 1]);\n        }\n    }\n    return dp[0] > 0 ? \"Alice\" : dp[0] < 0 ? \"Bob\" : \"Tie\";\n};"
+    }
+   }
+  ]
  }
 }

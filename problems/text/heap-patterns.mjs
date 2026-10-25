@@ -119,4 +119,41 @@ Return the largest capital you can have at the end.`,
       'Sort projects by required capital. Each round, push every newly affordable project\'s profit into a max-heap, then take the top. Stop early if the heap is empty.',
     ],
   },
+  'single-threaded-cpu': {
+    statement: `\`tasks[i] = [enqueueTime_i, processingTime_i]\` describes task \`i\`: it becomes available at time \`enqueueTime_i\` and takes \`processingTime_i\` units to finish.
+
+A single-threaded CPU processes at most one task at a time:
+
+- if the CPU is idle and no task is available, it stays idle;
+- if the CPU is idle and tasks are available, it picks the one with the **shortest processing time**, breaking ties by the **smallest index**;
+- once started, a task runs to completion without interruption, and the CPU can pick the next task the moment it finishes.
+
+Return the order in which the CPU processes the tasks.`,
+    constraints: ['n == tasks.length', '1 <= n <= 1e5', '1 <= tasks[i][j] <= 1e9'],
+    hints: [
+      'Simulate time. Sort the task indices by enqueue time so you can add newly available tasks in order.',
+      'Keep the available tasks in a min-heap ordered by (processing time, index). Whenever the CPU is free, pop the top.',
+      'If the heap is empty, jump the clock forward to the next enqueue time instead of ticking one unit at a time. Use a 64-bit clock: total processing time can reach 10¹⁴.',
+    ],
+  },
+  'reorganize-string': {
+    statement: `Rearrange the characters of \`s\` so that no two adjacent characters are the same. Return any valid arrangement, or \`""\` if it is impossible.`,
+    constraints: ['1 <= s.length <= 500', '`s` has only lowercase English letters'],
+    hints: [
+      'When is it impossible? Think about the most frequent letter: it needs a different letter between every two of its copies.',
+      'It is possible exactly when the highest count is at most ⌈n / 2⌉, that is (n + 1) / 2 in integer division.',
+      'Place the most frequent letter at indices 0, 2, 4, …, then keep filling the remaining even indices and wrap around to the odd ones with the other letters. Alternatively, greedily take the two most frequent letters from a max-heap each round.',
+    ],
+  },
+  'longest-happy-string': {
+    statement: `A string is **happy** if it contains only the letters \`"a"\`, \`"b"\` and \`"c"\` and never contains \`"aaa"\`, \`"bbb"\` or \`"ccc"\` as a substring.
+
+Given \`a\`, \`b\` and \`c\`, return the **longest** happy string that uses at most \`a\` letters \`"a"\`, at most \`b\` letters \`"b"\` and at most \`c\` letters \`"c"\`. If several are equally long, return any of them. If none exists, return \`""\`.`,
+    constraints: ['0 <= a, b, c <= 100', 'a + b + c > 0'],
+    hints: [
+      'Greedy: at every step, try to use the letter you have the most of left, because that is the one most likely to be stranded.',
+      'If the last two letters you wrote are already that letter, use the letter with the second-highest count instead (if any remain).',
+      'Stop when neither choice is possible. A max-heap of (count, letter), or simply sorting three counts each step, finds the top two.',
+    ],
+  },
 };

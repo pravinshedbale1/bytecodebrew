@@ -1167,4 +1167,339 @@ public:
       },
     ],
   },
+  'add-binary': {
+    pattern: 'Digit-by-digit addition with a carry (base 2)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Convert to integers and back',
+        idea: 'Parse both strings as binary numbers, add them, and print the sum in binary.',
+        steps: [
+          'Convert `a` and `b` to integers (base 2).',
+          'Add them and convert the sum back to a binary string.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Inputs can have 10⁴ bits, while a 64-bit integer holds 63. The long tests overflow in Java, C++ and JavaScript (Python\'s big integers survive, but that dodges the point of the exercise).',
+        code: {
+          java: r`class Solution {
+    public String addBinary(String a, String b) {
+        return Long.toBinaryString(Long.parseLong(a, 2) + Long.parseLong(b, 2));
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string addBinary(string a, string b) {
+        unsigned long long s = stoull(a, nullptr, 2) + stoull(b, nullptr, 2);
+        if (s == 0) return "0";
+        string out;
+        while (s) { out += (char) ('0' + (s & 1)); s >>= 1; }
+        reverse(out.begin(), out.end());
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def addBinary(self, a: str, b: str) -> str:
+        return bin(int(a, 2) + int(b, 2))[2:]`,
+          javascript: r`var addBinary = function(a, b) {
+    return (parseInt(a, 2) + parseInt(b, 2)).toString(2);
+};`,
+        },
+        timesOut: [4, 5],
+      },
+      {
+        level: 'Optimal', name: 'Two pointers from the right with a carry',
+        idea: 'Add the strings like grade-school addition: walk both from the last bit, add the bits and the carry, write the low bit, and carry the high bit.',
+        steps: [
+          'Set `i`, `j` to the last indices and `carry = 0`.',
+          'While `i >= 0`, `j >= 0` or `carry > 0`: `sum = carry + bit(a, i) + bit(b, j)`; append `sum % 2`; `carry = sum / 2`; move both pointers left.',
+          'Reverse the appended bits and return them.',
+        ],
+        time: 'O(max(m, n))', space: 'O(max(m, n))',
+        why: 'One pass over the longer string; the output needs at most one extra bit. Looping while the carry is non-zero handles "1" + "1" = "10" without a special case.',
+        code: {
+          java: r`class Solution {
+    public String addBinary(String a, String b) {
+        StringBuilder sb = new StringBuilder();
+        int i = a.length() - 1, j = b.length() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry > 0) {
+            int s = carry;
+            if (i >= 0) s += a.charAt(i--) - '0';
+            if (j >= 0) s += b.charAt(j--) - '0';
+            sb.append(s & 1);
+            carry = s >> 1;
+        }
+        return sb.reverse().toString();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string addBinary(string a, string b) {
+        string out;
+        int i = (int) a.size() - 1, j = (int) b.size() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry) {
+            int s = carry;
+            if (i >= 0) s += a[i--] - '0';
+            if (j >= 0) s += b[j--] - '0';
+            out += (char) ('0' + (s & 1));
+            carry = s >> 1;
+        }
+        reverse(out.begin(), out.end());
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def addBinary(self, a: str, b: str) -> str:
+        out, i, j, carry = [], len(a) - 1, len(b) - 1, 0
+        while i >= 0 or j >= 0 or carry:
+            s = carry
+            if i >= 0:
+                s += int(a[i])
+                i -= 1
+            if j >= 0:
+                s += int(b[j])
+                j -= 1
+            out.append(str(s & 1))
+            carry = s >> 1
+        return "".join(reversed(out))`,
+          javascript: r`var addBinary = function(a, b) {
+    const out = [];
+    let i = a.length - 1, j = b.length - 1, carry = 0;
+    while (i >= 0 || j >= 0 || carry) {
+        let s = carry;
+        if (i >= 0) s += a.charCodeAt(i--) - 48;
+        if (j >= 0) s += b.charCodeAt(j--) - 48;
+        out.push(s & 1);
+        carry = s >> 1;
+    }
+    return out.reverse().join("");
+};`,
+        },
+      },
+    ],
+  },
+  'bitwise-and-of-numbers-range': {
+    pattern: 'Common binary prefix of left and right',
+    approaches: [
+      {
+        level: 'Brute force', name: 'AND every number',
+        idea: 'Start with `left` and AND in every number up to `right`, stopping early once the result reaches 0.',
+        steps: [
+          'Set `r = left`.',
+          'For `k` from `left + 1` to `right` (as a 64-bit counter), set `r &= k`; break if `r == 0`.',
+          'Return `r`.',
+        ],
+        time: 'O(right − left)', space: 'O(1)',
+        why: 'The early exit helps when the range crosses a power of two, but a range like [2³⁰, 2³¹ − 1] keeps a set bit the whole way through, about 10⁹ steps, so it times out there.',
+        code: {
+          java: r`class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        int r = left;
+        for (long k = (long) left + 1; k <= right && r != 0; k++) r &= (int) k;
+        return r;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int rangeBitwiseAnd(int left, int right) {
+        int r = left;
+        for (long long k = (long long) left + 1; k <= right && r != 0; k++) r &= (int) k;
+        return r;
+    }
+};`,
+          python: r`class Solution:
+    def rangeBitwiseAnd(self, left: int, right: int) -> int:
+        r = left
+        k = left + 1
+        while k <= right and r:
+            r &= k
+            k += 1
+        return r`,
+          javascript: r`var rangeBitwiseAnd = function(left, right) {
+    let r = left;
+    for (let k = left + 1; k <= right && r !== 0; k++) r &= k;
+    return r >>> 0;
+};`,
+        },
+        timesOut: [6, 7, 'generated'],
+      },
+      {
+        level: 'Better', name: 'Clear the lowest set bit of right',
+        idea: 'While `right > left`, remove right\'s lowest set bit (`right & (right − 1)`). Each removal drops a bit that must vary inside the range.',
+        steps: [
+          'While `left < right`, set `right = right & (right − 1)`.',
+          'Return `right`.',
+        ],
+        time: 'O(log n)', space: 'O(1)',
+        why: 'At most 31 iterations. If right is still larger than left, the number right − 1 is in the range and differs from right in its lowest set bit, so that bit cannot survive the AND.',
+        code: {
+          java: r`class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        while (left < right) right &= right - 1;
+        return right;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int rangeBitwiseAnd(int left, int right) {
+        while (left < right) right &= right - 1;
+        return right;
+    }
+};`,
+          python: r`class Solution:
+    def rangeBitwiseAnd(self, left: int, right: int) -> int:
+        while left < right:
+            right &= right - 1
+        return right`,
+          javascript: r`var rangeBitwiseAnd = function(left, right) {
+    while (left < right) right &= right - 1;
+    return right;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Shift to the common prefix',
+        idea: 'Bits below the highest position where `left` and `right` differ all take both values somewhere in the range, so they AND to 0. Only the shared prefix survives.',
+        steps: [
+          'Shift `left` and `right` right together, counting shifts, until they are equal.',
+          'Shift the common value back left by that count.',
+          'Return it.',
+        ],
+        time: 'O(log n)', space: 'O(1)',
+        why: 'At most 31 shifts. Between two numbers that differ at bit k there is a number ending in 0111…1 and the next one ending in 1000…0, which together zero out every bit up to k.',
+        code: {
+          java: r`class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        int shift = 0;
+        while (left != right) { left >>= 1; right >>= 1; shift++; }
+        return left << shift;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int rangeBitwiseAnd(int left, int right) {
+        int shift = 0;
+        while (left != right) { left >>= 1; right >>= 1; shift++; }
+        return left << shift;
+    }
+};`,
+          python: r`class Solution:
+    def rangeBitwiseAnd(self, left: int, right: int) -> int:
+        shift = 0
+        while left != right:
+            left >>= 1
+            right >>= 1
+            shift += 1
+        return left << shift`,
+          javascript: r`var rangeBitwiseAnd = function(left, right) {
+    let shift = 0;
+    while (left !== right) { left >>= 1; right >>= 1; shift++; }
+    return (left << shift) >>> 0;
+};`,
+        },
+      },
+    ],
+  },
+  'minimum-array-end': {
+    pattern: 'Write n − 1 into the zero bits of x',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Step to the next valid number n − 1 times',
+        idea: 'Start at `x`. The next valid element is the smallest larger number that still contains all of x\'s bits: `(cur + 1) | x`. Apply that `n − 1` times.',
+        steps: [
+          'Set `cur = x` (64-bit).',
+          'Repeat `n − 1` times: `cur = (cur + 1) | x`.',
+          'Return `cur`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Adding 1 and OR-ing x back in jumps straight over every number missing one of x\'s bits, so each step is O(1). Still, n can be 10⁸, which is too slow for the largest tests.',
+        code: {
+          java: r`class Solution {
+    public long minEnd(int n, int x) {
+        long cur = x;
+        for (int i = 1; i < n; i++) cur = (cur + 1) | x;
+        return cur;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    long long minEnd(int n, int x) {
+        long long cur = x;
+        for (int i = 1; i < n; i++) cur = (cur + 1) | x;
+        return cur;
+    }
+};`,
+          python: r`class Solution:
+    def minEnd(self, n: int, x: int) -> int:
+        cur = x
+        for _ in range(n - 1):
+            cur = (cur + 1) | x
+        return cur`,
+          javascript: r`var minEnd = function(n, x) {
+    let cur = BigInt(x);
+    const bx = BigInt(x);
+    for (let i = 1; i < n; i++) cur = (cur + 1n) | bx;
+    return Number(cur);
+};`,
+        },
+        timesOut: [4, 5, 6, 'generated'],
+      },
+      {
+        level: 'Optimal', name: 'Deposit the bits of n − 1',
+        idea: 'Valid numbers are x with any pattern in its 0-bit positions, and they are ordered by that pattern. The (n − 1)-th one (counting from 0) puts the binary digits of n − 1 into those free positions, lowest first.',
+        steps: [
+          'Set `result = x` and `rest = n − 1` (64-bit).',
+          'Walk bit positions upward. Skip positions where x has a 1. At each free position, copy the lowest bit of `rest` into `result`, then shift `rest` right.',
+          'Stop when `rest` is 0 and return `result`.',
+        ],
+        time: 'O(log n + log x)', space: 'O(1)',
+        why: 'At most about 60 bit positions are visited. The answer can exceed 2³¹ (for example n = x = 10⁸), so it must be computed in 64 bits; in JavaScript, plain numbers are safe up to 2⁵³ but bitwise operators work on 32 bits, so the code uses arithmetic or BigInt.',
+        code: {
+          java: r`class Solution {
+    public long minEnd(int n, int x) {
+        long result = x, rest = n - 1;
+        for (long bit = 1; rest > 0; bit <<= 1) {
+            if ((x & bit) != 0) continue;
+            if ((rest & 1) == 1) result |= bit;
+            rest >>= 1;
+        }
+        return result;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    long long minEnd(int n, int x) {
+        long long result = x, rest = n - 1;
+        for (long long bit = 1; rest > 0; bit <<= 1) {
+            if (x & bit) continue;
+            if (rest & 1) result |= bit;
+            rest >>= 1;
+        }
+        return result;
+    }
+};`,
+          python: r`class Solution:
+    def minEnd(self, n: int, x: int) -> int:
+        result, rest, bit = x, n - 1, 1
+        while rest:
+            if not x & bit:
+                if rest & 1:
+                    result |= bit
+                rest >>= 1
+            bit <<= 1
+        return result`,
+          javascript: r`var minEnd = function(n, x) {
+    let result = BigInt(x), rest = BigInt(n - 1), bit = 1n;
+    const bx = BigInt(x);
+    while (rest > 0n) {
+        if ((bx & bit) === 0n) {
+            if (rest & 1n) result |= bit;
+            rest >>= 1n;
+        }
+        bit <<= 1n;
+    }
+    return Number(result);
+};`,
+        },
+      },
+    ],
+  },
 };

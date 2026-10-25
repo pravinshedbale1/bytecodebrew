@@ -34,4 +34,14 @@ export default {
   ipo: {
     explain: 'With capital 0 only project 0 is affordable: finishing it raises capital to 1. Then the best affordable project is project 2 (profit 3), bringing capital to 4 after the 2 allowed projects.',
   },
+  'single-threaded-cpu': {
+    explain: 'At time 1 only task 0 is available, so it runs until time 3. Tasks 1 and 2 are waiting; task 2 is shorter, so it runs until 5. Then task 3 (time 1) beats task 1 (time 4). The order is `[0,2,3,1]`.',
+  },
+  'reorganize-string': {
+    explain: '"a" appears twice in a string of length 3, which is allowed (at most ⌈3 / 2⌉ = 2). Putting the a\'s at positions 0 and 2 and the b between them gives "aba".',
+    more: 'For example "aaab" is impossible: three a\'s in four characters always leaves two of them side by side, so the answer there is "".',
+  },
+  'longest-happy-string': {
+    explain: 'There are many more c\'s than anything else, so each pair of c\'s needs another letter after it. Writing cc, a, cc, b, cc uses all the a and b letters; one more c would make "ccc". The result "ccaccbcc" has length 8, the most possible.',
+  },
 };

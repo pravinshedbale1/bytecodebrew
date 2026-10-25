@@ -519,5 +519,66 @@
     }
    }
   ]
+ },
+ "longest-increasing-path-in-a-matrix": {
+  "pattern": "DFS + memoisation on a DAG (or Kahn-style peeling)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "DFS from every cell, no memory",
+    "idea": "From each cell, explore every strictly increasing path with DFS and keep the longest.",
+    "steps": [
+     "`dfs(r, c)` = 1 + the maximum of `dfs` over neighbours with a larger value (or 1 if there are none).",
+     "Call `dfs` from every cell and return the maximum."
+    ],
+    "time": "O(exponential)",
+    "space": "O(m · n)",
+    "why": "The same cell is re-explored from every path that reaches it. On a \"snake\" grid where one path visits all 40,000 cells, the work is quadratic or worse, so it times out on the large test.",
+    "code": {
+     "java": "class Solution {\n    private static final int[][] DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n    public int longestIncreasingPath(int[][] matrix) {\n        int best = 0;\n        for (int r = 0; r < matrix.length; r++)\n            for (int c = 0; c < matrix[0].length; c++) best = Math.max(best, dfs(matrix, r, c));\n        return best;\n    }\n    private int dfs(int[][] g, int r, int c) {\n        int best = 1;\n        for (int[] d : DIRS) {\n            int nr = r + d[0], nc = c + d[1];\n            if (nr < 0 || nc < 0 || nr >= g.length || nc >= g[0].length || g[nr][nc] <= g[r][c]) continue;\n            best = Math.max(best, 1 + dfs(g, nr, nc));\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\n    int dfs(vector<vector<int>>& g, int r, int c) {\n        static const int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n        int best = 1;\n        for (auto& d : dirs) {\n            int nr = r + d[0], nc = c + d[1];\n            if (nr < 0 || nc < 0 || nr >= (int) g.size() || nc >= (int) g[0].size() || g[nr][nc] <= g[r][c]) continue;\n            best = max(best, 1 + dfs(g, nr, nc));\n        }\n        return best;\n    }\npublic:\n    int longestIncreasingPath(vector<vector<int>>& matrix) {\n        int best = 0;\n        for (int r = 0; r < (int) matrix.size(); r++)\n            for (int c = 0; c < (int) matrix[0].size(); c++) best = max(best, dfs(matrix, r, c));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestIncreasingPath(self, matrix: List[List[int]]) -> int:\n        m, n = len(matrix), len(matrix[0])\n        def dfs(r, c):\n            best = 1\n            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= nr < m and 0 <= nc < n and matrix[nr][nc] > matrix[r][c]:\n                    best = max(best, 1 + dfs(nr, nc))\n            return best\n        return max(dfs(r, c) for r in range(m) for c in range(n))",
+     "javascript": "var longestIncreasingPath = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n    const dfs = (r, c) => {\n        let best = 1;\n        for (const [dr, dc] of dirs) {\n            const nr = r + dr, nc = c + dc;\n            if (nr < 0 || nc < 0 || nr >= m || nc >= n || matrix[nr][nc] <= matrix[r][c]) continue;\n            best = Math.max(best, 1 + dfs(nr, nc));\n        }\n        return best;\n    };\n    let best = 0;\n    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) best = Math.max(best, dfs(r, c));\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "DFS with memoisation",
+    "idea": "The longest path starting at a cell never changes, and increasing paths cannot loop. Cache each cell's answer the first time it is computed.",
+    "steps": [
+     "`memo[r][c] = 0` means \"not computed yet\".",
+     "`dfs(r, c)`: if cached, return it; otherwise compute 1 + the best `dfs` of larger neighbours, store it and return it.",
+     "Return the maximum over all cells."
+    ],
+    "time": "O(m · n)",
+    "space": "O(m · n)",
+    "why": "Each cell is computed once and looks at four neighbours. The graph \"smaller → larger neighbour\" is a DAG, so memoisation is safe. Recursion can go m · n levels deep on a snake-shaped grid, which needs a large stack (the judge provides one).",
+    "code": {
+     "java": "class Solution {\n    private static final int[][] DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n    public int longestIncreasingPath(int[][] matrix) {\n        int m = matrix.length, n = matrix[0].length, best = 0;\n        int[][] memo = new int[m][n];\n        for (int r = 0; r < m; r++) for (int c = 0; c < n; c++) best = Math.max(best, dfs(matrix, r, c, memo));\n        return best;\n    }\n    private int dfs(int[][] g, int r, int c, int[][] memo) {\n        if (memo[r][c] != 0) return memo[r][c];\n        int best = 1;\n        for (int[] d : DIRS) {\n            int nr = r + d[0], nc = c + d[1];\n            if (nr < 0 || nc < 0 || nr >= g.length || nc >= g[0].length || g[nr][nc] <= g[r][c]) continue;\n            best = Math.max(best, 1 + dfs(g, nr, nc, memo));\n        }\n        return memo[r][c] = best;\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> memo;\n    int dfs(vector<vector<int>>& g, int r, int c) {\n        static const int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n        if (memo[r][c]) return memo[r][c];\n        int best = 1;\n        for (auto& d : dirs) {\n            int nr = r + d[0], nc = c + d[1];\n            if (nr < 0 || nc < 0 || nr >= (int) g.size() || nc >= (int) g[0].size() || g[nr][nc] <= g[r][c]) continue;\n            best = max(best, 1 + dfs(g, nr, nc));\n        }\n        return memo[r][c] = best;\n    }\npublic:\n    int longestIncreasingPath(vector<vector<int>>& matrix) {\n        memo.assign(matrix.size(), vector<int>(matrix[0].size(), 0));\n        int best = 0;\n        for (int r = 0; r < (int) matrix.size(); r++)\n            for (int c = 0; c < (int) matrix[0].size(); c++) best = max(best, dfs(matrix, r, c));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestIncreasingPath(self, matrix: List[List[int]]) -> int:\n        m, n = len(matrix), len(matrix[0])\n        @lru_cache(maxsize=None)\n        def dfs(r, c):\n            best = 1\n            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= nr < m and 0 <= nc < n and matrix[nr][nc] > matrix[r][c]:\n                    best = max(best, 1 + dfs(nr, nc))\n            return best\n        return max(dfs(r, c) for r in range(m) for c in range(n))",
+     "javascript": "var longestIncreasingPath = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    const memo = Array.from({ length: m }, () => new Array(n).fill(0));\n    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n    const dfs = (r, c) => {\n        if (memo[r][c]) return memo[r][c];\n        let best = 1;\n        for (const [dr, dc] of dirs) {\n            const nr = r + dr, nc = c + dc;\n            if (nr < 0 || nc < 0 || nr >= m || nc >= n || matrix[nr][nc] <= matrix[r][c]) continue;\n            best = Math.max(best, 1 + dfs(nr, nc));\n        }\n        return (memo[r][c] = best);\n    };\n    let best = 0;\n    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) best = Math.max(best, dfs(r, c));\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Peel layers by out-degree (Kahn)",
+    "idea": "Count, for each cell, how many neighbours are larger. Cells with none are path ends. Remove them layer by layer; the number of layers is the longest path.",
+    "steps": [
+     "For every cell, `out[r][c]` = number of strictly larger neighbours. Queue every cell with `out == 0`.",
+     "Process the queue one layer at a time. For each cell, decrement `out` of every strictly smaller neighbour, queueing those that reach 0.",
+     "Return the number of layers processed."
+    ],
+    "time": "O(m · n)",
+    "space": "O(m · n)",
+    "why": "This is a topological sort of the DAG run from the sinks backwards: a cell is released only after every longer continuation has been counted, so its layer number equals the longest path starting there. No recursion, so no stack-depth worries.",
+    "code": {
+     "java": "class Solution {\n    public int longestIncreasingPath(int[][] matrix) {\n        int m = matrix.length, n = matrix[0].length;\n        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };\n        int[][] out = new int[m][n];\n        Deque<int[]> q = new ArrayDeque<>();\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                for (int[] d : dirs) {\n                    int nr = r + d[0], nc = c + d[1];\n                    if (nr >= 0 && nc >= 0 && nr < m && nc < n && matrix[nr][nc] > matrix[r][c]) out[r][c]++;\n                }\n                if (out[r][c] == 0) q.add(new int[] { r, c });\n            }\n        int layers = 0;\n        while (!q.isEmpty()) {\n            layers++;\n            for (int size = q.size(); size > 0; size--) {\n                int[] p = q.poll();\n                for (int[] d : dirs) {\n                    int nr = p[0] + d[0], nc = p[1] + d[1];\n                    if (nr < 0 || nc < 0 || nr >= m || nc >= n || matrix[nr][nc] >= matrix[p[0]][p[1]]) continue;\n                    if (--out[nr][nc] == 0) q.add(new int[] { nr, nc });\n                }\n            }\n        }\n        return layers;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestIncreasingPath(vector<vector<int>>& matrix) {\n        int m = matrix.size(), n = matrix[0].size();\n        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n        vector<vector<int>> out(m, vector<int>(n, 0));\n        queue<pair<int, int>> q;\n        for (int r = 0; r < m; r++)\n            for (int c = 0; c < n; c++) {\n                for (auto& d : dirs) {\n                    int nr = r + d[0], nc = c + d[1];\n                    if (nr >= 0 && nc >= 0 && nr < m && nc < n && matrix[nr][nc] > matrix[r][c]) out[r][c]++;\n                }\n                if (out[r][c] == 0) q.push({r, c});\n            }\n        int layers = 0;\n        while (!q.empty()) {\n            layers++;\n            for (int size = q.size(); size > 0; size--) {\n                auto [r, c] = q.front(); q.pop();\n                for (auto& d : dirs) {\n                    int nr = r + d[0], nc = c + d[1];\n                    if (nr < 0 || nc < 0 || nr >= m || nc >= n || matrix[nr][nc] >= matrix[r][c]) continue;\n                    if (--out[nr][nc] == 0) q.push({nr, nc});\n                }\n            }\n        }\n        return layers;\n    }\n};",
+     "python": "class Solution:\n    def longestIncreasingPath(self, matrix: List[List[int]]) -> int:\n        m, n = len(matrix), len(matrix[0])\n        def nbrs(r, c):\n            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):\n                if 0 <= nr < m and 0 <= nc < n:\n                    yield nr, nc\n        out = [[sum(1 for nr, nc in nbrs(r, c) if matrix[nr][nc] > matrix[r][c]) for c in range(n)] for r in range(m)]\n        q = [(r, c) for r in range(m) for c in range(n) if out[r][c] == 0]\n        layers = 0\n        while q:\n            layers += 1\n            nxt = []\n            for r, c in q:\n                for nr, nc in nbrs(r, c):\n                    if matrix[nr][nc] < matrix[r][c]:\n                        out[nr][nc] -= 1\n                        if out[nr][nc] == 0:\n                            nxt.append((nr, nc))\n            q = nxt\n        return layers",
+     "javascript": "var longestIncreasingPath = function(matrix) {\n    const m = matrix.length, n = matrix[0].length;\n    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];\n    const out = Array.from({ length: m }, () => new Array(n).fill(0));\n    let q = [];\n    for (let r = 0; r < m; r++)\n        for (let c = 0; c < n; c++) {\n            for (const [dr, dc] of dirs) {\n                const nr = r + dr, nc = c + dc;\n                if (nr >= 0 && nc >= 0 && nr < m && nc < n && matrix[nr][nc] > matrix[r][c]) out[r][c]++;\n            }\n            if (out[r][c] === 0) q.push([r, c]);\n        }\n    let layers = 0;\n    while (q.length) {\n        layers++;\n        const next = [];\n        for (const [r, c] of q)\n            for (const [dr, dc] of dirs) {\n                const nr = r + dr, nc = c + dc;\n                if (nr < 0 || nc < 0 || nr >= m || nc >= n || matrix[nr][nc] >= matrix[r][c]) continue;\n                if (--out[nr][nc] === 0) next.push([nr, nc]);\n            }\n        q = next;\n    }\n    return layers;\n};"
+    }
+   }
+  ]
  }
 }

@@ -211,4 +211,106 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'integer-break', title: 'Integer Break', level: 'Medium',
+    summary: 'Split n into the sum of at least two positive integers and return the largest possible product of those integers.',
+    method: 'integerBreak', params: [['int', 'n']], returns: 'int',
+    tests: [
+      { in: [2], out: 1 },
+      { in: [10], out: 36 },
+      { in: [3] },
+      { in: [4] },
+      { in: [8] },
+      { in: [27] },
+      { in: [58] },
+    ],
+    ref: `class Solution {
+    public int integerBreak(int n) {
+        if (n <= 3) return n - 1;
+        int product = 1;
+        while (n > 4) { product *= 3; n -= 3; }
+        return product * n;
+    }
+}`,
+  },
+  {
+    slug: 'maximum-sum-circular-subarray', title: 'Maximum Sum Circular Subarray', level: 'Medium',
+    summary: 'nums is circular: the end wraps around to the start. Return the largest sum of a non-empty subarray, where a subarray may wrap around but uses each element at most once.',
+    method: 'maxSubarraySumCircular', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[1, -2, 3, -2]], out: 3 },
+      { in: [[5, -3, 5]], out: 10 },
+      { in: [[-3, -2, -3]], out: -2 },
+      { in: [[7]] },
+      { in: [[3, -1, 2, -1]] },
+      { in: [[-2, 4, -5, 4, -5, 9, 4]] },
+      { in: [[30000, -30000, 30000]] },
+    ],
+    ref: `class Solution {
+    public int maxSubarraySumCircular(int[] nums) {
+        int total = 0, curMax = 0, best = Integer.MIN_VALUE, curMin = 0, worst = Integer.MAX_VALUE;
+        for (int x : nums) {
+            total += x;
+            curMax = Math.max(curMax + x, x); best = Math.max(best, curMax);
+            curMin = Math.min(curMin + x, x); worst = Math.min(worst, curMin);
+        }
+        return best < 0 ? best : Math.max(best, total - worst);
+    }
+}`,
+  },
+  {
+    slug: 'longest-turbulent-subarray', title: 'Longest Turbulent Subarray', level: 'Medium',
+    summary: 'A subarray is turbulent if the comparison sign flips between each pair of neighbours (up, down, up, … or down, up, down, …). Return the length of the longest turbulent subarray.',
+    method: 'maxTurbulenceSize', params: [['int[]', 'arr']], returns: 'int',
+    tests: [
+      { in: [[9, 4, 2, 10, 7, 8, 8, 1, 9]], out: 5 },
+      { in: [[4, 8, 12, 16]], out: 2 },
+      { in: [[100]], out: 1 },
+      { in: [[5, 5, 5]] },
+      { in: [[1, 2, 1, 2, 1, 2]] },
+      { in: [[0, 1, 1, 0, 1, 0, 1, 1, 0, 0]] },
+      { in: [[2, 1]] },
+    ],
+    ref: `class Solution {
+    public int maxTurbulenceSize(int[] arr) {
+        int best = 1, up = 1, down = 1;
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] > arr[i - 1]) { up = down + 1; down = 1; }
+            else if (arr[i] < arr[i - 1]) { down = up + 1; up = 1; }
+            else { up = 1; down = 1; }
+            best = Math.max(best, Math.max(up, down));
+        }
+        return best;
+    }
+}`,
+  },
+  {
+    slug: 'stone-game-iii', title: 'Stone Game III', level: 'Hard',
+    summary: 'Stones are in a row with values (possibly negative). Alice and Bob alternate, Alice first; each turn takes 1, 2 or 3 stones from the front. Both play optimally to maximise their own total. Return "Alice", "Bob" or "Tie".',
+    method: 'stoneGameIII', params: [['int[]', 'stoneValue']], returns: 'String',
+    tests: [
+      { in: [[1, 2, 3, 7]], out: 'Bob' },
+      { in: [[1, 2, 3, -9]], out: 'Alice' },
+      { in: [[1, 2, 3, 6]], out: 'Tie' },
+      { in: [[-1]] },
+      { in: [[0]] },
+      { in: [[-1, -2, -3]] },
+      { in: [[5, -10, 20, -1, 3, 4, -6, 2]] },
+    ],
+    ref: `class Solution {
+    public String stoneGameIII(int[] stoneValue) {
+        int n = stoneValue.length;
+        int[] dp = new int[n + 4];
+        for (int i = n - 1; i >= 0; i--) {
+            int take = 0;
+            dp[i] = Integer.MIN_VALUE;
+            for (int k = 0; k < 3 && i + k < n; k++) {
+                take += stoneValue[i + k];
+                dp[i] = Math.max(dp[i], take - dp[i + k + 1]);
+            }
+        }
+        return dp[0] > 0 ? "Alice" : dp[0] < 0 ? "Bob" : "Tie";
+    }
+}`,
+  },
 ];

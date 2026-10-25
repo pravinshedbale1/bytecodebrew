@@ -1004,6 +1004,7 @@ public:
     return best;
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Optimal', name: 'Greedy from the leaves up',
@@ -1153,6 +1154,7 @@ public:
     return best(nums);
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Optimal', name: 'Interval DP choosing the last balloon',
@@ -1359,6 +1361,286 @@ public:
             dp[i][j] = p[j] - p[i] + best;
         }
     return dp[0][k - 1];
+};`,
+        },
+      },
+    ],
+  },
+  'stone-game': {
+    pattern: 'Interval DP on score difference (and a parity argument)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Recursive minimax on the row',
+        idea: 'Let `diff(i, j)` be the best (current player − opponent) difference on piles `i..j`. Taking the left pile gains `piles[i]` and hands `i + 1..j` to the opponent; same for the right.',
+        steps: [
+          '`diff(i, i) = piles[i]`.',
+          '`diff(i, j) = max(piles[i] − diff(i + 1, j), piles[j] − diff(i, j − 1))`.',
+          'Return `diff(0, n − 1) > 0`.',
+        ],
+        time: 'O(2ⁿ)', space: 'O(n)',
+        why: 'Two choices per move and no caching: the same sub-row is solved many times. Fine for 8 piles, hopeless for 500.',
+        code: {
+          java: r`class Solution {
+    public boolean stoneGame(int[] piles) { return diff(piles, 0, piles.length - 1) > 0; }
+    private int diff(int[] p, int i, int j) {
+        if (i == j) return p[i];
+        return Math.max(p[i] - diff(p, i + 1, j), p[j] - diff(p, i, j - 1));
+    }
+}`,
+          cpp: r`class Solution {
+    int diff(vector<int>& p, int i, int j) {
+        if (i == j) return p[i];
+        return max(p[i] - diff(p, i + 1, j), p[j] - diff(p, i, j - 1));
+    }
+public:
+    bool stoneGame(vector<int>& piles) { return diff(piles, 0, piles.size() - 1) > 0; }
+};`,
+          python: r`class Solution:
+    def stoneGame(self, piles: List[int]) -> bool:
+        def diff(i, j):
+            if i == j:
+                return piles[i]
+            return max(piles[i] - diff(i + 1, j), piles[j] - diff(i, j - 1))
+        return diff(0, len(piles) - 1) > 0`,
+          javascript: r`var stoneGame = function(piles) {
+    const diff = (i, j) => (i === j ? piles[i] : Math.max(piles[i] - diff(i + 1, j), piles[j] - diff(i, j - 1)));
+    return diff(0, piles.length - 1) > 0;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Interval DP table',
+        idea: 'The same recurrence, filled for all intervals by increasing length so every sub-row is solved once.',
+        steps: [
+          '`dp[i][i] = piles[i]`.',
+          'For each length from 2 to `n`, and each start `i` with `j = i + len − 1`: `dp[i][j] = max(piles[i] − dp[i + 1][j], piles[j] − dp[i][j − 1])`.',
+          'Return `dp[0][n − 1] > 0`.',
+        ],
+        time: 'O(n²)', space: 'O(n²)',
+        why: 'n² / 2 intervals, O(1) each. This is the general technique: it also works when ties are possible or the pile count is odd, where the parity trick below does not apply.',
+        code: {
+          java: r`class Solution {
+    public boolean stoneGame(int[] piles) {
+        int n = piles.length;
+        int[][] dp = new int[n][n];
+        for (int i = 0; i < n; i++) dp[i][i] = piles[i];
+        for (int len = 2; len <= n; len++)
+            for (int i = 0; i + len - 1 < n; i++) {
+                int j = i + len - 1;
+                dp[i][j] = Math.max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);
+            }
+        return dp[0][n - 1] > 0;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool stoneGame(vector<int>& piles) {
+        int n = piles.size();
+        vector<vector<int>> dp(n, vector<int>(n, 0));
+        for (int i = 0; i < n; i++) dp[i][i] = piles[i];
+        for (int len = 2; len <= n; len++)
+            for (int i = 0; i + len - 1 < n; i++) {
+                int j = i + len - 1;
+                dp[i][j] = max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);
+            }
+        return dp[0][n - 1] > 0;
+    }
+};`,
+          python: r`class Solution:
+    def stoneGame(self, piles: List[int]) -> bool:
+        n = len(piles)
+        dp = [[0] * n for _ in range(n)]
+        for i in range(n):
+            dp[i][i] = piles[i]
+        for length in range(2, n + 1):
+            for i in range(n - length + 1):
+                j = i + length - 1
+                dp[i][j] = max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1])
+        return dp[0][n - 1] > 0`,
+          javascript: r`var stoneGame = function(piles) {
+    const n = piles.length;
+    const dp = Array.from({ length: n }, () => new Array(n).fill(0));
+    for (let i = 0; i < n; i++) dp[i][i] = piles[i];
+    for (let len = 2; len <= n; len++)
+        for (let i = 0; i + len - 1 < n; i++) {
+            const j = i + len - 1;
+            dp[i][j] = Math.max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);
+        }
+    return dp[0][n - 1] > 0;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Alice always wins',
+        idea: 'Number the piles 0..n − 1. With an even count, Alice can take every even-index pile or every odd-index pile, whichever set is bigger, and the totals differ because the sum is odd.',
+        steps: [
+          'Note that Alice, moving first on an even row, can always take the end that keeps her on her chosen parity, and Bob is then forced onto the other parity.',
+          'One of the two parity sets holds more stones (the total is odd, so they cannot be equal).',
+          'Return `true`.',
+        ],
+        time: 'O(1)', space: 'O(1)',
+        why: 'The argument shows a winning strategy exists, which is all the question asks. In an interview, show the DP first and then point out this observation; it depends entirely on "even count, odd total".',
+        code: {
+          java: r`class Solution {
+    public boolean stoneGame(int[] piles) {
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool stoneGame(vector<int>& piles) {
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def stoneGame(self, piles: List[int]) -> bool:
+        return True`,
+          javascript: r`var stoneGame = function(piles) {
+    return true;
+};`,
+        },
+      },
+    ],
+  },
+  'stone-game-ii': {
+    pattern: 'Game DP over (position, M) with suffix sums',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Recursive minimax without caching',
+        idea: 'From position `i` with parameter `M`, try every `X` in `1..2M`; your total is what remains minus the opponent\'s best from `i + X` with `max(M, X)`.',
+        steps: [
+          'Precompute `suffix[i]`, the stones in piles `i..n − 1`.',
+          '`best(i, M)`: if `i + 2M >= n`, take everything (`suffix[i]`).',
+          'Otherwise return the maximum over `X` of `suffix[i] − best(i + X, max(M, X))`.',
+        ],
+        time: 'O(exponential)', space: 'O(n)',
+        why: 'States repeat across many move orders and nothing is cached. It works for a handful of piles only.',
+        code: {
+          java: r`class Solution {
+    private int[] suffix;
+    public int stoneGameII(int[] piles) {
+        int n = piles.length;
+        suffix = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+        return best(0, 1, n);
+    }
+    private int best(int i, int m, int n) {
+        if (i + 2 * m >= n) return suffix[i];
+        int res = 0;
+        for (int x = 1; x <= 2 * m; x++) res = Math.max(res, suffix[i] - best(i + x, Math.max(m, x), n));
+        return res;
+    }
+}`,
+          cpp: r`class Solution {
+    vector<int> suffix;
+    int best(int i, int m, int n) {
+        if (i + 2 * m >= n) return suffix[i];
+        int res = 0;
+        for (int x = 1; x <= 2 * m; x++) res = max(res, suffix[i] - best(i + x, max(m, x), n));
+        return res;
+    }
+public:
+    int stoneGameII(vector<int>& piles) {
+        int n = piles.size();
+        suffix.assign(n + 1, 0);
+        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+        return best(0, 1, n);
+    }
+};`,
+          python: r`class Solution:
+    def stoneGameII(self, piles: List[int]) -> int:
+        n = len(piles)
+        suffix = [0] * (n + 1)
+        for i in range(n - 1, -1, -1):
+            suffix[i] = suffix[i + 1] + piles[i]
+        def best(i, m):
+            if i + 2 * m >= n:
+                return suffix[i]
+            return max(suffix[i] - best(i + x, max(m, x)) for x in range(1, 2 * m + 1))
+        return best(0, 1)`,
+          javascript: r`var stoneGameII = function(piles) {
+    const n = piles.length, suffix = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+    const best = (i, m) => {
+        if (i + 2 * m >= n) return suffix[i];
+        let res = 0;
+        for (let x = 1; x <= 2 * m; x++) res = Math.max(res, suffix[i] - best(i + x, Math.max(m, x)));
+        return res;
+    };
+    return best(0, 1);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Memoised (i, M) table',
+        idea: 'There are only n × n distinct states (M never needs to exceed n), so cache `best(i, M)` and the whole game is solved once per state.',
+        steps: [
+          'Precompute suffix sums.',
+          'Fill `dp[i][m]` for `i` from `n − 1` down to 0 and `m` from 1 to `n`: if `i + 2m >= n`, `dp[i][m] = suffix[i]`; otherwise the best over `X` of `suffix[i] − dp[i + X][min(n, max(m, X))]`.',
+          'Return `dp[0][1]`.',
+        ],
+        time: 'O(n³)', space: 'O(n²)',
+        why: 'n² states, each trying up to 2M ≤ 2n moves. With n ≤ 100 that is about 10⁶ steps. "Maximise mine" equals "minimise theirs" because all stones in the suffix are split between the two players.',
+        code: {
+          java: r`class Solution {
+    public int stoneGameII(int[] piles) {
+        int n = piles.length;
+        int[] suffix = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+        int[][] dp = new int[n + 1][n + 1];
+        for (int i = n - 1; i >= 0; i--)
+            for (int m = 1; m <= n; m++) {
+                if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }
+                int best = 0;
+                for (int x = 1; x <= 2 * m; x++) best = Math.max(best, suffix[i] - dp[i + x][Math.min(n, Math.max(m, x))]);
+                dp[i][m] = best;
+            }
+        return dp[0][1];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int stoneGameII(vector<int>& piles) {
+        int n = piles.size();
+        vector<int> suffix(n + 1, 0);
+        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+        vector<vector<int>> dp(n + 1, vector<int>(n + 1, 0));
+        for (int i = n - 1; i >= 0; i--)
+            for (int m = 1; m <= n; m++) {
+                if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }
+                int best = 0;
+                for (int x = 1; x <= 2 * m; x++) best = max(best, suffix[i] - dp[i + x][min(n, max(m, x))]);
+                dp[i][m] = best;
+            }
+        return dp[0][1];
+    }
+};`,
+          python: r`class Solution:
+    def stoneGameII(self, piles: List[int]) -> int:
+        n = len(piles)
+        suffix = [0] * (n + 1)
+        for i in range(n - 1, -1, -1):
+            suffix[i] = suffix[i + 1] + piles[i]
+        dp = [[0] * (n + 1) for _ in range(n + 1)]
+        for i in range(n - 1, -1, -1):
+            for m in range(1, n + 1):
+                if i + 2 * m >= n:
+                    dp[i][m] = suffix[i]
+                else:
+                    dp[i][m] = max(suffix[i] - dp[i + x][min(n, max(m, x))] for x in range(1, 2 * m + 1))
+        return dp[0][1]`,
+          javascript: r`var stoneGameII = function(piles) {
+    const n = piles.length, suffix = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+    const dp = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--)
+        for (let m = 1; m <= n; m++) {
+            if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }
+            let best = 0;
+            for (let x = 1; x <= 2 * m; x++) best = Math.max(best, suffix[i] - dp[i + x][Math.min(n, Math.max(m, x))]);
+            dp[i][m] = best;
+        }
+    return dp[0][1];
 };`,
         },
       },

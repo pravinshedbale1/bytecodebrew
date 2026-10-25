@@ -313,7 +313,10 @@
      "cpp": "class Solution {\npublic:\n    int minCameraCover(TreeNode* root) {\n        vector<TreeNode*> nodes;\n        unordered_map<TreeNode*, int> idx;\n        vector<TreeNode*> stack{root};\n        while (!stack.empty()) {\n            TreeNode* t = stack.back();\n            stack.pop_back();\n            idx[t] = nodes.size();\n            nodes.push_back(t);\n            if (t->left) stack.push_back(t->left);\n            if (t->right) stack.push_back(t->right);\n        }\n        int n = nodes.size(), best = n;\n        vector<int> parent(n, -1);\n        for (auto* t : nodes) {\n            if (t->left) parent[idx[t->left]] = idx[t];\n            if (t->right) parent[idx[t->right]] = idx[t];\n        }\n        for (int mask = 0; mask < (1 << n); mask++) {\n            if (__builtin_popcount(mask) >= best) continue;\n            bool ok = true;\n            for (int i = 0; i < n && ok; i++) {\n                TreeNode* t = nodes[i];\n                bool covered = (mask >> i & 1) || (parent[i] >= 0 && (mask >> parent[i] & 1))\n                    || (t->left && (mask >> idx[t->left] & 1)) || (t->right && (mask >> idx[t->right] & 1));\n                if (!covered) ok = false;\n            }\n            if (ok) best = __builtin_popcount(mask);\n        }\n        return best;\n    }\n};",
      "python": "class Solution:\n    def minCameraCover(self, root: Optional[TreeNode]) -> int:\n        nodes, stack = [], [root]\n        while stack:\n            t = stack.pop()\n            nodes.append(t)\n            stack.extend(c for c in (t.left, t.right) if c)\n        idx = {t: i for i, t in enumerate(nodes)}\n        neighbours = [[i] for i in range(len(nodes))]\n        for t in nodes:\n            for c in (t.left, t.right):\n                if c:\n                    neighbours[idx[t]].append(idx[c])\n                    neighbours[idx[c]].append(idx[t])\n        n = len(nodes)\n        for size in range(1, n + 1):\n            for cams in combinations(range(n), size):\n                chosen = set(cams)\n                if all(any(j in chosen for j in neighbours[i]) for i in range(n)):\n                    return size\n        return n",
      "javascript": "var minCameraCover = function(root) {\n    const nodes = [], stack = [root];\n    while (stack.length) {\n        const t = stack.pop();\n        nodes.push(t);\n        if (t.left) stack.push(t.left);\n        if (t.right) stack.push(t.right);\n    }\n    const n = nodes.length, idx = new Map(nodes.map((t, i) => [t, i]));\n    const neighbours = nodes.map((_, i) => [i]);\n    for (const t of nodes)\n        for (const c of [t.left, t.right])\n            if (c) { neighbours[idx.get(t)].push(idx.get(c)); neighbours[idx.get(c)].push(idx.get(t)); }\n    let best = n;\n    for (let mask = 0; mask < (1 << n); mask++) {\n        let cams = 0;\n        for (let x = mask; x; x &= x - 1) cams++;\n        if (cams >= best) continue;\n        if (neighbours.every((list) => list.some((j) => (mask >> j) & 1))) best = cams;\n    }\n    return best;\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Optimal",
@@ -357,7 +360,10 @@
      "cpp": "class Solution {\n    int best(vector<int>& b) {\n        if (b.empty()) return 0;\n        int result = 0;\n        for (size_t i = 0; i < b.size(); i++) {\n            int coins = (i > 0 ? b[i - 1] : 1) * b[i] * (i + 1 < b.size() ? b[i + 1] : 1);\n            int x = b[i];\n            b.erase(b.begin() + i);\n            result = max(result, coins + best(b));\n            b.insert(b.begin() + i, x);\n        }\n        return result;\n    }\npublic:\n    int maxCoins(vector<int>& nums) {\n        vector<int> b = nums;\n        return best(b);\n    }\n};",
      "python": "class Solution:\n    def maxCoins(self, nums: List[int]) -> int:\n        def best(b):\n            result = 0\n            for i in range(len(b)):\n                coins = (b[i - 1] if i > 0 else 1) * b[i] * (b[i + 1] if i + 1 < len(b) else 1)\n                result = max(result, coins + best(b[:i] + b[i + 1:]))\n            return result\n        return best(nums)",
      "javascript": "var maxCoins = function(nums) {\n    const best = (b) => {\n        let result = 0;\n        for (let i = 0; i < b.length; i++) {\n            const coins = (i > 0 ? b[i - 1] : 1) * b[i] * (i + 1 < b.length ? b[i + 1] : 1);\n            result = Math.max(result, coins + best([...b.slice(0, i), ...b.slice(i + 1)]));\n        }\n        return result;\n    };\n    return best(nums);\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Optimal",
@@ -419,6 +425,111 @@
      "cpp": "class Solution {\npublic:\n    int minCost(int n, vector<int>& cuts) {\n        sort(cuts.begin(), cuts.end());\n        vector<int> p{0};\n        p.insert(p.end(), cuts.begin(), cuts.end());\n        p.push_back(n);\n        int k = p.size();\n        vector<vector<int>> dp(k, vector<int>(k, 0));\n        for (int gap = 2; gap < k; gap++)\n            for (int i = 0; i + gap < k; i++) {\n                int j = i + gap, best = INT_MAX;\n                for (int mid = i + 1; mid < j; mid++) best = min(best, dp[i][mid] + dp[mid][j]);\n                dp[i][j] = p[j] - p[i] + best;\n            }\n        return dp[0][k - 1];\n    }\n};",
      "python": "class Solution:\n    def minCost(self, n: int, cuts: List[int]) -> int:\n        p = [0] + sorted(cuts) + [n]\n        k = len(p)\n        dp = [[0] * k for _ in range(k)]\n        for gap in range(2, k):\n            for i in range(k - gap):\n                j = i + gap\n                dp[i][j] = p[j] - p[i] + min(dp[i][m] + dp[m][j] for m in range(i + 1, j))\n        return dp[0][k - 1]",
      "javascript": "var minCost = function(n, cuts) {\n    const p = [0, ...[...cuts].sort((a, b) => a - b), n], k = p.length;\n    const dp = Array.from({ length: k }, () => new Array(k).fill(0));\n    for (let gap = 2; gap < k; gap++)\n        for (let i = 0; i + gap < k; i++) {\n            const j = i + gap;\n            let best = Infinity;\n            for (let mid = i + 1; mid < j; mid++) best = Math.min(best, dp[i][mid] + dp[mid][j]);\n            dp[i][j] = p[j] - p[i] + best;\n        }\n    return dp[0][k - 1];\n};"
+    }
+   }
+  ]
+ },
+ "stone-game": {
+  "pattern": "Interval DP on score difference (and a parity argument)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursive minimax on the row",
+    "idea": "Let `diff(i, j)` be the best (current player − opponent) difference on piles `i..j`. Taking the left pile gains `piles[i]` and hands `i + 1..j` to the opponent; same for the right.",
+    "steps": [
+     "`diff(i, i) = piles[i]`.",
+     "`diff(i, j) = max(piles[i] − diff(i + 1, j), piles[j] − diff(i, j − 1))`.",
+     "Return `diff(0, n − 1) > 0`."
+    ],
+    "time": "O(2ⁿ)",
+    "space": "O(n)",
+    "why": "Two choices per move and no caching: the same sub-row is solved many times. Fine for 8 piles, hopeless for 500.",
+    "code": {
+     "java": "class Solution {\n    public boolean stoneGame(int[] piles) { return diff(piles, 0, piles.length - 1) > 0; }\n    private int diff(int[] p, int i, int j) {\n        if (i == j) return p[i];\n        return Math.max(p[i] - diff(p, i + 1, j), p[j] - diff(p, i, j - 1));\n    }\n}",
+     "cpp": "class Solution {\n    int diff(vector<int>& p, int i, int j) {\n        if (i == j) return p[i];\n        return max(p[i] - diff(p, i + 1, j), p[j] - diff(p, i, j - 1));\n    }\npublic:\n    bool stoneGame(vector<int>& piles) { return diff(piles, 0, piles.size() - 1) > 0; }\n};",
+     "python": "class Solution:\n    def stoneGame(self, piles: List[int]) -> bool:\n        def diff(i, j):\n            if i == j:\n                return piles[i]\n            return max(piles[i] - diff(i + 1, j), piles[j] - diff(i, j - 1))\n        return diff(0, len(piles) - 1) > 0",
+     "javascript": "var stoneGame = function(piles) {\n    const diff = (i, j) => (i === j ? piles[i] : Math.max(piles[i] - diff(i + 1, j), piles[j] - diff(i, j - 1)));\n    return diff(0, piles.length - 1) > 0;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Interval DP table",
+    "idea": "The same recurrence, filled for all intervals by increasing length so every sub-row is solved once.",
+    "steps": [
+     "`dp[i][i] = piles[i]`.",
+     "For each length from 2 to `n`, and each start `i` with `j = i + len − 1`: `dp[i][j] = max(piles[i] − dp[i + 1][j], piles[j] − dp[i][j − 1])`.",
+     "Return `dp[0][n − 1] > 0`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "n² / 2 intervals, O(1) each. This is the general technique: it also works when ties are possible or the pile count is odd, where the parity trick below does not apply.",
+    "code": {
+     "java": "class Solution {\n    public boolean stoneGame(int[] piles) {\n        int n = piles.length;\n        int[][] dp = new int[n][n];\n        for (int i = 0; i < n; i++) dp[i][i] = piles[i];\n        for (int len = 2; len <= n; len++)\n            for (int i = 0; i + len - 1 < n; i++) {\n                int j = i + len - 1;\n                dp[i][j] = Math.max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);\n            }\n        return dp[0][n - 1] > 0;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool stoneGame(vector<int>& piles) {\n        int n = piles.size();\n        vector<vector<int>> dp(n, vector<int>(n, 0));\n        for (int i = 0; i < n; i++) dp[i][i] = piles[i];\n        for (int len = 2; len <= n; len++)\n            for (int i = 0; i + len - 1 < n; i++) {\n                int j = i + len - 1;\n                dp[i][j] = max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);\n            }\n        return dp[0][n - 1] > 0;\n    }\n};",
+     "python": "class Solution:\n    def stoneGame(self, piles: List[int]) -> bool:\n        n = len(piles)\n        dp = [[0] * n for _ in range(n)]\n        for i in range(n):\n            dp[i][i] = piles[i]\n        for length in range(2, n + 1):\n            for i in range(n - length + 1):\n                j = i + length - 1\n                dp[i][j] = max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1])\n        return dp[0][n - 1] > 0",
+     "javascript": "var stoneGame = function(piles) {\n    const n = piles.length;\n    const dp = Array.from({ length: n }, () => new Array(n).fill(0));\n    for (let i = 0; i < n; i++) dp[i][i] = piles[i];\n    for (let len = 2; len <= n; len++)\n        for (let i = 0; i + len - 1 < n; i++) {\n            const j = i + len - 1;\n            dp[i][j] = Math.max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);\n        }\n    return dp[0][n - 1] > 0;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Alice always wins",
+    "idea": "Number the piles 0..n − 1. With an even count, Alice can take every even-index pile or every odd-index pile, whichever set is bigger, and the totals differ because the sum is odd.",
+    "steps": [
+     "Note that Alice, moving first on an even row, can always take the end that keeps her on her chosen parity, and Bob is then forced onto the other parity.",
+     "One of the two parity sets holds more stones (the total is odd, so they cannot be equal).",
+     "Return `true`."
+    ],
+    "time": "O(1)",
+    "space": "O(1)",
+    "why": "The argument shows a winning strategy exists, which is all the question asks. In an interview, show the DP first and then point out this observation; it depends entirely on \"even count, odd total\".",
+    "code": {
+     "java": "class Solution {\n    public boolean stoneGame(int[] piles) {\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool stoneGame(vector<int>& piles) {\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def stoneGame(self, piles: List[int]) -> bool:\n        return True",
+     "javascript": "var stoneGame = function(piles) {\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "stone-game-ii": {
+  "pattern": "Game DP over (position, M) with suffix sums",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Recursive minimax without caching",
+    "idea": "From position `i` with parameter `M`, try every `X` in `1..2M`; your total is what remains minus the opponent's best from `i + X` with `max(M, X)`.",
+    "steps": [
+     "Precompute `suffix[i]`, the stones in piles `i..n − 1`.",
+     "`best(i, M)`: if `i + 2M >= n`, take everything (`suffix[i]`).",
+     "Otherwise return the maximum over `X` of `suffix[i] − best(i + X, max(M, X))`."
+    ],
+    "time": "O(exponential)",
+    "space": "O(n)",
+    "why": "States repeat across many move orders and nothing is cached. It works for a handful of piles only.",
+    "code": {
+     "java": "class Solution {\n    private int[] suffix;\n    public int stoneGameII(int[] piles) {\n        int n = piles.length;\n        suffix = new int[n + 1];\n        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n        return best(0, 1, n);\n    }\n    private int best(int i, int m, int n) {\n        if (i + 2 * m >= n) return suffix[i];\n        int res = 0;\n        for (int x = 1; x <= 2 * m; x++) res = Math.max(res, suffix[i] - best(i + x, Math.max(m, x), n));\n        return res;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> suffix;\n    int best(int i, int m, int n) {\n        if (i + 2 * m >= n) return suffix[i];\n        int res = 0;\n        for (int x = 1; x <= 2 * m; x++) res = max(res, suffix[i] - best(i + x, max(m, x), n));\n        return res;\n    }\npublic:\n    int stoneGameII(vector<int>& piles) {\n        int n = piles.size();\n        suffix.assign(n + 1, 0);\n        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n        return best(0, 1, n);\n    }\n};",
+     "python": "class Solution:\n    def stoneGameII(self, piles: List[int]) -> int:\n        n = len(piles)\n        suffix = [0] * (n + 1)\n        for i in range(n - 1, -1, -1):\n            suffix[i] = suffix[i + 1] + piles[i]\n        def best(i, m):\n            if i + 2 * m >= n:\n                return suffix[i]\n            return max(suffix[i] - best(i + x, max(m, x)) for x in range(1, 2 * m + 1))\n        return best(0, 1)",
+     "javascript": "var stoneGameII = function(piles) {\n    const n = piles.length, suffix = new Array(n + 1).fill(0);\n    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n    const best = (i, m) => {\n        if (i + 2 * m >= n) return suffix[i];\n        let res = 0;\n        for (let x = 1; x <= 2 * m; x++) res = Math.max(res, suffix[i] - best(i + x, Math.max(m, x)));\n        return res;\n    };\n    return best(0, 1);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Memoised (i, M) table",
+    "idea": "There are only n × n distinct states (M never needs to exceed n), so cache `best(i, M)` and the whole game is solved once per state.",
+    "steps": [
+     "Precompute suffix sums.",
+     "Fill `dp[i][m]` for `i` from `n − 1` down to 0 and `m` from 1 to `n`: if `i + 2m >= n`, `dp[i][m] = suffix[i]`; otherwise the best over `X` of `suffix[i] − dp[i + X][min(n, max(m, X))]`.",
+     "Return `dp[0][1]`."
+    ],
+    "time": "O(n³)",
+    "space": "O(n²)",
+    "why": "n² states, each trying up to 2M ≤ 2n moves. With n ≤ 100 that is about 10⁶ steps. \"Maximise mine\" equals \"minimise theirs\" because all stones in the suffix are split between the two players.",
+    "code": {
+     "java": "class Solution {\n    public int stoneGameII(int[] piles) {\n        int n = piles.length;\n        int[] suffix = new int[n + 1];\n        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n        int[][] dp = new int[n + 1][n + 1];\n        for (int i = n - 1; i >= 0; i--)\n            for (int m = 1; m <= n; m++) {\n                if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }\n                int best = 0;\n                for (int x = 1; x <= 2 * m; x++) best = Math.max(best, suffix[i] - dp[i + x][Math.min(n, Math.max(m, x))]);\n                dp[i][m] = best;\n            }\n        return dp[0][1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int stoneGameII(vector<int>& piles) {\n        int n = piles.size();\n        vector<int> suffix(n + 1, 0);\n        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n        vector<vector<int>> dp(n + 1, vector<int>(n + 1, 0));\n        for (int i = n - 1; i >= 0; i--)\n            for (int m = 1; m <= n; m++) {\n                if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }\n                int best = 0;\n                for (int x = 1; x <= 2 * m; x++) best = max(best, suffix[i] - dp[i + x][min(n, max(m, x))]);\n                dp[i][m] = best;\n            }\n        return dp[0][1];\n    }\n};",
+     "python": "class Solution:\n    def stoneGameII(self, piles: List[int]) -> int:\n        n = len(piles)\n        suffix = [0] * (n + 1)\n        for i in range(n - 1, -1, -1):\n            suffix[i] = suffix[i + 1] + piles[i]\n        dp = [[0] * (n + 1) for _ in range(n + 1)]\n        for i in range(n - 1, -1, -1):\n            for m in range(1, n + 1):\n                if i + 2 * m >= n:\n                    dp[i][m] = suffix[i]\n                else:\n                    dp[i][m] = max(suffix[i] - dp[i + x][min(n, max(m, x))] for x in range(1, 2 * m + 1))\n        return dp[0][1]",
+     "javascript": "var stoneGameII = function(piles) {\n    const n = piles.length, suffix = new Array(n + 1).fill(0);\n    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];\n    const dp = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));\n    for (let i = n - 1; i >= 0; i--)\n        for (let m = 1; m <= n; m++) {\n            if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }\n            let best = 0;\n            for (let x = 1; x <= 2 * m; x++) best = Math.max(best, suffix[i] - dp[i + x][Math.min(n, Math.max(m, x))]);\n            dp[i][m] = best;\n        }\n    return dp[0][1];\n};"
     }
    }
   ]

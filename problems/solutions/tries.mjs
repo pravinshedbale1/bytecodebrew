@@ -1371,4 +1371,238 @@ public:
       },
     ],
   },
+  'extra-characters-in-a-string': {
+    pattern: 'DP over suffixes; a trie lists the words starting at each position',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Plain recursion',
+        idea: 'At position `i`, either skip `s[i]` as an extra character or jump over any dictionary word that starts at `i`; take the better result.',
+        steps: [
+          '`f(i)` = 0 when `i == n`.',
+          'Otherwise `f(i) = 1 + f(i + 1)`, and for every `j > i` with `s[i..j)` in the dictionary set, `f(i) = min(f(i), f(j))`.',
+          'Return `f(0)`.',
+        ],
+        time: 'O(2ⁿ · n)', space: 'O(n)',
+        why: 'The same suffix is solved again and again along different paths. With a long run of "a" and words "a", "aa", "aaa", the number of paths explodes, so it times out on that test.',
+        code: {
+          java: r`class Solution {
+    public int minExtraChar(String s, String[] dictionary) {
+        return f(s, 0, new HashSet<>(Arrays.asList(dictionary)));
+    }
+    private int f(String s, int i, Set<String> dict) {
+        if (i == s.length()) return 0;
+        int best = 1 + f(s, i + 1, dict);
+        for (int j = i + 1; j <= s.length(); j++)
+            if (dict.contains(s.substring(i, j))) best = Math.min(best, f(s, j, dict));
+        return best;
+    }
+}`,
+          cpp: r`class Solution {
+    unordered_set<string> dict;
+    int f(const string& s, int i) {
+        if (i == (int) s.size()) return 0;
+        int best = 1 + f(s, i + 1);
+        for (int j = i + 1; j <= (int) s.size(); j++)
+            if (dict.count(s.substr(i, j - i))) best = min(best, f(s, j));
+        return best;
+    }
+public:
+    int minExtraChar(string s, vector<string>& dictionary) {
+        dict = unordered_set<string>(dictionary.begin(), dictionary.end());
+        return f(s, 0);
+    }
+};`,
+          python: r`class Solution:
+    def minExtraChar(self, s: str, dictionary: List[str]) -> int:
+        words = set(dictionary)
+        def f(i):
+            if i == len(s):
+                return 0
+            best = 1 + f(i + 1)
+            for j in range(i + 1, len(s) + 1):
+                if s[i:j] in words:
+                    best = min(best, f(j))
+            return best
+        return f(0)`,
+          javascript: r`var minExtraChar = function(s, dictionary) {
+    const dict = new Set(dictionary);
+    const f = (i) => {
+        if (i === s.length) return 0;
+        let best = 1 + f(i + 1);
+        for (let j = i + 1; j <= s.length; j++)
+            if (dict.has(s.slice(i, j))) best = Math.min(best, f(j));
+        return best;
+    };
+    return f(0);
+};`,
+        },
+        timesOut: [5],
+      },
+      {
+        level: 'Better', name: 'Bottom-up DP with a hash set',
+        idea: 'Solve each suffix once, from the end of the string backwards, checking every substring against a set of words.',
+        steps: [
+          '`dp[n] = 0`.',
+          'For `i` from `n − 1` down to 0: `dp[i] = dp[i + 1] + 1`; for each `j > i` with `s[i..j)` in the set, `dp[i] = min(dp[i], dp[j])`.',
+          'Return `dp[0]`.',
+        ],
+        time: 'O(n³)', space: 'O(n + D)',
+        why: 'n² substrings, each built and hashed in O(n). D is the total size of the dictionary set. With n ≤ 50 this is instant; the trie removes the repeated substring building.',
+        code: {
+          java: r`class Solution {
+    public int minExtraChar(String s, String[] dictionary) {
+        Set<String> dict = new HashSet<>(Arrays.asList(dictionary));
+        int n = s.length();
+        int[] dp = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) {
+            dp[i] = dp[i + 1] + 1;
+            for (int j = i + 1; j <= n; j++)
+                if (dict.contains(s.substring(i, j))) dp[i] = Math.min(dp[i], dp[j]);
+        }
+        return dp[0];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minExtraChar(string s, vector<string>& dictionary) {
+        unordered_set<string> dict(dictionary.begin(), dictionary.end());
+        int n = s.size();
+        vector<int> dp(n + 1, 0);
+        for (int i = n - 1; i >= 0; i--) {
+            dp[i] = dp[i + 1] + 1;
+            for (int j = i + 1; j <= n; j++)
+                if (dict.count(s.substr(i, j - i))) dp[i] = min(dp[i], dp[j]);
+        }
+        return dp[0];
+    }
+};`,
+          python: r`class Solution:
+    def minExtraChar(self, s: str, dictionary: List[str]) -> int:
+        words, n = set(dictionary), len(s)
+        dp = [0] * (n + 1)
+        for i in range(n - 1, -1, -1):
+            dp[i] = dp[i + 1] + 1
+            for j in range(i + 1, n + 1):
+                if s[i:j] in words:
+                    dp[i] = min(dp[i], dp[j])
+        return dp[0]`,
+          javascript: r`var minExtraChar = function(s, dictionary) {
+    const dict = new Set(dictionary), n = s.length;
+    const dp = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        dp[i] = dp[i + 1] + 1;
+        for (let j = i + 1; j <= n; j++)
+            if (dict.has(s.slice(i, j))) dp[i] = Math.min(dp[i], dp[j]);
+    }
+    return dp[0];
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'DP with a trie walk',
+        idea: 'Put the dictionary in a trie. From each position `i`, walk the trie along `s[i], s[i + 1], …`; every word-end node you pass is a word starting at `i`, found without building substrings.',
+        steps: [
+          'Insert every word into a trie.',
+          'For `i` from `n − 1` down to 0: `dp[i] = dp[i + 1] + 1`, then walk the trie from the root along `s[j]` for `j = i, i + 1, …`, stopping when there is no child.',
+          'At each node that ends a word, set `dp[i] = min(dp[i], dp[j + 1])`. Return `dp[0]`.',
+        ],
+        time: 'O(n² + D)', space: 'O(n + D)',
+        why: 'D is the total length of the dictionary words (the trie size). Each position walks at most n trie steps with O(1) work each, and the walk stops early as soon as no word continues, which is usually after a few characters.',
+        code: {
+          java: r`class Solution {
+    private static class Trie { Trie[] next = new Trie[26]; boolean end; }
+    public int minExtraChar(String s, String[] dictionary) {
+        Trie root = new Trie();
+        for (String w : dictionary) {
+            Trie t = root;
+            for (char c : w.toCharArray()) {
+                if (t.next[c - 'a'] == null) t.next[c - 'a'] = new Trie();
+                t = t.next[c - 'a'];
+            }
+            t.end = true;
+        }
+        int n = s.length();
+        int[] dp = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) {
+            dp[i] = dp[i + 1] + 1;
+            Trie t = root;
+            for (int j = i; j < n; j++) {
+                t = t.next[s.charAt(j) - 'a'];
+                if (t == null) break;
+                if (t.end) dp[i] = Math.min(dp[i], dp[j + 1]);
+            }
+        }
+        return dp[0];
+    }
+}`,
+          cpp: r`class Solution {
+    struct Trie { Trie* next[26] = {}; bool end = false; };
+public:
+    int minExtraChar(string s, vector<string>& dictionary) {
+        Trie* root = new Trie();
+        for (const string& w : dictionary) {
+            Trie* t = root;
+            for (char c : w) {
+                if (!t->next[c - 'a']) t->next[c - 'a'] = new Trie();
+                t = t->next[c - 'a'];
+            }
+            t->end = true;
+        }
+        int n = s.size();
+        vector<int> dp(n + 1, 0);
+        for (int i = n - 1; i >= 0; i--) {
+            dp[i] = dp[i + 1] + 1;
+            Trie* t = root;
+            for (int j = i; j < n; j++) {
+                t = t->next[s[j] - 'a'];
+                if (!t) break;
+                if (t->end) dp[i] = min(dp[i], dp[j + 1]);
+            }
+        }
+        return dp[0];
+    }
+};`,
+          python: r`class Solution:
+    def minExtraChar(self, s: str, dictionary: List[str]) -> int:
+        root = {}
+        for w in dictionary:
+            t = root
+            for c in w:
+                t = t.setdefault(c, {})
+            t['$'] = True
+        n = len(s)
+        dp = [0] * (n + 1)
+        for i in range(n - 1, -1, -1):
+            dp[i] = dp[i + 1] + 1
+            t = root
+            for j in range(i, n):
+                t = t.get(s[j])
+                if t is None:
+                    break
+                if '$' in t:
+                    dp[i] = min(dp[i], dp[j + 1])
+        return dp[0]`,
+          javascript: r`var minExtraChar = function(s, dictionary) {
+    const root = {};
+    for (const w of dictionary) {
+        let t = root;
+        for (const c of w) t = t[c] || (t[c] = {});
+        t.$ = true;
+    }
+    const n = s.length, dp = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        dp[i] = dp[i + 1] + 1;
+        let t = root;
+        for (let j = i; j < n; j++) {
+            t = t[s[j]];
+            if (!t) break;
+            if (t.$) dp[i] = Math.min(dp[i], dp[j + 1]);
+        }
+    }
+    return dp[0];
+};`,
+        },
+      },
+    ],
+  },
 };

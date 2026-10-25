@@ -1283,4 +1283,743 @@ public:
       },
     ],
   },
+  'concatenation-of-array': {
+    pattern: 'Direct array construction (index arithmetic)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Append to a growing list twice',
+        idea: 'Walk `nums` twice and append every value to a dynamic list, then convert it to an array.',
+        steps: [
+          'Create an empty list.',
+          'Append each value of `nums`, then do the same again.',
+          'Convert the list to the answer array.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Already linear. The boxing and the final copy in Java make it slower in practice than filling a fixed-size array.',
+        code: {
+          java: r`class Solution {
+    public int[] getConcatenation(int[] nums) {
+        List<Integer> list = new ArrayList<>();
+        for (int round = 0; round < 2; round++) for (int x : nums) list.add(x);
+        int[] ans = new int[list.size()];
+        for (int i = 0; i < ans.length; i++) ans[i] = list.get(i);
+        return ans;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> getConcatenation(vector<int>& nums) {
+        vector<int> ans;
+        for (int round = 0; round < 2; round++) for (int x : nums) ans.push_back(x);
+        return ans;
+    }
+};`,
+          python: r`class Solution:
+    def getConcatenation(self, nums: List[int]) -> List[int]:
+        ans = []
+        for _ in range(2):
+            for x in nums:
+                ans.append(x)
+        return ans`,
+          javascript: r`var getConcatenation = function(nums) {
+    const ans = [];
+    for (let round = 0; round < 2; round++) for (const x of nums) ans.push(x);
+    return ans;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Fill both halves in one pass',
+        idea: 'Allocate `2n` slots and write `nums[i]` to positions `i` and `i + n`.',
+        steps: [
+          'Create `ans` of length `2n`.',
+          'For each `i`, set `ans[i] = ans[i + n] = nums[i]`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'n iterations, two writes each. The output itself is 2n values, so O(n) space is required.',
+        code: {
+          java: r`class Solution {
+    public int[] getConcatenation(int[] nums) {
+        int n = nums.length;
+        int[] ans = new int[2 * n];
+        for (int i = 0; i < n; i++) ans[i] = ans[i + n] = nums[i];
+        return ans;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> getConcatenation(vector<int>& nums) {
+        int n = nums.size();
+        vector<int> ans(2 * n);
+        for (int i = 0; i < n; i++) ans[i] = ans[i + n] = nums[i];
+        return ans;
+    }
+};`,
+          python: r`class Solution:
+    def getConcatenation(self, nums: List[int]) -> List[int]:
+        n = len(nums)
+        ans = [0] * (2 * n)
+        for i in range(n):
+            ans[i] = ans[i + n] = nums[i]
+        return ans`,
+          javascript: r`var getConcatenation = function(nums) {
+    const n = nums.length, ans = new Array(2 * n);
+    for (let i = 0; i < n; i++) ans[i] = ans[i + n] = nums[i];
+    return ans;
+};`,
+        },
+      },
+    ],
+  },
+  'majority-element': {
+    pattern: 'Boyer–Moore voting (cancel out different values)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Count each value',
+        idea: 'For each position, count how often its value appears in the whole array and return the first one above n / 2.',
+        steps: [
+          'For each `i`, count the `j` with `nums[j] == nums[i]`.',
+          'If the count exceeds `n / 2`, return `nums[i]`.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'n candidates times n comparisons: 2.5 × 10⁹ steps for n = 5 × 10⁴, which times out when the majority value only starts halfway through the array.',
+        code: {
+          java: r`class Solution {
+    public int majorityElement(int[] nums) {
+        int n = nums.length;
+        for (int x : nums) {
+            int count = 0;
+            for (int y : nums) if (y == x) count++;
+            if (count > n / 2) return x;
+        }
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int majorityElement(vector<int>& nums) {
+        int n = nums.size();
+        for (int x : nums) {
+            int count = 0;
+            for (int y : nums) if (y == x) count++;
+            if (count > n / 2) return x;
+        }
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> int:
+        n = len(nums)
+        for x in nums:
+            if sum(1 for y in nums if y == x) > n // 2:
+                return x
+        return -1`,
+          javascript: r`var majorityElement = function(nums) {
+    const n = nums.length;
+    for (const x of nums) {
+        let count = 0;
+        for (const y of nums) if (y === x) count++;
+        if (count > Math.floor(n / 2)) return x;
+    }
+    return -1;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Hash map of counts',
+        idea: 'Count every value in a hash map and return the one whose count passes n / 2.',
+        steps: [
+          'For each `x`, increment `count[x]`.',
+          'As soon as a count exceeds `n / 2`, return that value.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'One pass with O(1) average map operations. The map can hold up to n / 2 distinct values. Sorting and returning `nums[n / 2]` is another O(n log n), O(1) option.',
+        code: {
+          java: r`class Solution {
+    public int majorityElement(int[] nums) {
+        Map<Integer, Integer> count = new HashMap<>();
+        for (int x : nums) if (count.merge(x, 1, Integer::sum) > nums.length / 2) return x;
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int majorityElement(vector<int>& nums) {
+        unordered_map<int, int> count;
+        for (int x : nums) if (++count[x] > (int) nums.size() / 2) return x;
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> int:
+        count = Counter()
+        for x in nums:
+            count[x] += 1
+            if count[x] > len(nums) // 2:
+                return x
+        return -1`,
+          javascript: r`var majorityElement = function(nums) {
+    const count = new Map();
+    for (const x of nums) {
+        const c = (count.get(x) || 0) + 1;
+        count.set(x, c);
+        if (c > Math.floor(nums.length / 2)) return x;
+    }
+    return -1;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Boyer–Moore voting',
+        idea: 'Keep one candidate and a counter. Each different value cancels one vote; because the majority has more copies than everything else combined, it is the candidate left standing.',
+        steps: [
+          'Set `count = 0`.',
+          'For each `x`: if `count == 0`, make `x` the candidate. Then add 1 if `x` equals the candidate, otherwise subtract 1.',
+          'Return the candidate.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each decrement pairs one candidate copy with one different value and throws both away. The majority cannot be fully cancelled, since it has more than half the elements. The result is only guaranteed because the problem promises a majority exists; otherwise a second counting pass would be needed.',
+        code: {
+          java: r`class Solution {
+    public int majorityElement(int[] nums) {
+        int cand = 0, count = 0;
+        for (int x : nums) {
+            if (count == 0) cand = x;
+            count += x == cand ? 1 : -1;
+        }
+        return cand;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int majorityElement(vector<int>& nums) {
+        int cand = 0, count = 0;
+        for (int x : nums) {
+            if (count == 0) cand = x;
+            count += x == cand ? 1 : -1;
+        }
+        return cand;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> int:
+        cand, count = 0, 0
+        for x in nums:
+            if count == 0:
+                cand = x
+            count += 1 if x == cand else -1
+        return cand`,
+          javascript: r`var majorityElement = function(nums) {
+    let cand = 0, count = 0;
+    for (const x of nums) {
+        if (count === 0) cand = x;
+        count += x === cand ? 1 : -1;
+    }
+    return cand;
+};`,
+        },
+      },
+    ],
+  },
+  'encode-and-decode-strings': {
+    pattern: 'Length-prefix framing (no delimiter can clash)',
+    approaches: [
+      {
+        level: 'Better', name: 'Escape the delimiter',
+        idea: 'Join the strings with a separator, after escaping every separator and escape character inside them, so the decoder can tell a real separator from a literal one.',
+        steps: [
+          'For each string, replace `\\` with `\\\\` and `,` with `\\,`, then append `,` after it.',
+          'To decode, scan characters: after a `\\`, take the next character literally; an unescaped `,` ends the current string.',
+        ],
+        time: 'O(L)', space: 'O(L)',
+        why: 'L is the total length of all strings. It works for any content, but the escaping logic is easy to get subtly wrong, and every escaped character makes the output longer. Ending each string with a separator (instead of joining) keeps `[]` and `[""]` distinct.',
+        code: {
+          java: r`class Codec {
+    public String encode(List<String> strs) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : strs) {
+            for (char c : s.toCharArray()) {
+                if (c == '\\' || c == ',') sb.append('\\');
+                sb.append(c);
+            }
+            sb.append(',');
+        }
+        return sb.toString();
+    }
+    public List<String> decode(String s) {
+        List<String> out = new ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\\') cur.append(s.charAt(++i));
+            else if (c == ',') { out.add(cur.toString()); cur.setLength(0); }
+            else cur.append(c);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Codec {
+public:
+    string encode(vector<string>& strs) {
+        string out;
+        for (const string& s : strs) {
+            for (char c : s) {
+                if (c == '\\' || c == ',') out += '\\';
+                out += c;
+            }
+            out += ',';
+        }
+        return out;
+    }
+    vector<string> decode(string s) {
+        vector<string> out;
+        string cur;
+        for (size_t i = 0; i < s.size(); i++) {
+            char c = s[i];
+            if (c == '\\') cur += s[++i];
+            else if (c == ',') { out.push_back(cur); cur.clear(); }
+            else cur += c;
+        }
+        return out;
+    }
+};`,
+          python: r`class Codec:
+    def encode(self, strs: List[str]) -> str:
+        out = []
+        for s in strs:
+            out.append(s.replace('\\', '\\\\').replace(',', '\\,'))
+            out.append(',')
+        return ''.join(out)
+
+    def decode(self, s: str) -> List[str]:
+        out, cur, i = [], [], 0
+        while i < len(s):
+            c = s[i]
+            if c == '\\':
+                i += 1
+                cur.append(s[i])
+            elif c == ',':
+                out.append(''.join(cur))
+                cur = []
+            else:
+                cur.append(c)
+            i += 1
+        return out`,
+          javascript: r`var encode = function(strs) {
+    let out = "";
+    for (const s of strs) out += s.replace(/[\\,]/g, (c) => "\\" + c) + ",";
+    return out;
+};
+
+var decode = function(s) {
+    const out = [];
+    let cur = "";
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (c === "\\") cur += s[++i];
+        else if (c === ",") { out.push(cur); cur = ""; }
+        else cur += c;
+    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Length, separator, string',
+        idea: 'Write each string as its length, a `#`, and the string itself. The decoder reads the number, skips the `#`, and takes exactly that many characters, so the string\'s own characters never confuse it.',
+        steps: [
+          'Encode: for each string, append `len + "#" + s`.',
+          'Decode: from position `i`, find the next `#` at `j`; the digits between are the length `len`.',
+          'Take `s[j + 1 .. j + len]` as the next string and continue from `j + 1 + len`.',
+        ],
+        time: 'O(L)', space: 'O(L)',
+        why: 'Each character is copied once in each direction, plus a few digits of overhead per string. The `#` found after `i` is always the length\'s own separator, because the decoder only ever looks for it at the start of a frame, never inside string content. This is how real protocols frame messages (HTTP Content-Length, length-prefixed binary formats).',
+        code: {
+          java: r`class Codec {
+    public String encode(List<String> strs) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : strs) sb.append(s.length()).append('#').append(s);
+        return sb.toString();
+    }
+    public List<String> decode(String s) {
+        List<String> out = new ArrayList<>();
+        int i = 0;
+        while (i < s.length()) {
+            int j = s.indexOf('#', i);
+            int len = Integer.parseInt(s.substring(i, j));
+            out.add(s.substring(j + 1, j + 1 + len));
+            i = j + 1 + len;
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Codec {
+public:
+    string encode(vector<string>& strs) {
+        string out;
+        for (const string& s : strs) out += to_string(s.size()) + "#" + s;
+        return out;
+    }
+    vector<string> decode(string s) {
+        vector<string> out;
+        size_t i = 0;
+        while (i < s.size()) {
+            size_t j = s.find('#', i);
+            int len = stoi(s.substr(i, j - i));
+            out.push_back(s.substr(j + 1, len));
+            i = j + 1 + len;
+        }
+        return out;
+    }
+};`,
+          python: r`class Codec:
+    def encode(self, strs: List[str]) -> str:
+        return ''.join(f'{len(s)}#{s}' for s in strs)
+
+    def decode(self, s: str) -> List[str]:
+        out, i = [], 0
+        while i < len(s):
+            j = s.index('#', i)
+            n = int(s[i:j])
+            out.append(s[j + 1:j + 1 + n])
+            i = j + 1 + n
+        return out`,
+          javascript: r`var encode = function(strs) {
+    return strs.map((s) => s.length + "#" + s).join("");
+};
+
+var decode = function(s) {
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+        const j = s.indexOf("#", i);
+        const len = Number(s.slice(i, j));
+        out.push(s.slice(j + 1, j + 1 + len));
+        i = j + 1 + len;
+    }
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'majority-element-ii': {
+    pattern: 'Boyer–Moore voting with two candidates',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Count each distinct value',
+        idea: 'For every value, count its occurrences across the whole array and keep those above n / 3, without repeats.',
+        steps: [
+          'For each `x` not already in the answer, count how often it appears.',
+          'If the count exceeds `n / 3`, add it to the answer.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'Quadratic counting, so it times out on the large test. The answer list holds at most two values, so it does not count as extra space.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> majorityElement(int[] nums) {
+        List<Integer> out = new ArrayList<>();
+        for (int x : nums) {
+            if (out.contains(x)) continue;
+            int count = 0;
+            for (int y : nums) if (y == x) count++;
+            if (count > nums.length / 3) out.add(x);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> majorityElement(vector<int>& nums) {
+        vector<int> out;
+        for (int x : nums) {
+            if (find(out.begin(), out.end(), x) != out.end()) continue;
+            int count = 0;
+            for (int y : nums) if (y == x) count++;
+            if (count > (int) nums.size() / 3) out.push_back(x);
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> List[int]:
+        out = []
+        for x in nums:
+            if x not in out and nums.count(x) > len(nums) // 3:
+                out.append(x)
+        return out`,
+          javascript: r`var majorityElement = function(nums) {
+    const out = [];
+    for (const x of nums) {
+        if (out.includes(x)) continue;
+        let count = 0;
+        for (const y of nums) if (y === x) count++;
+        if (count > Math.floor(nums.length / 3)) out.push(x);
+    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Hash map of counts',
+        idea: 'Count every value, then return the keys whose count is above n / 3.',
+        steps: [
+          'Build `count[x]` for every value.',
+          'Collect each key with `count > n / 3`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Linear time, but the map can hold up to n distinct values. The follow-up asks for O(1) space.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> majorityElement(int[] nums) {
+        Map<Integer, Integer> count = new HashMap<>();
+        for (int x : nums) count.merge(x, 1, Integer::sum);
+        List<Integer> out = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> e : count.entrySet()) if (e.getValue() > nums.length / 3) out.add(e.getKey());
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> majorityElement(vector<int>& nums) {
+        unordered_map<int, int> count;
+        for (int x : nums) count[x]++;
+        vector<int> out;
+        for (auto& [v, c] : count) if (c > (int) nums.size() / 3) out.push_back(v);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> List[int]:
+        return [x for x, c in Counter(nums).items() if c > len(nums) // 3]`,
+          javascript: r`var majorityElement = function(nums) {
+    const count = new Map();
+    for (const x of nums) count.set(x, (count.get(x) || 0) + 1);
+    const out = [];
+    for (const [v, c] of count) if (c > Math.floor(nums.length / 3)) out.push(v);
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two-candidate voting + verification',
+        idea: 'At most two values can pass n / 3. Keep two candidates with counters; a value matching neither cancels one vote from each. Then count the two survivors to confirm them.',
+        steps: [
+          'For each `x`: if it equals candidate 1 or 2, bump that counter; else if a counter is 0, make `x` that candidate with count 1; else decrement both counters.',
+          'Reset both counters and count how often each candidate really appears.',
+          'Return the candidates whose real count exceeds `n / 3`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each "decrement both" throws away three different values at once, so a value with more than n / 3 copies can never be cancelled completely. The second pass matters: survivors are only candidates (in `[1,2,3]` some value survives but none qualifies). Starting the candidates at different values avoids both counters tracking the same number.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> majorityElement(int[] nums) {
+        int c1 = 0, c2 = 1, n1 = 0, n2 = 0;
+        for (int x : nums) {
+            if (x == c1) n1++;
+            else if (x == c2) n2++;
+            else if (n1 == 0) { c1 = x; n1 = 1; }
+            else if (n2 == 0) { c2 = x; n2 = 1; }
+            else { n1--; n2--; }
+        }
+        n1 = 0; n2 = 0;
+        for (int x : nums) { if (x == c1) n1++; else if (x == c2) n2++; }
+        List<Integer> out = new ArrayList<>();
+        if (n1 > nums.length / 3) out.add(c1);
+        if (n2 > nums.length / 3) out.add(c2);
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> majorityElement(vector<int>& nums) {
+        int c1 = 0, c2 = 1, n1 = 0, n2 = 0;
+        for (int x : nums) {
+            if (x == c1) n1++;
+            else if (x == c2) n2++;
+            else if (n1 == 0) { c1 = x; n1 = 1; }
+            else if (n2 == 0) { c2 = x; n2 = 1; }
+            else { n1--; n2--; }
+        }
+        n1 = n2 = 0;
+        for (int x : nums) { if (x == c1) n1++; else if (x == c2) n2++; }
+        vector<int> out;
+        int n = nums.size();
+        if (n1 > n / 3) out.push_back(c1);
+        if (n2 > n / 3) out.push_back(c2);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def majorityElement(self, nums: List[int]) -> List[int]:
+        c1, c2, n1, n2 = 0, 1, 0, 0
+        for x in nums:
+            if x == c1:
+                n1 += 1
+            elif x == c2:
+                n2 += 1
+            elif n1 == 0:
+                c1, n1 = x, 1
+            elif n2 == 0:
+                c2, n2 = x, 1
+            else:
+                n1 -= 1
+                n2 -= 1
+        return [c for c in (c1, c2) if nums.count(c) > len(nums) // 3]`,
+          javascript: r`var majorityElement = function(nums) {
+    let c1 = 0, c2 = 1, n1 = 0, n2 = 0;
+    for (const x of nums) {
+        if (x === c1) n1++;
+        else if (x === c2) n2++;
+        else if (n1 === 0) { c1 = x; n1 = 1; }
+        else if (n2 === 0) { c2 = x; n2 = 1; }
+        else { n1--; n2--; }
+    }
+    n1 = 0; n2 = 0;
+    for (const x of nums) { if (x === c1) n1++; else if (x === c2) n2++; }
+    const out = [], limit = Math.floor(nums.length / 3);
+    if (n1 > limit) out.push(c1);
+    if (n2 > limit) out.push(c2);
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'verifying-an-alien-dictionary': {
+    pattern: 'Rank lookup table + compare neighbours',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Translate to English and compare all pairs',
+        idea: 'Map every word to the English letters at the same alphabet positions, then check every pair `i < j` with ordinary string comparison.',
+        steps: [
+          'Build `rank[c]` = position of `c` in `order`, and translate each word letter by letter into `"a" + rank`.',
+          'For every `i < j`, return `false` if translated word `i` is greater than translated word `j`.',
+          'Return `true`.',
+        ],
+        time: 'O(n² · m)', space: 'O(n · m)',
+        why: 'n words of length up to m. Comparing all pairs repeats work: sortedness only needs neighbouring pairs. The translation trick is still neat, because ordinary string comparison already handles the prefix rule.',
+        code: {
+          java: r`class Solution {
+    public boolean isAlienSorted(String[] words, String order) {
+        int[] rank = new int[26];
+        for (int i = 0; i < 26; i++) rank[order.charAt(i) - 'a'] = i;
+        String[] t = new String[words.length];
+        for (int w = 0; w < words.length; w++) {
+            StringBuilder sb = new StringBuilder();
+            for (char c : words[w].toCharArray()) sb.append((char) ('a' + rank[c - 'a']));
+            t[w] = sb.toString();
+        }
+        for (int i = 0; i < t.length; i++)
+            for (int j = i + 1; j < t.length; j++)
+                if (t[i].compareTo(t[j]) > 0) return false;
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool isAlienSorted(vector<string>& words, string order) {
+        int rank[26];
+        for (int i = 0; i < 26; i++) rank[order[i] - 'a'] = i;
+        vector<string> t;
+        for (const string& w : words) {
+            string s;
+            for (char c : w) s += (char) ('a' + rank[c - 'a']);
+            t.push_back(s);
+        }
+        for (size_t i = 0; i < t.size(); i++)
+            for (size_t j = i + 1; j < t.size(); j++)
+                if (t[i] > t[j]) return false;
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def isAlienSorted(self, words: List[str], order: str) -> bool:
+        rank = {c: i for i, c in enumerate(order)}
+        t = [''.join(chr(97 + rank[c]) for c in w) for w in words]
+        for i in range(len(t)):
+            for j in range(i + 1, len(t)):
+                if t[i] > t[j]:
+                    return False
+        return True`,
+          javascript: r`var isAlienSorted = function(words, order) {
+    const rank = {};
+    for (let i = 0; i < 26; i++) rank[order[i]] = i;
+    const t = words.map((w) => [...w].map((c) => String.fromCharCode(97 + rank[c])).join(""));
+    for (let i = 0; i < t.length; i++)
+        for (let j = i + 1; j < t.length; j++)
+            if (t[i] > t[j]) return false;
+    return true;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Compare neighbours with a rank table',
+        idea: 'A list is sorted exactly when each word is not after the next one. Compare each neighbouring pair at its first differing letter using an O(1) rank lookup.',
+        steps: [
+          'Build `rank[c]` from `order`.',
+          'For each neighbouring pair `a`, `b`: find the first index `k` where they differ.',
+          'If there is none and `a` is longer than `b`, return `false`. If `rank[a[k]] > rank[b[k]]`, return `false`. Otherwise continue; return `true` at the end.',
+        ],
+        time: 'O(C)', space: 'O(1)',
+        why: 'C is the total number of characters: each pair comparison stops at the first difference, so every character is looked at a constant number of times. Ordering is transitive, so neighbours suffice. The rank table has a fixed 26 entries. The prefix case ("apple" before "app") is the usual bug.',
+        code: {
+          java: r`class Solution {
+    public boolean isAlienSorted(String[] words, String order) {
+        int[] rank = new int[26];
+        for (int i = 0; i < 26; i++) rank[order.charAt(i) - 'a'] = i;
+        for (int w = 0; w + 1 < words.length; w++) {
+            String a = words[w], b = words[w + 1];
+            int k = 0;
+            while (k < a.length() && k < b.length() && a.charAt(k) == b.charAt(k)) k++;
+            if (k == a.length()) continue;
+            if (k == b.length() || rank[a.charAt(k) - 'a'] > rank[b.charAt(k) - 'a']) return false;
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool isAlienSorted(vector<string>& words, string order) {
+        int rank[26];
+        for (int i = 0; i < 26; i++) rank[order[i] - 'a'] = i;
+        for (size_t w = 0; w + 1 < words.size(); w++) {
+            const string& a = words[w];
+            const string& b = words[w + 1];
+            size_t k = 0;
+            while (k < a.size() && k < b.size() && a[k] == b[k]) k++;
+            if (k == a.size()) continue;
+            if (k == b.size() || rank[a[k] - 'a'] > rank[b[k] - 'a']) return false;
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def isAlienSorted(self, words: List[str], order: str) -> bool:
+        rank = {c: i for i, c in enumerate(order)}
+        for a, b in zip(words, words[1:]):
+            k = 0
+            while k < len(a) and k < len(b) and a[k] == b[k]:
+                k += 1
+            if k == len(a):
+                continue
+            if k == len(b) or rank[a[k]] > rank[b[k]]:
+                return False
+        return True`,
+          javascript: r`var isAlienSorted = function(words, order) {
+    const rank = new Array(26);
+    for (let i = 0; i < 26; i++) rank[order.charCodeAt(i) - 97] = i;
+    for (let w = 0; w + 1 < words.length; w++) {
+        const a = words[w], b = words[w + 1];
+        let k = 0;
+        while (k < a.length && k < b.length && a[k] === b[k]) k++;
+        if (k === a.length) continue;
+        if (k === b.length || rank[a.charCodeAt(k) - 97] > rank[b.charCodeAt(k) - 97]) return false;
+    }
+    return true;
+};`,
+        },
+      },
+    ],
+  },
 };

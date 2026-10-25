@@ -419,6 +419,7 @@ public:
     return best(0, 0);
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Optimal', name: 'Subset sum: the largest reachable sum ≤ total / 2',
@@ -491,7 +492,7 @@ public:
         ],
         time: 'O(kᵃ)', space: 'O(a)',
         why: 'k branches per level and up to a levels deep (a = amount); amounts repeat endlessly.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     public int coinChange(int[] coins, int amount) {
@@ -728,6 +729,7 @@ public:
     return ways(0, amount);
 };`,
         },
+        timesOut: ['generated'],
       },
       {
         level: 'Better', name: '2-D table over (coins used, amount)',
@@ -843,7 +845,7 @@ public:
         ],
         time: 'O(kᵗ)', space: 'O(t)',
         why: 'It visits every sequence one by one, so the work is at least the answer (over a billion for one test).',
-        timesOut: [3],
+        timesOut: [3, 'generated'],
         code: {
           java: r`class Solution {
     public int combinationSum4(int[] nums, int target) {
@@ -1003,7 +1005,7 @@ public:
         ],
         time: 'O(√n^n)', space: 'O(n)',
         why: 'Branching by up to √n at every level with no reuse — hopeless beyond tiny n.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     public int numSquares(int n) {

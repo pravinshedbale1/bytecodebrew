@@ -197,4 +197,59 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'stone-game', title: 'Stone Game', level: 'Medium',
+    summary: 'An even number of piles is in a row and the total is odd. Alice and Bob alternate, Alice first, each taking a whole pile from either end. Both play optimally. Return true if Alice ends with more stones.',
+    method: 'stoneGame', params: [['int[]', 'piles']], returns: 'boolean',
+    tests: [
+      { in: [[5, 3, 4, 5]], out: true },
+      { in: [[3, 7, 2, 3]], out: true },
+      { in: [[1, 2]] },
+      { in: [[2, 9, 1, 1, 6, 4]] },
+      { in: [[7, 8, 8, 10]] },
+      { in: [[1, 100, 3, 2, 4, 6, 8, 7]] },
+    ],
+    ref: `class Solution {
+    public boolean stoneGame(int[] piles) {
+        int n = piles.length;
+        int[][] dp = new int[n][n];
+        for (int i = 0; i < n; i++) dp[i][i] = piles[i];
+        for (int len = 2; len <= n; len++)
+            for (int i = 0; i + len - 1 < n; i++) {
+                int j = i + len - 1;
+                dp[i][j] = Math.max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1]);
+            }
+        return dp[0][n - 1] > 0;
+    }
+}`,
+  },
+  {
+    slug: 'stone-game-ii', title: 'Stone Game II', level: 'Medium',
+    summary: 'Piles are in a row; M starts at 1. Alice and Bob alternate, Alice first; on a turn the player takes all stones from the first X remaining piles, 1 <= X <= 2M, then M becomes max(M, X). Both play optimally. Return the most stones Alice can get.',
+    method: 'stoneGameII', params: [['int[]', 'piles']], returns: 'int',
+    tests: [
+      { in: [[2, 7, 9, 4, 4]], out: 10 },
+      { in: [[1, 2, 3, 4, 5, 100]], out: 104 },
+      { in: [[5]] },
+      { in: [[1, 1]] },
+      { in: [[3, 1, 8, 2, 7, 9, 4, 6]] },
+      { in: [[10000, 1, 1, 1, 1, 10000]] },
+    ],
+    ref: `class Solution {
+    public int stoneGameII(int[] piles) {
+        int n = piles.length;
+        int[] suffix = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + piles[i];
+        int[][] dp = new int[n + 1][n + 1];
+        for (int i = n - 1; i >= 0; i--)
+            for (int m = 1; m <= n; m++) {
+                if (i + 2 * m >= n) { dp[i][m] = suffix[i]; continue; }
+                int best = 0;
+                for (int x = 1; x <= 2 * m; x++) best = Math.max(best, suffix[i] - dp[i + x][Math.min(n, Math.max(m, x))]);
+                dp[i][m] = best;
+            }
+        return dp[0][1];
+    }
+}`,
+  },
 ];

@@ -2805,4 +2805,1037 @@ RandomizedCollection.prototype.getRandom = function() {
       },
     ],
   },
+  'design-hashset': {
+    pattern: 'Hash table with separate chaining',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Unsorted list',
+        idea: 'Keep the keys in one list and search it linearly for every operation.',
+        steps: [
+          '`contains` scans the list for the key.',
+          '`add` appends the key only if `contains` is false; `remove` deletes it if found.',
+        ],
+        time: 'O(n) per operation', space: 'O(n)',
+        why: 'n is the number of stored keys. Simple, but every call is a full scan, which is exactly what hashing avoids.',
+        code: {
+          java: r`class MyHashSet {
+    private final List<Integer> keys = new ArrayList<>();
+    public MyHashSet() {}
+    public void add(int key) { if (!keys.contains(key)) keys.add(key); }
+    public void remove(int key) { keys.remove(Integer.valueOf(key)); }
+    public boolean contains(int key) { return keys.contains(key); }
+}`,
+          cpp: r`class MyHashSet {
+    vector<int> keys;
+public:
+    MyHashSet() {}
+    void add(int key) { if (!contains(key)) keys.push_back(key); }
+    void remove(int key) {
+        auto it = find(keys.begin(), keys.end(), key);
+        if (it != keys.end()) keys.erase(it);
+    }
+    bool contains(int key) { return find(keys.begin(), keys.end(), key) != keys.end(); }
+};`,
+          python: r`class MyHashSet:
+    def __init__(self):
+        self.keys = []
+
+    def add(self, key: int) -> None:
+        if key not in self.keys:
+            self.keys.append(key)
+
+    def remove(self, key: int) -> None:
+        if key in self.keys:
+            self.keys.remove(key)
+
+    def contains(self, key: int) -> bool:
+        return key in self.keys`,
+          javascript: r`var MyHashSet = function() {
+    this.keys = [];
+};
+
+MyHashSet.prototype.add = function(key) {
+    if (!this.keys.includes(key)) this.keys.push(key);
+};
+
+MyHashSet.prototype.remove = function(key) {
+    const i = this.keys.indexOf(key);
+    if (i >= 0) this.keys.splice(i, 1);
+};
+
+MyHashSet.prototype.contains = function(key) {
+    return this.keys.includes(key);
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Direct-address array',
+        idea: 'Keys are at most 10⁶, so a boolean array indexed by key answers every operation in O(1).',
+        steps: [
+          'Allocate `present` of size 10⁶ + 1.',
+          '`add` sets `present[key] = true`, `remove` sets it to false, `contains` reads it.',
+        ],
+        time: 'O(1) per operation', space: 'O(U)',
+        why: 'U = 10⁶ + 1 is the size of the key range. Fast and simple, but the memory depends on the key range rather than on how many keys you store, and it does not work for large or non-integer keys.',
+        code: {
+          java: r`class MyHashSet {
+    private final boolean[] present = new boolean[1000001];
+    public MyHashSet() {}
+    public void add(int key) { present[key] = true; }
+    public void remove(int key) { present[key] = false; }
+    public boolean contains(int key) { return present[key]; }
+}`,
+          cpp: r`class MyHashSet {
+    vector<bool> present = vector<bool>(1000001, false);
+public:
+    MyHashSet() {}
+    void add(int key) { present[key] = true; }
+    void remove(int key) { present[key] = false; }
+    bool contains(int key) { return present[key]; }
+};`,
+          python: r`class MyHashSet:
+    def __init__(self):
+        self.present = bytearray(1000001)
+
+    def add(self, key: int) -> None:
+        self.present[key] = 1
+
+    def remove(self, key: int) -> None:
+        self.present[key] = 0
+
+    def contains(self, key: int) -> bool:
+        return self.present[key] == 1`,
+          javascript: r`var MyHashSet = function() {
+    this.present = new Uint8Array(1000001);
+};
+
+MyHashSet.prototype.add = function(key) {
+    this.present[key] = 1;
+};
+
+MyHashSet.prototype.remove = function(key) {
+    this.present[key] = 0;
+};
+
+MyHashSet.prototype.contains = function(key) {
+    return this.present[key] === 1;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Buckets with chaining',
+        idea: 'Split keys into a fixed number of buckets by `key % SIZE`; each bucket is a short list searched linearly.',
+        steps: [
+          'Create `SIZE` buckets (a prime such as 1009 spreads keys evenly).',
+          'For any key, its bucket is `buckets[key % SIZE]`.',
+          '`add` appends if the bucket does not hold the key, `remove` deletes it from the bucket, `contains` searches the bucket.',
+        ],
+        time: 'O(n / SIZE) per operation', space: 'O(n + SIZE)',
+        why: 'With keys spread evenly, each bucket holds about n / SIZE keys, which is a small constant here (10⁴ calls over 1009 buckets). Real hash tables also resize when buckets get long (load factor), keeping operations O(1) on average.',
+        code: {
+          java: r`class MyHashSet {
+    private static final int SIZE = 1009;
+    private final List<Integer>[] buckets = new List[SIZE];
+    public MyHashSet() {
+        for (int i = 0; i < SIZE; i++) buckets[i] = new ArrayList<>();
+    }
+    public void add(int key) {
+        List<Integer> b = buckets[key % SIZE];
+        if (!b.contains(key)) b.add(key);
+    }
+    public void remove(int key) { buckets[key % SIZE].remove(Integer.valueOf(key)); }
+    public boolean contains(int key) { return buckets[key % SIZE].contains(key); }
+}`,
+          cpp: r`class MyHashSet {
+    static const int SIZE = 1009;
+    vector<list<int>> buckets = vector<list<int>>(SIZE);
+public:
+    MyHashSet() {}
+    void add(int key) { if (!contains(key)) buckets[key % SIZE].push_back(key); }
+    void remove(int key) { buckets[key % SIZE].remove(key); }
+    bool contains(int key) {
+        auto& b = buckets[key % SIZE];
+        return find(b.begin(), b.end(), key) != b.end();
+    }
+};`,
+          python: r`class MyHashSet:
+    SIZE = 1009
+
+    def __init__(self):
+        self.buckets = [[] for _ in range(self.SIZE)]
+
+    def add(self, key: int) -> None:
+        b = self.buckets[key % self.SIZE]
+        if key not in b:
+            b.append(key)
+
+    def remove(self, key: int) -> None:
+        b = self.buckets[key % self.SIZE]
+        if key in b:
+            b.remove(key)
+
+    def contains(self, key: int) -> bool:
+        return key in self.buckets[key % self.SIZE]`,
+          javascript: r`var MyHashSet = function() {
+    this.SIZE = 1009;
+    this.buckets = Array.from({ length: this.SIZE }, () => []);
+};
+
+MyHashSet.prototype.add = function(key) {
+    const b = this.buckets[key % this.SIZE];
+    if (!b.includes(key)) b.push(key);
+};
+
+MyHashSet.prototype.remove = function(key) {
+    const b = this.buckets[key % this.SIZE];
+    const i = b.indexOf(key);
+    if (i >= 0) b.splice(i, 1);
+};
+
+MyHashSet.prototype.contains = function(key) {
+    return this.buckets[key % this.SIZE].includes(key);
+};`,
+        },
+      },
+    ],
+  },
+  'implement-stack-using-queues': {
+    pattern: 'Reorder on write: rotate the queue after each push',
+    approaches: [
+      {
+        level: 'Better', name: 'Two queues, costly pop',
+        idea: 'Push is a plain enqueue. To pop, move all but the last element into a second queue, take the last one, then swap the queues.',
+        steps: [
+          '`push(x)`: add `x` to `q1`.',
+          '`pop()`: move `size − 1` elements from `q1` to `q2`, remove the remaining one from `q1` (that is the newest), then swap `q1` and `q2`.',
+          '`top()`: do the same as pop but put the last element into `q2` as well before swapping.',
+        ],
+        time: 'O(1) push, O(n) pop and top', space: 'O(n)',
+        why: 'Each pop walks the whole queue. That suits a workload with many pushes and few pops; the one-queue rotation below makes pops cheap instead.',
+        code: {
+          java: r`class MyStack {
+    private Queue<Integer> q1 = new ArrayDeque<>(), q2 = new ArrayDeque<>();
+    public MyStack() {}
+    public void push(int x) { q1.add(x); }
+    public int pop() {
+        while (q1.size() > 1) q2.add(q1.poll());
+        int x = q1.poll();
+        Queue<Integer> t = q1; q1 = q2; q2 = t;
+        return x;
+    }
+    public int top() {
+        while (q1.size() > 1) q2.add(q1.poll());
+        int x = q1.poll();
+        q2.add(x);
+        Queue<Integer> t = q1; q1 = q2; q2 = t;
+        return x;
+    }
+    public boolean empty() { return q1.isEmpty(); }
+}`,
+          cpp: r`class MyStack {
+    queue<int> q1, q2;
+public:
+    MyStack() {}
+    void push(int x) { q1.push(x); }
+    int pop() {
+        while (q1.size() > 1) { q2.push(q1.front()); q1.pop(); }
+        int x = q1.front(); q1.pop();
+        swap(q1, q2);
+        return x;
+    }
+    int top() {
+        while (q1.size() > 1) { q2.push(q1.front()); q1.pop(); }
+        int x = q1.front(); q1.pop();
+        q2.push(x);
+        swap(q1, q2);
+        return x;
+    }
+    bool empty() { return q1.empty(); }
+};`,
+          python: r`class MyStack:
+    def __init__(self):
+        self.q1, self.q2 = deque(), deque()
+
+    def push(self, x: int) -> None:
+        self.q1.append(x)
+
+    def pop(self) -> int:
+        while len(self.q1) > 1:
+            self.q2.append(self.q1.popleft())
+        x = self.q1.popleft()
+        self.q1, self.q2 = self.q2, self.q1
+        return x
+
+    def top(self) -> int:
+        while len(self.q1) > 1:
+            self.q2.append(self.q1.popleft())
+        x = self.q1.popleft()
+        self.q2.append(x)
+        self.q1, self.q2 = self.q2, self.q1
+        return x
+
+    def empty(self) -> bool:
+        return not self.q1`,
+          javascript: r`var MyStack = function() {
+    this.q1 = new Queue();
+    this.q2 = new Queue();
+};
+
+MyStack.prototype.push = function(x) {
+    this.q1.enqueue(x);
+};
+
+MyStack.prototype.pop = function() {
+    while (this.q1.size() > 1) this.q2.enqueue(this.q1.dequeue());
+    const x = this.q1.dequeue();
+    [this.q1, this.q2] = [this.q2, this.q1];
+    return x;
+};
+
+MyStack.prototype.top = function() {
+    while (this.q1.size() > 1) this.q2.enqueue(this.q1.dequeue());
+    const x = this.q1.dequeue();
+    this.q2.enqueue(x);
+    [this.q1, this.q2] = [this.q2, this.q1];
+    return x;
+};
+
+MyStack.prototype.empty = function() {
+    return this.q1.isEmpty();
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'One queue, rotate on push',
+        idea: 'After adding `x` at the back, cycle the older elements from the front to the back. Then `x` sits at the front, and the queue\'s front-to-back order is the stack\'s top-to-bottom order.',
+        steps: [
+          '`push(x)`: add `x`, then repeat `size − 1` times: remove from the front and add to the back.',
+          '`pop()` removes from the front; `top()` peeks the front.',
+          '`empty()` checks whether the queue is empty.',
+        ],
+        time: 'O(n) push, O(1) pop and top', space: 'O(n)',
+        why: 'Each push does n − 1 moves; the other operations are constant time. Only one queue is needed. Which variant is "best" depends on whether pushes or pops dominate, so say that out loud in an interview.',
+        code: {
+          java: r`class MyStack {
+    private final Queue<Integer> q = new ArrayDeque<>();
+    public MyStack() {}
+    public void push(int x) {
+        q.add(x);
+        for (int i = 1; i < q.size(); i++) q.add(q.poll());
+    }
+    public int pop() { return q.poll(); }
+    public int top() { return q.peek(); }
+    public boolean empty() { return q.isEmpty(); }
+}`,
+          cpp: r`class MyStack {
+    queue<int> q;
+public:
+    MyStack() {}
+    void push(int x) {
+        q.push(x);
+        for (size_t i = 1; i < q.size(); i++) { q.push(q.front()); q.pop(); }
+    }
+    int pop() { int x = q.front(); q.pop(); return x; }
+    int top() { return q.front(); }
+    bool empty() { return q.empty(); }
+};`,
+          python: r`class MyStack:
+    def __init__(self):
+        self.q = deque()
+
+    def push(self, x: int) -> None:
+        self.q.append(x)
+        for _ in range(len(self.q) - 1):
+            self.q.append(self.q.popleft())
+
+    def pop(self) -> int:
+        return self.q.popleft()
+
+    def top(self) -> int:
+        return self.q[0]
+
+    def empty(self) -> bool:
+        return not self.q`,
+          javascript: r`var MyStack = function() {
+    this.q = new Queue();
+};
+
+MyStack.prototype.push = function(x) {
+    this.q.enqueue(x);
+    for (let i = 1; i < this.q.size(); i++) this.q.enqueue(this.q.dequeue());
+};
+
+MyStack.prototype.pop = function() {
+    return this.q.dequeue();
+};
+
+MyStack.prototype.top = function() {
+    return this.q.front();
+};
+
+MyStack.prototype.empty = function() {
+    return this.q.isEmpty();
+};`,
+        },
+      },
+    ],
+  },
+  'design-circular-queue': {
+    pattern: 'Ring buffer: head index + size, indices taken modulo capacity',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Shift on dequeue',
+        idea: 'Store values at the start of an array of size `k` and shift everything left when the front is removed.',
+        steps: [
+          'Keep the values in `a[0..size − 1]`.',
+          '`enQueue` writes `a[size++]` if there is room.',
+          '`deQueue` shifts `a[1..size − 1]` one place left and decrements `size`.',
+        ],
+        time: 'O(k) deQueue, O(1) others', space: 'O(k)',
+        why: 'Correct, but the shifting is what a circular buffer exists to avoid.',
+        code: {
+          java: r`class MyCircularQueue {
+    private final int[] a; private int size = 0;
+    public MyCircularQueue(int k) { a = new int[k]; }
+    public boolean enQueue(int value) { if (isFull()) return false; a[size++] = value; return true; }
+    public boolean deQueue() {
+        if (isEmpty()) return false;
+        for (int i = 1; i < size; i++) a[i - 1] = a[i];
+        size--;
+        return true;
+    }
+    public int Front() { return isEmpty() ? -1 : a[0]; }
+    public int Rear() { return isEmpty() ? -1 : a[size - 1]; }
+    public boolean isEmpty() { return size == 0; }
+    public boolean isFull() { return size == a.length; }
+}`,
+          cpp: r`class MyCircularQueue {
+    vector<int> a; int size = 0;
+public:
+    MyCircularQueue(int k) : a(k) {}
+    bool enQueue(int value) { if (isFull()) return false; a[size++] = value; return true; }
+    bool deQueue() {
+        if (isEmpty()) return false;
+        for (int i = 1; i < size; i++) a[i - 1] = a[i];
+        size--;
+        return true;
+    }
+    int Front() { return isEmpty() ? -1 : a[0]; }
+    int Rear() { return isEmpty() ? -1 : a[size - 1]; }
+    bool isEmpty() { return size == 0; }
+    bool isFull() { return size == (int) a.size(); }
+};`,
+          python: r`class MyCircularQueue:
+    def __init__(self, k: int):
+        self.a = [0] * k
+        self.size = 0
+
+    def enQueue(self, value: int) -> bool:
+        if self.isFull():
+            return False
+        self.a[self.size] = value
+        self.size += 1
+        return True
+
+    def deQueue(self) -> bool:
+        if self.isEmpty():
+            return False
+        for i in range(1, self.size):
+            self.a[i - 1] = self.a[i]
+        self.size -= 1
+        return True
+
+    def Front(self) -> int:
+        return -1 if self.isEmpty() else self.a[0]
+
+    def Rear(self) -> int:
+        return -1 if self.isEmpty() else self.a[self.size - 1]
+
+    def isEmpty(self) -> bool:
+        return self.size == 0
+
+    def isFull(self) -> bool:
+        return self.size == len(self.a)`,
+          javascript: r`var MyCircularQueue = function(k) {
+    this.a = new Array(k);
+    this.size = 0;
+};
+
+MyCircularQueue.prototype.enQueue = function(value) {
+    if (this.isFull()) return false;
+    this.a[this.size++] = value;
+    return true;
+};
+
+MyCircularQueue.prototype.deQueue = function() {
+    if (this.isEmpty()) return false;
+    for (let i = 1; i < this.size; i++) this.a[i - 1] = this.a[i];
+    this.size--;
+    return true;
+};
+
+MyCircularQueue.prototype.Front = function() {
+    return this.isEmpty() ? -1 : this.a[0];
+};
+
+MyCircularQueue.prototype.Rear = function() {
+    return this.isEmpty() ? -1 : this.a[this.size - 1];
+};
+
+MyCircularQueue.prototype.isEmpty = function() {
+    return this.size === 0;
+};
+
+MyCircularQueue.prototype.isFull = function() {
+    return this.size === this.a.length;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Ring buffer',
+        idea: 'Let the front move instead of the data. Keep a `head` index and a `size`; positions wrap around with `% k`.',
+        steps: [
+          '`enQueue`: if not full, write at `(head + size) % k` and increment `size`.',
+          '`deQueue`: if not empty, set `head = (head + 1) % k` and decrement `size`.',
+          '`Front` is `a[head]`, `Rear` is `a[(head + size − 1) % k]`; both return -1 when `size == 0`.',
+        ],
+        time: 'O(1) per operation', space: 'O(k)',
+        why: 'Every operation touches one slot. Storing `size` (rather than a separate tail index) removes the classic ambiguity where head == tail could mean empty or full. This is how bounded queues in kernels, audio buffers and network cards work.',
+        code: {
+          java: r`class MyCircularQueue {
+    private final int[] a; private int head = 0, size = 0;
+    public MyCircularQueue(int k) { a = new int[k]; }
+    public boolean enQueue(int value) {
+        if (isFull()) return false;
+        a[(head + size) % a.length] = value;
+        size++;
+        return true;
+    }
+    public boolean deQueue() {
+        if (isEmpty()) return false;
+        head = (head + 1) % a.length;
+        size--;
+        return true;
+    }
+    public int Front() { return isEmpty() ? -1 : a[head]; }
+    public int Rear() { return isEmpty() ? -1 : a[(head + size - 1) % a.length]; }
+    public boolean isEmpty() { return size == 0; }
+    public boolean isFull() { return size == a.length; }
+}`,
+          cpp: r`class MyCircularQueue {
+    vector<int> a; int head = 0, size = 0;
+public:
+    MyCircularQueue(int k) : a(k) {}
+    bool enQueue(int value) {
+        if (isFull()) return false;
+        a[(head + size) % a.size()] = value;
+        size++;
+        return true;
+    }
+    bool deQueue() {
+        if (isEmpty()) return false;
+        head = (head + 1) % a.size();
+        size--;
+        return true;
+    }
+    int Front() { return isEmpty() ? -1 : a[head]; }
+    int Rear() { return isEmpty() ? -1 : a[(head + size - 1) % a.size()]; }
+    bool isEmpty() { return size == 0; }
+    bool isFull() { return size == (int) a.size(); }
+};`,
+          python: r`class MyCircularQueue:
+    def __init__(self, k: int):
+        self.a = [0] * k
+        self.head = 0
+        self.size = 0
+
+    def enQueue(self, value: int) -> bool:
+        if self.isFull():
+            return False
+        self.a[(self.head + self.size) % len(self.a)] = value
+        self.size += 1
+        return True
+
+    def deQueue(self) -> bool:
+        if self.isEmpty():
+            return False
+        self.head = (self.head + 1) % len(self.a)
+        self.size -= 1
+        return True
+
+    def Front(self) -> int:
+        return -1 if self.isEmpty() else self.a[self.head]
+
+    def Rear(self) -> int:
+        return -1 if self.isEmpty() else self.a[(self.head + self.size - 1) % len(self.a)]
+
+    def isEmpty(self) -> bool:
+        return self.size == 0
+
+    def isFull(self) -> bool:
+        return self.size == len(self.a)`,
+          javascript: r`var MyCircularQueue = function(k) {
+    this.a = new Array(k);
+    this.head = 0;
+    this.size = 0;
+};
+
+MyCircularQueue.prototype.enQueue = function(value) {
+    if (this.isFull()) return false;
+    this.a[(this.head + this.size) % this.a.length] = value;
+    this.size++;
+    return true;
+};
+
+MyCircularQueue.prototype.deQueue = function() {
+    if (this.isEmpty()) return false;
+    this.head = (this.head + 1) % this.a.length;
+    this.size--;
+    return true;
+};
+
+MyCircularQueue.prototype.Front = function() {
+    return this.isEmpty() ? -1 : this.a[this.head];
+};
+
+MyCircularQueue.prototype.Rear = function() {
+    return this.isEmpty() ? -1 : this.a[(this.head + this.size - 1) % this.a.length];
+};
+
+MyCircularQueue.prototype.isEmpty = function() {
+    return this.size === 0;
+};
+
+MyCircularQueue.prototype.isFull = function() {
+    return this.size === this.a.length;
+};`,
+        },
+      },
+    ],
+  },
+  'detect-squares': {
+    pattern: 'Point counts in a hash map; enumerate the diagonal corner',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Try every pair of stored points',
+        idea: 'Keep all added points (with duplicates) in a list. For a query, try every ordered pair as the two corners sharing a side with the query point, and check the fourth.',
+        steps: [
+          'Store each added point in a list.',
+          'For a query `(x, y)`, loop over every stored `p` with `p.y == y` and `p.x != x` (a horizontal neighbour) and every stored `q` with `q.x == x` and `|q.y − y| == |p.x − x|` (a vertical neighbour).',
+          'For each such pair, add the number of stored copies of `(p.x, q.y)`.',
+        ],
+        time: 'O(n²) per count', space: 'O(n)',
+        why: 'n is the number of added points. Two nested loops over the list, plus an O(1) lookup of the fourth corner in a count table. Up to 1500 adds and 1500 counts is billions of steps, so it times out on the large test.',
+        code: {
+          java: r`class DetectSquares {
+    private final List<int[]> pts = new ArrayList<>();
+    private final int[][] cnt = new int[1001][1001];
+    public DetectSquares() {}
+    public void add(int[] point) { pts.add(point); cnt[point[0]][point[1]]++; }
+    public int count(int[] point) {
+        int x = point[0], y = point[1], total = 0;
+        for (int[] p : pts) {
+            if (p[1] != y || p[0] == x) continue;
+            int side = Math.abs(p[0] - x);
+            for (int[] q : pts)
+                if (q[0] == x && Math.abs(q[1] - y) == side) total += cnt[p[0]][q[1]];
+        }
+        return total;
+    }
+}`,
+          cpp: r`class DetectSquares {
+    vector<pair<int, int>> pts;
+    vector<vector<int>> cnt = vector<vector<int>>(1001, vector<int>(1001, 0));
+public:
+    DetectSquares() {}
+    void add(vector<int> point) { pts.push_back({point[0], point[1]}); cnt[point[0]][point[1]]++; }
+    int count(vector<int> point) {
+        int x = point[0], y = point[1], total = 0;
+        for (auto& [px, py] : pts) {
+            if (py != y || px == x) continue;
+            int side = abs(px - x);
+            for (auto& [qx, qy] : pts)
+                if (qx == x && abs(qy - y) == side) total += cnt[px][qy];
+        }
+        return total;
+    }
+};`,
+          python: r`class DetectSquares:
+    def __init__(self):
+        self.pts = []
+        self.cnt = Counter()
+
+    def add(self, point: List[int]) -> None:
+        self.pts.append(tuple(point))
+        self.cnt[tuple(point)] += 1
+
+    def count(self, point: List[int]) -> int:
+        x, y = point
+        total = 0
+        for px, py in self.pts:
+            if py != y or px == x:
+                continue
+            side = abs(px - x)
+            for qx, qy in self.pts:
+                if qx == x and abs(qy - y) == side:
+                    total += self.cnt[(px, qy)]
+        return total`,
+          javascript: r`var DetectSquares = function() {
+    this.pts = [];
+    this.cnt = new Map();
+};
+
+DetectSquares.prototype.add = function(point) {
+    this.pts.push(point);
+    const key = point[0] * 1001 + point[1];
+    this.cnt.set(key, (this.cnt.get(key) || 0) + 1);
+};
+
+DetectSquares.prototype.count = function(point) {
+    const [x, y] = point;
+    let total = 0;
+    for (const [px, py] of this.pts) {
+        if (py !== y || px === x) continue;
+        const side = Math.abs(px - x);
+        for (const [qx, qy] of this.pts)
+            if (qx === x && Math.abs(qy - y) === side) total += this.cnt.get(px * 1001 + qy) || 0;
+    }
+    return total;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Count table + diagonal enumeration',
+        idea: 'Fix the query point. Every square is determined by its diagonal corner, so loop over distinct stored points that sit on a diagonal and multiply the counts of the three needed corners.',
+        steps: [
+          '`add`: increment `cnt[x][y]`; when a point is seen for the first time, also add it to a list of distinct points.',
+          '`count(x, y)`: for each distinct `(px, py)` with `|px − x| == |py − y|` and `px != x`, add `cnt[px][py] · cnt[x][py] · cnt[px][y]`.',
+          'Return the total.',
+        ],
+        time: 'O(1) add, O(d) count', space: 'O(d)',
+        why: 'd is the number of distinct points stored (the 1001 × 1001 table is a fixed size). Multiplying counts handles duplicates: each copy of each corner gives a different choice of three points. `px != x` rules out zero-area squares. A hash map of counts works the same way when coordinates are not bounded.',
+        code: {
+          java: r`class DetectSquares {
+    private final int[][] cnt = new int[1001][1001];
+    private final List<int[]> pts = new ArrayList<>();
+    public DetectSquares() {}
+    public void add(int[] point) { if (cnt[point[0]][point[1]]++ == 0) pts.add(point); }
+    public int count(int[] point) {
+        int x = point[0], y = point[1], total = 0;
+        for (int[] p : pts) {
+            int px = p[0], py = p[1];
+            if (Math.abs(px - x) != Math.abs(py - y) || px == x) continue;
+            total += cnt[px][py] * cnt[x][py] * cnt[px][y];
+        }
+        return total;
+    }
+}`,
+          cpp: r`class DetectSquares {
+    vector<vector<int>> cnt = vector<vector<int>>(1001, vector<int>(1001, 0));
+    vector<pair<int, int>> pts;
+public:
+    DetectSquares() {}
+    void add(vector<int> point) { if (cnt[point[0]][point[1]]++ == 0) pts.push_back({point[0], point[1]}); }
+    int count(vector<int> point) {
+        int x = point[0], y = point[1], total = 0;
+        for (auto& [px, py] : pts) {
+            if (abs(px - x) != abs(py - y) || px == x) continue;
+            total += cnt[px][py] * cnt[x][py] * cnt[px][y];
+        }
+        return total;
+    }
+};`,
+          python: r`class DetectSquares:
+    def __init__(self):
+        self.cnt = Counter()
+
+    def add(self, point: List[int]) -> None:
+        self.cnt[tuple(point)] += 1
+
+    def count(self, point: List[int]) -> int:
+        x, y = point
+        total = 0
+        for (px, py), c in self.cnt.items():
+            if abs(px - x) != abs(py - y) or px == x:
+                continue
+            total += c * self.cnt.get((x, py), 0) * self.cnt.get((px, y), 0)
+        return total`,
+          javascript: r`var DetectSquares = function() {
+    this.cnt = new Map();
+    this.pts = [];
+};
+
+DetectSquares.prototype.add = function(point) {
+    const key = point[0] * 1001 + point[1];
+    const c = this.cnt.get(key) || 0;
+    if (c === 0) this.pts.push([point[0], point[1]]);
+    this.cnt.set(key, c + 1);
+};
+
+DetectSquares.prototype.count = function(point) {
+    const [x, y] = point;
+    const get = (a, b) => this.cnt.get(a * 1001 + b) || 0;
+    let total = 0;
+    for (const [px, py] of this.pts) {
+        if (Math.abs(px - x) !== Math.abs(py - y) || px === x) continue;
+        total += get(px, py) * get(x, py) * get(px, y);
+    }
+    return total;
+};`,
+        },
+      },
+    ],
+  },
+  'maximum-frequency-stack': {
+    pattern: 'Frequency map + one stack per frequency level',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Scan the stack on every pop',
+        idea: 'Keep the pushes in a list and a frequency map. To pop, find the highest frequency, then scan from the top for the first value with that frequency and remove it.',
+        steps: [
+          '`push(val)`: append to the list and increment `freq[val]`.',
+          '`pop()`: let `best` be the largest frequency; scan the list from the end for the first value with `freq == best`.',
+          'Remove it from the list, decrement its frequency and return it.',
+        ],
+        time: 'O(n) pop, O(1) push', space: 'O(n)',
+        why: 'n is the stack size. Finding the maximum frequency and the position, then deleting from the middle of a list, are all linear. With 2 · 10⁴ operations it still finishes, but it misses the O(1) structure the problem is about.',
+        code: {
+          java: r`class FreqStack {
+    private final List<Integer> st = new ArrayList<>();
+    private final Map<Integer, Integer> freq = new HashMap<>();
+    public FreqStack() {}
+    public void push(int val) { st.add(val); freq.merge(val, 1, Integer::sum); }
+    public int pop() {
+        int best = 0;
+        for (int f : freq.values()) best = Math.max(best, f);
+        for (int i = st.size() - 1; ; i--) {
+            int v = st.get(i);
+            if (freq.get(v) == best) {
+                st.remove(i);
+                freq.merge(v, -1, Integer::sum);
+                return v;
+            }
+        }
+    }
+}`,
+          cpp: r`class FreqStack {
+    vector<int> st;
+    unordered_map<int, int> freq;
+public:
+    FreqStack() {}
+    void push(int val) { st.push_back(val); freq[val]++; }
+    int pop() {
+        int best = 0;
+        for (auto& [v, f] : freq) best = max(best, f);
+        for (int i = (int) st.size() - 1; ; i--) {
+            int v = st[i];
+            if (freq[v] == best) {
+                st.erase(st.begin() + i);
+                freq[v]--;
+                return v;
+            }
+        }
+    }
+};`,
+          python: r`class FreqStack:
+    def __init__(self):
+        self.st = []
+        self.freq = Counter()
+
+    def push(self, val: int) -> None:
+        self.st.append(val)
+        self.freq[val] += 1
+
+    def pop(self) -> int:
+        best = max(self.freq.values())
+        for i in range(len(self.st) - 1, -1, -1):
+            v = self.st[i]
+            if self.freq[v] == best:
+                del self.st[i]
+                self.freq[v] -= 1
+                return v`,
+          javascript: r`var FreqStack = function() {
+    this.st = [];
+    this.freq = new Map();
+};
+
+FreqStack.prototype.push = function(val) {
+    this.st.push(val);
+    this.freq.set(val, (this.freq.get(val) || 0) + 1);
+};
+
+FreqStack.prototype.pop = function() {
+    let best = 0;
+    for (const f of this.freq.values()) best = Math.max(best, f);
+    for (let i = this.st.length - 1; ; i--) {
+        const v = this.st[i];
+        if (this.freq.get(v) === best) {
+            this.st.splice(i, 1);
+            this.freq.set(v, best - 1);
+            return v;
+        }
+    }
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Heap ordered by (frequency, push time)',
+        idea: 'Push an entry `(frequency after this push, push counter, value)` onto a max-heap. The top is always the most frequent value, and among ties the most recent.',
+        steps: [
+          '`push(val)`: increment `freq[val]` and push `(freq[val], time++, val)`.',
+          '`pop()`: remove the heap\'s top entry, decrement that value\'s frequency, return the value.',
+        ],
+        time: 'O(log n) per operation', space: 'O(n)',
+        why: 'Each push records the k-th copy of a value with its own timestamp, so popping the top entry removes exactly the right copy, and older entries of the same value stay valid. The heap\'s log factor is the only cost over the optimal version.',
+        code: {
+          java: r`class FreqStack {
+    private final Map<Integer, Integer> freq = new HashMap<>();
+    private final PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[0] != b[0] ? b[0] - a[0] : b[1] - a[1]);
+    private int time = 0;
+    public FreqStack() {}
+    public void push(int val) {
+        int f = freq.merge(val, 1, Integer::sum);
+        heap.add(new int[] { f, time++, val });
+    }
+    public int pop() {
+        int val = heap.poll()[2];
+        freq.merge(val, -1, Integer::sum);
+        return val;
+    }
+}`,
+          cpp: r`class FreqStack {
+    unordered_map<int, int> freq;
+    priority_queue<tuple<int, int, int>> heap;
+    int time = 0;
+public:
+    FreqStack() {}
+    void push(int val) { heap.push({++freq[val], time++, val}); }
+    int pop() {
+        int val = get<2>(heap.top());
+        heap.pop();
+        freq[val]--;
+        return val;
+    }
+};`,
+          python: r`class FreqStack:
+    def __init__(self):
+        self.freq = Counter()
+        self.heap = []
+        self.time = 0
+
+    def push(self, val: int) -> None:
+        self.freq[val] += 1
+        heappush(self.heap, (-self.freq[val], -self.time, val))
+        self.time += 1
+
+    def pop(self) -> int:
+        val = heappop(self.heap)[2]
+        self.freq[val] -= 1
+        return val`,
+          javascript: r`var FreqStack = function() {
+    this.freq = new Map();
+    this.heap = new PriorityQueue((a, b) => (b[0] - a[0]) || (b[1] - a[1]));
+    this.time = 0;
+};
+
+FreqStack.prototype.push = function(val) {
+    const f = (this.freq.get(val) || 0) + 1;
+    this.freq.set(val, f);
+    this.heap.enqueue([f, this.time++, val]);
+};
+
+FreqStack.prototype.pop = function() {
+    const val = this.heap.dequeue()[2];
+    this.freq.set(val, this.freq.get(val) - 1);
+    return val;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'A stack per frequency',
+        idea: 'When a value reaches frequency k, push it onto stack number k. The stack for the highest frequency always holds the answer on top, in push order.',
+        steps: [
+          '`push(val)`: `f = ++freq[val]`; if there is no stack for `f` yet, add one; push `val` onto stack `f`.',
+          '`pop()`: pop from the highest stack; if that stack becomes empty, remove it (the maximum frequency drops by one).',
+          'Decrement the popped value\'s frequency and return it.',
+        ],
+        time: 'O(1) per operation', space: 'O(n)',
+        why: 'A value with frequency f appears once in each of stacks 1..f, so popping its top copy from stack f leaves its lower copies where they belong. The highest frequency only ever changes by one per operation, so the list of stacks behaves like a stack itself.',
+        code: {
+          java: r`class FreqStack {
+    private final Map<Integer, Integer> freq = new HashMap<>();
+    private final List<Deque<Integer>> groups = new ArrayList<>();
+    public FreqStack() {}
+    public void push(int val) {
+        int f = freq.merge(val, 1, Integer::sum);
+        if (f > groups.size()) groups.add(new ArrayDeque<>());
+        groups.get(f - 1).push(val);
+    }
+    public int pop() {
+        Deque<Integer> top = groups.get(groups.size() - 1);
+        int val = top.pop();
+        if (top.isEmpty()) groups.remove(groups.size() - 1);
+        freq.merge(val, -1, Integer::sum);
+        return val;
+    }
+}`,
+          cpp: r`class FreqStack {
+    unordered_map<int, int> freq;
+    vector<vector<int>> groups;
+public:
+    FreqStack() {}
+    void push(int val) {
+        int f = ++freq[val];
+        if (f > (int) groups.size()) groups.emplace_back();
+        groups[f - 1].push_back(val);
+    }
+    int pop() {
+        int val = groups.back().back();
+        groups.back().pop_back();
+        if (groups.back().empty()) groups.pop_back();
+        freq[val]--;
+        return val;
+    }
+};`,
+          python: r`class FreqStack:
+    def __init__(self):
+        self.freq = Counter()
+        self.groups = []
+
+    def push(self, val: int) -> None:
+        self.freq[val] += 1
+        f = self.freq[val]
+        if f > len(self.groups):
+            self.groups.append([])
+        self.groups[f - 1].append(val)
+
+    def pop(self) -> int:
+        val = self.groups[-1].pop()
+        if not self.groups[-1]:
+            self.groups.pop()
+        self.freq[val] -= 1
+        return val`,
+          javascript: r`var FreqStack = function() {
+    this.freq = new Map();
+    this.groups = [];
+};
+
+FreqStack.prototype.push = function(val) {
+    const f = (this.freq.get(val) || 0) + 1;
+    this.freq.set(val, f);
+    if (f > this.groups.length) this.groups.push([]);
+    this.groups[f - 1].push(val);
+};
+
+FreqStack.prototype.pop = function() {
+    const top = this.groups[this.groups.length - 1];
+    const val = top.pop();
+    if (top.length === 0) this.groups.pop();
+    this.freq.set(val, this.freq.get(val) - 1);
+    return val;
+};`,
+        },
+      },
+    ],
+  },
 };

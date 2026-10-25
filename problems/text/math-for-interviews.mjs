@@ -114,4 +114,57 @@ The judge calls \`rand10()\` \`n\` times and checks that every value is in range
       'If the outcome is 41–49, reject it and try again (rejection sampling). The expected number of rand7 calls is about 2.45.',
     ],
   },
+  'plus-one': {
+    statement: `\`digits\` represents a large non-negative integer: \`digits[i]\` is its \`i\`-th digit, most significant first, with no leading zeros (except the number 0 itself).
+
+Add one to the integer and return the resulting array of digits.`,
+    constraints: ['1 <= digits.length <= 100', '0 <= digits[i] <= 9', '`digits` has no leading zeros, except for the number 0'],
+    hints: [
+      'The number can have 100 digits, far more than any built-in integer type holds. Work on the digits directly.',
+      'Add one from the right. A digit below 9 just increases and you are done; a 9 becomes 0 and the carry moves left.',
+      'If every digit was 9, the answer is a 1 followed by zeros, one digit longer than the input.',
+    ],
+  },
+  'roman-to-integer': {
+    statement: `Roman numerals use seven symbols: \`I = 1\`, \`V = 5\`, \`X = 10\`, \`L = 50\`, \`C = 100\`, \`D = 500\` and \`M = 1000\`. Symbols are usually written largest to smallest, left to right, and added up. Six subtractive pairs are the exception, where a smaller symbol before a larger one is subtracted: \`IV = 4\`, \`IX = 9\`, \`XL = 40\`, \`XC = 90\`, \`CD = 400\` and \`CM = 900\`.
+
+Given a valid Roman numeral \`s\`, return its integer value.`,
+    constraints: ['1 <= s.length <= 15', '`s` contains only I, V, X, L, C, D and M', '`s` is a valid Roman numeral in the range [1, 3999]'],
+    hints: [
+      'You could look for the six subtractive pairs explicitly, but there is a simpler rule.',
+      'A symbol is subtracted exactly when the symbol right after it is larger.',
+      'Scan left to right: add each value, or subtract it if the next value is bigger.',
+    ],
+  },
+  'excel-sheet-column-title': {
+    statement: `Spreadsheet columns are labelled \`A, B, …, Z, AA, AB, …, AZ, BA, …, ZZ, AAA, …\`. Given \`columnNumber\` (where \`1\` is \`A\`), return its column title.`,
+    constraints: ['1 <= columnNumber <= 2^31 - 1'],
+    hints: [
+      'This is like converting to base 26, except there is no zero digit: the "digits" run from 1 (A) to 26 (Z).',
+      'Subtract 1 before each step so the last letter becomes (n − 1) % 26 in the range 0..25.',
+      'Then divide (n − 1) by 26 and repeat. Letters come out from right to left, so reverse at the end.',
+    ],
+  },
+  'greatest-common-divisor-of-strings': {
+    statement: `A string \`t\` **divides** a string \`s\` if \`s\` is \`t\` concatenated with itself one or more times (\`s = t + t + … + t\`).
+
+Return the largest string \`x\` that divides both \`str1\` and \`str2\`, or \`""\` if there is none.`,
+    constraints: ['1 <= str1.length, str2.length <= 1000', '`str1` and `str2` contain only uppercase English letters'],
+    hints: [
+      'A common divisor must be a prefix of both strings, and its length must divide both lengths. You could try each such length.',
+      'If a common divisor exists, str1 + str2 equals str2 + str1 (both are the same block repeated). The converse is also true.',
+      'When the concatenations match, the answer is the prefix of length gcd(len1, len2).',
+    ],
+  },
+  'multiply-strings': {
+    statement: `\`num1\` and \`num2\` are non-negative integers written as decimal strings. Return their product, also as a string.
+
+Do not use a built-in big-integer library and do not convert the whole inputs to numbers directly: they can be far too long for any built-in type.`,
+    constraints: ['1 <= num1.length, num2.length <= 200', '`num1` and `num2` contain only digits', 'Neither number has leading zeros, except the number 0 itself'],
+    hints: [
+      'Do long multiplication as on paper: multiply every digit of num1 by every digit of num2.',
+      'The product of the digits at positions i and j (from the left) lands in positions i + j and i + j + 1 of a result array of length m + n.',
+      'Add each product into position i + j + 1 and push the carry into i + j. At the end, skip leading zeros, and return "0" if nothing is left.',
+    ],
+  },
 };

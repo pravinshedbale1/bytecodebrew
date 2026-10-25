@@ -1199,4 +1199,987 @@ public:
       },
     ],
   },
+  'lemonade-change': {
+    pattern: 'Greedy change-making: spend the least flexible bill first',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Keep every bill and search for change',
+        idea: 'Store all the bills you hold. For each customer, try combinations of held bills that add up to the change owed.',
+        steps: [
+          'Keep a list of bills in the till.',
+          'For a $10, look for a $5 to remove. For a $20, try to remove a $10 and a $5, or else three $5s, by scanning the list.',
+          'Add the customer\'s bill to the till; fail if no combination was found.',
+        ],
+        time: 'O(n²)', space: 'O(n)',
+        why: 'Each customer may scan the whole till. It mirrors how you might do it by hand, but the till only ever needs two numbers: how many $5s and how many $10s.',
+        code: {
+          java: r`class Solution {
+    public boolean lemonadeChange(int[] bills) {
+        List<Integer> till = new ArrayList<>();
+        for (int b : bills) {
+            if (b == 10 && !till.remove(Integer.valueOf(5))) return false;
+            if (b == 20) {
+                if (till.contains(10) && till.contains(5)) { till.remove(Integer.valueOf(10)); till.remove(Integer.valueOf(5)); }
+                else if (Collections.frequency(till, 5) >= 3) for (int k = 0; k < 3; k++) till.remove(Integer.valueOf(5));
+                else return false;
+            }
+            till.add(b);
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+    bool take(vector<int>& till, int v) {
+        auto it = find(till.begin(), till.end(), v);
+        if (it == till.end()) return false;
+        till.erase(it);
+        return true;
+    }
+public:
+    bool lemonadeChange(vector<int>& bills) {
+        vector<int> till;
+        for (int b : bills) {
+            if (b == 10 && !take(till, 5)) return false;
+            if (b == 20) {
+                bool hasTen = find(till.begin(), till.end(), 10) != till.end();
+                bool hasFive = find(till.begin(), till.end(), 5) != till.end();
+                if (hasTen && hasFive) { take(till, 10); take(till, 5); }
+                else if (count(till.begin(), till.end(), 5) >= 3) { take(till, 5); take(till, 5); take(till, 5); }
+                else return false;
+            }
+            till.push_back(b);
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def lemonadeChange(self, bills: List[int]) -> bool:
+        till = []
+        for b in bills:
+            if b == 10:
+                if 5 not in till:
+                    return False
+                till.remove(5)
+            elif b == 20:
+                if 10 in till and 5 in till:
+                    till.remove(10)
+                    till.remove(5)
+                elif till.count(5) >= 3:
+                    for _ in range(3):
+                        till.remove(5)
+                else:
+                    return False
+            till.append(b)
+        return True`,
+          javascript: r`var lemonadeChange = function(bills) {
+    const till = [];
+    const take = (v) => {
+        const i = till.indexOf(v);
+        if (i < 0) return false;
+        till.splice(i, 1);
+        return true;
+    };
+    for (const b of bills) {
+        if (b === 10 && !take(5)) return false;
+        if (b === 20) {
+            if (till.includes(10) && till.includes(5)) { take(10); take(5); }
+            else if (till.filter((x) => x === 5).length >= 3) { take(5); take(5); take(5); }
+            else return false;
+        }
+        till.push(b);
+    }
+    return true;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Count fives and tens',
+        idea: 'Track only how many $5 and $10 bills you hold. For a $20, give a $10 + $5 when possible and three $5s otherwise.',
+        steps: [
+          'A $5: `fives++`.',
+          'A $10: needs a $5 (`fives--`, `tens++`), else fail.',
+          'A $20: if `tens > 0 && fives > 0`, use one of each; else if `fives >= 3`, use three; else fail.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: '$20 bills are never given as change, so they need not be counted. Preferring the $10 is the greedy choice: a $5 can pay any future customer, a $10 can only help a $20 customer, so keeping $5s never hurts.',
+        code: {
+          java: r`class Solution {
+    public boolean lemonadeChange(int[] bills) {
+        int fives = 0, tens = 0;
+        for (int b : bills) {
+            if (b == 5) fives++;
+            else if (b == 10) { if (fives == 0) return false; fives--; tens++; }
+            else if (tens > 0 && fives > 0) { tens--; fives--; }
+            else if (fives >= 3) fives -= 3;
+            else return false;
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool lemonadeChange(vector<int>& bills) {
+        int fives = 0, tens = 0;
+        for (int b : bills) {
+            if (b == 5) fives++;
+            else if (b == 10) { if (fives == 0) return false; fives--; tens++; }
+            else if (tens > 0 && fives > 0) { tens--; fives--; }
+            else if (fives >= 3) fives -= 3;
+            else return false;
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def lemonadeChange(self, bills: List[int]) -> bool:
+        fives = tens = 0
+        for b in bills:
+            if b == 5:
+                fives += 1
+            elif b == 10:
+                if fives == 0:
+                    return False
+                fives -= 1
+                tens += 1
+            elif tens and fives:
+                tens -= 1
+                fives -= 1
+            elif fives >= 3:
+                fives -= 3
+            else:
+                return False
+        return True`,
+          javascript: r`var lemonadeChange = function(bills) {
+    let fives = 0, tens = 0;
+    for (const b of bills) {
+        if (b === 5) fives++;
+        else if (b === 10) { if (fives === 0) return false; fives--; tens++; }
+        else if (tens > 0 && fives > 0) { tens--; fives--; }
+        else if (fives >= 3) fives -= 3;
+        else return false;
+    }
+    return true;
+};`,
+        },
+      },
+    ],
+  },
+  'merge-triplets-to-form-target-triplet': {
+    pattern: 'Greedy filter: drop anything that overshoots, then cover each position',
+    approaches: [
+      {
+        level: 'Better', name: 'Filter, then merge everything usable',
+        idea: 'Discard triplets that exceed the target anywhere. Merging all remaining ones gives the element-wise maximum, which equals the target exactly when the target is reachable.',
+        steps: [
+          'Collect every triplet with all three values at most the target\'s.',
+          'Take the element-wise maximum over that list (start from [0,0,0]).',
+          'Return whether it equals `target`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Merges only increase values, so an overshooting triplet can never be part of the answer, and merging more usable triplets never hurts. The extra list is unnecessary: the maximum can be tracked on the fly.',
+        code: {
+          java: r`class Solution {
+    public boolean mergeTriplets(int[][] triplets, int[] target) {
+        List<int[]> usable = new ArrayList<>();
+        for (int[] t : triplets) if (t[0] <= target[0] && t[1] <= target[1] && t[2] <= target[2]) usable.add(t);
+        int[] best = new int[3];
+        for (int[] t : usable) for (int k = 0; k < 3; k++) best[k] = Math.max(best[k], t[k]);
+        return Arrays.equals(best, target);
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool mergeTriplets(vector<vector<int>>& triplets, vector<int>& target) {
+        vector<vector<int>> usable;
+        for (auto& t : triplets) if (t[0] <= target[0] && t[1] <= target[1] && t[2] <= target[2]) usable.push_back(t);
+        vector<int> best(3, 0);
+        for (auto& t : usable) for (int k = 0; k < 3; k++) best[k] = max(best[k], t[k]);
+        return best == target;
+    }
+};`,
+          python: r`class Solution:
+    def mergeTriplets(self, triplets: List[List[int]], target: List[int]) -> bool:
+        usable = [t for t in triplets if all(t[k] <= target[k] for k in range(3))]
+        best = [0, 0, 0]
+        for t in usable:
+            best = [max(best[k], t[k]) for k in range(3)]
+        return best == target`,
+          javascript: r`var mergeTriplets = function(triplets, target) {
+    const usable = triplets.filter((t) => t[0] <= target[0] && t[1] <= target[1] && t[2] <= target[2]);
+    const best = [0, 0, 0];
+    for (const t of usable) for (let k = 0; k < 3; k++) best[k] = Math.max(best[k], t[k]);
+    return best[0] === target[0] && best[1] === target[1] && best[2] === target[2];
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'One pass with three flags',
+        idea: 'Skip any triplet that overshoots. For the rest, just record whether each position of the target has been matched exactly by some usable triplet.',
+        steps: [
+          'Set flags `a = b = c = false`.',
+          'For each triplet with all values at most the target\'s, set `a |= t[0] == x`, `b |= t[1] == y`, `c |= t[2] == z`.',
+          'Return `a && b && c`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Usable triplets never push a value above the target, so the merged maximum at each position equals the target value exactly when some usable triplet already has it there.',
+        code: {
+          java: r`class Solution {
+    public boolean mergeTriplets(int[][] triplets, int[] target) {
+        boolean a = false, b = false, c = false;
+        for (int[] t : triplets) {
+            if (t[0] > target[0] || t[1] > target[1] || t[2] > target[2]) continue;
+            a |= t[0] == target[0]; b |= t[1] == target[1]; c |= t[2] == target[2];
+        }
+        return a && b && c;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool mergeTriplets(vector<vector<int>>& triplets, vector<int>& target) {
+        bool a = false, b = false, c = false;
+        for (auto& t : triplets) {
+            if (t[0] > target[0] || t[1] > target[1] || t[2] > target[2]) continue;
+            a |= t[0] == target[0]; b |= t[1] == target[1]; c |= t[2] == target[2];
+        }
+        return a && b && c;
+    }
+};`,
+          python: r`class Solution:
+    def mergeTriplets(self, triplets: List[List[int]], target: List[int]) -> bool:
+        x, y, z = target
+        a = b = c = False
+        for t in triplets:
+            if t[0] > x or t[1] > y or t[2] > z:
+                continue
+            a |= t[0] == x
+            b |= t[1] == y
+            c |= t[2] == z
+        return a and b and c`,
+          javascript: r`var mergeTriplets = function(triplets, target) {
+    let a = false, b = false, c = false;
+    for (const t of triplets) {
+        if (t[0] > target[0] || t[1] > target[1] || t[2] > target[2]) continue;
+        a ||= t[0] === target[0]; b ||= t[1] === target[1]; c ||= t[2] === target[2];
+    }
+    return a && b && c;
+};`,
+        },
+      },
+    ],
+  },
+  'valid-parenthesis-string': {
+    pattern: 'Greedy range of possible open-bracket counts',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Try every meaning of every star',
+        idea: 'Recursively replace each "*" with "(", ")" or nothing and check whether the open count ever goes negative or ends non-zero.',
+        steps: [
+          '`go(i, open)`: if `open < 0` return false; if `i == n` return `open == 0`.',
+          'For "(" recurse with `open + 1`; for ")" with `open − 1`.',
+          'For "*" return `go(i + 1, open + 1) || go(i + 1, open − 1) || go(i + 1, open)`.',
+        ],
+        time: 'O(3ᵏ · n)', space: 'O(n)',
+        why: 'k is the number of stars, each tripling the search. A string with fifty stars is far beyond reach, so it times out on those tests.',
+        code: {
+          java: r`class Solution {
+    public boolean checkValidString(String s) { return go(s, 0, 0); }
+    private boolean go(String s, int i, int open) {
+        if (open < 0) return false;
+        if (i == s.length()) return open == 0;
+        char c = s.charAt(i);
+        if (c == '(') return go(s, i + 1, open + 1);
+        if (c == ')') return go(s, i + 1, open - 1);
+        return go(s, i + 1, open + 1) || go(s, i + 1, open - 1) || go(s, i + 1, open);
+    }
+}`,
+          cpp: r`class Solution {
+    bool go(const string& s, int i, int open) {
+        if (open < 0) return false;
+        if (i == (int) s.size()) return open == 0;
+        if (s[i] == '(') return go(s, i + 1, open + 1);
+        if (s[i] == ')') return go(s, i + 1, open - 1);
+        return go(s, i + 1, open + 1) || go(s, i + 1, open - 1) || go(s, i + 1, open);
+    }
+public:
+    bool checkValidString(string s) { return go(s, 0, 0); }
+};`,
+          python: r`class Solution:
+    def checkValidString(self, s: str) -> bool:
+        def go(i, open_):
+            if open_ < 0:
+                return False
+            if i == len(s):
+                return open_ == 0
+            if s[i] == '(':
+                return go(i + 1, open_ + 1)
+            if s[i] == ')':
+                return go(i + 1, open_ - 1)
+            return go(i + 1, open_ + 1) or go(i + 1, open_ - 1) or go(i + 1, open_)
+        return go(0, 0)`,
+          javascript: r`var checkValidString = function(s) {
+    const go = (i, open) => {
+        if (open < 0) return false;
+        if (i === s.length) return open === 0;
+        if (s[i] === "(") return go(i + 1, open + 1);
+        if (s[i] === ")") return go(i + 1, open - 1);
+        return go(i + 1, open + 1) || go(i + 1, open - 1) || go(i + 1, open);
+    };
+    return go(0, 0);
+};`,
+        },
+        timesOut: [7, 8],
+      },
+      {
+        level: 'Better', name: 'Memoised (index, open count)',
+        idea: 'The recursion only depends on the position and the current open count, both at most n. Cache the result of each state.',
+        steps: [
+          'Use a table `memo[i][open]` with three values: unknown, true, false.',
+          'Run the same recursion, returning the cached result when a state repeats.',
+          'Return `go(0, 0)`.',
+        ],
+        time: 'O(n²)', space: 'O(n²)',
+        why: 'n · n states, O(1) each. Always correct and easy to derive from the brute force, which makes it a safe interview answer before the greedy insight.',
+        code: {
+          java: r`class Solution {
+    private Boolean[][] memo;
+    public boolean checkValidString(String s) {
+        memo = new Boolean[s.length() + 1][s.length() + 1];
+        return go(s, 0, 0);
+    }
+    private boolean go(String s, int i, int open) {
+        if (open < 0 || open > s.length()) return false;
+        if (i == s.length()) return open == 0;
+        if (memo[i][open] != null) return memo[i][open];
+        char c = s.charAt(i);
+        boolean r;
+        if (c == '(') r = go(s, i + 1, open + 1);
+        else if (c == ')') r = go(s, i + 1, open - 1);
+        else r = go(s, i + 1, open + 1) || go(s, i + 1, open - 1) || go(s, i + 1, open);
+        return memo[i][open] = r;
+    }
+}`,
+          cpp: r`class Solution {
+    vector<vector<int>> memo;
+    bool go(const string& s, int i, int open) {
+        if (open < 0 || open > (int) s.size()) return false;
+        if (i == (int) s.size()) return open == 0;
+        int& m = memo[i][open];
+        if (m != -1) return m;
+        bool r;
+        if (s[i] == '(') r = go(s, i + 1, open + 1);
+        else if (s[i] == ')') r = go(s, i + 1, open - 1);
+        else r = go(s, i + 1, open + 1) || go(s, i + 1, open - 1) || go(s, i + 1, open);
+        return m = r;
+    }
+public:
+    bool checkValidString(string s) {
+        memo.assign(s.size() + 1, vector<int>(s.size() + 2, -1));
+        return go(s, 0, 0);
+    }
+};`,
+          python: r`class Solution:
+    def checkValidString(self, s: str) -> bool:
+        n = len(s)
+        @lru_cache(maxsize=None)
+        def go(i, open_):
+            if open_ < 0 or open_ > n:
+                return False
+            if i == n:
+                return open_ == 0
+            if s[i] == '(':
+                return go(i + 1, open_ + 1)
+            if s[i] == ')':
+                return go(i + 1, open_ - 1)
+            return go(i + 1, open_ + 1) or go(i + 1, open_ - 1) or go(i + 1, open_)
+        return go(0, 0)`,
+          javascript: r`var checkValidString = function(s) {
+    const n = s.length, memo = new Map();
+    const go = (i, open) => {
+        if (open < 0 || open > n) return false;
+        if (i === n) return open === 0;
+        const key = i * 128 + open;
+        if (memo.has(key)) return memo.get(key);
+        let r;
+        if (s[i] === "(") r = go(i + 1, open + 1);
+        else if (s[i] === ")") r = go(i + 1, open - 1);
+        else r = go(i + 1, open + 1) || go(i + 1, open - 1) || go(i + 1, open);
+        memo.set(key, r);
+        return r;
+    };
+    return go(0, 0);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Track the lowest and highest possible open count',
+        idea: 'Every choice of stars gives some open count after each character, and those counts form a contiguous range `[lo, hi]`. Track the range instead of each choice.',
+        steps: [
+          '"(" raises both `lo` and `hi`; ")" lowers both; "*" lowers `lo` and raises `hi`.',
+          'If `hi < 0`, even treating every star as "(" cannot cover the ")": return `false`.',
+          'Clamp `lo` at 0 (a negative count is never a valid choice). At the end, return `lo == 0`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each step changes the possible counts by exactly −1, 0 or +1, so the set of reachable counts stays an interval, and only its ends matter. Clamping `lo` drops choices that would already be invalid.',
+        code: {
+          java: r`class Solution {
+    public boolean checkValidString(String s) {
+        int lo = 0, hi = 0;
+        for (char c : s.toCharArray()) {
+            if (c == '(') { lo++; hi++; }
+            else if (c == ')') { lo--; hi--; }
+            else { lo--; hi++; }
+            if (hi < 0) return false;
+            if (lo < 0) lo = 0;
+        }
+        return lo == 0;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool checkValidString(string s) {
+        int lo = 0, hi = 0;
+        for (char c : s) {
+            if (c == '(') { lo++; hi++; }
+            else if (c == ')') { lo--; hi--; }
+            else { lo--; hi++; }
+            if (hi < 0) return false;
+            if (lo < 0) lo = 0;
+        }
+        return lo == 0;
+    }
+};`,
+          python: r`class Solution:
+    def checkValidString(self, s: str) -> bool:
+        lo = hi = 0
+        for c in s:
+            if c == '(':
+                lo, hi = lo + 1, hi + 1
+            elif c == ')':
+                lo, hi = lo - 1, hi - 1
+            else:
+                lo, hi = lo - 1, hi + 1
+            if hi < 0:
+                return False
+            lo = max(lo, 0)
+        return lo == 0`,
+          javascript: r`var checkValidString = function(s) {
+    let lo = 0, hi = 0;
+    for (const c of s) {
+        if (c === "(") { lo++; hi++; }
+        else if (c === ")") { lo--; hi--; }
+        else { lo--; hi++; }
+        if (hi < 0) return false;
+        if (lo < 0) lo = 0;
+    }
+    return lo === 0;
+};`,
+        },
+      },
+    ],
+  },
+  'hand-of-straights': {
+    pattern: 'Greedy from the smallest card with a sorted count map',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Sort, then pull out runs from a list',
+        idea: 'Sort the cards. Repeatedly take the smallest remaining card and search the list for the next `groupSize − 1` consecutive values, removing each one.',
+        steps: [
+          'Sort `hand` into a list.',
+          'While the list is not empty, remove its first value `v`, then for `v + 1 … v + groupSize − 1` find and remove one occurrence each.',
+          'If any value is missing, return `false`; otherwise `true`.',
+        ],
+        time: 'O(n²)', space: 'O(n)',
+        why: 'Searching and deleting from the middle of a list are linear operations, done once per card. Correct, but a count map makes each step O(log n).',
+        code: {
+          java: r`class Solution {
+    public boolean isNStraightHand(int[] hand, int groupSize) {
+        if (hand.length % groupSize != 0) return false;
+        List<Integer> cards = new ArrayList<>();
+        for (int h : hand) cards.add(h);
+        Collections.sort(cards);
+        while (!cards.isEmpty()) {
+            int v = cards.remove(0);
+            for (int k = 1; k < groupSize; k++)
+                if (!cards.remove(Integer.valueOf(v + k))) return false;
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool isNStraightHand(vector<int>& hand, int groupSize) {
+        if (hand.size() % groupSize != 0) return false;
+        vector<int> cards(hand);
+        sort(cards.begin(), cards.end());
+        while (!cards.empty()) {
+            int v = cards[0];
+            cards.erase(cards.begin());
+            for (int k = 1; k < groupSize; k++) {
+                auto it = find(cards.begin(), cards.end(), v + k);
+                if (it == cards.end()) return false;
+                cards.erase(it);
+            }
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def isNStraightHand(self, hand: List[int], groupSize: int) -> bool:
+        if len(hand) % groupSize:
+            return False
+        cards = sorted(hand)
+        while cards:
+            v = cards.pop(0)
+            for k in range(1, groupSize):
+                if v + k not in cards:
+                    return False
+                cards.remove(v + k)
+        return True`,
+          javascript: r`var isNStraightHand = function(hand, groupSize) {
+    if (hand.length % groupSize !== 0) return false;
+    const cards = [...hand].sort((a, b) => a - b);
+    while (cards.length) {
+        const v = cards.shift();
+        for (let k = 1; k < groupSize; k++) {
+            const i = cards.indexOf(v + k);
+            if (i < 0) return false;
+            cards.splice(i, 1);
+        }
+    }
+    return true;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Sorted count map',
+        idea: 'Count each value. The smallest remaining value must start a group, so repeatedly consume one of each value from it upwards.',
+        steps: [
+          'If `n % groupSize != 0`, return `false`. Count the values in a sorted map (or sort the distinct values).',
+          'Take the smallest value `v` still present; for `v … v + groupSize − 1`, decrement each count, failing if a value is missing.',
+          'Remove values whose count reaches 0; repeat until the map is empty.',
+        ],
+        time: 'O(n log n)', space: 'O(n)',
+        why: 'Each card is decremented once, at O(log n) per map operation. The greedy choice is forced: nothing smaller than the minimum exists, so the minimum card can only be the start of a run.',
+        code: {
+          java: r`class Solution {
+    public boolean isNStraightHand(int[] hand, int groupSize) {
+        if (hand.length % groupSize != 0) return false;
+        TreeMap<Integer, Integer> count = new TreeMap<>();
+        for (int h : hand) count.merge(h, 1, Integer::sum);
+        while (!count.isEmpty()) {
+            int start = count.firstKey();
+            for (int v = start; v < start + groupSize; v++) {
+                Integer c = count.get(v);
+                if (c == null) return false;
+                if (c == 1) count.remove(v); else count.put(v, c - 1);
+            }
+        }
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool isNStraightHand(vector<int>& hand, int groupSize) {
+        if (hand.size() % groupSize != 0) return false;
+        map<int, int> count;
+        for (int h : hand) count[h]++;
+        while (!count.empty()) {
+            int start = count.begin()->first;
+            for (int v = start; v < start + groupSize; v++) {
+                auto it = count.find(v);
+                if (it == count.end()) return false;
+                if (--it->second == 0) count.erase(it);
+            }
+        }
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def isNStraightHand(self, hand: List[int], groupSize: int) -> bool:
+        if len(hand) % groupSize:
+            return False
+        count = Counter(hand)
+        for v in sorted(count):
+            c = count[v]
+            if c == 0:
+                continue
+            for k in range(groupSize):
+                if count[v + k] < c:
+                    return False
+                count[v + k] -= c
+        return True`,
+          javascript: r`var isNStraightHand = function(hand, groupSize) {
+    if (hand.length % groupSize !== 0) return false;
+    const count = new Map();
+    for (const h of hand) count.set(h, (count.get(h) || 0) + 1);
+    for (const v of [...count.keys()].sort((a, b) => a - b)) {
+        const c = count.get(v);
+        if (c === 0) continue;
+        for (let k = 0; k < groupSize; k++) {
+            const have = count.get(v + k) || 0;
+            if (have < c) return false;
+            count.set(v + k, have - c);
+        }
+    }
+    return true;
+};`,
+        },
+      },
+    ],
+  },
+  'dota2-senate': {
+    pattern: 'Greedy bans simulated with two queues',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Simulate rounds on the string',
+        idea: 'Walk through the senators in order. Each active senator bans the next active opponent, searching forward (and wrapping around) for them; repeat rounds until one party is left.',
+        steps: [
+          'Keep a `banned` array and counts of active R and D senators.',
+          'For each active senator in turn, if the other party has no active members, that party has lost. Otherwise scan forward cyclically for the next active opponent and ban them.',
+          'Return the party left standing.',
+        ],
+        time: 'O(n²)', space: 'O(n)',
+        why: 'Each ban may scan up to n positions, and there are up to n − 1 bans. Banning the next opponent in line is optimal because that is the senator who would otherwise act soonest against you.',
+        code: {
+          java: r`class Solution {
+    public String predictPartyVictory(String senate) {
+        int n = senate.length(), r = 0, d = 0;
+        boolean[] banned = new boolean[n];
+        for (char c : senate.toCharArray()) if (c == 'R') r++; else d++;
+        while (true) {
+            for (int i = 0; i < n; i++) {
+                if (banned[i]) continue;
+                char me = senate.charAt(i);
+                if (me == 'R' ? d == 0 : r == 0) return me == 'R' ? "Radiant" : "Dire";
+                for (int j = (i + 1) % n; ; j = (j + 1) % n) {
+                    if (!banned[j] && senate.charAt(j) != me) {
+                        banned[j] = true;
+                        if (me == 'R') d--; else r--;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string predictPartyVictory(string senate) {
+        int n = senate.size(), r = 0, d = 0;
+        vector<bool> banned(n, false);
+        for (char c : senate) (c == 'R' ? r : d)++;
+        while (true) {
+            for (int i = 0; i < n; i++) {
+                if (banned[i]) continue;
+                char me = senate[i];
+                if (me == 'R' ? d == 0 : r == 0) return me == 'R' ? "Radiant" : "Dire";
+                for (int j = (i + 1) % n; ; j = (j + 1) % n) {
+                    if (!banned[j] && senate[j] != me) {
+                        banned[j] = true;
+                        (me == 'R' ? d : r)--;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+};`,
+          python: r`class Solution:
+    def predictPartyVictory(self, senate: str) -> str:
+        n = len(senate)
+        banned = [False] * n
+        left = {'R': senate.count('R'), 'D': senate.count('D')}
+        while True:
+            for i in range(n):
+                if banned[i]:
+                    continue
+                me = senate[i]
+                other = 'D' if me == 'R' else 'R'
+                if left[other] == 0:
+                    return "Radiant" if me == 'R' else "Dire"
+                j = (i + 1) % n
+                while banned[j] or senate[j] == me:
+                    j = (j + 1) % n
+                banned[j] = True
+                left[other] -= 1`,
+          javascript: r`var predictPartyVictory = function(senate) {
+    const n = senate.length, banned = new Array(n).fill(false);
+    const left = { R: 0, D: 0 };
+    for (const c of senate) left[c]++;
+    while (true) {
+        for (let i = 0; i < n; i++) {
+            if (banned[i]) continue;
+            const me = senate[i], other = me === "R" ? "D" : "R";
+            if (left[other] === 0) return me === "R" ? "Radiant" : "Dire";
+            let j = (i + 1) % n;
+            while (banned[j] || senate[j] === me) j = (j + 1) % n;
+            banned[j] = true;
+            left[other]--;
+        }
+    }
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two queues of turn positions',
+        idea: 'Keep each party\'s senators as a queue of positions. The front senator with the smaller position acts first: they ban the other front and rejoin their queue for the next round at position + n.',
+        steps: [
+          'Push every index into the R queue or the D queue.',
+          'While both are non-empty, pop the fronts `a` (R) and `b` (D). The smaller one wins this duel and is pushed back as `index + n`.',
+          'Return the party whose queue is not empty.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Every duel removes one senator for good, so there are at most n duels, each O(1). Adding n keeps the turn order correct across rounds without rebuilding anything.',
+        code: {
+          java: r`class Solution {
+    public String predictPartyVictory(String senate) {
+        int n = senate.length();
+        Deque<Integer> r = new ArrayDeque<>(), d = new ArrayDeque<>();
+        for (int i = 0; i < n; i++) (senate.charAt(i) == 'R' ? r : d).add(i);
+        while (!r.isEmpty() && !d.isEmpty()) {
+            int a = r.poll(), b = d.poll();
+            if (a < b) r.add(a + n); else d.add(b + n);
+        }
+        return r.isEmpty() ? "Dire" : "Radiant";
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string predictPartyVictory(string senate) {
+        int n = senate.size();
+        queue<int> r, d;
+        for (int i = 0; i < n; i++) (senate[i] == 'R' ? r : d).push(i);
+        while (!r.empty() && !d.empty()) {
+            int a = r.front(), b = d.front();
+            r.pop(); d.pop();
+            if (a < b) r.push(a + n); else d.push(b + n);
+        }
+        return r.empty() ? "Dire" : "Radiant";
+    }
+};`,
+          python: r`class Solution:
+    def predictPartyVictory(self, senate: str) -> str:
+        n = len(senate)
+        r = deque(i for i, c in enumerate(senate) if c == 'R')
+        d = deque(i for i, c in enumerate(senate) if c == 'D')
+        while r and d:
+            a, b = r.popleft(), d.popleft()
+            if a < b:
+                r.append(a + n)
+            else:
+                d.append(b + n)
+        return "Radiant" if r else "Dire"`,
+          javascript: r`var predictPartyVictory = function(senate) {
+    const n = senate.length, r = new Queue(), d = new Queue();
+    for (let i = 0; i < n; i++) (senate[i] === "R" ? r : d).enqueue(i);
+    while (!r.isEmpty() && !d.isEmpty()) {
+        const a = r.dequeue(), b = d.dequeue();
+        if (a < b) r.enqueue(a + n); else d.enqueue(b + n);
+    }
+    return r.isEmpty() ? "Dire" : "Radiant";
+};`,
+        },
+      },
+    ],
+  },
+  'jump-game-vii': {
+    pattern: 'Reachability DP with a sliding-window count',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Check every jump',
+        idea: 'Mark index 0 reachable. For every reachable index, mark every "0" within its jump range as reachable.',
+        steps: [
+          'Set `ok[0] = true`.',
+          'For each `i` with `ok[i]`, mark `ok[j] = true` for every `j` in `[i + minJump, min(i + maxJump, n − 1)]` with `s[j] == "0"`.',
+          'Return `ok[n − 1]`.',
+        ],
+        time: 'O(n · (maxJump − minJump))', space: 'O(n)',
+        why: 'Each reachable index scans its whole jump window. With a window of 50,000 and 10⁵ indices that is billions of steps, so it times out on the large test.',
+        code: {
+          java: r`class Solution {
+    public boolean canReach(String s, int minJump, int maxJump) {
+        int n = s.length();
+        boolean[] ok = new boolean[n];
+        ok[0] = true;
+        for (int i = 0; i < n; i++) {
+            if (!ok[i]) continue;
+            for (int j = i + minJump; j <= Math.min(i + maxJump, n - 1); j++)
+                if (s.charAt(j) == '0') ok[j] = true;
+        }
+        return ok[n - 1];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool canReach(string s, int minJump, int maxJump) {
+        int n = s.size();
+        vector<bool> ok(n, false);
+        ok[0] = true;
+        for (int i = 0; i < n; i++) {
+            if (!ok[i]) continue;
+            for (int j = i + minJump; j <= min(i + maxJump, n - 1); j++)
+                if (s[j] == '0') ok[j] = true;
+        }
+        return ok[n - 1];
+    }
+};`,
+          python: r`class Solution:
+    def canReach(self, s: str, minJump: int, maxJump: int) -> bool:
+        n = len(s)
+        ok = [False] * n
+        ok[0] = True
+        for i in range(n):
+            if ok[i]:
+                for j in range(i + minJump, min(i + maxJump, n - 1) + 1):
+                    if s[j] == '0':
+                        ok[j] = True
+        return ok[n - 1]`,
+          javascript: r`var canReach = function(s, minJump, maxJump) {
+    const n = s.length, ok = new Array(n).fill(false);
+    ok[0] = true;
+    for (let i = 0; i < n; i++) {
+        if (!ok[i]) continue;
+        for (let j = i + minJump; j <= Math.min(i + maxJump, n - 1); j++)
+            if (s[j] === "0") ok[j] = true;
+    }
+    return ok[n - 1];
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'BFS with a "farthest scheduled" pointer',
+        idea: 'BFS from index 0, but remember the farthest index already examined. Each new window only scans the part beyond it, so every index is looked at once.',
+        steps: [
+          'Queue index 0 and set `farthest = 0`.',
+          'Pop `i`; scan `j` from `max(i + minJump, farthest + 1)` to `min(i + maxJump, n − 1)`, queueing each `"0"`.',
+          'Set `farthest = i + maxJump`. Return true when `n − 1` is queued.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Windows of later indices start later, so scanning only past `farthest` never misses anything, and each index is scanned at most once. The queue costs O(n) memory, which the DP below avoids keeping as a separate structure.',
+        code: {
+          java: r`class Solution {
+    public boolean canReach(String s, int minJump, int maxJump) {
+        int n = s.length(), farthest = 0;
+        Deque<Integer> q = new ArrayDeque<>();
+        q.add(0);
+        while (!q.isEmpty()) {
+            int i = q.poll();
+            if (i == n - 1) return true;
+            for (int j = Math.max(i + minJump, farthest + 1); j <= Math.min(i + maxJump, n - 1); j++)
+                if (s.charAt(j) == '0') q.add(j);
+            farthest = Math.max(farthest, i + maxJump);
+        }
+        return false;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool canReach(string s, int minJump, int maxJump) {
+        int n = s.size(), farthest = 0;
+        queue<int> q;
+        q.push(0);
+        while (!q.empty()) {
+            int i = q.front(); q.pop();
+            if (i == n - 1) return true;
+            for (int j = max(i + minJump, farthest + 1); j <= min(i + maxJump, n - 1); j++)
+                if (s[j] == '0') q.push(j);
+            farthest = max(farthest, i + maxJump);
+        }
+        return false;
+    }
+};`,
+          python: r`class Solution:
+    def canReach(self, s: str, minJump: int, maxJump: int) -> bool:
+        n, farthest = len(s), 0
+        q = deque([0])
+        while q:
+            i = q.popleft()
+            if i == n - 1:
+                return True
+            for j in range(max(i + minJump, farthest + 1), min(i + maxJump, n - 1) + 1):
+                if s[j] == '0':
+                    q.append(j)
+            farthest = max(farthest, i + maxJump)
+        return False`,
+          javascript: r`var canReach = function(s, minJump, maxJump) {
+    const n = s.length, q = [0];
+    let farthest = 0;
+    for (let head = 0; head < q.length; head++) {
+        const i = q[head];
+        if (i === n - 1) return true;
+        for (let j = Math.max(i + minJump, farthest + 1); j <= Math.min(i + maxJump, n - 1); j++)
+            if (s[j] === "0") q.push(j);
+        farthest = Math.max(farthest, i + maxJump);
+    }
+    return false;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'DP with a sliding count of reachable indices',
+        idea: 'Index `j` is reachable if it is a "0" and some reachable index lies in `[j − maxJump, j − minJump]`. Keep a running count of reachable indices in that window as it slides right.',
+        steps: [
+          'Set `ok[0] = true` and `count = 0`.',
+          'For `j` from 1: if `j − minJump >= 0` and `ok[j − minJump]`, increment `count` (it entered the window); if `j − maxJump − 1 >= 0` and `ok[j − maxJump − 1]`, decrement it (it left).',
+          'Set `ok[j] = count > 0 && s[j] == "0"`. Return `ok[n − 1]`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Each index enters and leaves the window once, so every step is O(1). This "sliding window over a DP array" trick turns many range-reachability DPs from O(n · k) into O(n); a prefix-sum array over `ok` is an equivalent formulation.',
+        code: {
+          java: r`class Solution {
+    public boolean canReach(String s, int minJump, int maxJump) {
+        int n = s.length();
+        boolean[] ok = new boolean[n];
+        ok[0] = true;
+        int reachable = 0;
+        for (int i = 1; i < n; i++) {
+            if (i - minJump >= 0 && ok[i - minJump]) reachable++;
+            if (i - maxJump - 1 >= 0 && ok[i - maxJump - 1]) reachable--;
+            ok[i] = reachable > 0 && s.charAt(i) == '0';
+        }
+        return ok[n - 1];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool canReach(string s, int minJump, int maxJump) {
+        int n = s.size(), reachable = 0;
+        vector<bool> ok(n, false);
+        ok[0] = true;
+        for (int i = 1; i < n; i++) {
+            if (i - minJump >= 0 && ok[i - minJump]) reachable++;
+            if (i - maxJump - 1 >= 0 && ok[i - maxJump - 1]) reachable--;
+            ok[i] = reachable > 0 && s[i] == '0';
+        }
+        return ok[n - 1];
+    }
+};`,
+          python: r`class Solution:
+    def canReach(self, s: str, minJump: int, maxJump: int) -> bool:
+        n = len(s)
+        ok = [False] * n
+        ok[0] = True
+        reachable = 0
+        for i in range(1, n):
+            if i - minJump >= 0 and ok[i - minJump]:
+                reachable += 1
+            if i - maxJump - 1 >= 0 and ok[i - maxJump - 1]:
+                reachable -= 1
+            ok[i] = reachable > 0 and s[i] == '0'
+        return ok[n - 1]`,
+          javascript: r`var canReach = function(s, minJump, maxJump) {
+    const n = s.length, ok = new Array(n).fill(false);
+    ok[0] = true;
+    let reachable = 0;
+    for (let i = 1; i < n; i++) {
+        if (i - minJump >= 0 && ok[i - minJump]) reachable++;
+        if (i - maxJump - 1 >= 0 && ok[i - maxJump - 1]) reachable--;
+        ok[i] = reachable > 0 && s[i] === "0";
+    }
+    return ok[n - 1];
+};`,
+        },
+      },
+    ],
+  },
 };

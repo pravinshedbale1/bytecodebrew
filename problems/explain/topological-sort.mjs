@@ -20,4 +20,10 @@ export default {
   'sort-items-by-groups-respecting-dependencies': {
     explain: 'Group 0 holds items 3, 4 and 6, and group 1 holds items 2 and 5. In `[6,3,4,5,2,0,7,1]` each group\'s items sit together, 6 comes before 1, 3 and 4, 3 comes before 4, and 5 comes before 2, so every rule holds. Other orders that satisfy the rules are also accepted.',
   },
+  'alien-dictionary': {
+    explain: 'Neighbouring words give the rules t before f (wrt, wrf), w before e (wrf, er), r before t (er, ett) and e before r (ett, rftt). The only order using all five letters is "wertf".',
+  },
+  'build-a-matrix-with-conditions': {
+    explain: 'Rows: 1 and 3 must be above 2, so one order is 1, 3, 2. Columns: 3 before 2 before 1. Placing each number at its row and column gives `[[0,0,1],[3,0,0],[0,2,0]]`; LeetCode\'s sample answer `[[3,0,0],[0,0,1],[0,2,0]]` is equally valid.',
+  },
 };

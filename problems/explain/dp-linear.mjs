@@ -33,4 +33,18 @@ export default {
   'russian-doll-envelopes': {
     explain: '`[2,3]` fits into `[5,4]`, which fits into `[6,7]`: both sides strictly larger each time. `[6,4]` can\'t join because its height equals `[5,4]`\'s. So the answer is 3.',
   },
+  'integer-break': {
+    explain: '2 must be split into at least two parts, and the only way is 1 + 1, whose product is 1.',
+    more: 'For example 10 = 3 + 3 + 4 gives 3 × 3 × 4 = 36, the best possible.',
+  },
+  'maximum-sum-circular-subarray': {
+    explain: 'The single element 3 is the best choice: no subarray, wrapping or not, adds up to more. The answer is 3.',
+    more: 'For example in `[5,-3,5]` the best subarray wraps around: 5 (last) + 5 (first) = 10.',
+  },
+  'longest-turbulent-subarray': {
+    explain: 'The subarray 4, 2, 10, 7, 8 goes down, up, down, up: every step flips direction. It has length 5, and the equal pair 8, 8 stops anything longer.',
+  },
+  'stone-game-iii': {
+    explain: 'If Alice takes 1, 2 and 3 (sum 6), Bob takes 7. Any smaller first move lets Bob take the 7 too. Bob always ends ahead, so the answer is "Bob".',
+  },
 };

@@ -120,4 +120,80 @@ Return the number of words in the shortest such sequence, counting both ends, or
       'Remove words from the set when you enqueue them so they are not visited twice. BFS from both ends at once makes it faster still.',
     ],
   },
+  'island-perimeter': {
+    statement: `\`grid\` is a map where \`1\` is land and \`0\` is water. Cells connect horizontally and vertically (not diagonally). The grid is surrounded by water, and contains **exactly one island**: one or more connected land cells, with no "lakes" (water inside the island that is not connected to the water around it).
+
+Each cell is a 1 × 1 square. Return the perimeter of the island.`,
+    constraints: ['row == grid.length', 'col == grid[i].length', '1 <= grid.length, grid[0].length <= 100', '0 <= grid[i][j] <= 1', 'There is exactly one island'],
+    hints: [
+      'Each land cell contributes 4 edges, minus one for each neighbouring land cell.',
+      'Count, for every land cell, the sides that touch water or the grid\'s border.',
+      'Even simpler: perimeter = 4 × (land cells) − 2 × (adjacent land pairs). Count only the right and down neighbours so each pair is counted once.',
+    ],
+  },
+  'find-the-town-judge': {
+    statement: `A town has \`n\` people labelled \`1\` to \`n\`. A rumour says one of them is secretly the town judge. If the judge exists:
+
+1. the judge trusts nobody;
+2. everybody else trusts the judge;
+3. there is exactly one person satisfying 1 and 2.
+
+\`trust[i] = [a, b]\` means person \`a\` trusts person \`b\`. Return the label of the town judge if they exist and can be identified, otherwise \`-1\`.`,
+    constraints: ['1 <= n <= 1000', '0 <= trust.length <= 1e4', 'trust[i].length == 2', 'All pairs in `trust` are unique', '`a != b`', '1 <= trust[i][j] <= n'],
+    hints: [
+      'Think of trust as a directed graph: a → b. What do the judge\'s in-degree and out-degree look like?',
+      'The judge has out-degree 0 and in-degree n − 1.',
+      'Keep one score per person: +1 for each person who trusts them, −1 for each person they trust. The judge is the person whose score is exactly n − 1.',
+    ],
+  },
+  'walls-and-gates': {
+    statement: `\`rooms\` is an \`m × n\` grid where each cell is:
+
+- \`-1\`: a wall or obstacle,
+- \`0\`: a gate,
+- \`2147483647\` (written INF): an empty room.
+
+Fill each empty room **in place** with the number of steps to its nearest gate, moving up, down, left or right and never through walls. If no gate can be reached, leave the room as INF. Don't return anything: the judge prints \`rooms\` after your call.`,
+    constraints: ['m == rooms.length', 'n == rooms[i].length', '1 <= rooms.length, rooms[0].length <= 250', '`rooms[i][j]` is -1, 0 or 2147483647'],
+    hints: [
+      'Running a BFS from every empty room to find its nearest gate repeats a lot of work.',
+      'Turn it around: start a single BFS from all gates at once (multi-source BFS). The first time the wave reaches a room is its shortest distance.',
+      'Seed the queue with every gate. When you pop a cell, set each neighbouring INF room to this cell\'s value + 1 and push it. A room that is no longer INF has already been reached by a closer gate.',
+    ],
+  },
+  'open-the-lock': {
+    statement: `A lock has four circular wheels, each showing a digit \`0\`–\`9\`. One move turns one wheel by one slot in either direction, and the wheels wrap around (\`9\` turns into \`0\` and \`0\` into \`9\`). The lock starts at \`"0000"\`.
+
+\`deadends\` lists combinations that jam the lock: if the wheels ever show one of them, you are stuck. Return the minimum number of moves needed to reach \`target\`, or \`-1\` if it is impossible.`,
+    constraints: ['1 <= deadends.length <= 500', 'deadends[i].length == 4', 'target.length == 4', '`target` is not in `deadends`', '`target` and `deadends[i]` consist of digits only'],
+    hints: [
+      'Every combination is a node in a graph with 10⁴ nodes, and each node has 8 neighbours (4 wheels × 2 directions).',
+      'Shortest path in an unweighted graph means BFS from "0000". Treat deadends as already visited so you never step on them.',
+      'Remember the corner case where "0000" itself is a deadend. For extra speed, run BFS from both ends at once (bidirectional BFS).',
+    ],
+  },
+  'evaluate-division': {
+    statement: `\`equations[i] = [A_i, B_i]\` and \`values[i]\` mean that \`A_i / B_i = values[i]\`, where each \`A_i\` and \`B_i\` is a variable name.
+
+For each query \`queries[j] = [C_j, D_j]\`, return the value of \`C_j / D_j\`. If it cannot be determined, return \`-1.0\`; that includes any query mentioning a variable that never appears in the equations (even \`x / x\`).
+
+The input is always valid: no division by zero and no contradictions.`,
+    constraints: ['1 <= equations.length <= 20', 'equations[i].length == 2', 'values.length == equations.length', '0.0 < values[i] <= 20.0', '1 <= queries.length <= 20', 'queries[i].length == 2', 'Variable names have 1 to 5 lowercase letters or digits'],
+    hints: [
+      'Treat each variable as a node. An equation A / B = v gives an edge A → B with weight v and an edge B → A with weight 1 / v.',
+      'C / D is the product of the weights along any path from C to D. Find one with DFS or BFS.',
+      'Answer -1.0 when either variable is missing from the graph or no path exists. A weighted union-find, which stores each variable\'s ratio to its root, answers each query in near-constant time.',
+    ],
+  },
+  'reconstruct-itinerary': {
+    statement: `\`tickets[i] = [from_i, to_i]\` is a flight from one airport to another. Reconstruct the itinerary in order and return it.
+
+The trip starts at \`"JFK"\` and must use **every ticket exactly once**. If more than one itinerary is possible, return the one that is smallest when the airport codes are read in order as one string (so \`["JFK","LGA"]\` comes before \`["JFK","LGB"]\`). At least one valid itinerary always exists.`,
+    constraints: ['1 <= tickets.length <= 300', 'tickets[i].length == 2', 'Airport codes are three uppercase English letters', 'from_i != to_i'],
+    hints: [
+      'Using every edge exactly once is an Eulerian path in a directed graph.',
+      'Greedily taking the smallest destination can strand you at a dead end before all tickets are used, so plain greedy is not enough; backtracking works but can be slow.',
+      'Hierholzer\'s algorithm: DFS, always following the smallest unused ticket; append an airport to the route only when it has no tickets left, then reverse the route at the end.',
+    ],
+  },
 };

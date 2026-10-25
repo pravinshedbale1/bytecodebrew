@@ -87,4 +87,60 @@ The array is unsorted and can contain negatives, zeros and duplicates. Solve it 
       'Keep swapping at the same index until its value is out of range or already in its home (watch for duplicates, or you loop forever). Then the first index i with nums[i] != i + 1 gives the answer i + 1.',
     ],
   },
+  'concatenation-of-array': {
+    statement: `Given \`nums\` of length \`n\`, return an array \`ans\` of length \`2n\` where \`ans[i] == nums[i]\` and \`ans[i + n] == nums[i]\` for every \`i\`. In other words, \`ans\` is \`nums\` written twice in a row.`,
+    constraints: ['1 <= nums.length <= 1000', '1 <= nums[i] <= 1000'],
+    hints: [
+      'The answer has a fixed size, 2n, so you can allocate it up front.',
+      'Position i and position i + n both get nums[i].',
+      'One loop over i from 0 to n − 1 fills both halves.',
+    ],
+  },
+  'majority-element': {
+    statement: `Return the **majority element** of \`nums\`: the value that appears more than \`⌊n / 2⌋\` times. You may assume it always exists.
+
+Follow-up: can you do it in O(n) time and O(1) extra space?`,
+    constraints: ['1 <= nums.length <= 5e4', '-1e9 <= nums[i] <= 1e9', 'A majority element always exists'],
+    hints: [
+      'A hash map of counts finds it in O(n) time but O(n) space. Sorting also works: the middle element of the sorted array must be the majority.',
+      'For O(1) space, imagine pairing each majority value with a different value and cancelling both. The majority still has copies left over.',
+      'Boyer–Moore voting: keep a candidate and a counter. On a match add 1, otherwise subtract 1; when the counter is 0, the next value becomes the candidate.',
+    ],
+  },
+  'encode-and-decode-strings': {
+    statement: `Design a \`Codec\` that sends a list of strings as one string:
+
+- \`encode(strs)\` turns the list into a single string.
+- \`decode(s)\` turns that string back into the original list.
+
+The strings can contain **any** character, including whatever separator you might pick, and can be empty. The judge calls \`encode\` on one \`Codec\` and \`decode\` on a different one, so you cannot keep the list in a field. It prints the decoded list, which must equal the input.`,
+    constraints: ['0 <= strs.length <= 99', '0 <= strs[i].length <= 199', '`strs[i]` may contain any of the 256 ASCII characters'],
+    hints: [
+      'Joining with a delimiter like "," breaks as soon as a string contains a comma. Escaping works, but there is a simpler idea.',
+      'If the decoder knew each string\'s length, it would not care what characters the string contains.',
+      'Write each string as its length, a separator such as "#", then the string itself. To decode, read digits up to the "#", then take exactly that many characters.',
+    ],
+  },
+  'majority-element-ii': {
+    statement: `Return every value in \`nums\` that appears more than \`⌊n / 3⌋\` times, in any order.
+
+Follow-up: can you do it in O(n) time and O(1) extra space?`,
+    constraints: ['1 <= nums.length <= 5e4', '-1e9 <= nums[i] <= 1e9'],
+    hints: [
+      'At most two values can each appear more than n / 3 times. Three such values would need more than n elements.',
+      'A count map solves it in O(n) space. For O(1), extend Boyer–Moore voting to two candidates with two counters.',
+      'A value that matches neither candidate decrements both counters (or replaces a candidate whose counter is 0). The survivors are only candidates: count them again in a second pass before returning them.',
+    ],
+  },
+  'verifying-an-alien-dictionary': {
+    statement: `An alien language uses the same 26 lowercase letters, but in a different order: \`order\` lists them from first to last.
+
+Return \`true\` if \`words\` is sorted in this language\'s dictionary order. As in English, compare two words at their first differing letter; if one word is a prefix of the other, the shorter word comes first.`,
+    constraints: ['1 <= words.length <= 100', '1 <= words[i].length <= 20', 'order.length == 26', 'All letters are lowercase English letters; `order` contains each letter once'],
+    hints: [
+      'The list is sorted exactly when every pair of neighbouring words is in order. You don\'t need to compare all pairs.',
+      'Store each letter\'s position in order in an int[26] so comparing two letters is O(1).',
+      'For two neighbours, find the first differing position and compare the ranks there. If there is none, the first word must not be longer than the second ("apple" before "app" is wrong).',
+    ],
+  },
 };

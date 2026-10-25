@@ -193,4 +193,81 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'alien-dictionary', title: 'Alien Dictionary', level: 'Hard',
+    summary: 'words is sorted in an alien language that uses lowercase letters in an unknown order. Return a string of all letters that appear in words, in an order consistent with the sorting, or "" if no order is possible. Any valid order is accepted.',
+    method: 'alienOrder', params: [['String[]', 'words']], returns: 'String', check: 'custom:alienOrder',
+    tests: [
+      { in: [['wrt', 'wrf', 'er', 'ett', 'rftt']], out: 'wertf' },
+      { in: [['z', 'x']], out: 'zx' },
+      { in: [['z', 'x', 'z']], out: '' },
+      { in: [['abc', 'ab']] },
+      { in: [['z', 'z']] },
+      { in: [['ab', 'adc']] },
+      { in: [['ac', 'ab', 'zc', 'zb']] },
+      { in: [['a', 'b', 'ca', 'cc']] },
+      { in: [['abc', 'bcd', 'qwert', 'ab']] },
+    ],
+    ref: `class Solution {
+    public String alienOrder(String[] words) {
+        Map<Character, Set<Character>> next = new TreeMap<>();
+        Map<Character, Integer> indeg = new TreeMap<>();
+        for (String w : words) for (char c : w.toCharArray()) { next.putIfAbsent(c, new TreeSet<>()); indeg.putIfAbsent(c, 0); }
+        for (int i = 0; i + 1 < words.length; i++) {
+            String a = words[i], b = words[i + 1];
+            int k = 0;
+            while (k < a.length() && k < b.length() && a.charAt(k) == b.charAt(k)) k++;
+            if (k == b.length() && a.length() > b.length()) return "";
+            if (k < a.length() && k < b.length() && next.get(a.charAt(k)).add(b.charAt(k))) indeg.merge(b.charAt(k), 1, Integer::sum);
+        }
+        PriorityQueue<Character> q = new PriorityQueue<>();
+        for (Map.Entry<Character, Integer> e : indeg.entrySet()) if (e.getValue() == 0) q.add(e.getKey());
+        StringBuilder sb = new StringBuilder();
+        while (!q.isEmpty()) {
+            char c = q.poll();
+            sb.append(c);
+            for (char d : next.get(c)) if (indeg.merge(d, -1, Integer::sum) == 0) q.add(d);
+        }
+        return sb.length() == indeg.size() ? sb.toString() : "";
+    }
+}`,
+  },
+  {
+    slug: 'build-a-matrix-with-conditions', title: 'Build a Matrix With Conditions', level: 'Hard',
+    summary: 'Place each number 1..k exactly once in a k × k matrix (other cells 0) so that for every [above, below] in rowConditions, above is in a strictly higher row, and for every [left, right] in colConditions, left is in a strictly earlier column. Return any such matrix, or [] if impossible.',
+    method: 'buildMatrix', params: [['int', 'k'], ['int[][]', 'rowConditions'], ['int[][]', 'colConditions']], returns: 'int[][]', check: 'custom:matrixConditions',
+    tests: [
+      { in: [3, [[1, 2], [3, 2]], [[2, 1], [3, 2]]], out: [[3, 0, 0], [0, 0, 1], [0, 2, 0]] },
+      { in: [3, [[1, 2], [2, 3], [3, 1], [2, 3]], [[2, 1]]], out: [] },
+      { in: [2, [[1, 2]], [[2, 1]]] },
+      { in: [2, [[1, 2]], [[1, 2], [2, 1]]] },
+      { in: [4, [[4, 3], [3, 2], [2, 1]], [[1, 2], [2, 3], [3, 4]]] },
+      { in: [5, [[1, 5], [2, 5], [5, 3]], [[3, 1], [4, 2], [1, 2]]] },
+    ],
+    ref: `class Solution {
+    public int[][] buildMatrix(int k, int[][] rowConditions, int[][] colConditions) {
+        int[] row = order(k, rowConditions), col = order(k, colConditions);
+        if (row == null || col == null) return new int[0][];
+        int[][] m = new int[k][k];
+        for (int v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+        return m;
+    }
+    private int[] order(int k, int[][] conds) {
+        List<List<Integer>> adj = new ArrayList<>();
+        for (int i = 0; i <= k; i++) adj.add(new ArrayList<>());
+        int[] indeg = new int[k + 1];
+        for (int[] c : conds) { adj.get(c[0]).add(c[1]); indeg[c[1]]++; }
+        Deque<Integer> q = new ArrayDeque<>();
+        for (int v = 1; v <= k; v++) if (indeg[v] == 0) q.add(v);
+        int[] pos = new int[k + 1];
+        int idx = 0;
+        while (!q.isEmpty()) {
+            int v = q.poll();
+            pos[v] = idx++;
+            for (int w : adj.get(v)) if (--indeg[w] == 0) q.add(w);
+        }
+        return idx == k ? pos : null;
+    }
+}`,
+  },
 ];

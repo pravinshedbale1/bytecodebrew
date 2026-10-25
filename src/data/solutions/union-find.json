@@ -344,5 +344,177 @@
     }
    }
   ]
+ },
+ "graph-valid-tree": {
+  "pattern": "Tree = n − 1 edges + no cycle (union-find)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "DFS from node 0",
+    "idea": "A tree has exactly n − 1 edges. With that many edges, it is a tree exactly when one DFS from node 0 reaches every node.",
+    "steps": [
+     "If `edges.length != n − 1`, return `false`.",
+     "Build an adjacency list and DFS (or BFS) from node 0, marking visited nodes.",
+     "Return whether all `n` nodes were visited."
+    ],
+    "time": "O(n + e)",
+    "space": "O(n + e)",
+    "why": "With n − 1 edges, \"connected\" and \"acyclic\" are equivalent, so a reachability check is enough. The adjacency list stores every edge twice.",
+    "code": {
+     "java": "class Solution {\n    public boolean validTree(int n, int[][] edges) {\n        if (edges.length != n - 1) return false;\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        boolean[] seen = new boolean[n];\n        Deque<Integer> st = new ArrayDeque<>();\n        st.push(0); seen[0] = true;\n        int count = 0;\n        while (!st.isEmpty()) {\n            int u = st.pop();\n            count++;\n            for (int v : adj.get(u)) if (!seen[v]) { seen[v] = true; st.push(v); }\n        }\n        return count == n;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool validTree(int n, vector<vector<int>>& edges) {\n        if ((int) edges.size() != n - 1) return false;\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<bool> seen(n, false);\n        vector<int> st{0};\n        seen[0] = true;\n        int count = 0;\n        while (!st.empty()) {\n            int u = st.back(); st.pop_back();\n            count++;\n            for (int v : adj[u]) if (!seen[v]) { seen[v] = true; st.push_back(v); }\n        }\n        return count == n;\n    }\n};",
+     "python": "class Solution:\n    def validTree(self, n: int, edges: List[List[int]]) -> bool:\n        if len(edges) != n - 1:\n            return False\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        seen, st = {0}, [0]\n        while st:\n            u = st.pop()\n            for v in adj[u]:\n                if v not in seen:\n                    seen.add(v)\n                    st.append(v)\n        return len(seen) == n",
+     "javascript": "var validTree = function(n, edges) {\n    if (edges.length !== n - 1) return false;\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const seen = new Array(n).fill(false), st = [0];\n    seen[0] = true;\n    let count = 0;\n    while (st.length) {\n        const u = st.pop();\n        count++;\n        for (const v of adj[u]) if (!seen[v]) { seen[v] = true; st.push(v); }\n    }\n    return count === n;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union-find cycle check",
+    "idea": "With exactly n − 1 edges, merge the endpoints of each edge. If an edge joins two nodes that are already in the same set, it closes a cycle.",
+    "steps": [
+     "If `edges.length != n − 1`, return `false`.",
+     "Start with each node as its own set. For each edge, find both roots.",
+     "If the roots are equal, return `false`; otherwise merge them. Return `true` at the end."
+    ],
+    "time": "O(n · α(n))",
+    "space": "O(n)",
+    "why": "No adjacency list is needed, and path compression keeps each find nearly constant. n − 1 edges with no cycle always connect all n nodes, so no separate connectivity check is required.",
+    "code": {
+     "java": "class Solution {\n    public boolean validTree(int n, int[][] edges) {\n        if (edges.length != n - 1) return false;\n        int[] parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        for (int[] e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a == b) return false;\n            parent[a] = b;\n        }\n        return true;\n    }\n    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\npublic:\n    bool validTree(int n, vector<vector<int>>& edges) {\n        if ((int) edges.size() != n - 1) return false;\n        vector<int> parent(n);\n        iota(parent.begin(), parent.end(), 0);\n        for (auto& e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a == b) return false;\n            parent[a] = b;\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def validTree(self, n: int, edges: List[List[int]]) -> bool:\n        if len(edges) != n - 1:\n            return False\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for a, b in edges:\n            ra, rb = find(a), find(b)\n            if ra == rb:\n                return False\n            parent[ra] = rb\n        return True",
+     "javascript": "var validTree = function(n, edges) {\n    if (edges.length !== n - 1) return false;\n    const parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n    for (const [a, b] of edges) {\n        const ra = find(a), rb = find(b);\n        if (ra === rb) return false;\n        parent[ra] = rb;\n    }\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "number-of-connected-components-in-an-undirected-graph": {
+  "pattern": "Count components with DFS starts, or union-find merges",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "DFS from every unvisited node",
+    "idea": "Each time you start a search from a node that has not been visited, you discover one new component.",
+    "steps": [
+     "Build an adjacency list.",
+     "For each node `0..n − 1` not yet visited: increase the count and DFS from it, marking everything reachable.",
+     "Return the count."
+    ],
+    "time": "O(n + e)",
+    "space": "O(n + e)",
+    "why": "Every node and edge is processed once. The adjacency list and visited array take linear space.",
+    "code": {
+     "java": "class Solution {\n    public int countComponents(int n, int[][] edges) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        boolean[] seen = new boolean[n];\n        int comps = 0;\n        for (int s = 0; s < n; s++) {\n            if (seen[s]) continue;\n            comps++;\n            Deque<Integer> st = new ArrayDeque<>();\n            st.push(s); seen[s] = true;\n            while (!st.isEmpty()) for (int v : adj.get(st.pop())) if (!seen[v]) { seen[v] = true; st.push(v); }\n        }\n        return comps;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int countComponents(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<bool> seen(n, false);\n        int comps = 0;\n        for (int s = 0; s < n; s++) {\n            if (seen[s]) continue;\n            comps++;\n            vector<int> st{s};\n            seen[s] = true;\n            while (!st.empty()) {\n                int u = st.back(); st.pop_back();\n                for (int v : adj[u]) if (!seen[v]) { seen[v] = true; st.push_back(v); }\n            }\n        }\n        return comps;\n    }\n};",
+     "python": "class Solution:\n    def countComponents(self, n: int, edges: List[List[int]]) -> int:\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        seen, comps = [False] * n, 0\n        for s in range(n):\n            if seen[s]:\n                continue\n            comps += 1\n            seen[s] = True\n            st = [s]\n            while st:\n                for v in adj[st.pop()]:\n                    if not seen[v]:\n                        seen[v] = True\n                        st.append(v)\n        return comps",
+     "javascript": "var countComponents = function(n, edges) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const seen = new Array(n).fill(false);\n    let comps = 0;\n    for (let s = 0; s < n; s++) {\n        if (seen[s]) continue;\n        comps++;\n        const st = [s];\n        seen[s] = true;\n        while (st.length) for (const v of adj[st.pop()]) if (!seen[v]) { seen[v] = true; st.push(v); }\n    }\n    return comps;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union-find",
+    "idea": "Start with n separate components. Every edge that joins two different sets merges them and removes one component.",
+    "steps": [
+     "Initialise `parent[i] = i` and `comps = n`.",
+     "For each edge, find both roots; if they differ, link them and decrement `comps`.",
+     "Return `comps`."
+    ],
+    "time": "O(n + e · α(n))",
+    "space": "O(n)",
+    "why": "No adjacency list is needed and each union is nearly constant time with path compression. It also works when edges arrive one at a time, where DFS would have to start over.",
+    "code": {
+     "java": "class Solution {\n    public int countComponents(int n, int[][] edges) {\n        int[] parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        int comps = n;\n        for (int[] e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a != b) { parent[a] = b; comps--; }\n        }\n        return comps;\n    }\n    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\npublic:\n    int countComponents(int n, vector<vector<int>>& edges) {\n        vector<int> parent(n);\n        iota(parent.begin(), parent.end(), 0);\n        int comps = n;\n        for (auto& e : edges) {\n            int a = find(parent, e[0]), b = find(parent, e[1]);\n            if (a != b) { parent[a] = b; comps--; }\n        }\n        return comps;\n    }\n};",
+     "python": "class Solution:\n    def countComponents(self, n: int, edges: List[List[int]]) -> int:\n        parent = list(range(n))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        comps = n\n        for a, b in edges:\n            ra, rb = find(a), find(b)\n            if ra != rb:\n                parent[ra] = rb\n                comps -= 1\n        return comps",
+     "javascript": "var countComponents = function(n, edges) {\n    const parent = Array.from({ length: n }, (_, i) => i);\n    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n    let comps = n;\n    for (const [a, b] of edges) {\n        const ra = find(a), rb = find(b);\n        if (ra !== rb) { parent[ra] = rb; comps--; }\n    }\n    return comps;\n};"
+    }
+   }
+  ]
+ },
+ "find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree": {
+  "pattern": "Kruskal's MST re-run with one edge excluded or forced",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Re-sort for every Kruskal run",
+    "idea": "Compute the best MST weight. For each edge, build an MST without it (heavier or disconnected → critical); otherwise build one that starts with it (same weight → pseudo-critical).",
+    "steps": [
+     "`mst(skip, force)`: copy and sort the edges by weight, add `force` first if given, then add every non-skipped edge that joins two different sets; return the weight, or ∞ if fewer than n − 1 edges were used.",
+     "`best = mst(none, none)`.",
+     "For each edge `i`: if `mst(i, none) > best` it is critical; else if `mst(none, i) == best` it is pseudo-critical."
+    ],
+    "time": "O(E² log E)",
+    "space": "O(E + n)",
+    "why": "About 2E Kruskal runs, each sorting the edges again. With E ≤ 200 that is fast, but sorting once outside the loop is an easy win.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> findCriticalAndPseudoCriticalEdges(int n, int[][] edges) {\n        int best = mst(n, edges, -1, -1);\n        List<Integer> critical = new ArrayList<>(), pseudo = new ArrayList<>();\n        for (int i = 0; i < edges.length; i++) {\n            if (mst(n, edges, i, -1) > best) critical.add(i);\n            else if (mst(n, edges, -1, i) == best) pseudo.add(i);\n        }\n        return Arrays.asList(critical, pseudo);\n    }\n    private int mst(int n, int[][] edges, int skip, int force) {\n        Integer[] order = new Integer[edges.length];\n        for (int i = 0; i < order.length; i++) order[i] = i;\n        Arrays.sort(order, (x, y) -> edges[x][2] - edges[y][2]);\n        int[] parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        int total = 0, used = 0;\n        if (force >= 0) { parent[find(parent, edges[force][0])] = find(parent, edges[force][1]); total += edges[force][2]; used++; }\n        for (int i : order) {\n            if (i == skip) continue;\n            int a = find(parent, edges[i][0]), b = find(parent, edges[i][1]);\n            if (a == b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used == n - 1 ? total : Integer.MAX_VALUE;\n    }\n    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n    int mst(int n, vector<vector<int>>& edges, int skip, int force) {\n        vector<int> order(edges.size());\n        iota(order.begin(), order.end(), 0);\n        sort(order.begin(), order.end(), [&](int x, int y) { return edges[x][2] < edges[y][2]; });\n        vector<int> parent(n);\n        iota(parent.begin(), parent.end(), 0);\n        int total = 0, used = 0;\n        if (force >= 0) { parent[find(parent, edges[force][0])] = find(parent, edges[force][1]); total += edges[force][2]; used++; }\n        for (int i : order) {\n            if (i == skip) continue;\n            int a = find(parent, edges[i][0]), b = find(parent, edges[i][1]);\n            if (a == b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used == n - 1 ? total : INT_MAX;\n    }\npublic:\n    vector<vector<int>> findCriticalAndPseudoCriticalEdges(int n, vector<vector<int>>& edges) {\n        int best = mst(n, edges, -1, -1);\n        vector<int> critical, pseudo;\n        for (int i = 0; i < (int) edges.size(); i++) {\n            if (mst(n, edges, i, -1) > best) critical.push_back(i);\n            else if (mst(n, edges, -1, i) == best) pseudo.push_back(i);\n        }\n        return {critical, pseudo};\n    }\n};",
+     "python": "class Solution:\n    def findCriticalAndPseudoCriticalEdges(self, n: int, edges: List[List[int]]) -> List[List[int]]:\n        def mst(skip, force):\n            order = sorted(range(len(edges)), key=lambda i: edges[i][2])\n            parent = list(range(n))\n            def find(x):\n                while parent[x] != x:\n                    parent[x] = parent[parent[x]]\n                    x = parent[x]\n                return x\n            total = used = 0\n            if force >= 0:\n                parent[find(edges[force][0])] = find(edges[force][1])\n                total, used = edges[force][2], 1\n            for i in order:\n                if i == skip:\n                    continue\n                a, b = find(edges[i][0]), find(edges[i][1])\n                if a != b:\n                    parent[a] = b\n                    total += edges[i][2]\n                    used += 1\n            return total if used == n - 1 else float('inf')\n        best = mst(-1, -1)\n        critical, pseudo = [], []\n        for i in range(len(edges)):\n            if mst(i, -1) > best:\n                critical.append(i)\n            elif mst(-1, i) == best:\n                pseudo.append(i)\n        return [critical, pseudo]",
+     "javascript": "var findCriticalAndPseudoCriticalEdges = function(n, edges) {\n    const mst = (skip, force) => {\n        const order = [...edges.keys()].sort((x, y) => edges[x][2] - edges[y][2]);\n        const parent = Array.from({ length: n }, (_, i) => i);\n        const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n        let total = 0, used = 0;\n        if (force >= 0) { parent[find(edges[force][0])] = find(edges[force][1]); total += edges[force][2]; used++; }\n        for (const i of order) {\n            if (i === skip) continue;\n            const a = find(edges[i][0]), b = find(edges[i][1]);\n            if (a === b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used === n - 1 ? total : Infinity;\n    };\n    const best = mst(-1, -1), critical = [], pseudo = [];\n    for (let i = 0; i < edges.length; i++) {\n        if (mst(i, -1) > best) critical.push(i);\n        else if (mst(-1, i) === best) pseudo.push(i);\n    }\n    return [critical, pseudo];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort once, then 2E union-find passes",
+    "idea": "The same two tests per edge, but the edges are sorted a single time and every Kruskal run just walks that order with a fresh union-find.",
+    "steps": [
+     "Sort edge indices by weight once.",
+     "`mst(skip, force)` walks the sorted order with a new union-find (adding `force` first) and returns the weight or ∞.",
+     "Classify each edge exactly as before: heavier without it → critical; optimal when forced → pseudo-critical."
+    ],
+    "time": "O(E² · α(n))",
+    "space": "O(E + n)",
+    "why": "Each run is a single linear pass, so the total is about 2E passes of E near-constant steps. Why forcing works: if some MST contains edge i, Kruskal with i added first still finds an MST of the best weight; if none does, the forced tree must be heavier.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> findCriticalAndPseudoCriticalEdges(int n, int[][] edges) {\n        int m = edges.length;\n        Integer[] order = new Integer[m];\n        for (int i = 0; i < m; i++) order[i] = i;\n        Arrays.sort(order, (x, y) -> edges[x][2] - edges[y][2]);\n        int best = mst(n, edges, order, -1, -1);\n        List<Integer> critical = new ArrayList<>(), pseudo = new ArrayList<>();\n        for (int i = 0; i < m; i++) {\n            if (mst(n, edges, order, i, -1) > best) critical.add(i);\n            else if (mst(n, edges, order, -1, i) == best) pseudo.add(i);\n        }\n        return Arrays.asList(critical, pseudo);\n    }\n    private int mst(int n, int[][] edges, Integer[] order, int skip, int force) {\n        int[] parent = new int[n];\n        for (int i = 0; i < n; i++) parent[i] = i;\n        int total = 0, used = 0;\n        if (force >= 0) { parent[find(parent, edges[force][0])] = find(parent, edges[force][1]); total += edges[force][2]; used++; }\n        for (int i : order) {\n            if (i == skip) continue;\n            int a = find(parent, edges[i][0]), b = find(parent, edges[i][1]);\n            if (a == b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used == n - 1 ? total : Integer.MAX_VALUE;\n    }\n    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n}",
+     "cpp": "class Solution {\n    int find(vector<int>& p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n    int mst(int n, vector<vector<int>>& edges, vector<int>& order, int skip, int force) {\n        vector<int> parent(n);\n        iota(parent.begin(), parent.end(), 0);\n        int total = 0, used = 0;\n        if (force >= 0) { parent[find(parent, edges[force][0])] = find(parent, edges[force][1]); total += edges[force][2]; used++; }\n        for (int i : order) {\n            if (i == skip) continue;\n            int a = find(parent, edges[i][0]), b = find(parent, edges[i][1]);\n            if (a == b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used == n - 1 ? total : INT_MAX;\n    }\npublic:\n    vector<vector<int>> findCriticalAndPseudoCriticalEdges(int n, vector<vector<int>>& edges) {\n        vector<int> order(edges.size());\n        iota(order.begin(), order.end(), 0);\n        sort(order.begin(), order.end(), [&](int x, int y) { return edges[x][2] < edges[y][2]; });\n        int best = mst(n, edges, order, -1, -1);\n        vector<int> critical, pseudo;\n        for (int i = 0; i < (int) edges.size(); i++) {\n            if (mst(n, edges, order, i, -1) > best) critical.push_back(i);\n            else if (mst(n, edges, order, -1, i) == best) pseudo.push_back(i);\n        }\n        return {critical, pseudo};\n    }\n};",
+     "python": "class Solution:\n    def findCriticalAndPseudoCriticalEdges(self, n: int, edges: List[List[int]]) -> List[List[int]]:\n        order = sorted(range(len(edges)), key=lambda i: edges[i][2])\n        def mst(skip, force):\n            parent = list(range(n))\n            def find(x):\n                while parent[x] != x:\n                    parent[x] = parent[parent[x]]\n                    x = parent[x]\n                return x\n            total = used = 0\n            if force >= 0:\n                parent[find(edges[force][0])] = find(edges[force][1])\n                total, used = edges[force][2], 1\n            for i in order:\n                if i == skip:\n                    continue\n                a, b = find(edges[i][0]), find(edges[i][1])\n                if a != b:\n                    parent[a] = b\n                    total += edges[i][2]\n                    used += 1\n            return total if used == n - 1 else float('inf')\n        best = mst(-1, -1)\n        critical, pseudo = [], []\n        for i in range(len(edges)):\n            if mst(i, -1) > best:\n                critical.append(i)\n            elif mst(-1, i) == best:\n                pseudo.append(i)\n        return [critical, pseudo]",
+     "javascript": "var findCriticalAndPseudoCriticalEdges = function(n, edges) {\n    const order = [...edges.keys()].sort((x, y) => edges[x][2] - edges[y][2]);\n    const mst = (skip, force) => {\n        const parent = Array.from({ length: n }, (_, i) => i);\n        const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n        let total = 0, used = 0;\n        if (force >= 0) { parent[find(edges[force][0])] = find(edges[force][1]); total += edges[force][2]; used++; }\n        for (const i of order) {\n            if (i === skip) continue;\n            const a = find(edges[i][0]), b = find(edges[i][1]);\n            if (a === b) continue;\n            parent[a] = b; total += edges[i][2]; used++;\n        }\n        return used === n - 1 ? total : Infinity;\n    };\n    const best = mst(-1, -1), critical = [], pseudo = [];\n    for (let i = 0; i < edges.length; i++) {\n        if (mst(i, -1) > best) critical.push(i);\n        else if (mst(-1, i) === best) pseudo.push(i);\n    }\n    return [critical, pseudo];\n};"
+    }
+   }
+  ]
+ },
+ "greatest-common-divisor-traversal": {
+  "pattern": "Union-find through shared prime factors",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Pairwise gcd graph + BFS",
+    "idea": "Connect every pair of indices whose values have gcd greater than 1, then check that one BFS reaches every index.",
+    "steps": [
+     "If there is one element, return `true`.",
+     "BFS from index 0: for the current index, scan every unvisited index `j` and visit it if `gcd(nums[i], nums[j]) > 1`.",
+     "Return whether all indices were visited."
+    ],
+    "time": "O(n² log V)",
+    "space": "O(n)",
+    "why": "Each of up to n popped indices scans all others, with an O(log V) gcd each. For 10⁵ numbers that is about 10¹⁰ gcd calls, so it times out on the large test.",
+    "code": {
+     "java": "class Solution {\n    public boolean canTraverseAllPairs(int[] nums) {\n        int n = nums.length;\n        if (n == 1) return true;\n        boolean[] seen = new boolean[n];\n        Deque<Integer> q = new ArrayDeque<>();\n        q.add(0); seen[0] = true;\n        int count = 1;\n        while (!q.isEmpty()) {\n            int i = q.poll();\n            for (int j = 0; j < n; j++)\n                if (!seen[j] && gcd(nums[i], nums[j]) > 1) { seen[j] = true; count++; q.add(j); }\n        }\n        return count == n;\n    }\n    private int gcd(int a, int b) { while (b != 0) { int t = a % b; a = b; b = t; } return a; }\n}",
+     "cpp": "class Solution {\npublic:\n    bool canTraverseAllPairs(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return true;\n        vector<bool> seen(n, false);\n        queue<int> q;\n        q.push(0); seen[0] = true;\n        int count = 1;\n        while (!q.empty()) {\n            int i = q.front(); q.pop();\n            for (int j = 0; j < n; j++)\n                if (!seen[j] && gcd(nums[i], nums[j]) > 1) { seen[j] = true; count++; q.push(j); }\n        }\n        return count == n;\n    }\n};",
+     "python": "class Solution:\n    def canTraverseAllPairs(self, nums: List[int]) -> bool:\n        n = len(nums)\n        if n == 1:\n            return True\n        seen, q = [False] * n, deque([0])\n        seen[0] = True\n        count = 1\n        while q:\n            i = q.popleft()\n            for j in range(n):\n                if not seen[j] and gcd(nums[i], nums[j]) > 1:\n                    seen[j] = True\n                    count += 1\n                    q.append(j)\n        return count == n",
+     "javascript": "var canTraverseAllPairs = function(nums) {\n    const n = nums.length;\n    if (n === 1) return true;\n    const gcd = (a, b) => { while (b) [a, b] = [b, a % b]; return a; };\n    const seen = new Array(n).fill(false), q = [0];\n    seen[0] = true;\n    let count = 1;\n    for (let head = 0; head < q.length; head++) {\n        const i = q[head];\n        for (let j = 0; j < n; j++)\n            if (!seen[j] && gcd(nums[i], nums[j]) > 1) { seen[j] = true; count++; q.push(j); }\n    }\n    return count === n;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sieve + union by prime factor",
+    "idea": "Two values share a gcd above 1 exactly when they share a prime. Give every prime its own union-find node and union each index with the primes that divide its value.",
+    "steps": [
+     "Handle n = 1 (true) and any value 1 when n > 1 (false: 1 shares no prime with anything).",
+     "Build a smallest-prime-factor table up to max(nums) with a sieve.",
+     "Union index `i` with node `n + p` for every distinct prime `p` of `nums[i]`, then check that all indices share one root."
+    ],
+    "time": "O(V log log V + n log V)",
+    "space": "O(V + n)",
+    "why": "V = max(nums). The sieve is near-linear, and each value has at most about 6 distinct primes under 10⁵, found in O(log V) divisions using the table. Prime nodes act as hubs, so the graph never needs the O(n²) pairwise edges.",
+    "code": {
+     "java": "class Solution {\n    public boolean canTraverseAllPairs(int[] nums) {\n        int n = nums.length;\n        if (n == 1) return true;\n        int max = 0;\n        for (int x : nums) { if (x == 1) return false; max = Math.max(max, x); }\n        int[] spf = new int[max + 1];\n        for (int i = 2; i <= max; i++) if (spf[i] == 0) for (int j = i; j <= max; j += i) if (spf[j] == 0) spf[j] = i;\n        int[] parent = new int[n + max + 1];\n        for (int i = 0; i < parent.length; i++) parent[i] = i;\n        for (int i = 0; i < n; i++) {\n            int x = nums[i];\n            while (x > 1) {\n                int p = spf[x];\n                parent[find(parent, i)] = find(parent, n + p);\n                while (x % p == 0) x /= p;\n            }\n        }\n        int root = find(parent, 0);\n        for (int i = 1; i < n; i++) if (find(parent, i) != root) return false;\n        return true;\n    }\n    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }\npublic:\n    bool canTraverseAllPairs(vector<int>& nums) {\n        int n = nums.size();\n        if (n == 1) return true;\n        int mx = 0;\n        for (int x : nums) { if (x == 1) return false; mx = max(mx, x); }\n        vector<int> spf(mx + 1, 0);\n        for (int i = 2; i <= mx; i++) if (!spf[i]) for (int j = i; j <= mx; j += i) if (!spf[j]) spf[j] = i;\n        parent.resize(n + mx + 1);\n        iota(parent.begin(), parent.end(), 0);\n        for (int i = 0; i < n; i++) {\n            int x = nums[i];\n            while (x > 1) {\n                int p = spf[x];\n                parent[find(i)] = find(n + p);\n                while (x % p == 0) x /= p;\n            }\n        }\n        int root = find(0);\n        for (int i = 1; i < n; i++) if (find(i) != root) return false;\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def canTraverseAllPairs(self, nums: List[int]) -> bool:\n        n = len(nums)\n        if n == 1:\n            return True\n        if 1 in nums:\n            return False\n        mx = max(nums)\n        spf = list(range(mx + 1))\n        for i in range(2, isqrt(mx) + 1):\n            if spf[i] == i:\n                for j in range(i * i, mx + 1, i):\n                    if spf[j] == j:\n                        spf[j] = i\n        parent = list(range(n + mx + 1))\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n        for i, x in enumerate(nums):\n            while x > 1:\n                p = spf[x]\n                parent[find(i)] = find(n + p)\n                while x % p == 0:\n                    x //= p\n        root = find(0)\n        return all(find(i) == root for i in range(1, n))",
+     "javascript": "var canTraverseAllPairs = function(nums) {\n    const n = nums.length;\n    if (n === 1) return true;\n    let mx = 0;\n    for (const x of nums) { if (x === 1) return false; mx = Math.max(mx, x); }\n    const spf = new Int32Array(mx + 1);\n    for (let i = 2; i <= mx; i++) if (!spf[i]) for (let j = i; j <= mx; j += i) if (!spf[j]) spf[j] = i;\n    const parent = new Int32Array(n + mx + 1).map((_, i) => i);\n    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n    for (let i = 0; i < n; i++) {\n        let x = nums[i];\n        while (x > 1) {\n            const p = spf[x];\n            parent[find(i)] = find(n + p);\n            while (x % p === 0) x /= p;\n        }\n    }\n    const root = find(0);\n    for (let i = 1; i < n; i++) if (find(i) !== root) return false;\n    return true;\n};"
+    }
+   }
+  ]
  }
 }

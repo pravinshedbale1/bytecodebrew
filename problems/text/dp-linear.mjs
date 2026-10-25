@@ -107,4 +107,46 @@ Return the maximum number of envelopes you can nest one inside the other.`,
       'Run the O(n log n) longest increasing subsequence on the heights; O(n²) is too slow for 10⁵ envelopes.',
     ],
   },
+  'integer-break': {
+    statement: `Break the positive integer \`n\` into the sum of **at least two** positive integers, and make the product of those integers as large as possible. Return that maximum product.`,
+    constraints: ['2 <= n <= 58'],
+    hints: [
+      'Try small cases by hand: 4 → 2 + 2 (4), 5 → 2 + 3 (6), 6 → 3 + 3 (9). Which pieces keep appearing?',
+      'DP: best[i] = max over j of max(j, best[j]) × max(i − j, best[i − j]). The max(…) lets a part stay unsplit, which matters because the whole n must be split but its parts need not be.',
+      'Maths: use as many 3s as possible, but never leave a 1; turn a final 3 + 1 into 2 + 2. That gives an O(1) or O(log n) answer.',
+    ],
+  },
+  'maximum-sum-circular-subarray': {
+    statement: `\`nums\` is a **circular** array: the element after \`nums[n − 1]\` is \`nums[0]\`. Return the largest possible sum of a **non-empty** subarray.
+
+A subarray may wrap around the end, but it may include each element at most once.`,
+    constraints: ['n == nums.length', '1 <= n <= 3e4', '-3e4 <= nums[i] <= 3e4'],
+    hints: [
+      'A best subarray either does not wrap (plain Kadane finds it) or wraps around the end.',
+      'A wrapping subarray is everything except a contiguous middle part, so its sum is total − (that middle part). To make it large, make the middle part as small as possible.',
+      'Run Kadane for the maximum and the minimum subarray in one pass. The answer is max(maxSum, total − minSum), except when every number is negative: then minSum is the whole array and you must return maxSum.',
+    ],
+  },
+  'longest-turbulent-subarray': {
+    statement: `A subarray \`arr[i..j]\` is **turbulent** if the comparison sign flips between each adjacent pair: either \`arr[i] > arr[i + 1] < arr[i + 2] > …\` or \`arr[i] < arr[i + 1] > arr[i + 2] < …\`. Equal neighbours break turbulence.
+
+Return the length of the longest turbulent subarray of \`arr\`. A single element counts, with length 1.`,
+    constraints: ['1 <= arr.length <= 4e4', '0 <= arr[i] <= 1e9'],
+    hints: [
+      'Look at the sign of each step arr[i] − arr[i − 1]: +, − or 0. A turbulent subarray is a run of alternating + and − signs.',
+      'Keep two lengths ending at i: up (the last step went up) and down (the last step went down).',
+      'If arr[i] > arr[i − 1] then up = down + 1 and down = 1; if smaller, down = up + 1 and up = 1; if equal, both reset to 1. The answer is the largest value seen.',
+    ],
+  },
+  'stone-game-iii': {
+    statement: `Stones are arranged in a row and \`stoneValue[i]\` is the value of the \`i\`-th stone (values can be negative). Alice and Bob take turns, Alice first. On each turn the player takes **1, 2 or 3** stones from the front of the row, adding their values to their score. The game ends when no stones are left.
+
+Both players play optimally to maximise their own final score. Return \`"Alice"\` if Alice ends with the higher score, \`"Bob"\` if Bob does, or \`"Tie"\` if the scores are equal.`,
+    constraints: ['1 <= stoneValue.length <= 5e4', '-1000 <= stoneValue[i] <= 1000'],
+    hints: [
+      'Instead of tracking both scores, track the difference: dp[i] = the best (my score − opponent\'s score) the player to move can get from stones i onward.',
+      'If the player takes k stones (k = 1..3), they gain their sum and the opponent then gets dp[i + k] as their own difference. So dp[i] = max over k of (sum of the k stones − dp[i + k]).',
+      'Fill dp from the end (dp[n] = 0). The sign of dp[0] decides the winner. Taking stones is not optional, which matters when values are negative.',
+    ],
+  },
 };

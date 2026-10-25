@@ -146,6 +146,45 @@ export const VALIDATORS = {
   // longest palindromic substring: any palindrome of the maximum length
   palindrome: ([s], got, expected) =>
     typeof got === 'string' && got.length === expected.length && s.includes(got) && got === [...got].reverse().join(''),
+  // alien dictionary: every letter used once, each ordering the sorted words imply respected; "" exactly when impossible
+  alienOrder: ([words], got, expected) => {
+    if (typeof got !== 'string') return false;
+    if (expected === '') return got === '';
+    const letters = new Set(words.join(''));
+    if (got.length !== letters.size || new Set(got).size !== got.length || [...got].some((c) => !letters.has(c))) return false;
+    for (let i = 0; i + 1 < words.length; i++) {
+      const [a, b] = [words[i], words[i + 1]];
+      const k = [...a].findIndex((c, j) => c !== b[j]);
+      if (k >= 0 && k < b.length && got.indexOf(a[k]) > got.indexOf(b[k])) return false;
+    }
+    return true;
+  },
+  // build a matrix with conditions: k × k, each of 1..k once, rows above/below and columns left/right as asked; [] exactly when impossible
+  matrixConditions: ([k, rows, cols], got, expected) => {
+    if (!Array.isArray(got)) return false;
+    if (expected.length === 0) return got.length === 0;
+    if (got.length !== k || got.some((r) => !Array.isArray(r) || r.length !== k)) return false;
+    const at = new Map();
+    got.forEach((r, i) => r.forEach((v, j) => { if (v !== 0) at.set(v, at.has(v) ? null : [i, j]); }));
+    for (let v = 1; v <= k; v++) if (!at.get(v)) return false;
+    if (at.size !== k) return false;
+    return rows.every(([a, b]) => at.get(a)[0] < at.get(b)[0]) && cols.every(([a, b]) => at.get(a)[1] < at.get(b)[1]);
+  },
+  // reorganize string: a rearrangement of s with no two equal neighbours; "" exactly when impossible
+  reorganize: ([s], got, expected) => {
+    if (typeof got !== 'string') return false;
+    if (expected === '') return got === '';
+    return got.length === s.length && [...got].sort().join('') === [...s].sort().join('') && [...got].every((c, i) => i === 0 || got[i - 1] !== c);
+  },
+  // longest happy string: the maximum length, at most a/b/c of each letter, never three equal letters in a row
+  happyString: ([a, b, c], got, expected) => {
+    if (typeof got !== 'string' || got.length !== expected.length || /[^abc]/.test(got) || /aaa|bbb|ccc/.test(got)) return false;
+    const n = (ch) => got.split(ch).length - 1;
+    return n('a') <= a && n('b') <= b && n('c') <= c;
+  },
+  // two lists (critical, pseudo-critical), each in any order
+  twoSets: (_, got, expected) =>
+    Array.isArray(got) && got.length === 2 && got.every(Array.isArray) && deepEqual(sortTop(got[0]), sortTop(expected[0])) && deepEqual(sortTop(got[1]), sortTop(expected[1])),
 };
 
 /** True when `got` (parsed) is an acceptable answer for this test. */

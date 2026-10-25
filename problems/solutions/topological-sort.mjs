@@ -1313,4 +1313,470 @@ public:
       },
     ],
   },
+  'alien-dictionary': {
+    pattern: 'Build ordering rules from neighbours, then topological sort',
+    approaches: [
+      {
+        level: 'Better', name: 'DFS topological sort with colours',
+        idea: 'Turn each neighbouring pair into an edge "letter a comes before letter b". A DFS that finishes letters in post-order, reversed, gives a valid alphabet; meeting a letter that is still on the stack means a cycle.',
+        steps: [
+          'Register every letter. For each neighbouring pair, add an edge at the first differing letters; if there is none and the first word is longer, return "".',
+          'DFS from each unvisited letter with states unvisited / visiting / done; reaching a "visiting" letter means a cycle → return "".',
+          'Append each letter when its DFS finishes, then reverse the result.',
+        ],
+        time: 'O(C + U²)', space: 'O(U²)',
+        why: 'C is the total number of characters in `words` (each pair comparison stops at the first difference). U ≤ 26 is the number of distinct letters, so the graph has at most U² edges. Post-order reversal works because a letter finishes only after everything that must come after it.',
+        code: {
+          java: r`class Solution {
+    private final Map<Character, Set<Character>> next = new HashMap<>();
+    private final Map<Character, Integer> state = new HashMap<>();
+    private final StringBuilder out = new StringBuilder();
+    public String alienOrder(String[] words) {
+        for (String w : words) for (char c : w.toCharArray()) next.putIfAbsent(c, new HashSet<>());
+        for (int i = 0; i + 1 < words.length; i++) {
+            String a = words[i], b = words[i + 1];
+            int k = 0;
+            while (k < a.length() && k < b.length() && a.charAt(k) == b.charAt(k)) k++;
+            if (k == b.length() && a.length() > b.length()) return "";
+            if (k < a.length() && k < b.length()) next.get(a.charAt(k)).add(b.charAt(k));
+        }
+        for (char c : next.keySet()) if (!dfs(c)) return "";
+        return out.reverse().toString();
+    }
+    private boolean dfs(char c) {
+        Integer s = state.get(c);
+        if (s != null) return s == 2;
+        state.put(c, 1);
+        for (char d : next.get(c)) if (!dfs(d)) return false;
+        state.put(c, 2);
+        out.append(c);
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+    unordered_map<char, unordered_set<char>> nxt;
+    unordered_map<char, int> state;
+    string out;
+    bool dfs(char c) {
+        if (state.count(c)) return state[c] == 2;
+        state[c] = 1;
+        for (char d : nxt[c]) if (!dfs(d)) return false;
+        state[c] = 2;
+        out += c;
+        return true;
+    }
+public:
+    string alienOrder(vector<string>& words) {
+        for (auto& w : words) for (char c : w) nxt[c];
+        for (size_t i = 0; i + 1 < words.size(); i++) {
+            const string& a = words[i];
+            const string& b = words[i + 1];
+            size_t k = 0;
+            while (k < a.size() && k < b.size() && a[k] == b[k]) k++;
+            if (k == b.size() && a.size() > b.size()) return "";
+            if (k < a.size() && k < b.size()) nxt[a[k]].insert(b[k]);
+        }
+        for (auto& [c, _] : nxt) if (!dfs(c)) return "";
+        reverse(out.begin(), out.end());
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def alienOrder(self, words: List[str]) -> str:
+        nxt = {c: set() for w in words for c in w}
+        for a, b in zip(words, words[1:]):
+            k = 0
+            while k < len(a) and k < len(b) and a[k] == b[k]:
+                k += 1
+            if k == len(b) and len(a) > len(b):
+                return ""
+            if k < len(a) and k < len(b):
+                nxt[a[k]].add(b[k])
+        state, out = {}, []
+        def dfs(c):
+            if c in state:
+                return state[c] == 2
+            state[c] = 1
+            for d in nxt[c]:
+                if not dfs(d):
+                    return False
+            state[c] = 2
+            out.append(c)
+            return True
+        for c in nxt:
+            if not dfs(c):
+                return ""
+        return "".join(reversed(out))`,
+          javascript: r`var alienOrder = function(words) {
+    const next = new Map();
+    for (const w of words) for (const c of w) if (!next.has(c)) next.set(c, new Set());
+    for (let i = 0; i + 1 < words.length; i++) {
+        const a = words[i], b = words[i + 1];
+        let k = 0;
+        while (k < a.length && k < b.length && a[k] === b[k]) k++;
+        if (k === b.length && a.length > b.length) return "";
+        if (k < a.length && k < b.length) next.get(a[k]).add(b[k]);
+    }
+    const state = new Map(), out = [];
+    const dfs = (c) => {
+        if (state.has(c)) return state.get(c) === 2;
+        state.set(c, 1);
+        for (const d of next.get(c)) if (!dfs(d)) return false;
+        state.set(c, 2);
+        out.push(c);
+        return true;
+    };
+    for (const c of next.keys()) if (!dfs(c)) return "";
+    return out.reverse().join("");
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Kahn\'s algorithm (BFS by in-degree)',
+        idea: 'Build the same graph, then repeatedly output a letter with no remaining incoming rules. If some letters are never freed, the rules contain a cycle.',
+        steps: [
+          'Register every letter with in-degree 0; add one edge per neighbouring pair (skip duplicates), returning "" for the invalid prefix case.',
+          'Queue every letter with in-degree 0. Pop a letter, append it, and decrement its successors, queueing any that reach 0.',
+          'If the output has fewer letters than the graph, return ""; otherwise return the output.',
+        ],
+        time: 'O(C + U²)', space: 'O(U²)',
+        why: 'Same bounds as the DFS, without recursion, and the cycle check is a simple count. Skipping duplicate edges matters: counting the same rule twice would leave an in-degree that never reaches 0.',
+        code: {
+          java: r`class Solution {
+    public String alienOrder(String[] words) {
+        Map<Character, Set<Character>> next = new HashMap<>();
+        Map<Character, Integer> indeg = new HashMap<>();
+        for (String w : words) for (char c : w.toCharArray()) { next.putIfAbsent(c, new HashSet<>()); indeg.putIfAbsent(c, 0); }
+        for (int i = 0; i + 1 < words.length; i++) {
+            String a = words[i], b = words[i + 1];
+            int k = 0;
+            while (k < a.length() && k < b.length() && a.charAt(k) == b.charAt(k)) k++;
+            if (k == b.length() && a.length() > b.length()) return "";
+            if (k < a.length() && k < b.length() && next.get(a.charAt(k)).add(b.charAt(k))) indeg.merge(b.charAt(k), 1, Integer::sum);
+        }
+        Deque<Character> q = new ArrayDeque<>();
+        for (Map.Entry<Character, Integer> e : indeg.entrySet()) if (e.getValue() == 0) q.add(e.getKey());
+        StringBuilder sb = new StringBuilder();
+        while (!q.isEmpty()) {
+            char c = q.poll();
+            sb.append(c);
+            for (char d : next.get(c)) if (indeg.merge(d, -1, Integer::sum) == 0) q.add(d);
+        }
+        return sb.length() == indeg.size() ? sb.toString() : "";
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string alienOrder(vector<string>& words) {
+        unordered_map<char, unordered_set<char>> nxt;
+        unordered_map<char, int> indeg;
+        for (auto& w : words) for (char c : w) { nxt[c]; indeg[c]; }
+        for (size_t i = 0; i + 1 < words.size(); i++) {
+            const string& a = words[i];
+            const string& b = words[i + 1];
+            size_t k = 0;
+            while (k < a.size() && k < b.size() && a[k] == b[k]) k++;
+            if (k == b.size() && a.size() > b.size()) return "";
+            if (k < a.size() && k < b.size() && nxt[a[k]].insert(b[k]).second) indeg[b[k]]++;
+        }
+        queue<char> q;
+        for (auto& [c, d] : indeg) if (d == 0) q.push(c);
+        string out;
+        while (!q.empty()) {
+            char c = q.front(); q.pop();
+            out += c;
+            for (char d : nxt[c]) if (--indeg[d] == 0) q.push(d);
+        }
+        return out.size() == indeg.size() ? out : "";
+    }
+};`,
+          python: r`class Solution:
+    def alienOrder(self, words: List[str]) -> str:
+        nxt = {c: set() for w in words for c in w}
+        indeg = {c: 0 for c in nxt}
+        for a, b in zip(words, words[1:]):
+            k = 0
+            while k < len(a) and k < len(b) and a[k] == b[k]:
+                k += 1
+            if k == len(b) and len(a) > len(b):
+                return ""
+            if k < len(a) and k < len(b) and b[k] not in nxt[a[k]]:
+                nxt[a[k]].add(b[k])
+                indeg[b[k]] += 1
+        q = deque(c for c in indeg if indeg[c] == 0)
+        out = []
+        while q:
+            c = q.popleft()
+            out.append(c)
+            for d in nxt[c]:
+                indeg[d] -= 1
+                if indeg[d] == 0:
+                    q.append(d)
+        return "".join(out) if len(out) == len(indeg) else ""`,
+          javascript: r`var alienOrder = function(words) {
+    const next = new Map(), indeg = new Map();
+    for (const w of words) for (const c of w) if (!next.has(c)) { next.set(c, new Set()); indeg.set(c, 0); }
+    for (let i = 0; i + 1 < words.length; i++) {
+        const a = words[i], b = words[i + 1];
+        let k = 0;
+        while (k < a.length && k < b.length && a[k] === b[k]) k++;
+        if (k === b.length && a.length > b.length) return "";
+        if (k < a.length && k < b.length && !next.get(a[k]).has(b[k])) {
+            next.get(a[k]).add(b[k]);
+            indeg.set(b[k], indeg.get(b[k]) + 1);
+        }
+    }
+    const q = [...indeg.keys()].filter((c) => indeg.get(c) === 0), out = [];
+    for (let head = 0; head < q.length; head++) {
+        const c = q[head];
+        out.push(c);
+        for (const d of next.get(c)) {
+            indeg.set(d, indeg.get(d) - 1);
+            if (indeg.get(d) === 0) q.push(d);
+        }
+    }
+    return out.length === indeg.size ? out.join("") : "";
+};`,
+        },
+      },
+    ],
+  },
+  'build-a-matrix-with-conditions': {
+    pattern: 'Two independent topological sorts (rows and columns)',
+    approaches: [
+      {
+        level: 'Better', name: 'DFS topological sorts',
+        idea: 'Row conditions only constrain the order of rows and column conditions only the order of columns. Topologically sort each with a coloured DFS; a back edge means no answer.',
+        steps: [
+          'For each set of conditions, build a graph on 1..k and run DFS with states unvisited / visiting / done; a "visiting" neighbour means a cycle.',
+          'Reverse the finishing order to get each number\'s index.',
+          'Place number `v` at `(rowIndex[v], colIndex[v])` in a zero matrix.',
+        ],
+        time: 'O(k² + R + C)', space: 'O(k² + R + C)',
+        why: 'R and C are the numbers of conditions. Each sort is linear in its graph; filling the k × k matrix is O(k²). Every number has its own row and its own column, so placements never collide.',
+        code: {
+          java: r`class Solution {
+    public int[][] buildMatrix(int k, int[][] rowConditions, int[][] colConditions) {
+        int[] row = order(k, rowConditions), col = order(k, colConditions);
+        if (row == null || col == null) return new int[0][];
+        int[][] m = new int[k][k];
+        for (int v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+        return m;
+    }
+    private int[] order(int k, int[][] conds) {
+        List<List<Integer>> adj = new ArrayList<>();
+        for (int i = 0; i <= k; i++) adj.add(new ArrayList<>());
+        for (int[] c : conds) adj.get(c[0]).add(c[1]);
+        int[] state = new int[k + 1];
+        List<Integer> post = new ArrayList<>();
+        for (int v = 1; v <= k; v++) if (!dfs(v, adj, state, post)) return null;
+        int[] pos = new int[k + 1];
+        for (int i = 0; i < k; i++) pos[post.get(k - 1 - i)] = i;
+        return pos;
+    }
+    private boolean dfs(int v, List<List<Integer>> adj, int[] state, List<Integer> post) {
+        if (state[v] != 0) return state[v] == 2;
+        state[v] = 1;
+        for (int w : adj.get(v)) if (!dfs(w, adj, state, post)) return false;
+        state[v] = 2;
+        post.add(v);
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+    bool dfs(int v, vector<vector<int>>& adj, vector<int>& state, vector<int>& post) {
+        if (state[v]) return state[v] == 2;
+        state[v] = 1;
+        for (int w : adj[v]) if (!dfs(w, adj, state, post)) return false;
+        state[v] = 2;
+        post.push_back(v);
+        return true;
+    }
+    vector<int> order(int k, vector<vector<int>>& conds) {
+        vector<vector<int>> adj(k + 1);
+        for (auto& c : conds) adj[c[0]].push_back(c[1]);
+        vector<int> state(k + 1, 0), post;
+        for (int v = 1; v <= k; v++) if (!dfs(v, adj, state, post)) return {};
+        vector<int> pos(k + 1);
+        for (int i = 0; i < k; i++) pos[post[k - 1 - i]] = i;
+        return pos;
+    }
+public:
+    vector<vector<int>> buildMatrix(int k, vector<vector<int>>& rowConditions, vector<vector<int>>& colConditions) {
+        vector<int> row = order(k, rowConditions), col = order(k, colConditions);
+        if (row.empty() || col.empty()) return {};
+        vector<vector<int>> m(k, vector<int>(k, 0));
+        for (int v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+        return m;
+    }
+};`,
+          python: r`class Solution:
+    def buildMatrix(self, k: int, rowConditions: List[List[int]], colConditions: List[List[int]]) -> List[List[int]]:
+        def order(conds):
+            adj = [[] for _ in range(k + 1)]
+            for a, b in conds:
+                adj[a].append(b)
+            state, post = [0] * (k + 1), []
+            def dfs(v):
+                if state[v]:
+                    return state[v] == 2
+                state[v] = 1
+                for w in adj[v]:
+                    if not dfs(w):
+                        return False
+                state[v] = 2
+                post.append(v)
+                return True
+            for v in range(1, k + 1):
+                if not dfs(v):
+                    return None
+            pos = [0] * (k + 1)
+            for i, v in enumerate(reversed(post)):
+                pos[v] = i
+            return pos
+        row, col = order(rowConditions), order(colConditions)
+        if row is None or col is None:
+            return []
+        m = [[0] * k for _ in range(k)]
+        for v in range(1, k + 1):
+            m[row[v]][col[v]] = v
+        return m`,
+          javascript: r`var buildMatrix = function(k, rowConditions, colConditions) {
+    const order = (conds) => {
+        const adj = Array.from({ length: k + 1 }, () => []);
+        for (const [a, b] of conds) adj[a].push(b);
+        const state = new Array(k + 1).fill(0), post = [];
+        const dfs = (v) => {
+            if (state[v]) return state[v] === 2;
+            state[v] = 1;
+            for (const w of adj[v]) if (!dfs(w)) return false;
+            state[v] = 2;
+            post.push(v);
+            return true;
+        };
+        for (let v = 1; v <= k; v++) if (!dfs(v)) return null;
+        const pos = new Array(k + 1);
+        post.reverse().forEach((v, i) => { pos[v] = i; });
+        return pos;
+    };
+    const row = order(rowConditions), col = order(colConditions);
+    if (!row || !col) return [];
+    const m = Array.from({ length: k }, () => new Array(k).fill(0));
+    for (let v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+    return m;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Kahn\'s algorithm for each axis',
+        idea: 'Same decomposition, using in-degree BFS for each topological sort: the position at which a number is dequeued is its row (or column).',
+        steps: [
+          'For each set of conditions, compute in-degrees and queue every number with in-degree 0.',
+          'Dequeue numbers in order, giving each the next index, and release their successors. If fewer than `k` numbers come out, return `[]`.',
+          'Place each number at `(rowIndex, colIndex)`.',
+        ],
+        time: 'O(k² + R + C)', space: 'O(k² + R + C)',
+        why: 'Linear-time sorts with no recursion (k = 400 is shallow anyway), and the cycle check is just a count. Duplicate conditions are harmless: each copy adds one to the in-degree and is removed once.',
+        code: {
+          java: r`class Solution {
+    public int[][] buildMatrix(int k, int[][] rowConditions, int[][] colConditions) {
+        int[] row = order(k, rowConditions), col = order(k, colConditions);
+        if (row == null || col == null) return new int[0][];
+        int[][] m = new int[k][k];
+        for (int v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+        return m;
+    }
+    private int[] order(int k, int[][] conds) {
+        List<List<Integer>> adj = new ArrayList<>();
+        for (int i = 0; i <= k; i++) adj.add(new ArrayList<>());
+        int[] indeg = new int[k + 1];
+        for (int[] c : conds) { adj.get(c[0]).add(c[1]); indeg[c[1]]++; }
+        Deque<Integer> q = new ArrayDeque<>();
+        for (int v = 1; v <= k; v++) if (indeg[v] == 0) q.add(v);
+        int[] pos = new int[k + 1];
+        int idx = 0;
+        while (!q.isEmpty()) {
+            int v = q.poll();
+            pos[v] = idx++;
+            for (int w : adj.get(v)) if (--indeg[w] == 0) q.add(w);
+        }
+        return idx == k ? pos : null;
+    }
+}`,
+          cpp: r`class Solution {
+    vector<int> order(int k, vector<vector<int>>& conds) {
+        vector<vector<int>> adj(k + 1);
+        vector<int> indeg(k + 1, 0);
+        for (auto& c : conds) { adj[c[0]].push_back(c[1]); indeg[c[1]]++; }
+        queue<int> q;
+        for (int v = 1; v <= k; v++) if (indeg[v] == 0) q.push(v);
+        vector<int> pos(k + 1);
+        int idx = 0;
+        while (!q.empty()) {
+            int v = q.front(); q.pop();
+            pos[v] = idx++;
+            for (int w : adj[v]) if (--indeg[w] == 0) q.push(w);
+        }
+        return idx == k ? pos : vector<int>{};
+    }
+public:
+    vector<vector<int>> buildMatrix(int k, vector<vector<int>>& rowConditions, vector<vector<int>>& colConditions) {
+        vector<int> row = order(k, rowConditions), col = order(k, colConditions);
+        if (row.empty() || col.empty()) return {};
+        vector<vector<int>> m(k, vector<int>(k, 0));
+        for (int v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+        return m;
+    }
+};`,
+          python: r`class Solution:
+    def buildMatrix(self, k: int, rowConditions: List[List[int]], colConditions: List[List[int]]) -> List[List[int]]:
+        def order(conds):
+            adj = [[] for _ in range(k + 1)]
+            indeg = [0] * (k + 1)
+            for a, b in conds:
+                adj[a].append(b)
+                indeg[b] += 1
+            q = deque(v for v in range(1, k + 1) if indeg[v] == 0)
+            pos, idx = [0] * (k + 1), 0
+            while q:
+                v = q.popleft()
+                pos[v] = idx
+                idx += 1
+                for w in adj[v]:
+                    indeg[w] -= 1
+                    if indeg[w] == 0:
+                        q.append(w)
+            return pos if idx == k else None
+        row, col = order(rowConditions), order(colConditions)
+        if row is None or col is None:
+            return []
+        m = [[0] * k for _ in range(k)]
+        for v in range(1, k + 1):
+            m[row[v]][col[v]] = v
+        return m`,
+          javascript: r`var buildMatrix = function(k, rowConditions, colConditions) {
+    const order = (conds) => {
+        const adj = Array.from({ length: k + 1 }, () => []);
+        const indeg = new Array(k + 1).fill(0);
+        for (const [a, b] of conds) { adj[a].push(b); indeg[b]++; }
+        const q = [];
+        for (let v = 1; v <= k; v++) if (indeg[v] === 0) q.push(v);
+        const pos = new Array(k + 1);
+        for (let head = 0; head < q.length; head++) {
+            const v = q[head];
+            pos[v] = head;
+            for (const w of adj[v]) if (--indeg[w] === 0) q.push(w);
+        }
+        return q.length === k ? pos : null;
+    };
+    const row = order(rowConditions), col = order(colConditions);
+    if (!row || !col) return [];
+    const m = Array.from({ length: k }, () => new Array(k).fill(0));
+    for (let v = 1; v <= k; v++) m[row[v]][col[v]] = v;
+    return m;
+};`,
+        },
+      },
+    ],
+  },
 };

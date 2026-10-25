@@ -26,6 +26,10 @@ export default {
   'word-search': ['exp', 'O(m·n·3^L), L = word length'],
   'n-queens': ['fact', 'O(n!)'],
   'sudoku-solver': [null, 'Exponential search over the empty cells, though the board is a fixed 9×9'],
+  'sum-of-all-subset-xor-totals': [null, 'O(2ⁿ) enumerating subsets, or O(n) with the OR × 2ⁿ⁻¹ trick'],
+  'matchsticks-to-square': ['exp', 'O(4ⁿ) backtracking, or O(n·2ⁿ) with bitmask DP'],
+  'n-queens-ii': ['fact', 'O(n!)'],
+  'word-break-ii': ['exp', 'O(2ⁿ) sentences in the worst case, plus O(n²) memoised splits'],
 
   // ---- binary search on the answer
   'koko-eating-bananas': ['nlogn', 'O(n log M), M = largest pile'],
@@ -47,6 +51,9 @@ export default {
   'search-in-rotated-sorted-array': ['logn', 'O(log n)'],
   'find-peak-element': ['logn', 'O(log n)'],
   'median-of-two-sorted-arrays': ['logn', 'O(log(min(m, n)))'],
+  'guess-number-higher-or-lower': ['logn', 'O(log n) calls'],
+  'search-in-rotated-sorted-array-ii': [null, 'O(log n) on average, O(n) in the worst case when duplicates hide the sorted half'],
+  'find-in-mountain-array': ['logn', 'O(log n) calls to get'],
 
   // ---- bit manipulation
   'single-number': ['n', 'O(n), O(1) space'],
@@ -58,6 +65,9 @@ export default {
   'single-number-ii': ['n', 'O(n), O(1) space'],
   'sum-of-two-integers': ['1', 'O(1): at most 32 carries'],
   'single-number-iii': ['n', 'O(n), O(1) space'],
+  'add-binary': ['n', 'O(max(m, n))'],
+  'bitwise-and-of-numbers-range': ['1', 'O(1): at most 31 shifts'],
+  'minimum-array-end': ['logn', 'O(log n + log x)'],
 
   // ---- binary search trees (h = height: log n when balanced, n in the worst case)
   'search-in-a-binary-search-tree': ['n', 'O(h): O(log n) balanced, O(n) worst'],
@@ -83,6 +93,11 @@ export default {
   'design-twitter': ['nlogn', 'O(f log f) per news feed, f = people followed'],
   'lfu-cache': ['1', 'O(1) per get and put'],
   'insert-delete-getrandom-o1-duplicates-allowed': ['1', 'O(1) average per operation'],
+  'design-hashset': ['1', 'O(1) average per operation'],
+  'implement-stack-using-queues': [null, 'O(n) push and O(1) pop with one queue, or O(1) push and O(n) pop with two'],
+  'design-circular-queue': ['1', 'O(1) per operation'],
+  'detect-squares': ['n', 'O(1) add, O(n) count over the distinct points stored'],
+  'maximum-frequency-stack': ['1', 'O(1) per operation'],
 
   // ---- grid DP
   'unique-paths': ['n2', 'O(m·n)'],
@@ -94,6 +109,7 @@ export default {
   'count-square-submatrices-with-all-ones': ['n2', 'O(m·n)'],
   'dungeon-game': ['n2', 'O(m·n)'],
   'cherry-pickup': ['n3', 'O(n³)'],
+  'longest-increasing-path-in-a-matrix': ['n2', 'O(m·n)'],
 
   // ---- knapsack DP
   'partition-equal-subset-sum': ['n2', 'O(n·sum)'],
@@ -116,6 +132,10 @@ export default {
   'number-of-longest-increasing-subsequence': ['n2', 'O(n²)'],
   'best-time-to-buy-and-sell-stock-with-cooldown': ['n', 'O(n)'],
   'russian-doll-envelopes': ['nlogn', 'O(n log n)'],
+  'integer-break': [null, 'O(n²) DP, or O(1) / O(log n) with the use-3s rule'],
+  'maximum-sum-circular-subarray': ['n', 'O(n)'],
+  'longest-turbulent-subarray': ['n', 'O(n)'],
+  'stone-game-iii': ['n', 'O(n)'],
 
   // ---- DP without fear
   'fibonacci-number': ['n', 'O(n)'],
@@ -156,6 +176,8 @@ export default {
   'binary-tree-cameras': ['n', 'O(n)'],
   'burst-balloons': ['n3', 'O(n³)'],
   'minimum-cost-to-cut-a-stick': ['n3', 'O(c³), c = number of cuts'],
+  'stone-game': [null, 'O(n²) interval DP, or O(1) by the parity argument'],
+  'stone-game-ii': ['n3', 'O(n³)'],
 
   // ---- fast and slow pointers
   'middle-of-the-linked-list': ['n', 'O(n), O(1) space'],
@@ -179,6 +201,12 @@ export default {
   'surrounded-regions': ['n2', 'O(m·n)'],
   'pacific-atlantic-water-flow': ['n2', 'O(m·n)'],
   'word-ladder': ['n3', 'O(N·L²), N words of length L'],
+  'island-perimeter': ['n2', 'O(m·n)'],
+  'find-the-town-judge': ['n', 'O(n + trust.length)'],
+  'walls-and-gates': ['n2', 'O(m·n)'],
+  'open-the-lock': [null, 'BFS over at most 10⁴ combinations (8 neighbours each), plus O(d) for the deadends'],
+  'evaluate-division': [null, 'O(Q·(V + E)) with a DFS per query, or near O(E + Q) with weighted union-find'],
+  'reconstruct-itinerary': ['nlogn', 'O(E log E)'],
 
   // ---- greedy
   'assign-cookies': ['nlogn', 'O(n log n + m log m)'],
@@ -190,6 +218,12 @@ export default {
   'boats-to-save-people': ['nlogn', 'O(n log n)'],
   'two-city-scheduling': ['nlogn', 'O(n log n)'],
   candy: ['n', 'O(n)'],
+  'lemonade-change': ['n', 'O(n)'],
+  'merge-triplets-to-form-target-triplet': ['n', 'O(n)'],
+  'valid-parenthesis-string': [null, 'O(n) with the lo/hi range, or O(n²) with DP over (index, open count)'],
+  'hand-of-straights': ['nlogn', 'O(n log n)'],
+  'dota2-senate': ['n', 'O(n)'],
+  'jump-game-vii': ['n', 'O(n)'],
 
   // ---- hashing
   'two-sum': ['n', 'O(n)'],
@@ -200,6 +234,11 @@ export default {
   'longest-consecutive-sequence': ['n', 'O(n)'],
   'valid-sudoku': ['1', 'O(1): the board is always 9×9'],
   'first-missing-positive': ['n', 'O(n), O(1) space'],
+  'concatenation-of-array': ['n', 'O(n)'],
+  'majority-element': ['n', 'O(n), O(1) space with Boyer–Moore voting'],
+  'majority-element-ii': ['n', 'O(n), O(1) space with two-candidate voting'],
+  'encode-and-decode-strings': ['n', 'O(total length of the strings)'],
+  'verifying-an-alien-dictionary': ['n', 'O(total characters)'],
 
   // ---- heaps
   'last-stone-weight': ['nlogn', 'O(n log n)'],
@@ -212,6 +251,9 @@ export default {
   'merge-k-sorted-lists': ['nlogn', 'O(N log k), N = all nodes'],
   'find-median-from-data-stream': ['logn', 'O(log n) add, O(1) median'],
   ipo: ['nlogn', 'O(n log n)'],
+  'single-threaded-cpu': ['nlogn', 'O(n log n)'],
+  'reorganize-string': ['n', 'O(n): the heap holds at most 26 letters'],
+  'longest-happy-string': ['n', 'O(a + b + c)'],
 
   // ---- intervals
   'merge-intervals': ['nlogn', 'O(n log n)'],
@@ -221,6 +263,9 @@ export default {
   'interval-list-intersections': ['n', 'O(m + n)'],
   'remove-covered-intervals': ['nlogn', 'O(n log n)'],
   'minimum-interval-to-include-each-query': ['nlogn', 'O((n + q) log(n + q))'],
+  'meeting-rooms': ['nlogn', 'O(n log n)'],
+  'meeting-rooms-ii': ['nlogn', 'O(n log n)'],
+  'meeting-rooms-iii': ['nlogn', 'O(m log m + m log n), m meetings, n rooms'],
 
   // ---- linked lists
   'reverse-linked-list': ['n', 'O(n), O(1) space'],
@@ -232,6 +277,8 @@ export default {
   'partition-list': ['n', 'O(n)'],
   'rotate-list': ['n', 'O(n)'],
   'reverse-nodes-in-k-group': ['n', 'O(n), O(1) space'],
+  'insert-greatest-common-divisors-in-linked-list': ['nlogn', 'O(n log V), V = largest value'],
+  'copy-list-with-random-pointer': ['n', 'O(n)'],
 
   // ---- math
   'find-greatest-common-divisor-of-array': ['n', 'O(n + log M)'],
@@ -244,6 +291,11 @@ export default {
   'shuffle-an-array': ['n', 'O(n) per shuffle, Fisher–Yates'],
   'linked-list-random-node': [null, 'O(n) per pick with reservoir sampling, O(1) with an array'],
   'implement-rand10-using-rand7': ['1', 'O(1) expected calls'],
+  'plus-one': ['n', 'O(n)'],
+  'roman-to-integer': ['n', 'O(n)'],
+  'excel-sheet-column-title': ['logn', 'O(log₂₆ n)'],
+  'greatest-common-divisor-of-strings': ['n', 'O(m + n)'],
+  'multiply-strings': ['n2', 'O(m·n)'],
 
   // ---- matrices
   'transpose-matrix': ['n2', 'O(m·n)'],
@@ -307,6 +359,8 @@ export default {
   'find-all-anagrams-in-a-string': ['n', 'O(m + n)'],
   'minimum-window-substring': ['n', 'O(m + n)'],
   'subarrays-with-k-different-integers': ['n', 'O(n), at most k minus at most k − 1'],
+  'contains-duplicate-ii': ['n', 'O(n)'],
+  'find-k-closest-elements': [null, 'O(n − k) shrinking from both ends, or O(log(n − k) + k) with binary search'],
 
   // ---- sorting as a tool
   'sort-array-by-increasing-frequency': ['nlogn', 'O(n log n)'],
@@ -326,6 +380,8 @@ export default {
   'basic-calculator-ii': ['n', 'O(n)'],
   'decode-string': [null, 'O(length of the decoded output)'],
   'longest-valid-parentheses': ['n', 'O(n)'],
+  'baseball-game': ['n', 'O(n)'],
+  'car-fleet': ['nlogn', 'O(n log n)'],
 
   // ---- string matching
   'find-the-index-of-the-first-occurrence-in-a-string': ['n', 'O(m + n), KMP'],
@@ -345,6 +401,8 @@ export default {
   'find-eventual-safe-states': ['n', 'O(V + E)'],
   'find-all-possible-recipes-from-given-supplies': ['n', 'O(V + E)'],
   'sort-items-by-groups-respecting-dependencies': ['n', 'O(n + m + edges)'],
+  'alien-dictionary': ['n', 'O(total characters + 26²)'],
+  'build-a-matrix-with-conditions': ['n2', 'O(k² + conditions): filling the k × k matrix dominates'],
 
   // ---- tree BFS
   'binary-tree-level-order-traversal': ['n', 'O(n)'],
@@ -367,6 +425,12 @@ export default {
   'lowest-common-ancestor-of-a-binary-tree': ['n', 'O(n)'],
   'construct-binary-tree-from-preorder-and-inorder-traversal': ['n', 'O(n) with an index map'],
   'serialize-and-deserialize-binary-tree': ['n', 'O(n)'],
+  'binary-tree-inorder-traversal': ['n', 'O(n)'],
+  'binary-tree-preorder-traversal': ['n', 'O(n)'],
+  'binary-tree-postorder-traversal': ['n', 'O(n)'],
+  'subtree-of-another-tree': [null, 'O(m·n) comparing at every node, or O(m + n) with serialisation and KMP'],
+  'construct-quad-tree': [null, 'O(n² log n) top-down, or O(n²) bottom-up, for an n × n grid'],
+  'delete-leaves-with-a-given-value': ['n', 'O(n)'],
 
   // ---- tries
   'longest-common-prefix': ['n', 'O(S), S = total characters'],
@@ -376,6 +440,7 @@ export default {
   'search-suggestions-system': [null, 'O(total characters) to build, O(m) per typed letter'],
   'maximum-xor-of-two-numbers-in-an-array': ['n', 'O(32·n)'],
   'word-search-ii': ['exp', 'O(m·n·4^L), pruned by the trie'],
+  'extra-characters-in-a-string': [null, 'O(n³) with a hash set, or O(n² + dictionary size) with a trie'],
 
   // ---- two pointers
   'valid-palindrome': ['n', 'O(n), O(1) space'],
@@ -387,6 +452,13 @@ export default {
   '3sum': ['n2', 'O(n²)'],
   'sort-colors': ['n', 'O(n), one pass'],
   'trapping-rain-water': ['n', 'O(n), O(1) space'],
+  'remove-element': ['n', 'O(n)'],
+  'reverse-string': ['n', 'O(n)'],
+  'valid-palindrome-ii': ['n', 'O(n)'],
+  'merge-strings-alternately': ['n', 'O(m + n)'],
+  'merge-sorted-array': ['n', 'O(m + n)'],
+  '4sum': ['n3', 'O(n³)'],
+  'rotate-array': ['n', 'O(n)'],
 
   // ---- union-find (α = inverse Ackermann, effectively constant)
   'find-if-path-exists-in-graph': ['n', 'O((V + E)·α(V))'],
@@ -397,4 +469,8 @@ export default {
   'min-cost-to-connect-all-points': ['n2', 'O(n²), Prim on the dense graph'],
   'regions-cut-by-slashes': ['n2', 'O(n²·α(n))'],
   'largest-component-size-by-common-factor': [null, 'O(n·√M), M = largest value'],
+  'graph-valid-tree': ['n', 'O(n·α(n))'],
+  'number-of-connected-components-in-an-undirected-graph': ['n', 'O(n + e·α(n))'],
+  'find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree': ['n2', 'O(E²·α(n))'],
+  'greatest-common-divisor-traversal': ['nlogn', 'O(V log log V + n log V), V = largest value'],
 };

@@ -140,4 +140,44 @@ The puzzle has exactly one solution. Change the board in place; the judge prints
       'Undo the digit (and the table entries) when the recursion fails. Choosing the empty cell with the fewest options first speeds it up a lot.',
     ],
   },
+  'sum-of-all-subset-xor-totals': {
+    statement: `The **XOR total** of an array is the bitwise XOR of all its elements, or \`0\` if it is empty. For example, the XOR total of \`[2,5,6]\` is \`2 XOR 5 XOR 6 = 1\`.
+
+Return the sum of the XOR totals of **every subset** of \`nums\`. Subsets with the same values but from different positions count separately.`,
+    constraints: ['1 <= nums.length <= 12', '1 <= nums[i] <= 20'],
+    hints: [
+      'There are only 2¹² = 4096 subsets, so generating all of them with backtracking (include or skip each element) is fast enough.',
+      'Carry the running XOR down the recursion instead of recomputing it for every subset.',
+      'For O(n): a bit that is set in at least one element is set in exactly half of all 2ⁿ subset XORs. So the answer is (OR of all elements) × 2ⁿ⁻¹.',
+    ],
+  },
+  'matchsticks-to-square': {
+    statement: `\`matchsticks[i]\` is the length of the \`i\`-th matchstick. Return \`true\` if you can make a square using **all** of them, each exactly once. You may not break a matchstick, but you can join several end to end to make one side.`,
+    constraints: ['1 <= matchsticks.length <= 15', '1 <= matchsticks[i] <= 1e8'],
+    hints: [
+      'The total length must be divisible by 4, and no stick may be longer than a side. Watch out: the total can exceed 2³¹ − 1.',
+      'Backtrack: put each stick on one of four sides, never letting a side exceed the target length.',
+      'Sort the sticks from longest to shortest so impossible branches fail early, and skip a side whose current length equals the previous side\'s (trying it would repeat the same search). For a guaranteed bound, use DP over bitmasks of used sticks: O(n · 2ⁿ).',
+    ],
+  },
+  'n-queens-ii': {
+    statement: `Place \`n\` queens on an \`n × n\` chessboard so that no two queens attack each other (no two share a row, a column or a diagonal). Return the number of distinct ways to do it.`,
+    constraints: ['1 <= n <= 9'],
+    hints: [
+      'Each row holds exactly one queen, so place queens row by row and backtrack.',
+      'Track which columns and which diagonals are taken. On one diagonal r − c is constant; on the other, r + c is.',
+      'Only the count is needed, not the boards. Bitmasks for columns and both diagonals make each step a few bit operations: free = ~(cols | d1 | d2) & ((1 << n) − 1).',
+    ],
+  },
+  'word-break-ii': {
+    statement: `Add spaces to \`s\` to build sentences in which every word is in \`wordDict\`. Return **all** such sentences, in any order.
+
+A dictionary word may be used more than once.`,
+    constraints: ['1 <= s.length <= 20', '1 <= wordDict.length <= 1000', '1 <= wordDict[i].length <= 10', '`s` and `wordDict[i]` have only lowercase English letters', 'All the strings of `wordDict` are unique', 'The answer has at most 10⁵ sentences'],
+    hints: [
+      'Backtrack from the start of s: try every dictionary word that is a prefix of what remains, then solve the rest.',
+      'Put the words in a hash set so checking s[i..j] is fast.',
+      'Memoise the list of sentences for each start index i: the same suffix is reached by many different paths. Strings like "aaaa…ab" make plain backtracking explore an exponential number of dead ends.',
+    ],
+  },
 };

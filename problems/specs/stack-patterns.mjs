@@ -227,4 +227,60 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'baseball-game', title: 'Baseball Game', level: 'Easy',
+    summary: 'Process score operations: an integer records that score, "+" records the sum of the previous two, "D" doubles the previous one, "C" removes the previous one. Return the sum of the scores left.',
+    method: 'calPoints', params: [['String[]', 'operations']], returns: 'int',
+    tests: [
+      { in: [['5', '2', 'C', 'D', '+']], out: 30 },
+      { in: [['5', '-2', '4', 'C', 'D', '9', '+', '+']], out: 27 },
+      { in: [['1', 'C']], out: 0 },
+      { in: [['7']] },
+      { in: [['-3', 'D', 'D', '+', 'C', '+']] },
+      { in: [['30000', 'D', '+', 'C', 'C', 'C']] },
+    ],
+    ref: `class Solution {
+    public int calPoints(String[] operations) {
+        Deque<Integer> st = new ArrayDeque<>();
+        for (String op : operations) {
+            if (op.equals("+")) { int a = st.pop(), b = st.peek(); st.push(a); st.push(a + b); }
+            else if (op.equals("D")) st.push(2 * st.peek());
+            else if (op.equals("C")) st.pop();
+            else st.push(Integer.parseInt(op));
+        }
+        int sum = 0;
+        for (int x : st) sum += x;
+        return sum;
+    }
+}`,
+  },
+  {
+    slug: 'car-fleet', title: 'Car Fleet', level: 'Medium',
+    summary: 'Cars at distinct positions drive towards target at their own speeds and cannot pass each other: a faster car that catches a slower one joins it and slows down. Return how many groups (fleets) arrive at target.',
+    method: 'carFleet', params: [['int', 'target'], ['int[]', 'position'], ['int[]', 'speed']], returns: 'int',
+    tests: [
+      { in: [12, [10, 8, 0, 5, 3], [2, 4, 1, 1, 3]], out: 3 },
+      { in: [10, [3], [3]], out: 1 },
+      { in: [100, [0, 2, 4], [4, 2, 1]], out: 1 },
+      { in: [10, [6, 8], [3, 2]] },
+      { in: [10, [0, 4, 2], [2, 1, 3]] },
+      { in: [20, [6, 2, 17], [3, 9, 2]] },
+      { in: [10, [8, 3, 7, 4, 6, 5], [4, 4, 4, 4, 4, 4]] },
+    ],
+    ref: `class Solution {
+    public int carFleet(int target, int[] position, int[] speed) {
+        int n = position.length;
+        Integer[] idx = new Integer[n];
+        for (int i = 0; i < n; i++) idx[i] = i;
+        Arrays.sort(idx, (a, b) -> position[b] - position[a]);
+        int fleets = 0;
+        double slowest = 0;
+        for (int i : idx) {
+            double t = (double) (target - position[i]) / speed[i];
+            if (t > slowest) { fleets++; slowest = t; }
+        }
+        return fleets;
+    }
+}`,
+  },
 ];

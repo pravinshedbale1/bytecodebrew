@@ -177,4 +177,80 @@ All operations must run in average O(1) time. The judge checks return values and
       'To remove, take any index of val, move the last element into it, and fix both entries in the index sets (careful when the moved element is val itself).',
     ],
   },
+  'design-hashset': {
+    statement: `Implement \`MyHashSet\` without using any built-in hash table:
+
+- \`void add(int key)\` inserts \`key\` into the set,
+- \`void remove(int key)\` removes \`key\` if it is present (otherwise does nothing),
+- \`boolean contains(int key)\` returns whether \`key\` is in the set.
+
+The tests call the class with a list of operations and their arguments.`,
+    constraints: ['0 ≤ key ≤ 10⁶', 'At most 10⁴ calls to add, remove and contains'],
+    hints: [
+      'Keys go up to 10⁶, so a boolean array of that size works. The interview answer, though, is a real hash table.',
+      'Use an array of buckets and pick a bucket with key % size. Keys that share a bucket go into a small list (separate chaining).',
+      'add must not insert a key twice; remove deletes it from its bucket. A prime number of buckets (like 1009) spreads keys evenly.',
+    ],
+  },
+  'implement-stack-using-queues': {
+    statement: `Implement a last-in-first-out stack \`MyStack\` using only queues:
+
+- \`void push(int x)\` pushes \`x\` on top,
+- \`int pop()\` removes the top element and returns it,
+- \`int top()\` returns the top element,
+- \`boolean empty()\` returns whether the stack is empty.
+
+Use only standard queue operations: add to the back, remove from the front, peek at the front, size and isEmpty. Every \`pop\` and \`top\` call is made on a non-empty stack.`,
+    constraints: ['1 ≤ x ≤ 9', 'At most 100 calls to push, pop, top and empty'],
+    hints: [
+      'A queue gives you the oldest element first, but a stack needs the newest. Something has to be reordered, either on push or on pop.',
+      'Make push expensive: after adding x to the back, rotate the queue by removing from the front and re-adding at the back, size − 1 times.',
+      'Now x is at the front, so pop and top are just a remove or peek from the front. One queue is enough.',
+    ],
+  },
+  'design-circular-queue': {
+    statement: `Implement \`MyCircularQueue\`, a first-in-first-out queue with a fixed capacity whose storage wraps around (a ring buffer):
+
+- \`MyCircularQueue(int k)\` creates a queue that holds up to \`k\` values,
+- \`boolean enQueue(int value)\` adds \`value\` at the rear; returns \`false\` if the queue is full,
+- \`boolean deQueue()\` removes the front value; returns \`false\` if the queue is empty,
+- \`int Front()\` and \`int Rear()\` return the front and rear values, or \`-1\` if the queue is empty,
+- \`boolean isEmpty()\` and \`boolean isFull()\` report the queue\'s state.
+
+Do not use a built-in queue.`,
+    constraints: ['1 ≤ k ≤ 1000', '0 ≤ value ≤ 1000', 'At most 3000 calls in total'],
+    hints: [
+      'Use an array of size k. Moving every element on deQueue would be O(k); instead let the front move.',
+      'Keep the index of the front and the number of stored values. The rear sits at (head + size − 1) % k.',
+      'enQueue writes at (head + size) % k; deQueue advances head with head = (head + 1) % k. Tracking size separately avoids the "full or empty?" ambiguity when head and tail meet.',
+    ],
+  },
+  'detect-squares': {
+    statement: `Implement \`DetectSquares\`, which stores points on a grid and counts squares:
+
+- \`void add(int[] point)\` stores \`point = [x, y]\`. The same point may be added several times; each copy counts separately.
+- \`int count(int[] point)\` returns the number of ways to choose three **stored** points that, together with the query point, form an axis-aligned square with positive area.
+
+An axis-aligned square has all four sides the same length and parallel to the x and y axes.`,
+    constraints: ['point.length == 2', '0 ≤ x, y ≤ 1000', 'At most 3000 calls to add and count in total'],
+    hints: [
+      'With the query point fixed, a square is decided by the opposite (diagonal) corner. The other two corners follow from it.',
+      'Count copies of each point, for example with a map or a 1001 × 1001 array, and keep a list of distinct points.',
+      'For each stored point (px, py) with |px − x| == |py − y| and px ≠ x, add count(px, py) × count(x, py) × count(px, y). That is O(distinct points) per query.',
+    ],
+  },
+  'maximum-frequency-stack': {
+    statement: `Implement \`FreqStack\`, a stack-like structure that pops the most frequent value:
+
+- \`void push(int val)\` pushes \`val\` onto the stack,
+- \`int pop()\` removes and returns the most frequent value in the stack. If several values are tied for most frequent, it removes and returns the one closest to the top (pushed most recently).
+
+Every \`pop\` call is made on a non-empty stack.`,
+    constraints: ['0 ≤ val ≤ 10⁹', 'At most 2 · 10⁴ calls to push and pop'],
+    hints: [
+      'Keep a map from value to its current frequency. The hard part is finding the most recent value among the most frequent ones.',
+      'Think of each push of a value as creating its k-th copy. Group values by that copy number: a stack for frequency 1, another for frequency 2, and so on.',
+      'pop takes from the stack of the highest frequency, decreases that value\'s count, and drops the stack when it becomes empty. Both operations are O(1).',
+    ],
+  },
 };

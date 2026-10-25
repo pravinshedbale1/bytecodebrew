@@ -2234,4 +2234,1091 @@ public:
       },
     ],
   },
+  'island-perimeter': {
+    pattern: 'Grid counting (edges touching water), or DFS over the island',
+    approaches: [
+      {
+        level: 'Better', name: 'DFS, counting edges that leave the island',
+        idea: 'Start a DFS at any land cell. Every time a step would leave the grid or land on water, that edge is part of the perimeter.',
+        steps: [
+          'Find a land cell and run DFS from it, marking visited cells.',
+          'For each cell, look in four directions: out of bounds or water adds 1; unvisited land is explored.',
+          'Return the total.',
+        ],
+        time: 'O(m · n)', space: 'O(m · n)',
+        why: 'Each cell is visited once. The recursion (or visited set) can hold the whole island. It generalises to "perimeter of the island containing this cell" when the grid has several islands.',
+        code: {
+          java: r`class Solution {
+    public int islandPerimeter(int[][] grid) {
+        for (int r = 0; r < grid.length; r++)
+            for (int c = 0; c < grid[0].length; c++)
+                if (grid[r][c] == 1) return dfs(grid, r, c, new boolean[grid.length][grid[0].length]);
+        return 0;
+    }
+    private int dfs(int[][] g, int r, int c, boolean[][] seen) {
+        if (r < 0 || c < 0 || r >= g.length || c >= g[0].length || g[r][c] == 0) return 1;
+        if (seen[r][c]) return 0;
+        seen[r][c] = true;
+        return dfs(g, r + 1, c, seen) + dfs(g, r - 1, c, seen) + dfs(g, r, c + 1, seen) + dfs(g, r, c - 1, seen);
+    }
+}`,
+          cpp: r`class Solution {
+    int dfs(vector<vector<int>>& g, int r, int c, vector<vector<bool>>& seen) {
+        if (r < 0 || c < 0 || r >= (int) g.size() || c >= (int) g[0].size() || g[r][c] == 0) return 1;
+        if (seen[r][c]) return 0;
+        seen[r][c] = true;
+        return dfs(g, r + 1, c, seen) + dfs(g, r - 1, c, seen) + dfs(g, r, c + 1, seen) + dfs(g, r, c - 1, seen);
+    }
+public:
+    int islandPerimeter(vector<vector<int>>& grid) {
+        vector<vector<bool>> seen(grid.size(), vector<bool>(grid[0].size(), false));
+        for (int r = 0; r < (int) grid.size(); r++)
+            for (int c = 0; c < (int) grid[0].size(); c++)
+                if (grid[r][c] == 1) return dfs(grid, r, c, seen);
+        return 0;
+    }
+};`,
+          python: r`class Solution:
+    def islandPerimeter(self, grid: List[List[int]]) -> int:
+        m, n = len(grid), len(grid[0])
+        seen = set()
+        def dfs(r, c):
+            if r < 0 or c < 0 or r >= m or c >= n or grid[r][c] == 0:
+                return 1
+            if (r, c) in seen:
+                return 0
+            seen.add((r, c))
+            return dfs(r + 1, c) + dfs(r - 1, c) + dfs(r, c + 1) + dfs(r, c - 1)
+        for r in range(m):
+            for c in range(n):
+                if grid[r][c] == 1:
+                    return dfs(r, c)
+        return 0`,
+          javascript: r`var islandPerimeter = function(grid) {
+    const m = grid.length, n = grid[0].length;
+    const seen = Array.from({ length: m }, () => new Array(n).fill(false));
+    const dfs = (r, c) => {
+        if (r < 0 || c < 0 || r >= m || c >= n || grid[r][c] === 0) return 1;
+        if (seen[r][c]) return 0;
+        seen[r][c] = true;
+        return dfs(r + 1, c) + dfs(r - 1, c) + dfs(r, c + 1) + dfs(r, c - 1);
+    };
+    for (let r = 0; r < m; r++)
+        for (let c = 0; c < n; c++)
+            if (grid[r][c] === 1) return dfs(r, c);
+    return 0;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: '4 × land − 2 × shared edges',
+        idea: 'Every land cell brings 4 edges, and every pair of neighbouring land cells hides one edge on each side. Count both in one scan.',
+        steps: [
+          'Scan every cell. For a land cell, add 1 to `land`.',
+          'If the cell below or to the right is also land, add 1 to `shared` for each.',
+          'Return `4 · land − 2 · shared`.',
+        ],
+        time: 'O(m · n)', space: 'O(1)',
+        why: 'Looking only right and down counts every adjacent pair exactly once. No recursion and no visited array, and it works no matter how many islands there are.',
+        code: {
+          java: r`class Solution {
+    public int islandPerimeter(int[][] grid) {
+        int land = 0, shared = 0;
+        for (int r = 0; r < grid.length; r++)
+            for (int c = 0; c < grid[0].length; c++) {
+                if (grid[r][c] == 0) continue;
+                land++;
+                if (r + 1 < grid.length && grid[r + 1][c] == 1) shared++;
+                if (c + 1 < grid[0].length && grid[r][c + 1] == 1) shared++;
+            }
+        return 4 * land - 2 * shared;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int islandPerimeter(vector<vector<int>>& grid) {
+        int m = grid.size(), n = grid[0].size(), land = 0, shared = 0;
+        for (int r = 0; r < m; r++)
+            for (int c = 0; c < n; c++) {
+                if (grid[r][c] == 0) continue;
+                land++;
+                if (r + 1 < m && grid[r + 1][c] == 1) shared++;
+                if (c + 1 < n && grid[r][c + 1] == 1) shared++;
+            }
+        return 4 * land - 2 * shared;
+    }
+};`,
+          python: r`class Solution:
+    def islandPerimeter(self, grid: List[List[int]]) -> int:
+        m, n = len(grid), len(grid[0])
+        land = shared = 0
+        for r in range(m):
+            for c in range(n):
+                if grid[r][c] == 0:
+                    continue
+                land += 1
+                if r + 1 < m and grid[r + 1][c] == 1:
+                    shared += 1
+                if c + 1 < n and grid[r][c + 1] == 1:
+                    shared += 1
+        return 4 * land - 2 * shared`,
+          javascript: r`var islandPerimeter = function(grid) {
+    const m = grid.length, n = grid[0].length;
+    let land = 0, shared = 0;
+    for (let r = 0; r < m; r++)
+        for (let c = 0; c < n; c++) {
+            if (grid[r][c] === 0) continue;
+            land++;
+            if (r + 1 < m && grid[r + 1][c] === 1) shared++;
+            if (c + 1 < n && grid[r][c + 1] === 1) shared++;
+        }
+    return 4 * land - 2 * shared;
+};`,
+        },
+      },
+    ],
+  },
+  'find-the-town-judge': {
+    pattern: 'In-degree and out-degree of a directed graph',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Check every candidate',
+        idea: 'For each person, scan all trust pairs to see whether they trust nobody and are trusted by everyone else.',
+        steps: [
+          'For each person `p` from 1 to `n`, count how many pairs have `b == p` and whether any has `a == p`.',
+          'If `p` trusts nobody and is trusted `n − 1` times, return `p`.',
+          'Return -1.',
+        ],
+        time: 'O(n · t)', space: 'O(1)',
+        why: 't is the number of trust pairs. Up to 1000 × 10⁴ = 10⁷ checks, fast enough here, but it rescans the same list for every person.',
+        code: {
+          java: r`class Solution {
+    public int findJudge(int n, int[][] trust) {
+        for (int p = 1; p <= n; p++) {
+            int trustedBy = 0;
+            boolean trustsSomeone = false;
+            for (int[] t : trust) {
+                if (t[0] == p) trustsSomeone = true;
+                if (t[1] == p) trustedBy++;
+            }
+            if (!trustsSomeone && trustedBy == n - 1) return p;
+        }
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int findJudge(int n, vector<vector<int>>& trust) {
+        for (int p = 1; p <= n; p++) {
+            int trustedBy = 0;
+            bool trustsSomeone = false;
+            for (auto& t : trust) {
+                if (t[0] == p) trustsSomeone = true;
+                if (t[1] == p) trustedBy++;
+            }
+            if (!trustsSomeone && trustedBy == n - 1) return p;
+        }
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def findJudge(self, n: int, trust: List[List[int]]) -> int:
+        for p in range(1, n + 1):
+            if all(a != p for a, _ in trust) and sum(1 for _, b in trust if b == p) == n - 1:
+                return p
+        return -1`,
+          javascript: r`var findJudge = function(n, trust) {
+    for (let p = 1; p <= n; p++) {
+        let trustedBy = 0, trustsSomeone = false;
+        for (const [a, b] of trust) {
+            if (a === p) trustsSomeone = true;
+            if (b === p) trustedBy++;
+        }
+        if (!trustsSomeone && trustedBy === n - 1) return p;
+    }
+    return -1;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'One score per person',
+        idea: 'Combine in-degree and out-degree into one number: +1 when someone trusts you, −1 when you trust someone. Only the judge can reach n − 1.',
+        steps: [
+          'Make `score[1..n]` all 0.',
+          'For each pair `[a, b]`: `score[a]--`, `score[b]++`.',
+          'Return the person with `score == n − 1`, or -1.',
+        ],
+        time: 'O(n + t)', space: 'O(n)',
+        why: 'A score of n − 1 needs in-degree n − 1 (everyone else) and out-degree 0, because pairs are unique and nobody trusts themselves. With n = 1 and no pairs, person 1 has score 0 = n − 1 and is the judge.',
+        code: {
+          java: r`class Solution {
+    public int findJudge(int n, int[][] trust) {
+        int[] score = new int[n + 1];
+        for (int[] t : trust) { score[t[0]]--; score[t[1]]++; }
+        for (int i = 1; i <= n; i++) if (score[i] == n - 1) return i;
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int findJudge(int n, vector<vector<int>>& trust) {
+        vector<int> score(n + 1, 0);
+        for (auto& t : trust) { score[t[0]]--; score[t[1]]++; }
+        for (int i = 1; i <= n; i++) if (score[i] == n - 1) return i;
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def findJudge(self, n: int, trust: List[List[int]]) -> int:
+        score = [0] * (n + 1)
+        for a, b in trust:
+            score[a] -= 1
+            score[b] += 1
+        for i in range(1, n + 1):
+            if score[i] == n - 1:
+                return i
+        return -1`,
+          javascript: r`var findJudge = function(n, trust) {
+    const score = new Array(n + 1).fill(0);
+    for (const [a, b] of trust) { score[a]--; score[b]++; }
+    for (let i = 1; i <= n; i++) if (score[i] === n - 1) return i;
+    return -1;
+};`,
+        },
+      },
+    ],
+  },
+  'walls-and-gates': {
+    pattern: 'Multi-source BFS from every gate at once',
+    approaches: [
+      {
+        level: 'Brute force', name: 'BFS from each gate',
+        idea: 'Run a separate BFS from every gate and keep, in each room, the smallest distance seen so far.',
+        steps: [
+          'For each gate, BFS outwards with distances, ignoring walls.',
+          'When the BFS reaches a room at distance `d`, set `rooms[r][c] = min(rooms[r][c], d)`.',
+          'Use a fresh visited array for every gate.',
+        ],
+        time: 'O(k · m · n)', space: 'O(m · n)',
+        why: 'k is the number of gates; each BFS can cover the whole grid. With thousands of gates on a 250 × 250 grid that is hundreds of millions of steps, so it times out on the large test.',
+        code: {
+          java: r`class Solution {
+    public void wallsAndGates(int[][] rooms) {
+        int m = rooms.length, n = rooms[0].length;
+        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (int gr = 0; gr < m; gr++)
+            for (int gc = 0; gc < n; gc++) {
+                if (rooms[gr][gc] != 0) continue;
+                boolean[][] seen = new boolean[m][n];
+                Deque<int[]> q = new ArrayDeque<>();
+                q.add(new int[] { gr, gc, 0 });
+                seen[gr][gc] = true;
+                while (!q.isEmpty()) {
+                    int[] p = q.poll();
+                    for (int[] d : dirs) {
+                        int r = p[0] + d[0], c = p[1] + d[1];
+                        if (r < 0 || c < 0 || r >= m || c >= n || seen[r][c] || rooms[r][c] <= 0) continue;
+                        seen[r][c] = true;
+                        rooms[r][c] = Math.min(rooms[r][c], p[2] + 1);
+                        q.add(new int[] { r, c, p[2] + 1 });
+                    }
+                }
+            }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void wallsAndGates(vector<vector<int>>& rooms) {
+        int m = rooms.size(), n = rooms[0].size();
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int gr = 0; gr < m; gr++)
+            for (int gc = 0; gc < n; gc++) {
+                if (rooms[gr][gc] != 0) continue;
+                vector<vector<bool>> seen(m, vector<bool>(n, false));
+                queue<array<int, 3>> q;
+                q.push({gr, gc, 0});
+                seen[gr][gc] = true;
+                while (!q.empty()) {
+                    auto [pr, pc, pd] = q.front(); q.pop();
+                    for (auto& d : dirs) {
+                        int r = pr + d[0], c = pc + d[1];
+                        if (r < 0 || c < 0 || r >= m || c >= n || seen[r][c] || rooms[r][c] <= 0) continue;
+                        seen[r][c] = true;
+                        rooms[r][c] = min(rooms[r][c], pd + 1);
+                        q.push({r, c, pd + 1});
+                    }
+                }
+            }
+    }
+};`,
+          python: r`class Solution:
+    def wallsAndGates(self, rooms: List[List[int]]) -> None:
+        m, n = len(rooms), len(rooms[0])
+        for gr in range(m):
+            for gc in range(n):
+                if rooms[gr][gc] != 0:
+                    continue
+                seen = {(gr, gc)}
+                q = deque([(gr, gc, 0)])
+                while q:
+                    pr, pc, pd = q.popleft()
+                    for r, c in ((pr + 1, pc), (pr - 1, pc), (pr, pc + 1), (pr, pc - 1)):
+                        if 0 <= r < m and 0 <= c < n and (r, c) not in seen and rooms[r][c] > 0:
+                            seen.add((r, c))
+                            rooms[r][c] = min(rooms[r][c], pd + 1)
+                            q.append((r, c, pd + 1))`,
+          javascript: r`var wallsAndGates = function(rooms) {
+    const m = rooms.length, n = rooms[0].length;
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (let gr = 0; gr < m; gr++)
+        for (let gc = 0; gc < n; gc++) {
+            if (rooms[gr][gc] !== 0) continue;
+            const seen = Array.from({ length: m }, () => new Array(n).fill(false));
+            let q = [[gr, gc, 0]];
+            seen[gr][gc] = true;
+            while (q.length) {
+                const next = [];
+                for (const [pr, pc, pd] of q)
+                    for (const [dr, dc] of dirs) {
+                        const r = pr + dr, c = pc + dc;
+                        if (r < 0 || c < 0 || r >= m || c >= n || seen[r][c] || rooms[r][c] <= 0) continue;
+                        seen[r][c] = true;
+                        rooms[r][c] = Math.min(rooms[r][c], pd + 1);
+                        next.push([r, c, pd + 1]);
+                    }
+                q = next;
+            }
+        }
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Multi-source BFS',
+        idea: 'Put every gate in the queue at distance 0 and run one BFS. The wave from the nearest gate reaches each room first, so each room is written exactly once.',
+        steps: [
+          'Push every gate onto a queue.',
+          'Pop a cell; for each neighbour that is still INF, set it to this cell\'s value + 1 and push it.',
+          'Walls (−1), gates (0) and rooms already filled are never pushed again.',
+        ],
+        time: 'O(m · n)', space: 'O(m · n)',
+        why: 'BFS processes cells in order of distance from the set of all gates, so the first value written into a room is its minimum. Every cell enters the queue at most once. The grid itself doubles as the visited marker.',
+        code: {
+          java: r`class Solution {
+    public void wallsAndGates(int[][] rooms) {
+        int m = rooms.length, n = rooms[0].length;
+        Deque<int[]> q = new ArrayDeque<>();
+        for (int r = 0; r < m; r++) for (int c = 0; c < n; c++) if (rooms[r][c] == 0) q.add(new int[] { r, c });
+        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        while (!q.isEmpty()) {
+            int[] p = q.poll();
+            for (int[] d : dirs) {
+                int r = p[0] + d[0], c = p[1] + d[1];
+                if (r < 0 || c < 0 || r >= m || c >= n || rooms[r][c] != Integer.MAX_VALUE) continue;
+                rooms[r][c] = rooms[p[0]][p[1]] + 1;
+                q.add(new int[] { r, c });
+            }
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    void wallsAndGates(vector<vector<int>>& rooms) {
+        int m = rooms.size(), n = rooms[0].size();
+        queue<pair<int, int>> q;
+        for (int r = 0; r < m; r++) for (int c = 0; c < n; c++) if (rooms[r][c] == 0) q.push({r, c});
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!q.empty()) {
+            auto [pr, pc] = q.front(); q.pop();
+            for (auto& d : dirs) {
+                int r = pr + d[0], c = pc + d[1];
+                if (r < 0 || c < 0 || r >= m || c >= n || rooms[r][c] != INT_MAX) continue;
+                rooms[r][c] = rooms[pr][pc] + 1;
+                q.push({r, c});
+            }
+        }
+    }
+};`,
+          python: r`class Solution:
+    def wallsAndGates(self, rooms: List[List[int]]) -> None:
+        INF = 2147483647
+        m, n = len(rooms), len(rooms[0])
+        q = deque((r, c) for r in range(m) for c in range(n) if rooms[r][c] == 0)
+        while q:
+            pr, pc = q.popleft()
+            for r, c in ((pr + 1, pc), (pr - 1, pc), (pr, pc + 1), (pr, pc - 1)):
+                if 0 <= r < m and 0 <= c < n and rooms[r][c] == INF:
+                    rooms[r][c] = rooms[pr][pc] + 1
+                    q.append((r, c))`,
+          javascript: r`var wallsAndGates = function(rooms) {
+    const INF = 2147483647, m = rooms.length, n = rooms[0].length;
+    let q = [];
+    for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) if (rooms[r][c] === 0) q.push([r, c]);
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (let head = 0; head < q.length; head++) {
+        const [pr, pc] = q[head];
+        for (const [dr, dc] of dirs) {
+            const r = pr + dr, c = pc + dc;
+            if (r < 0 || c < 0 || r >= m || c >= n || rooms[r][c] !== INF) continue;
+            rooms[r][c] = rooms[pr][pc] + 1;
+            q.push([r, c]);
+        }
+    }
+};`,
+        },
+      },
+    ],
+  },
+  'open-the-lock': {
+    pattern: 'BFS over implicit states (each combination is a node)',
+    approaches: [
+      {
+        level: 'Better', name: 'BFS from "0000"',
+        idea: 'Each combination has 8 neighbours. BFS level by level from "0000", never entering a deadend, until the target appears.',
+        steps: [
+          'If "0000" is a deadend, return -1. Put the deadends in a set.',
+          'BFS from "0000": for each combination, turn each of the 4 wheels up and down to get 8 neighbours.',
+          'Skip deadends and visited combinations; return the level number when the target is popped, or -1 if the queue empties.',
+        ],
+        time: 'O(10⁴ · 8 · 4 + d)', space: 'O(10⁴ + d)',
+        why: 'At most 10⁴ combinations, each producing 8 four-character strings. d is the number of deadends. BFS gives the shortest path because every move costs 1.',
+        code: {
+          java: r`class Solution {
+    public int openLock(String[] deadends, String target) {
+        Set<String> dead = new HashSet<>(Arrays.asList(deadends));
+        if (dead.contains("0000")) return -1;
+        Set<String> seen = new HashSet<>();
+        Deque<String> q = new ArrayDeque<>();
+        q.add("0000"); seen.add("0000");
+        for (int steps = 0; !q.isEmpty(); steps++) {
+            for (int size = q.size(); size > 0; size--) {
+                String cur = q.poll();
+                if (cur.equals(target)) return steps;
+                char[] c = cur.toCharArray();
+                for (int i = 0; i < 4; i++) {
+                    char orig = c[i];
+                    for (int d : new int[] { 1, 9 }) {
+                        c[i] = (char) ('0' + (orig - '0' + d) % 10);
+                        String next = new String(c);
+                        if (!dead.contains(next) && seen.add(next)) q.add(next);
+                    }
+                    c[i] = orig;
+                }
+            }
+        }
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int openLock(vector<string>& deadends, string target) {
+        unordered_set<string> dead(deadends.begin(), deadends.end());
+        if (dead.count("0000")) return -1;
+        unordered_set<string> seen{"0000"};
+        queue<string> q;
+        q.push("0000");
+        for (int steps = 0; !q.empty(); steps++) {
+            for (int size = q.size(); size > 0; size--) {
+                string cur = q.front(); q.pop();
+                if (cur == target) return steps;
+                for (int i = 0; i < 4; i++) {
+                    char orig = cur[i];
+                    for (int d : {1, 9}) {
+                        cur[i] = '0' + (orig - '0' + d) % 10;
+                        if (!dead.count(cur) && seen.insert(cur).second) q.push(cur);
+                    }
+                    cur[i] = orig;
+                }
+            }
+        }
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def openLock(self, deadends: List[str], target: str) -> int:
+        dead = set(deadends)
+        if "0000" in dead:
+            return -1
+        seen, q, steps = {"0000"}, deque(["0000"]), 0
+        while q:
+            for _ in range(len(q)):
+                cur = q.popleft()
+                if cur == target:
+                    return steps
+                for i in range(4):
+                    digit = int(cur[i])
+                    for d in (1, 9):
+                        nxt = cur[:i] + str((digit + d) % 10) + cur[i + 1:]
+                        if nxt not in dead and nxt not in seen:
+                            seen.add(nxt)
+                            q.append(nxt)
+            steps += 1
+        return -1`,
+          javascript: r`var openLock = function(deadends, target) {
+    const dead = new Set(deadends);
+    if (dead.has("0000")) return -1;
+    const seen = new Set(["0000"]);
+    let q = ["0000"];
+    for (let steps = 0; q.length; steps++) {
+        const next = [];
+        for (const cur of q) {
+            if (cur === target) return steps;
+            for (let i = 0; i < 4; i++) {
+                const digit = cur.charCodeAt(i) - 48;
+                for (const d of [1, 9]) {
+                    const s = cur.slice(0, i) + ((digit + d) % 10) + cur.slice(i + 1);
+                    if (!dead.has(s) && !seen.has(s)) { seen.add(s); next.push(s); }
+                }
+            }
+        }
+        q = next;
+    }
+    return -1;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Bidirectional BFS',
+        idea: 'Grow one frontier from "0000" and one from the target, always expanding the smaller one. They meet in the middle after exploring far fewer states.',
+        steps: [
+          'Handle "0000" being a deadend or equal to the target.',
+          'Keep two frontier sets, `begin = {"0000"}` and `end = {target}`, plus a shared visited set. Swap so `begin` is the smaller.',
+          'Expand every combination of `begin` into its 8 neighbours; if a neighbour is in `end`, return steps + 1; otherwise add unvisited, non-dead ones to the next frontier.',
+        ],
+        time: 'O(10⁴ · 8 · 4 + d)', space: 'O(10⁴ + d)',
+        why: 'The worst case is the same, but each side only searches about half the distance, and the number of states grows quickly with distance, so in practice it touches a fraction of the combinations. Always expanding the smaller frontier keeps the work balanced.',
+        code: {
+          java: r`class Solution {
+    public int openLock(String[] deadends, String target) {
+        Set<String> dead = new HashSet<>(Arrays.asList(deadends));
+        if (dead.contains("0000")) return -1;
+        if (target.equals("0000")) return 0;
+        Set<String> begin = new HashSet<>(), end = new HashSet<>(), seen = new HashSet<>();
+        begin.add("0000"); end.add(target); seen.add("0000"); seen.add(target);
+        for (int steps = 0; !begin.isEmpty() && !end.isEmpty(); steps++) {
+            if (begin.size() > end.size()) { Set<String> t = begin; begin = end; end = t; }
+            Set<String> next = new HashSet<>();
+            for (String cur : begin) {
+                char[] c = cur.toCharArray();
+                for (int i = 0; i < 4; i++) {
+                    char orig = c[i];
+                    for (int d : new int[] { 1, 9 }) {
+                        c[i] = (char) ('0' + (orig - '0' + d) % 10);
+                        String s = new String(c);
+                        if (end.contains(s)) return steps + 1;
+                        if (!dead.contains(s) && seen.add(s)) next.add(s);
+                    }
+                    c[i] = orig;
+                }
+            }
+            begin = next;
+        }
+        return -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int openLock(vector<string>& deadends, string target) {
+        unordered_set<string> dead(deadends.begin(), deadends.end());
+        if (dead.count("0000")) return -1;
+        if (target == "0000") return 0;
+        unordered_set<string> begin{"0000"}, end{target}, seen{"0000", target};
+        for (int steps = 0; !begin.empty() && !end.empty(); steps++) {
+            if (begin.size() > end.size()) swap(begin, end);
+            unordered_set<string> next;
+            for (string cur : begin) {
+                for (int i = 0; i < 4; i++) {
+                    char orig = cur[i];
+                    for (int d : {1, 9}) {
+                        cur[i] = '0' + (orig - '0' + d) % 10;
+                        if (end.count(cur)) return steps + 1;
+                        if (!dead.count(cur) && seen.insert(cur).second) next.insert(cur);
+                    }
+                    cur[i] = orig;
+                }
+            }
+            begin = next;
+        }
+        return -1;
+    }
+};`,
+          python: r`class Solution:
+    def openLock(self, deadends: List[str], target: str) -> int:
+        dead = set(deadends)
+        if "0000" in dead:
+            return -1
+        if target == "0000":
+            return 0
+        begin, end, seen = {"0000"}, {target}, {"0000", target}
+        steps = 0
+        while begin and end:
+            if len(begin) > len(end):
+                begin, end = end, begin
+            nxt = set()
+            for cur in begin:
+                for i in range(4):
+                    digit = int(cur[i])
+                    for d in (1, 9):
+                        s = cur[:i] + str((digit + d) % 10) + cur[i + 1:]
+                        if s in end:
+                            return steps + 1
+                        if s not in dead and s not in seen:
+                            seen.add(s)
+                            nxt.add(s)
+            begin = nxt
+            steps += 1
+        return -1`,
+          javascript: r`var openLock = function(deadends, target) {
+    const dead = new Set(deadends);
+    if (dead.has("0000")) return -1;
+    if (target === "0000") return 0;
+    let begin = new Set(["0000"]), end = new Set([target]);
+    const seen = new Set(["0000", target]);
+    for (let steps = 0; begin.size && end.size; steps++) {
+        if (begin.size > end.size) [begin, end] = [end, begin];
+        const next = new Set();
+        for (const cur of begin) {
+            for (let i = 0; i < 4; i++) {
+                const digit = cur.charCodeAt(i) - 48;
+                for (const d of [1, 9]) {
+                    const s = cur.slice(0, i) + ((digit + d) % 10) + cur.slice(i + 1);
+                    if (end.has(s)) return steps + 1;
+                    if (!dead.has(s) && !seen.has(s)) { seen.add(s); next.add(s); }
+                }
+            }
+        }
+        begin = next;
+    }
+    return -1;
+};`,
+        },
+      },
+    ],
+  },
+  'evaluate-division': {
+    pattern: 'Weighted graph search (or weighted union-find)',
+    approaches: [
+      {
+        level: 'Better', name: 'DFS per query on a weighted graph',
+        idea: 'Each equation A / B = v becomes two edges, A → B with weight v and B → A with weight 1 / v. A query C / D is the product of weights along any path from C to D.',
+        steps: [
+          'Build an adjacency map from the equations, in both directions.',
+          'For each query, return -1.0 if either variable is unknown; otherwise DFS from C, multiplying weights, until D is reached.',
+          'Return the product, or -1.0 if D is unreachable.',
+        ],
+        time: 'O(Q · (V + E))', space: 'O(V + E)',
+        why: 'Each query may explore the whole graph once. With at most 20 equations and 20 queries this is tiny. Any path gives the same product because the equations are consistent.',
+        code: {
+          java: r`class Solution {
+    public double[] calcEquation(List<List<String>> equations, double[] values, List<List<String>> queries) {
+        Map<String, Map<String, Double>> g = new HashMap<>();
+        for (int i = 0; i < values.length; i++) {
+            String a = equations.get(i).get(0), b = equations.get(i).get(1);
+            g.computeIfAbsent(a, k -> new HashMap<>()).put(b, values[i]);
+            g.computeIfAbsent(b, k -> new HashMap<>()).put(a, 1 / values[i]);
+        }
+        double[] out = new double[queries.size()];
+        for (int q = 0; q < out.length; q++) {
+            String c = queries.get(q).get(0), d = queries.get(q).get(1);
+            out[q] = g.containsKey(c) && g.containsKey(d) ? dfs(g, c, d, new HashSet<>()) : -1.0;
+        }
+        return out;
+    }
+    private double dfs(Map<String, Map<String, Double>> g, String cur, String target, Set<String> seen) {
+        if (cur.equals(target)) return 1.0;
+        seen.add(cur);
+        for (Map.Entry<String, Double> e : g.get(cur).entrySet()) {
+            if (seen.contains(e.getKey())) continue;
+            double r = dfs(g, e.getKey(), target, seen);
+            if (r >= 0) return e.getValue() * r;
+        }
+        return -1.0;
+    }
+}`,
+          cpp: r`class Solution {
+    unordered_map<string, unordered_map<string, double>> g;
+    double dfs(const string& cur, const string& target, unordered_set<string>& seen) {
+        if (cur == target) return 1.0;
+        seen.insert(cur);
+        for (auto& [next, w] : g[cur]) {
+            if (seen.count(next)) continue;
+            double r = dfs(next, target, seen);
+            if (r >= 0) return w * r;
+        }
+        return -1.0;
+    }
+public:
+    vector<double> calcEquation(vector<vector<string>>& equations, vector<double>& values, vector<vector<string>>& queries) {
+        for (size_t i = 0; i < values.size(); i++) {
+            g[equations[i][0]][equations[i][1]] = values[i];
+            g[equations[i][1]][equations[i][0]] = 1 / values[i];
+        }
+        vector<double> out;
+        for (auto& q : queries) {
+            if (!g.count(q[0]) || !g.count(q[1])) { out.push_back(-1.0); continue; }
+            unordered_set<string> seen;
+            out.push_back(dfs(q[0], q[1], seen));
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def calcEquation(self, equations: List[List[str]], values: List[float], queries: List[List[str]]) -> List[float]:
+        g = defaultdict(dict)
+        for (a, b), v in zip(equations, values):
+            g[a][b] = v
+            g[b][a] = 1 / v
+        def dfs(cur, target, seen):
+            if cur == target:
+                return 1.0
+            seen.add(cur)
+            for nxt, w in g[cur].items():
+                if nxt not in seen:
+                    r = dfs(nxt, target, seen)
+                    if r >= 0:
+                        return w * r
+            return -1.0
+        return [dfs(c, d, set()) if c in g and d in g else -1.0 for c, d in queries]`,
+          javascript: r`var calcEquation = function(equations, values, queries) {
+    const g = new Map();
+    const add = (a, b, w) => { if (!g.has(a)) g.set(a, new Map()); g.get(a).set(b, w); };
+    equations.forEach(([a, b], i) => { add(a, b, values[i]); add(b, a, 1 / values[i]); });
+    const dfs = (cur, target, seen) => {
+        if (cur === target) return 1;
+        seen.add(cur);
+        for (const [next, w] of g.get(cur)) {
+            if (seen.has(next)) continue;
+            const r = dfs(next, target, seen);
+            if (r >= 0) return w * r;
+        }
+        return -1;
+    };
+    return queries.map(([c, d]) => (g.has(c) && g.has(d) ? dfs(c, d, new Set()) : -1));
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Weighted union-find',
+        idea: 'Group connected variables in a union-find, and store for each variable its ratio to its parent. After path compression, `weight[x]` is `x / root`, so `C / D = weight[C] / weight[D]` when they share a root.',
+        steps: [
+          '`find(x)` compresses the path and multiplies weights along it, so afterwards `parent[x]` is the root and `weight[x] = x / root`.',
+          'For A / B = v: find both roots `ra`, `rb`; if different, attach `ra` under `rb` with `weight[ra] = v · weight[B] / weight[A]`.',
+          'For a query C / D: if either is unknown or the roots differ, answer -1.0; otherwise answer `weight[C] / weight[D]`.',
+        ],
+        time: 'O((E + Q) · α(V))', space: 'O(V)',
+        why: 'α is the inverse Ackermann function, effectively constant, so every equation and query is near O(1). The weight formula comes from A / ra = w[A] and B / rb = w[B]: then ra / rb = (A / w[A]) / (B / w[B]) = v · w[B] / w[A].',
+        code: {
+          java: r`class Solution {
+    private final Map<String, String> parent = new HashMap<>();
+    private final Map<String, Double> weight = new HashMap<>();
+    private String find(String x) {
+        String p = parent.get(x);
+        if (!p.equals(x)) {
+            String root = find(p);
+            weight.put(x, weight.get(x) * weight.get(p));
+            parent.put(x, root);
+        }
+        return parent.get(x);
+    }
+    public double[] calcEquation(List<List<String>> equations, double[] values, List<List<String>> queries) {
+        for (int i = 0; i < values.length; i++) {
+            String a = equations.get(i).get(0), b = equations.get(i).get(1);
+            for (String v : new String[] { a, b }) if (!parent.containsKey(v)) { parent.put(v, v); weight.put(v, 1.0); }
+            String ra = find(a), rb = find(b);
+            if (!ra.equals(rb)) {
+                parent.put(ra, rb);
+                weight.put(ra, values[i] * weight.get(b) / weight.get(a));
+            }
+        }
+        double[] out = new double[queries.size()];
+        for (int q = 0; q < out.length; q++) {
+            String c = queries.get(q).get(0), d = queries.get(q).get(1);
+            if (!parent.containsKey(c) || !parent.containsKey(d) || !find(c).equals(find(d))) out[q] = -1.0;
+            else out[q] = weight.get(c) / weight.get(d);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+    unordered_map<string, string> parent;
+    unordered_map<string, double> weight;
+    string find(const string& x) {
+        if (parent[x] != x) {
+            string p = parent[x];
+            string root = find(p);
+            weight[x] *= weight[p];
+            parent[x] = root;
+        }
+        return parent[x];
+    }
+public:
+    vector<double> calcEquation(vector<vector<string>>& equations, vector<double>& values, vector<vector<string>>& queries) {
+        for (size_t i = 0; i < values.size(); i++) {
+            const string& a = equations[i][0];
+            const string& b = equations[i][1];
+            for (const string& v : {a, b}) if (!parent.count(v)) { parent[v] = v; weight[v] = 1.0; }
+            string ra = find(a), rb = find(b);
+            if (ra != rb) {
+                parent[ra] = rb;
+                weight[ra] = values[i] * weight[b] / weight[a];
+            }
+        }
+        vector<double> out;
+        for (auto& q : queries) {
+            if (!parent.count(q[0]) || !parent.count(q[1]) || find(q[0]) != find(q[1])) out.push_back(-1.0);
+            else out.push_back(weight[q[0]] / weight[q[1]]);
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def calcEquation(self, equations: List[List[str]], values: List[float], queries: List[List[str]]) -> List[float]:
+        parent, weight = {}, {}
+        def find(x):
+            if parent[x] != x:
+                p = parent[x]
+                root = find(p)
+                weight[x] *= weight[p]
+                parent[x] = root
+            return parent[x]
+        for (a, b), v in zip(equations, values):
+            for x in (a, b):
+                if x not in parent:
+                    parent[x], weight[x] = x, 1.0
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[ra] = rb
+                weight[ra] = v * weight[b] / weight[a]
+        out = []
+        for c, d in queries:
+            if c not in parent or d not in parent or find(c) != find(d):
+                out.append(-1.0)
+            else:
+                out.append(weight[c] / weight[d])
+        return out`,
+          javascript: r`var calcEquation = function(equations, values, queries) {
+    const parent = new Map(), weight = new Map();
+    const find = (x) => {
+        const p = parent.get(x);
+        if (p !== x) {
+            const root = find(p);
+            weight.set(x, weight.get(x) * weight.get(p));
+            parent.set(x, root);
+        }
+        return parent.get(x);
+    };
+    equations.forEach(([a, b], i) => {
+        for (const v of [a, b]) if (!parent.has(v)) { parent.set(v, v); weight.set(v, 1); }
+        const ra = find(a), rb = find(b);
+        if (ra !== rb) {
+            parent.set(ra, rb);
+            weight.set(ra, values[i] * weight.get(b) / weight.get(a));
+        }
+    });
+    return queries.map(([c, d]) => {
+        if (!parent.has(c) || !parent.has(d) || find(c) !== find(d)) return -1;
+        return weight.get(c) / weight.get(d);
+    });
+};`,
+        },
+      },
+    ],
+  },
+  'reconstruct-itinerary': {
+    pattern: 'Eulerian path with Hierholzer\'s algorithm',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Backtracking in lexical order',
+        idea: 'Sort each airport\'s destinations. DFS from JFK, always trying the smallest unused ticket first; if you get stuck before using every ticket, undo and try the next one. The first complete route found is the answer.',
+        steps: [
+          'Build sorted destination lists with a "used" flag per ticket.',
+          'DFS(airport): if the route has `tickets + 1` stops, succeed. Otherwise try each unused ticket from this airport in order: mark it, append, recurse, and undo on failure.',
+          'Return the route from the first success.',
+        ],
+        time: 'O(Eᵈ)', space: 'O(E)',
+        why: 'E is the number of tickets and d the largest number of tickets out of one airport. Usually fast, but in the worst case it explores many dead ends. Trying destinations in sorted order guarantees the first full route is the lexically smallest.',
+        code: {
+          java: r`class Solution {
+    private final Map<String, List<String>> g = new HashMap<>();
+    private final Map<String, boolean[]> used = new HashMap<>();
+    private final List<String> route = new ArrayList<>();
+    private int total;
+    public List<String> findItinerary(List<List<String>> tickets) {
+        for (List<String> t : tickets) g.computeIfAbsent(t.get(0), k -> new ArrayList<>()).add(t.get(1));
+        for (Map.Entry<String, List<String>> e : g.entrySet()) { Collections.sort(e.getValue()); used.put(e.getKey(), new boolean[e.getValue().size()]); }
+        total = tickets.size() + 1;
+        route.add("JFK");
+        dfs("JFK");
+        return route;
+    }
+    private boolean dfs(String at) {
+        if (route.size() == total) return true;
+        List<String> next = g.get(at);
+        if (next == null) return false;
+        boolean[] u = used.get(at);
+        for (int i = 0; i < next.size(); i++) {
+            if (u[i] || (i > 0 && !u[i - 1] && next.get(i).equals(next.get(i - 1)))) continue;
+            u[i] = true;
+            route.add(next.get(i));
+            if (dfs(next.get(i))) return true;
+            route.remove(route.size() - 1);
+            u[i] = false;
+        }
+        return false;
+    }
+}`,
+          cpp: r`class Solution {
+    unordered_map<string, vector<string>> g;
+    unordered_map<string, vector<bool>> used;
+    vector<string> route;
+    size_t total = 0;
+    bool dfs(const string& at) {
+        if (route.size() == total) return true;
+        auto it = g.find(at);
+        if (it == g.end()) return false;
+        vector<string>& next = it->second;
+        vector<bool>& u = used[at];
+        for (size_t i = 0; i < next.size(); i++) {
+            if (u[i] || (i > 0 && !u[i - 1] && next[i] == next[i - 1])) continue;
+            u[i] = true;
+            route.push_back(next[i]);
+            if (dfs(next[i])) return true;
+            route.pop_back();
+            u[i] = false;
+        }
+        return false;
+    }
+public:
+    vector<string> findItinerary(vector<vector<string>>& tickets) {
+        for (auto& t : tickets) g[t[0]].push_back(t[1]);
+        for (auto& [k, v] : g) { sort(v.begin(), v.end()); used[k] = vector<bool>(v.size(), false); }
+        total = tickets.size() + 1;
+        route.push_back("JFK");
+        dfs("JFK");
+        return route;
+    }
+};`,
+          python: r`class Solution:
+    def findItinerary(self, tickets: List[List[str]]) -> List[str]:
+        g = defaultdict(list)
+        for a, b in tickets:
+            g[a].append(b)
+        for k in g:
+            g[k].sort()
+        used = {k: [False] * len(v) for k, v in g.items()}
+        route, total = ["JFK"], len(tickets) + 1
+        def dfs(at):
+            if len(route) == total:
+                return True
+            nxt, u = g.get(at, []), used.get(at, [])
+            for i, dest in enumerate(nxt):
+                if u[i] or (i > 0 and not u[i - 1] and dest == nxt[i - 1]):
+                    continue
+                u[i] = True
+                route.append(dest)
+                if dfs(dest):
+                    return True
+                route.pop()
+                u[i] = False
+            return False
+        dfs("JFK")
+        return route`,
+          javascript: r`var findItinerary = function(tickets) {
+    const g = new Map();
+    for (const [a, b] of tickets) { if (!g.has(a)) g.set(a, []); g.get(a).push(b); }
+    const used = new Map();
+    for (const [k, v] of g) { v.sort(); used.set(k, new Array(v.length).fill(false)); }
+    const route = ["JFK"], total = tickets.length + 1;
+    const dfs = (at) => {
+        if (route.length === total) return true;
+        const next = g.get(at);
+        if (!next) return false;
+        const u = used.get(at);
+        for (let i = 0; i < next.length; i++) {
+            if (u[i] || (i > 0 && !u[i - 1] && next[i] === next[i - 1])) continue;
+            u[i] = true;
+            route.push(next[i]);
+            if (dfs(next[i])) return true;
+            route.pop();
+            u[i] = false;
+        }
+        return false;
+    };
+    dfs("JFK");
+    return route;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Hierholzer with min-heaps',
+        idea: 'Walk greedily along the smallest unused ticket. When an airport has no tickets left, it must be the end of what remains of the trip, so add it to the front of the route and back up. Dead ends are handled automatically.',
+        steps: [
+          'Keep each airport\'s destinations in a min-heap (or a list sorted in reverse, popped from the end).',
+          'Push "JFK" on a stack. While the stack is not empty: if the top airport still has tickets, push its smallest destination (removing that ticket).',
+          'Otherwise pop the airport and prepend it to the route. Return the route.',
+        ],
+        time: 'O(E log E)', space: 'O(E)',
+        why: 'Every ticket is pushed and popped once, plus the heap work. An airport is added to the route only after all its tickets are spent, which is exactly the post-order that builds an Eulerian path backwards. A dead end visited too early simply ends up later in the route.',
+        code: {
+          java: r`class Solution {
+    public List<String> findItinerary(List<List<String>> tickets) {
+        Map<String, PriorityQueue<String>> g = new HashMap<>();
+        for (List<String> t : tickets) g.computeIfAbsent(t.get(0), k -> new PriorityQueue<>()).add(t.get(1));
+        LinkedList<String> route = new LinkedList<>();
+        Deque<String> st = new ArrayDeque<>();
+        st.push("JFK");
+        while (!st.isEmpty()) {
+            PriorityQueue<String> out = g.get(st.peek());
+            if (out != null && !out.isEmpty()) st.push(out.poll());
+            else route.addFirst(st.pop());
+        }
+        return route;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<string> findItinerary(vector<vector<string>>& tickets) {
+        unordered_map<string, priority_queue<string, vector<string>, greater<string>>> g;
+        for (auto& t : tickets) g[t[0]].push(t[1]);
+        vector<string> route;
+        stack<string> st;
+        st.push("JFK");
+        while (!st.empty()) {
+            auto& out = g[st.top()];
+            if (!out.empty()) { string next = out.top(); out.pop(); st.push(next); }
+            else { route.push_back(st.top()); st.pop(); }
+        }
+        reverse(route.begin(), route.end());
+        return route;
+    }
+};`,
+          python: r`class Solution:
+    def findItinerary(self, tickets: List[List[str]]) -> List[str]:
+        g = defaultdict(list)
+        for a, b in sorted(tickets, reverse=True):
+            g[a].append(b)
+        route, st = [], ["JFK"]
+        while st:
+            if g[st[-1]]:
+                st.append(g[st[-1]].pop())
+            else:
+                route.append(st.pop())
+        return route[::-1]`,
+          javascript: r`var findItinerary = function(tickets) {
+    const g = new Map();
+    for (const [a, b] of [...tickets].sort((x, y) => (x[1] < y[1] ? 1 : x[1] > y[1] ? -1 : 0))) {
+        if (!g.has(a)) g.set(a, []);
+        g.get(a).push(b);
+    }
+    const route = [], st = ["JFK"];
+    while (st.length) {
+        const out = g.get(st[st.length - 1]);
+        if (out && out.length) st.push(out.pop());
+        else route.push(st.pop());
+    }
+    return route.reverse();
+};`,
+        },
+      },
+    ],
+  },
 };

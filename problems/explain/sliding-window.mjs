@@ -31,4 +31,11 @@ export default {
     explain: 'The subarrays with exactly 2 different values are `[1,2]`, `[2,1]`, `[1,2]`, `[2,3]`, `[1,2,1]`, `[2,1,2]` and `[1,2,1,2]`: 7 in total.',
     more: 'A useful trick: the number with exactly k different values equals the number with at most k minus the number with at most k − 1, and "at most" is easy to count with a sliding window.',
   },
+  'contains-duplicate-ii': {
+    explain: 'The value 1 sits at indices 0 and 3, which are 3 apart, and k = 3 allows that distance, so the answer is `true`.',
+    more: 'For example `[1,2,3,1,2,3]` with k = 2 is `false`: every repeated value is exactly 3 positions after its first copy.',
+  },
+  'find-k-closest-elements': {
+    explain: 'Distances from x = 3 are 2, 1, 0, 1, 2. The four smallest are 0, 1, 1 and one of the 2s; on that tie 1 beats 5 because it is smaller, so the answer is `[1,2,3,4]`.',
+  },
 };

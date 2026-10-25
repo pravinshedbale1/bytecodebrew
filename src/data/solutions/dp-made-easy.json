@@ -94,7 +94,8 @@
     "space": "O(n)",
     "why": "The call tree doubles at every level with massive repetition: n = 45 needs billions of calls.",
     "timesOut": [
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int climbStairs(int n) {\n        return n <= 2 ? n : climbStairs(n - 1) + climbStairs(n - 2);\n    }\n}",
@@ -257,7 +258,8 @@
     "space": "O(n)",
     "why": "Three calls per level with heavy repetition — the call count itself grows like the sequence (about 1.84ⁿ), billions for n = 37.",
     "timesOut": [
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int tribonacci(int n) {\n        if (n == 0) return 0;\n        if (n <= 2) return 1;\n        return tribonacci(n - 1) + tribonacci(n - 2) + tribonacci(n - 3);\n    }\n}",

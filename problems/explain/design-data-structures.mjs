@@ -35,4 +35,19 @@ export default {
   'insert-delete-getrandom-o1-duplicates-allowed': {
     explain: 'Inserting 1 returns `true` (new), inserting it again returns `false` (already present, but now held twice), inserting 2 returns `true`. `getRandom` returns 1 with chance 2/3 (1 here). After removing one copy of 1, the values are 1 and 2 with equal chance (2 here). Output: `[null,true,false,true,1,true,2]`.',
   },
+  'design-hashset': {
+    explain: 'After adding 1 and 2, `contains(1)` is true and `contains(3)` is false. Adding 2 again changes nothing, so `contains(2)` is true; after `remove(2)` it is false. Output: `[null,null,null,true,false,null,true,null,false]`.',
+  },
+  'implement-stack-using-queues': {
+    explain: 'After pushing 1 and 2, the top is 2. `pop` removes and returns 2, and 1 is still there, so `empty` is false. Output: `[null,null,null,2,2,false]`.',
+  },
+  'design-circular-queue': {
+    explain: 'Capacity 3: enqueuing 1, 2 and 3 succeeds and 4 fails because the queue is full. The rear is 3 and `isFull` is true. `deQueue` removes 1, which frees a slot, so enqueuing 4 succeeds and becomes the new rear. Output: `[null,true,true,true,false,3,true,true,true,4]`.',
+  },
+  'detect-squares': {
+    explain: 'With (3,10), (11,2) and (3,2) stored, the query (11,10) completes one square of side 8. (14,8) completes none. After a second copy of (11,2) is added, the same square can use either copy, so the last count is 2. Output: `[null,null,null,null,1,0,null,2]`.',
+  },
+  'maximum-frequency-stack': {
+    explain: 'After the pushes, 5 appears three times and 7 twice. The first pop returns 5. Now 5 and 7 tie at two copies, and 7 was pushed more recently, so 7 comes next, then 5. Finally 5, 7 and 4 all appear once and 4 is nearest the top. Output: `[null,null,null,null,null,null,null,5,7,5,4]`.',
+  },
 };

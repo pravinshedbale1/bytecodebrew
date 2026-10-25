@@ -15,7 +15,8 @@
     "space": "O(1)",
     "why": "M is the largest pile (up to 10⁹); each speed costs a pass over the n piles.",
     "timesOut": [
-     3
+     3,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public int minEatingSpeed(int[] piles, int h) {\n        for (int k = 1; ; k++) {\n            long hours = 0;\n            for (int p : piles) hours += (p + k - 1) / k;\n            if (hours <= h) return k;\n        }\n    }\n}",
@@ -194,7 +195,8 @@
     "space": "O(1)",
     "why": "T is the answer itself, which can reach 10¹⁴ (one slow bus making 10⁷ trips).",
     "timesOut": [
-     3
+     3,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    public long minimumTime(int[] time, int totalTrips) {\n        for (long t = 1; ; t++) {\n            long trips = 0;\n            for (int x : time) {\n                trips += t / x;\n                if (trips >= totalTrips) return t;\n            }\n        }\n    }\n}",
@@ -245,7 +247,10 @@
      "cpp": "class Solution {\n    bool fits(vector<int>& pos, int d, int m) {\n        int placed = 1, last = pos[0];\n        for (int p : pos) if (p - last >= d) { placed++; last = p; }\n        return placed >= m;\n    }\npublic:\n    int maxDistance(vector<int>& position, int m) {\n        sort(position.begin(), position.end());\n        for (int d = (position.back() - position[0]) / (m - 1); d > 1; d--)\n            if (fits(position, d, m)) return d;\n        return 1;\n    }\n};",
      "python": "class Solution:\n    def maxDistance(self, position: List[int], m: int) -> int:\n        position.sort()\n        def fits(d):\n            placed, last = 1, position[0]\n            for p in position:\n                if p - last >= d:\n                    placed += 1\n                    last = p\n            return placed >= m\n        d = (position[-1] - position[0]) // (m - 1)\n        while d > 1 and not fits(d):\n            d -= 1\n        return d",
      "javascript": "var maxDistance = function(position, m) {\n    position.sort((a, b) => a - b);\n    const fits = (d) => {\n        let placed = 1, last = position[0];\n        for (const p of position) if (p - last >= d) { placed++; last = p; }\n        return placed >= m;\n    };\n    let d = Math.floor((position[position.length - 1] - position[0]) / (m - 1));\n    while (d > 1 && !fits(d)) d--;\n    return d;\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Optimal",

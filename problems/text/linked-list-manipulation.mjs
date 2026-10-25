@@ -98,4 +98,28 @@ Change the links, not the values, and use only O(1) extra memory.`,
       'After reversing, the group\'s old first node is its new last node: connect it to the rest of the list and make it the "before" node of the next group.',
     ],
   },
+  'insert-greatest-common-divisors-in-linked-list': {
+    statement: `For every pair of adjacent nodes in the list, insert a new node between them whose value is the **greatest common divisor** (GCD) of the two values. Return the head of the resulting list.
+
+The GCD of two numbers is the largest positive integer that divides both.`,
+    constraints: ['1 <= head.nodes <= 5000', '1 <= head.val <= 1000'],
+    hints: [
+      'Walk the list with a pointer a. While a has a next node b, a new node goes between them.',
+      'Create the node with value gcd(a.val, b.val), point it at b, and point a at it. Then jump to b (two steps), so you never insert next to a node you just created.',
+      'Euclid\'s algorithm: gcd(a, b) = gcd(b, a mod b), and gcd(a, 0) = a.',
+    ],
+  },
+  'copy-list-with-random-pointer': {
+    statement: `Each node of the list has a \`val\`, a \`next\` pointer and a \`random\` pointer, which points to any node of the list or is \`null\`.
+
+Return a **deep copy** of the list: \`n\` brand-new nodes with the same values, whose \`next\` and \`random\` pointers point to the corresponding **new** nodes. No pointer of the copy may point into the original list.
+
+In the tests, a list is written as \`[[val, random_index], …]\`, where \`random_index\` is the position of the node \`random\` points to, or \`null\`. The judge prints your copy in the same form and rejects it if it shares any node with the original.`,
+    constraints: ['The list has between 0 and 1000 nodes', '-10⁴ ≤ Node.val ≤ 10⁴', '`Node.random` is null or points to a node in the list'],
+    hints: [
+      'Creating the new nodes is easy. The problem is the random pointer: when you copy a node, the node its random points to may not have been copied yet.',
+      'Make two passes. First create every copy and remember old → new in a hash map. Then set copy.next = map[old.next] and copy.random = map[old.random].',
+      'For O(1) extra space, weave each copy right after its original (A → A\' → B → B\'). Then A\'.random = A.random.next, and finally unweave the two lists.',
+    ],
+  },
 };

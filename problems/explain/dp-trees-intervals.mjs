@@ -28,4 +28,10 @@ export default {
   'minimum-cost-to-cut-a-stick': {
     explain: 'Cutting in the order 3, 5, 1, 4 costs 7 (the whole stick), then 4 (the piece 3–7), then 3 (piece 0–3), then 2 (piece 3–5): 16 in total, the cheapest order.',
   },
+  'stone-game': {
+    explain: 'Alice takes the 5 at the start. Whatever end Bob takes from [3,4,5], Alice can take a 5 or 4 next and finish with 9 or 10 stones out of 17, so the answer is `true`.',
+  },
+  'stone-game-ii': {
+    explain: 'If Alice takes pile 1 (2 stones), M stays 1 and Bob takes piles 2 and 3 (16); Alice then takes the last two piles (8), for 10. Taking two piles first only gets her 9, so the answer is 10.',
+  },
 };

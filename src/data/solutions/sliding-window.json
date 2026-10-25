@@ -538,5 +538,129 @@
     }
    }
   ]
+ },
+ "contains-duplicate-ii": {
+  "pattern": "Fixed-size sliding window held in a hash set",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check the next k values",
+    "idea": "For each index, compare its value with the values at the next `k` positions.",
+    "steps": [
+     "For each `i`, loop `j` from `i + 1` to `min(n − 1, i + k)`.",
+     "If `nums[i] == nums[j]`, return `true`.",
+     "Return `false` after all pairs."
+    ],
+    "time": "O(n · min(n, k))",
+    "space": "O(1)",
+    "why": "With n and k both 10⁵ and no duplicates, that is about 10¹⁰ comparisons, so it times out on the large test.",
+    "code": {
+     "java": "class Solution {\n    public boolean containsNearbyDuplicate(int[] nums, int k) {\n        for (int i = 0; i < nums.length; i++)\n            for (int j = i + 1; j < nums.length && j <= i + k; j++)\n                if (nums[i] == nums[j]) return true;\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool containsNearbyDuplicate(vector<int>& nums, int k) {\n        int n = nums.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n && j <= i + k; j++)\n                if (nums[i] == nums[j]) return true;\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def containsNearbyDuplicate(self, nums: List[int], k: int) -> bool:\n        n = len(nums)\n        for i in range(n):\n            for j in range(i + 1, min(n, i + k + 1)):\n                if nums[i] == nums[j]:\n                    return True\n        return False",
+     "javascript": "var containsNearbyDuplicate = function(nums, k) {\n    for (let i = 0; i < nums.length; i++)\n        for (let j = i + 1; j < nums.length && j <= i + k; j++)\n            if (nums[i] === nums[j]) return true;\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Last index of each value",
+    "idea": "Remember where each value was last seen. A repeat is a hit when it is within `k` of that last position.",
+    "steps": [
+     "Keep a map `last` from value to its most recent index.",
+     "For each `i`: if `nums[i]` is in `last` and `i − last[nums[i]] <= k`, return `true`.",
+     "Set `last[nums[i]] = i` and continue."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Only the most recent copy matters, since it is the closest one to any later index. The map can hold all n values, while the window set below never holds more than k.",
+    "code": {
+     "java": "class Solution {\n    public boolean containsNearbyDuplicate(int[] nums, int k) {\n        Map<Integer, Integer> last = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            Integer j = last.put(nums[i], i);\n            if (j != null && i - j <= k) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool containsNearbyDuplicate(vector<int>& nums, int k) {\n        unordered_map<int, int> last;\n        for (int i = 0; i < (int) nums.size(); i++) {\n            auto it = last.find(nums[i]);\n            if (it != last.end() && i - it->second <= k) return true;\n            last[nums[i]] = i;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def containsNearbyDuplicate(self, nums: List[int], k: int) -> bool:\n        last = {}\n        for i, x in enumerate(nums):\n            if x in last and i - last[x] <= k:\n                return True\n            last[x] = i\n        return False",
+     "javascript": "var containsNearbyDuplicate = function(nums, k) {\n    const last = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        if (last.has(nums[i]) && i - last.get(nums[i]) <= k) return true;\n        last.set(nums[i], i);\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window set",
+    "idea": "Keep exactly the last `k` values in a set. A value already in the set has a copy at most `k` positions back.",
+    "steps": [
+     "For each `i`: try to add `nums[i]` to the set; if it was already there, return `true`.",
+     "If the set now holds more than `k` values, remove `nums[i − k]`, the value leaving the window.",
+     "Return `false` at the end."
+    ],
+    "time": "O(n)",
+    "space": "O(min(n, k))",
+    "why": "Each value enters and leaves the set once. The set never holds duplicates (we would have returned), so its size equals the window length and removing `nums[i − k]` removes exactly the oldest value. With k = 0 the set is emptied straight away, so no pair is ever found, which is correct.",
+    "code": {
+     "java": "class Solution {\n    public boolean containsNearbyDuplicate(int[] nums, int k) {\n        Set<Integer> window = new HashSet<>();\n        for (int i = 0; i < nums.length; i++) {\n            if (!window.add(nums[i])) return true;\n            if (window.size() > k) window.remove(nums[i - k]);\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool containsNearbyDuplicate(vector<int>& nums, int k) {\n        unordered_set<int> window;\n        for (int i = 0; i < (int) nums.size(); i++) {\n            if (!window.insert(nums[i]).second) return true;\n            if ((int) window.size() > k) window.erase(nums[i - k]);\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def containsNearbyDuplicate(self, nums: List[int], k: int) -> bool:\n        window = set()\n        for i, x in enumerate(nums):\n            if x in window:\n                return True\n            window.add(x)\n            if len(window) > k:\n                window.remove(nums[i - k])\n        return False",
+     "javascript": "var containsNearbyDuplicate = function(nums, k) {\n    const window = new Set();\n    for (let i = 0; i < nums.length; i++) {\n        if (window.has(nums[i])) return true;\n        window.add(nums[i]);\n        if (window.size > k) window.delete(nums[i - k]);\n    }\n    return false;\n};"
+    }
+   }
+  ]
+ },
+ "find-k-closest-elements": {
+  "pattern": "Binary search for the start of a fixed-size window",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sort by distance",
+    "idea": "Sort all values by (distance to `x`, value), take the first `k`, and sort those back into ascending order.",
+    "steps": [
+     "Copy `arr` and sort it by `|a − x|`, breaking ties by the smaller value.",
+     "Take the first `k` values.",
+     "Sort them ascending and return them."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "It ignores that `arr` is already sorted. Fine for 10⁴ values, but the interviewer wants you to use the order.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findClosestElements(int[] arr, int k, int x) {\n        List<Integer> all = new ArrayList<>();\n        for (int a : arr) all.add(a);\n        all.sort((a, b) -> Math.abs(a - x) != Math.abs(b - x) ? Math.abs(a - x) - Math.abs(b - x) : a - b);\n        List<Integer> out = new ArrayList<>(all.subList(0, k));\n        Collections.sort(out);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findClosestElements(vector<int>& arr, int k, int x) {\n        vector<int> all(arr);\n        stable_sort(all.begin(), all.end(), [x](int a, int b) {\n            return abs(a - x) != abs(b - x) ? abs(a - x) < abs(b - x) : a < b;\n        });\n        vector<int> out(all.begin(), all.begin() + k);\n        sort(out.begin(), out.end());\n        return out;\n    }\n};",
+     "python": "class Solution:\n    def findClosestElements(self, arr: List[int], k: int, x: int) -> List[int]:\n        return sorted(sorted(arr, key=lambda a: (abs(a - x), a))[:k])",
+     "javascript": "var findClosestElements = function(arr, k, x) {\n    const all = [...arr].sort((a, b) => Math.abs(a - x) - Math.abs(b - x) || a - b);\n    return all.slice(0, k).sort((a, b) => a - b);\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Shrink from both ends",
+    "idea": "The answer is a contiguous block. Start with the whole array and drop the end that is farther from `x` until `k` values remain.",
+    "steps": [
+     "Set `lo = 0`, `hi = n − 1`.",
+     "While `hi − lo + 1 > k`: if `x − arr[lo] <= arr[hi] − x`, drop the right end (`hi--`), otherwise drop the left (`lo++`).",
+     "Return `arr[lo..hi]`."
+    ],
+    "time": "O(n − k)",
+    "space": "O(1)",
+    "why": "Every step removes one value that cannot be in the answer: the farther end is never closer than anything inside. On a tie the right end goes, because the smaller value wins ties. Output space is not counted.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findClosestElements(int[] arr, int k, int x) {\n        int lo = 0, hi = arr.length - 1;\n        while (hi - lo + 1 > k) {\n            if (x - arr[lo] <= arr[hi] - x) hi--; else lo++;\n        }\n        List<Integer> out = new ArrayList<>();\n        for (int i = lo; i <= hi; i++) out.add(arr[i]);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findClosestElements(vector<int>& arr, int k, int x) {\n        int lo = 0, hi = (int) arr.size() - 1;\n        while (hi - lo + 1 > k) {\n            if (x - arr[lo] <= arr[hi] - x) hi--; else lo++;\n        }\n        return vector<int>(arr.begin() + lo, arr.begin() + hi + 1);\n    }\n};",
+     "python": "class Solution:\n    def findClosestElements(self, arr: List[int], k: int, x: int) -> List[int]:\n        lo, hi = 0, len(arr) - 1\n        while hi - lo + 1 > k:\n            if x - arr[lo] <= arr[hi] - x:\n                hi -= 1\n            else:\n                lo += 1\n        return arr[lo:hi + 1]",
+     "javascript": "var findClosestElements = function(arr, k, x) {\n    let lo = 0, hi = arr.length - 1;\n    while (hi - lo + 1 > k) {\n        if (x - arr[lo] <= arr[hi] - x) hi--; else lo++;\n    }\n    return arr.slice(lo, hi + 1);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Binary search the window start",
+    "idea": "Search for the best start `s` in `[0, n − k]`. Comparing the value just inside the window (`arr[mid]`) with the one just outside (`arr[mid + k]`) tells you whether the window should move right.",
+    "steps": [
+     "Set `lo = 0`, `hi = n − k`.",
+     "While `lo < hi`: `mid = (lo + hi) / 2`. If `x − arr[mid] > arr[mid + k] − x`, the left value is farther, so set `lo = mid + 1`; otherwise `hi = mid`.",
+     "Return `arr[lo .. lo + k − 1]`."
+    ],
+    "time": "O(log(n − k) + k)",
+    "space": "O(1)",
+    "why": "The windows `[s, s + k − 1]` and `[s + 1, s + k]` differ only in `arr[s]` and `arr[s + k]`, so that one comparison decides which is better, and the decision is monotonic in `s`. Comparing signed differences (not absolute values) handles duplicates and `x` outside the array correctly; using `abs` here is a known bug when values repeat.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findClosestElements(int[] arr, int k, int x) {\n        int lo = 0, hi = arr.length - k;\n        while (lo < hi) {\n            int mid = (lo + hi) >>> 1;\n            if (x - arr[mid] > arr[mid + k] - x) lo = mid + 1; else hi = mid;\n        }\n        List<Integer> out = new ArrayList<>();\n        for (int i = lo; i < lo + k; i++) out.add(arr[i]);\n        return out;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findClosestElements(vector<int>& arr, int k, int x) {\n        int lo = 0, hi = (int) arr.size() - k;\n        while (lo < hi) {\n            int mid = (lo + hi) / 2;\n            if (x - arr[mid] > arr[mid + k] - x) lo = mid + 1; else hi = mid;\n        }\n        return vector<int>(arr.begin() + lo, arr.begin() + lo + k);\n    }\n};",
+     "python": "class Solution:\n    def findClosestElements(self, arr: List[int], k: int, x: int) -> List[int]:\n        lo, hi = 0, len(arr) - k\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if x - arr[mid] > arr[mid + k] - x:\n                lo = mid + 1\n            else:\n                hi = mid\n        return arr[lo:lo + k]",
+     "javascript": "var findClosestElements = function(arr, k, x) {\n    let lo = 0, hi = arr.length - k;\n    while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (x - arr[mid] > arr[mid + k] - x) lo = mid + 1; else hi = mid;\n    }\n    return arr.slice(lo, lo + k);\n};"
+    }
+   }
+  ]
  }
 }

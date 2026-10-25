@@ -32,4 +32,14 @@ export default {
   'median-of-two-sorted-arrays': {
     explain: 'Merged, the arrays are `[1,2,3]`. With an odd count the median is the middle value, 2, returned as a double: 2.0.',
   },
+  'guess-number-higher-or-lower': {
+    explain: 'With n = 10, guessing 5 returns 1 (too low), so the number is in 6–10. Guessing 8 returns -1 (too high), leaving 6–7, and guessing 6 returns 0. The answer is 6.',
+  },
+  'search-in-rotated-sorted-array-ii': {
+    explain: 'The array is `[0,0,1,2,2,5,6]` rotated, and 0 sits at indices 3 and 4, so the answer is `true`.',
+    more: 'For example with the same array and target = 3 the answer is `false`.',
+  },
+  'find-in-mountain-array': {
+    explain: '3 appears at index 2 (on the way up) and at index 5 (on the way down). The smallest index is 2.',
+  },
 };

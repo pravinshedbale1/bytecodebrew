@@ -30,4 +30,10 @@ export default {
   'reverse-nodes-in-k-group': {
     explain: 'With `k = 2`, the groups (1, 2) and (3, 4) are reversed. The last group has only one node, fewer than `k`, so it stays as it is: `[2,1,4,3,5]`.',
   },
+  'insert-greatest-common-divisors-in-linked-list': {
+    explain: 'gcd(18, 6) = 6, gcd(6, 10) = 2 and gcd(10, 3) = 1, so those values go between the pairs: `[18,6,6,2,10,1,3]`.',
+  },
+  'copy-list-with-random-pointer': {
+    explain: 'The copy has the same five values, and each random pointer goes to the copy at the same position (13 → index 0, 11 → index 4, and so on), so it prints exactly like the input: `[[7,null],[13,0],[11,4],[10,2],[1,0]]`.',
+  },
 };

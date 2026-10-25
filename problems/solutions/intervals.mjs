@@ -897,4 +897,454 @@ public:
       },
     ],
   },
+  'meeting-rooms': {
+    pattern: 'Sort by start, compare neighbours',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Check every pair',
+        idea: 'Two meetings overlap when each starts before the other ends. Test every pair.',
+        steps: [
+          'For each pair `i < j`, check `a.start < b.end && b.start < a.end`.',
+          'Return `false` on the first overlap, otherwise `true`.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'n(n − 1) / 2 pair checks. Fine for small inputs, but sorting makes only neighbouring pairs matter.',
+        code: {
+          java: r`class Solution {
+    public boolean canAttendMeetings(int[][] intervals) {
+        for (int i = 0; i < intervals.length; i++)
+            for (int j = i + 1; j < intervals.length; j++)
+                if (intervals[i][0] < intervals[j][1] && intervals[j][0] < intervals[i][1]) return false;
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool canAttendMeetings(vector<vector<int>>& intervals) {
+        for (size_t i = 0; i < intervals.size(); i++)
+            for (size_t j = i + 1; j < intervals.size(); j++)
+                if (intervals[i][0] < intervals[j][1] && intervals[j][0] < intervals[i][1]) return false;
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def canAttendMeetings(self, intervals: List[List[int]]) -> bool:
+        for i in range(len(intervals)):
+            for j in range(i + 1, len(intervals)):
+                a, b = intervals[i], intervals[j]
+                if a[0] < b[1] and b[0] < a[1]:
+                    return False
+        return True`,
+          javascript: r`var canAttendMeetings = function(intervals) {
+    for (let i = 0; i < intervals.length; i++)
+        for (let j = i + 1; j < intervals.length; j++)
+            if (intervals[i][0] < intervals[j][1] && intervals[j][0] < intervals[i][1]) return false;
+    return true;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Sort and scan',
+        idea: 'Sort meetings by start time. If any meeting starts before the previous one ends, there is a clash.',
+        steps: [
+          'Sort by start time.',
+          'For each `i >= 1`, if `start[i] < end[i − 1]`, return `false`.',
+          'Return `true`.',
+        ],
+        time: 'O(n log n)', space: 'O(log n)',
+        why: 'After sorting, a meeting that overlaps anything must overlap its immediate predecessor, because every earlier meeting started even earlier. Using `<` (not `<=`) lets back-to-back meetings pass. The space is the sort\'s stack.',
+        code: {
+          java: r`class Solution {
+    public boolean canAttendMeetings(int[][] intervals) {
+        int[][] a = intervals.clone();
+        Arrays.sort(a, (x, y) -> Integer.compare(x[0], y[0]));
+        for (int i = 1; i < a.length; i++) if (a[i][0] < a[i - 1][1]) return false;
+        return true;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    bool canAttendMeetings(vector<vector<int>>& intervals) {
+        sort(intervals.begin(), intervals.end());
+        for (size_t i = 1; i < intervals.size(); i++) if (intervals[i][0] < intervals[i - 1][1]) return false;
+        return true;
+    }
+};`,
+          python: r`class Solution:
+    def canAttendMeetings(self, intervals: List[List[int]]) -> bool:
+        intervals.sort()
+        return all(intervals[i][0] >= intervals[i - 1][1] for i in range(1, len(intervals)))`,
+          javascript: r`var canAttendMeetings = function(intervals) {
+    const a = [...intervals].sort((x, y) => x[0] - y[0]);
+    for (let i = 1; i < a.length; i++) if (a[i][0] < a[i - 1][1]) return false;
+    return true;
+};`,
+        },
+      },
+    ],
+  },
+  'meeting-rooms-ii': {
+    pattern: 'Maximum overlap: min-heap of end times, or a start/end sweep',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Count overlaps at every start',
+        idea: 'The busiest moment is always some meeting\'s start. For each start time, count the meetings in progress.',
+        steps: [
+          'For each meeting `i`, count meetings `j` with `start_j <= start_i < end_j`.',
+          'Return the largest count.',
+        ],
+        time: 'O(n²)', space: 'O(1)',
+        why: 'n start times, each checked against n meetings. It is correct because the number of meetings in progress only increases at starts, so the maximum occurs at one of them.',
+        code: {
+          java: r`class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        int best = 0;
+        for (int[] a : intervals) {
+            int live = 0;
+            for (int[] b : intervals) if (b[0] <= a[0] && a[0] < b[1]) live++;
+            best = Math.max(best, live);
+        }
+        return best;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minMeetingRooms(vector<vector<int>>& intervals) {
+        int best = 0;
+        for (auto& a : intervals) {
+            int live = 0;
+            for (auto& b : intervals) if (b[0] <= a[0] && a[0] < b[1]) live++;
+            best = max(best, live);
+        }
+        return best;
+    }
+};`,
+          python: r`class Solution:
+    def minMeetingRooms(self, intervals: List[List[int]]) -> int:
+        return max(sum(1 for s, e in intervals if s <= a < e) for a, _ in intervals)`,
+          javascript: r`var minMeetingRooms = function(intervals) {
+    let best = 0;
+    for (const [a] of intervals) {
+        let live = 0;
+        for (const [s, e] of intervals) if (s <= a && a < e) live++;
+        best = Math.max(best, live);
+    }
+    return best;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Min-heap of end times',
+        idea: 'Sort meetings by start. Keep a min-heap of the end times of rooms in use; a new meeting reuses the room that frees up first if it is free by then.',
+        steps: [
+          'Sort by start time.',
+          'For each meeting, if the heap\'s smallest end is `<= start`, pop it (that room is reused).',
+          'Push this meeting\'s end. The heap\'s final size, which is also its maximum size, is the answer.',
+        ],
+        time: 'O(n log n)', space: 'O(n)',
+        why: 'Each meeting causes at most one push and one pop. The heap size never shrinks below the number of rooms needed so far, so its size at the end equals the peak.',
+        code: {
+          java: r`class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        int[][] a = intervals.clone();
+        Arrays.sort(a, (x, y) -> Integer.compare(x[0], y[0]));
+        PriorityQueue<Integer> ends = new PriorityQueue<>();
+        for (int[] m : a) {
+            if (!ends.isEmpty() && ends.peek() <= m[0]) ends.poll();
+            ends.add(m[1]);
+        }
+        return ends.size();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minMeetingRooms(vector<vector<int>>& intervals) {
+        sort(intervals.begin(), intervals.end());
+        priority_queue<int, vector<int>, greater<int>> ends;
+        for (auto& m : intervals) {
+            if (!ends.empty() && ends.top() <= m[0]) ends.pop();
+            ends.push(m[1]);
+        }
+        return ends.size();
+    }
+};`,
+          python: r`class Solution:
+    def minMeetingRooms(self, intervals: List[List[int]]) -> int:
+        ends = []
+        for s, e in sorted(intervals):
+            if ends and ends[0] <= s:
+                heappop(ends)
+            heappush(ends, e)
+        return len(ends)`,
+          javascript: r`var minMeetingRooms = function(intervals) {
+    const a = [...intervals].sort((x, y) => x[0] - y[0]);
+    const ends = new MinPriorityQueue();
+    for (const [s, e] of a) {
+        if (!ends.isEmpty() && ends.front() <= s) ends.dequeue();
+        ends.enqueue(e);
+    }
+    return ends.size();
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Sorted starts and ends sweep',
+        idea: 'Only the order of events matters. Sort starts and ends separately and walk them like a merge: each start needs a room, each end before it frees one.',
+        steps: [
+          'Sort the start times and the end times into two arrays.',
+          'For each start (in order), first release every end that is `<= ` this start, then take a room.',
+          'Track the maximum number of rooms in use.',
+        ],
+        time: 'O(n log n)', space: 'O(n)',
+        why: 'Sorting dominates; the sweep is linear with two pointers and no heap. Processing ends before starts on equal times is what lets a room be reused at the same moment. This counting view also answers "maximum concurrent sessions" style questions.',
+        code: {
+          java: r`class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        int n = intervals.length;
+        int[] starts = new int[n], ends = new int[n];
+        for (int i = 0; i < n; i++) { starts[i] = intervals[i][0]; ends[i] = intervals[i][1]; }
+        Arrays.sort(starts); Arrays.sort(ends);
+        int rooms = 0, best = 0, e = 0;
+        for (int s = 0; s < n; s++) {
+            while (ends[e] <= starts[s]) { e++; rooms--; }
+            rooms++;
+            best = Math.max(best, rooms);
+        }
+        return best;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minMeetingRooms(vector<vector<int>>& intervals) {
+        int n = intervals.size();
+        vector<int> starts(n), ends(n);
+        for (int i = 0; i < n; i++) { starts[i] = intervals[i][0]; ends[i] = intervals[i][1]; }
+        sort(starts.begin(), starts.end());
+        sort(ends.begin(), ends.end());
+        int rooms = 0, best = 0, e = 0;
+        for (int s = 0; s < n; s++) {
+            while (ends[e] <= starts[s]) { e++; rooms--; }
+            rooms++;
+            best = max(best, rooms);
+        }
+        return best;
+    }
+};`,
+          python: r`class Solution:
+    def minMeetingRooms(self, intervals: List[List[int]]) -> int:
+        starts = sorted(s for s, _ in intervals)
+        ends = sorted(e for _, e in intervals)
+        rooms = best = e = 0
+        for s in starts:
+            while ends[e] <= s:
+                e += 1
+                rooms -= 1
+            rooms += 1
+            best = max(best, rooms)
+        return best`,
+          javascript: r`var minMeetingRooms = function(intervals) {
+    const starts = intervals.map((m) => m[0]).sort((a, b) => a - b);
+    const ends = intervals.map((m) => m[1]).sort((a, b) => a - b);
+    let rooms = 0, best = 0, e = 0;
+    for (const s of starts) {
+        while (ends[e] <= s) { e++; rooms--; }
+        rooms++;
+        best = Math.max(best, rooms);
+    }
+    return best;
+};`,
+        },
+      },
+    ],
+  },
+  'meeting-rooms-iii': {
+    pattern: 'Event simulation with two heaps (free rooms, busy rooms by end time)',
+    approaches: [
+      {
+        level: 'Better', name: 'Scan the rooms for every meeting',
+        idea: 'Keep each room\'s next free time. For each meeting in start order, pick the lowest-numbered room free by its start; if none is, pick the room that frees earliest and delay the meeting.',
+        steps: [
+          'Sort meetings by start. Keep `freeAt[room]` (64-bit) and `count[room]`.',
+          'For a meeting `[s, e)`: scan rooms for the lowest index with `freeAt <= s`; if found, set `freeAt = e`.',
+          'Otherwise pick the room with the smallest `freeAt` (lowest index on ties) and set `freeAt += e − s`. Count the room; return the most used.',
+        ],
+        time: 'O(m log m + m · n)', space: 'O(n)',
+        why: 'm meetings, each scanning n ≤ 100 rooms: about 10⁷ steps, fast enough here. Delays can chain, so end times reach about 5 · 10¹⁰: they must be 64-bit, or comparisons silently go wrong.',
+        code: {
+          java: r`class Solution {
+    public int mostBooked(int n, int[][] meetings) {
+        int[][] m = meetings.clone();
+        Arrays.sort(m, (x, y) -> Integer.compare(x[0], y[0]));
+        long[] freeAt = new long[n];
+        int[] count = new int[n];
+        for (int[] mt : m) {
+            int room = -1;
+            for (int r = 0; r < n; r++) if (freeAt[r] <= mt[0]) { room = r; break; }
+            if (room >= 0) freeAt[room] = mt[1];
+            else {
+                room = 0;
+                for (int r = 1; r < n; r++) if (freeAt[r] < freeAt[room]) room = r;
+                freeAt[room] += mt[1] - mt[0];
+            }
+            count[room]++;
+        }
+        int best = 0;
+        for (int i = 1; i < n; i++) if (count[i] > count[best]) best = i;
+        return best;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int mostBooked(int n, vector<vector<int>>& meetings) {
+        sort(meetings.begin(), meetings.end());
+        vector<long long> freeAt(n, 0);
+        vector<int> count(n, 0);
+        for (auto& mt : meetings) {
+            int room = -1;
+            for (int r = 0; r < n; r++) if (freeAt[r] <= mt[0]) { room = r; break; }
+            if (room >= 0) freeAt[room] = mt[1];
+            else {
+                room = 0;
+                for (int r = 1; r < n; r++) if (freeAt[r] < freeAt[room]) room = r;
+                freeAt[room] += mt[1] - mt[0];
+            }
+            count[room]++;
+        }
+        return max_element(count.begin(), count.end()) - count.begin();
+    }
+};`,
+          python: r`class Solution:
+    def mostBooked(self, n: int, meetings: List[List[int]]) -> int:
+        free_at, count = [0] * n, [0] * n
+        for s, e in sorted(meetings):
+            room = next((r for r in range(n) if free_at[r] <= s), -1)
+            if room >= 0:
+                free_at[room] = e
+            else:
+                room = min(range(n), key=lambda r: (free_at[r], r))
+                free_at[room] += e - s
+            count[room] += 1
+        return count.index(max(count))`,
+          javascript: r`var mostBooked = function(n, meetings) {
+    const m = [...meetings].sort((x, y) => x[0] - y[0]);
+    const freeAt = new Array(n).fill(0), count = new Array(n).fill(0);
+    for (const [s, e] of m) {
+        let room = -1;
+        for (let r = 0; r < n; r++) if (freeAt[r] <= s) { room = r; break; }
+        if (room >= 0) freeAt[room] = e;
+        else {
+            room = 0;
+            for (let r = 1; r < n; r++) if (freeAt[r] < freeAt[room]) room = r;
+            freeAt[room] += e - s;
+        }
+        count[room]++;
+    }
+    let best = 0;
+    for (let i = 1; i < n; i++) if (count[i] > count[best]) best = i;
+    return best;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Free-room heap + busy-room heap',
+        idea: 'A min-heap of free room numbers gives "lowest free room" in O(log n); a min-heap of busy rooms keyed by (end time, room) gives "who frees first" in O(log n).',
+        steps: [
+          'Sort meetings by start; put every room in the free heap.',
+          'For a meeting `[s, e)`: move every busy room with end `<= s` to the free heap.',
+          'If a room is free, take the lowest and push `(e, room)`; otherwise pop the earliest busy `(t, room)` and push `(t + e − s, room)`. Count the room; return the most used.',
+        ],
+        time: 'O(m log m + m log n)', space: 'O(n)',
+        why: 'Every meeting does a constant number of heap operations on heaps of at most n rooms. Ties on end time are broken by room number inside the busy heap, which matches "lowest-numbered room" when several free up together.',
+        code: {
+          java: r`class Solution {
+    public int mostBooked(int n, int[][] meetings) {
+        int[][] m = meetings.clone();
+        Arrays.sort(m, (x, y) -> Integer.compare(x[0], y[0]));
+        PriorityQueue<Integer> free = new PriorityQueue<>();
+        for (int i = 0; i < n; i++) free.add(i);
+        PriorityQueue<long[]> busy = new PriorityQueue<>((x, y) -> x[0] != y[0] ? Long.compare(x[0], y[0]) : Long.compare(x[1], y[1]));
+        int[] count = new int[n];
+        for (int[] mt : m) {
+            long start = mt[0], len = mt[1] - mt[0];
+            while (!busy.isEmpty() && busy.peek()[0] <= start) free.add((int) busy.poll()[1]);
+            if (free.isEmpty()) {
+                long[] b = busy.poll();
+                start = b[0];
+                free.add((int) b[1]);
+            }
+            int room = free.poll();
+            count[room]++;
+            busy.add(new long[] { start + len, room });
+        }
+        int best = 0;
+        for (int i = 1; i < n; i++) if (count[i] > count[best]) best = i;
+        return best;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int mostBooked(int n, vector<vector<int>>& meetings) {
+        sort(meetings.begin(), meetings.end());
+        priority_queue<int, vector<int>, greater<int>> freeRooms;
+        for (int i = 0; i < n; i++) freeRooms.push(i);
+        priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long, int>>> busy;
+        vector<int> count(n, 0);
+        for (auto& mt : meetings) {
+            long long start = mt[0], len = mt[1] - mt[0];
+            while (!busy.empty() && busy.top().first <= start) { freeRooms.push(busy.top().second); busy.pop(); }
+            if (freeRooms.empty()) {
+                auto [t, r] = busy.top(); busy.pop();
+                start = t;
+                freeRooms.push(r);
+            }
+            int room = freeRooms.top(); freeRooms.pop();
+            count[room]++;
+            busy.push({start + len, room});
+        }
+        return max_element(count.begin(), count.end()) - count.begin();
+    }
+};`,
+          python: r`class Solution:
+    def mostBooked(self, n: int, meetings: List[List[int]]) -> int:
+        free = list(range(n))
+        busy = []
+        count = [0] * n
+        for s, e in sorted(meetings):
+            while busy and busy[0][0] <= s:
+                heappush(free, heappop(busy)[1])
+            start = s
+            if not free:
+                t, r = heappop(busy)
+                start = t
+                heappush(free, r)
+            room = heappop(free)
+            count[room] += 1
+            heappush(busy, (start + e - s, room))
+        return count.index(max(count))`,
+          javascript: r`var mostBooked = function(n, meetings) {
+    const m = [...meetings].sort((x, y) => x[0] - y[0]);
+    const free = new MinPriorityQueue();
+    for (let i = 0; i < n; i++) free.enqueue(i);
+    const busy = new PriorityQueue((x, y) => (x[0] - y[0]) || (x[1] - y[1]));
+    const count = new Array(n).fill(0);
+    for (const [s, e] of m) {
+        let start = s;
+        while (!busy.isEmpty() && busy.front()[0] <= start) free.enqueue(busy.dequeue()[1]);
+        if (free.isEmpty()) {
+            const [t, r] = busy.dequeue();
+            start = t;
+            free.enqueue(r);
+        }
+        const room = free.dequeue();
+        count[room]++;
+        busy.enqueue([start + e - s, room]);
+    }
+    let best = 0;
+    for (let i = 1; i < n; i++) if (count[i] > count[best]) best = i;
+    return best;
+};`,
+        },
+      },
+    ],
+  },
 };

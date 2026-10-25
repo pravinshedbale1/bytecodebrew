@@ -168,4 +168,165 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'lemonade-change', title: 'Lemonade Change', level: 'Easy',
+    summary: 'Lemonade costs $5. Customers pay in order with a $5, $10 or $20 bill, and you start with no change. Return true if you can give every customer correct change.',
+    method: 'lemonadeChange', params: [['int[]', 'bills']], returns: 'boolean',
+    tests: [
+      { in: [[5, 5, 5, 10, 20]], out: true },
+      { in: [[5, 5, 10, 10, 20]], out: false },
+      { in: [[10]] },
+      { in: [[5, 5, 5, 5, 20, 20]] },
+      { in: [[5, 10, 5, 20]] },
+      { in: [[5, 5, 5, 20, 5, 10, 5, 20]] },
+    ],
+    ref: `class Solution {
+    public boolean lemonadeChange(int[] bills) {
+        int fives = 0, tens = 0;
+        for (int b : bills) {
+            if (b == 5) fives++;
+            else if (b == 10) { if (fives == 0) return false; fives--; tens++; }
+            else if (tens > 0 && fives > 0) { tens--; fives--; }
+            else if (fives >= 3) fives -= 3;
+            else return false;
+        }
+        return true;
+    }
+}`,
+  },
+  {
+    slug: 'merge-triplets-to-form-target-triplet', title: 'Merge Triplets to Form Target Triplet', level: 'Medium',
+    summary: 'An operation replaces triplet j with the element-wise maximum of triplets i and j. Return true if, after any number of operations, some triplet can equal target.',
+    method: 'mergeTriplets', params: [['int[][]', 'triplets'], ['int[]', 'target']], returns: 'boolean',
+    tests: [
+      { in: [[[2, 5, 3], [1, 8, 4], [1, 7, 5]], [2, 7, 5]], out: true },
+      { in: [[[3, 4, 5], [4, 5, 6]], [3, 2, 5]], out: false },
+      { in: [[[2, 5, 3], [2, 3, 4], [1, 2, 5], [5, 2, 3]], [5, 5, 5]], out: true },
+      { in: [[[1, 1, 1]], [1, 1, 1]] },
+      { in: [[[1, 3, 1], [3, 1, 1]], [3, 3, 2]] },
+      { in: [[[7, 1, 1], [1, 7, 1], [1, 1, 7], [8, 8, 8]], [7, 7, 7]] },
+    ],
+    ref: `class Solution {
+    public boolean mergeTriplets(int[][] triplets, int[] target) {
+        boolean a = false, b = false, c = false;
+        for (int[] t : triplets) {
+            if (t[0] > target[0] || t[1] > target[1] || t[2] > target[2]) continue;
+            a |= t[0] == target[0]; b |= t[1] == target[1]; c |= t[2] == target[2];
+        }
+        return a && b && c;
+    }
+}`,
+  },
+  {
+    slug: 'valid-parenthesis-string', title: 'Valid Parenthesis String', level: 'Medium',
+    summary: 's contains "(", ")" and "*", where each "*" may be treated as "(", ")" or nothing. Return true if some choice makes s a valid parentheses string.',
+    method: 'checkValidString', params: [['String', 's']], returns: 'boolean',
+    tests: [
+      { in: ['()'], out: true },
+      { in: ['(*)'], out: true },
+      { in: ['(*))'], out: true },
+      { in: ['*'] },
+      { in: [')*'] },
+      { in: ['(((*)'] },
+      { in: ['((*)(*))((*'] },
+      { in: ['**************************************************))'] },
+      { in: ['(((((*(()((((*((**(((()()*)()()()*((((**)())*)*)))))))(())(()))())((*()()(((()((()*(())*(()**)()(())'] },
+    ],
+    ref: `class Solution {
+    public boolean checkValidString(String s) {
+        int lo = 0, hi = 0;
+        for (char c : s.toCharArray()) {
+            if (c == '(') { lo++; hi++; }
+            else if (c == ')') { lo--; hi--; }
+            else { lo--; hi++; }
+            if (hi < 0) return false;
+            if (lo < 0) lo = 0;
+        }
+        return lo == 0;
+    }
+}`,
+  },
+  {
+    slug: 'hand-of-straights', title: 'Hand of Straights', level: 'Medium',
+    summary: 'Return true if the cards in hand can be split into groups of groupSize consecutive values, using every card exactly once.',
+    method: 'isNStraightHand', params: [['int[]', 'hand'], ['int', 'groupSize']], returns: 'boolean',
+    tests: [
+      { in: [[1, 2, 3, 6, 2, 3, 4, 7, 8], 3], out: true },
+      { in: [[1, 2, 3, 4, 5], 4], out: false },
+      { in: [[5], 1] },
+      { in: [[1, 1, 2, 2, 3, 3], 3] },
+      { in: [[1, 2, 4, 5, 6, 7], 3] },
+      { in: [[8, 10, 12], 3] },
+      { in: [[1000000000, 999999999, 999999998, 3, 2, 1], 3] },
+    ],
+    ref: `class Solution {
+    public boolean isNStraightHand(int[] hand, int groupSize) {
+        if (hand.length % groupSize != 0) return false;
+        TreeMap<Integer, Integer> count = new TreeMap<>();
+        for (int h : hand) count.merge(h, 1, Integer::sum);
+        while (!count.isEmpty()) {
+            int start = count.firstKey();
+            for (int v = start; v < start + groupSize; v++) {
+                Integer c = count.get(v);
+                if (c == null) return false;
+                if (c == 1) count.remove(v); else count.put(v, c - 1);
+            }
+        }
+        return true;
+    }
+}`,
+  },
+  {
+    slug: 'dota2-senate', title: 'Dota2 Senate', level: 'Medium',
+    summary: 'Senators of two parties (R = Radiant, D = Dire) act in order, round after round; each can ban one senator of the other party. When only one party can still vote, it wins. Return "Radiant" or "Dire".',
+    method: 'predictPartyVictory', params: [['String', 'senate']], returns: 'String',
+    tests: [
+      { in: ['RD'], out: 'Radiant' },
+      { in: ['RDD'], out: 'Dire' },
+      { in: ['D'] },
+      { in: ['DDRRR'] },
+      { in: ['RRDDD'] },
+      { in: ['DRRDRDRDRDDRDRDR'] },
+    ],
+    ref: `class Solution {
+    public String predictPartyVictory(String senate) {
+        int n = senate.length();
+        Deque<Integer> r = new ArrayDeque<>(), d = new ArrayDeque<>();
+        for (int i = 0; i < n; i++) (senate.charAt(i) == 'R' ? r : d).add(i);
+        while (!r.isEmpty() && !d.isEmpty()) {
+            int a = r.poll(), b = d.poll();
+            if (a < b) r.add(a + n); else d.add(b + n);
+        }
+        return r.isEmpty() ? "Dire" : "Radiant";
+    }
+}`,
+  },
+  {
+    slug: 'jump-game-vii', title: 'Jump Game VII', level: 'Medium',
+    summary: 's is a binary string with s[0] = "0". From index i you may jump to j when minJump <= j − i <= maxJump and s[j] = "0". Return true if you can reach the last index.',
+    method: 'canReach', params: [['String', 's'], ['int', 'minJump'], ['int', 'maxJump']], returns: 'boolean',
+    tests: [
+      { in: ['011010', 2, 3], out: true },
+      { in: ['01101110', 2, 3], out: false },
+      { in: ['00', 1, 1] },
+      { in: ['01', 1, 1] },
+      { in: ['0000000000', 8, 8] },
+      { in: ['00111010', 3, 5] },
+      { in: ['0101010101', 2, 2] },
+    ],
+    ref: `class Solution {
+    public boolean canReach(String s, int minJump, int maxJump) {
+        int n = s.length();
+        boolean[] ok = new boolean[n];
+        ok[0] = true;
+        int reachable = 0;
+        for (int i = 1; i < n; i++) {
+            if (i - minJump >= 0 && ok[i - minJump]) reachable++;
+            if (i - maxJump - 1 >= 0 && ok[i - maxJump - 1]) reachable--;
+            ok[i] = reachable > 0 && s.charAt(i) == '0';
+        }
+        return ok[n - 1];
+    }
+}`,
+  },
 ];

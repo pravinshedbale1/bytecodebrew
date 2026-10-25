@@ -209,4 +209,37 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'longest-increasing-path-in-a-matrix', title: 'Longest Increasing Path in a Matrix', level: 'Hard',
+    summary: 'Moving up, down, left or right, return the length of the longest path whose values strictly increase at every step.',
+    method: 'longestIncreasingPath', params: [['int[][]', 'matrix']], returns: 'int',
+    tests: [
+      { in: [[[9, 9, 4], [6, 6, 8], [2, 1, 1]]], out: 4 },
+      { in: [[[3, 4, 5], [3, 2, 6], [2, 2, 1]]], out: 4 },
+      { in: [[[1]]], out: 1 },
+      { in: [[[7, 7], [7, 7]]] },
+      { in: [[[1, 2, 3], [6, 5, 4], [7, 8, 9]]] },
+      { in: [[[0, 2147483647]]] },
+      { in: [[[3, 2, 1], [4, 9, 0], [5, 6, 7]]] },
+    ],
+    ref: `class Solution {
+    public int longestIncreasingPath(int[][] matrix) {
+        int m = matrix.length, n = matrix[0].length, best = 0;
+        int[][] memo = new int[m][n];
+        for (int r = 0; r < m; r++) for (int c = 0; c < n; c++) best = Math.max(best, dfs(matrix, r, c, memo));
+        return best;
+    }
+    private static final int[][] DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    private int dfs(int[][] g, int r, int c, int[][] memo) {
+        if (memo[r][c] != 0) return memo[r][c];
+        int best = 1;
+        for (int[] d : DIRS) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr < 0 || nc < 0 || nr >= g.length || nc >= g[0].length || g[nr][nc] <= g[r][c]) continue;
+            best = Math.max(best, 1 + dfs(g, nr, nc, memo));
+        }
+        return memo[r][c] = best;
+    }
+}`,
+  },
 ];

@@ -285,4 +285,189 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'island-perimeter', title: 'Island Perimeter', level: 'Easy',
+    summary: 'grid has exactly one island of 1s (connected up/down/left/right, no lakes inside). Return the length of its perimeter.',
+    method: 'islandPerimeter', params: [['int[][]', 'grid']], returns: 'int',
+    tests: [
+      { in: [[[0, 1, 0, 0], [1, 1, 1, 0], [0, 1, 0, 0], [1, 1, 0, 0]]], out: 16 },
+      { in: [[[1]]], out: 4 },
+      { in: [[[1, 0]]], out: 4 },
+      { in: [[[1, 1], [1, 1]]] },
+      { in: [[[0, 0, 0], [0, 1, 1], [0, 0, 1]]] },
+      { in: [[[1, 1, 1, 1, 1]]] },
+    ],
+    ref: `class Solution {
+    public int islandPerimeter(int[][] grid) {
+        int land = 0, shared = 0;
+        for (int r = 0; r < grid.length; r++)
+            for (int c = 0; c < grid[0].length; c++) {
+                if (grid[r][c] == 0) continue;
+                land++;
+                if (r + 1 < grid.length && grid[r + 1][c] == 1) shared++;
+                if (c + 1 < grid[0].length && grid[r][c + 1] == 1) shared++;
+            }
+        return 4 * land - 2 * shared;
+    }
+}`,
+  },
+  {
+    slug: 'find-the-town-judge', title: 'Find the Town Judge', level: 'Easy',
+    summary: 'People are labelled 1..n; trust[i] = [a, b] means a trusts b. The town judge trusts nobody and is trusted by everyone else. Return the judge\'s label, or -1 if there is none.',
+    method: 'findJudge', params: [['int', 'n'], ['int[][]', 'trust']], returns: 'int',
+    tests: [
+      { in: [2, [[1, 2]]], out: 2 },
+      { in: [3, [[1, 3], [2, 3]]], out: 3 },
+      { in: [3, [[1, 3], [2, 3], [3, 1]]], out: -1 },
+      { in: [1, []] },
+      { in: [2, []] },
+      { in: [4, [[1, 3], [1, 4], [2, 3], [2, 4], [4, 3]]] },
+      { in: [3, [[1, 2], [2, 3]]] },
+    ],
+    ref: `class Solution {
+    public int findJudge(int n, int[][] trust) {
+        int[] score = new int[n + 1];
+        for (int[] t : trust) { score[t[0]]--; score[t[1]]++; }
+        for (int i = 1; i <= n; i++) if (score[i] == n - 1) return i;
+        return -1;
+    }
+}`,
+  },
+  {
+    slug: 'walls-and-gates', title: 'Walls and Gates', level: 'Medium',
+    summary: 'rooms holds -1 (wall), 0 (gate) or 2147483647 (empty room). Fill each empty room in place with the number of steps to its nearest gate, leaving it 2147483647 if no gate is reachable. The judge prints rooms after your call.',
+    method: 'wallsAndGates', params: [['int[][]', 'rooms']], returns: 'void', output: 0,
+    tests: [
+      { in: [[[2147483647, -1, 0, 2147483647], [2147483647, 2147483647, 2147483647, -1], [2147483647, -1, 2147483647, -1], [0, -1, 2147483647, 2147483647]]], out: [[3, -1, 0, 1], [2, 2, 1, -1], [1, -1, 2, -1], [0, -1, 3, 4]] },
+      { in: [[[-1]]], out: [[-1]] },
+      { in: [[[2147483647]]] },
+      { in: [[[0, 2147483647, 2147483647, 0]]] },
+      { in: [[[2147483647, -1], [-1, 0]]] },
+      { in: [[[0, -1, 2147483647], [2147483647, -1, 2147483647], [2147483647, 2147483647, 2147483647]]] },
+    ],
+    ref: `class Solution {
+    public void wallsAndGates(int[][] rooms) {
+        int m = rooms.length, n = rooms[0].length;
+        Deque<int[]> q = new ArrayDeque<>();
+        for (int r = 0; r < m; r++) for (int c = 0; c < n; c++) if (rooms[r][c] == 0) q.add(new int[] { r, c });
+        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        while (!q.isEmpty()) {
+            int[] p = q.poll();
+            for (int[] d : dirs) {
+                int r = p[0] + d[0], c = p[1] + d[1];
+                if (r < 0 || c < 0 || r >= m || c >= n || rooms[r][c] != Integer.MAX_VALUE) continue;
+                rooms[r][c] = rooms[p[0]][p[1]] + 1;
+                q.add(new int[] { r, c });
+            }
+        }
+    }
+}`,
+  },
+  {
+    slug: 'open-the-lock', title: 'Open the Lock', level: 'Medium',
+    summary: 'A lock has four wheels with digits 0–9 and starts at "0000". One move turns one wheel up or down by one (9 and 0 wrap around). Never landing on a deadend, return the fewest moves to reach target, or -1.',
+    method: 'openLock', params: [['String[]', 'deadends'], ['String', 'target']], returns: 'int',
+    tests: [
+      { in: [['0201', '0101', '0102', '1212', '2002'], '0202'], out: 6 },
+      { in: [['8888'], '0009'], out: 1 },
+      { in: [['8887', '8889', '8878', '8898', '8788', '8988', '7888', '9888'], '8888'], out: -1 },
+      { in: [['0000'], '8888'] },
+      { in: [['1111'], '5555'] },
+      { in: [['0001', '0010', '0100', '1000'], '0011'] },
+      { in: [['0009', '0090', '0900', '9000', '0001', '0010', '0100'], '1000'] },
+    ],
+    ref: `class Solution {
+    public int openLock(String[] deadends, String target) {
+        Set<String> dead = new HashSet<>(Arrays.asList(deadends));
+        if (dead.contains("0000")) return -1;
+        Set<String> seen = new HashSet<>();
+        Deque<String> q = new ArrayDeque<>();
+        q.add("0000"); seen.add("0000");
+        for (int steps = 0; !q.isEmpty(); steps++) {
+            for (int size = q.size(); size > 0; size--) {
+                String cur = q.poll();
+                if (cur.equals(target)) return steps;
+                char[] c = cur.toCharArray();
+                for (int i = 0; i < 4; i++) {
+                    char orig = c[i];
+                    for (int d : new int[] { 1, 9 }) {
+                        c[i] = (char) ('0' + (orig - '0' + d) % 10);
+                        String next = new String(c);
+                        if (!dead.contains(next) && seen.add(next)) q.add(next);
+                    }
+                    c[i] = orig;
+                }
+            }
+        }
+        return -1;
+    }
+}`,
+  },
+  {
+    slug: 'evaluate-division', title: 'Evaluate Division', level: 'Medium',
+    summary: 'equations[i] = [A, B] with values[i] means A / B = values[i]. Answer each query [C, D] with C / D, or -1.0 if it cannot be determined (including when a variable never appears).',
+    method: 'calcEquation', params: [['List<List<String>>', 'equations'], ['double[]', 'values'], ['List<List<String>>', 'queries']], returns: 'double[]',
+    tests: [
+      { in: [[['a', 'b'], ['b', 'c']], [2.0, 3.0], [['a', 'c'], ['b', 'a'], ['a', 'e'], ['a', 'a'], ['x', 'x']]], out: [6.0, 0.5, -1.0, 1.0, -1.0] },
+      { in: [[['a', 'b'], ['b', 'c'], ['bc', 'cd']], [1.5, 2.5, 5.0], [['a', 'c'], ['c', 'b'], ['bc', 'cd'], ['cd', 'bc']]], out: [3.75, 0.4, 5.0, 0.2] },
+      { in: [[['a', 'b']], [0.5], [['a', 'b'], ['b', 'a'], ['a', 'c'], ['x', 'y']]], out: [0.5, 2.0, -1.0, -1.0] },
+      { in: [[['x1', 'x2'], ['x2', 'x3'], ['x3', 'x4'], ['x4', 'x5']], [3.0, 4.0, 5.0, 6.0], [['x1', 'x5'], ['x5', 'x2'], ['x2', 'x4'], ['x2', 'x2'], ['x2', 'x9'], ['x9', 'x9']]] },
+      { in: [[['a', 'b'], ['c', 'd']], [1.0, 1.0], [['a', 'c'], ['b', 'd'], ['b', 'a'], ['d', 'c']]] },
+      { in: [[['a', 'aa']], [9.0], [['aa', 'a'], ['aa', 'aa']]] },
+    ],
+    ref: `class Solution {
+    public double[] calcEquation(List<List<String>> equations, double[] values, List<List<String>> queries) {
+        Map<String, Map<String, Double>> g = new HashMap<>();
+        for (int i = 0; i < values.length; i++) {
+            String a = equations.get(i).get(0), b = equations.get(i).get(1);
+            g.computeIfAbsent(a, k -> new HashMap<>()).put(b, values[i]);
+            g.computeIfAbsent(b, k -> new HashMap<>()).put(a, 1 / values[i]);
+        }
+        double[] out = new double[queries.size()];
+        for (int q = 0; q < out.length; q++) {
+            String c = queries.get(q).get(0), d = queries.get(q).get(1);
+            out[q] = g.containsKey(c) && g.containsKey(d) ? dfs(g, c, d, new HashSet<>()) : -1.0;
+        }
+        return out;
+    }
+    private double dfs(Map<String, Map<String, Double>> g, String cur, String target, Set<String> seen) {
+        if (cur.equals(target)) return 1.0;
+        seen.add(cur);
+        for (Map.Entry<String, Double> e : g.get(cur).entrySet()) {
+            if (seen.contains(e.getKey())) continue;
+            double r = dfs(g, e.getKey(), target, seen);
+            if (r >= 0) return e.getValue() * r;
+        }
+        return -1.0;
+    }
+}`,
+  },
+  {
+    slug: 'reconstruct-itinerary', title: 'Reconstruct Itinerary', level: 'Hard',
+    summary: 'tickets[i] = [from, to]. Use every ticket exactly once in a trip starting at "JFK". If several itineraries work, return the one that is smallest in lexical order when read as a single string.',
+    method: 'findItinerary', params: [['List<List<String>>', 'tickets']], returns: 'List<String>',
+    tests: [
+      { in: [[['MUC', 'LHR'], ['JFK', 'MUC'], ['SFO', 'SJC'], ['LHR', 'SFO']]], out: ['JFK', 'MUC', 'LHR', 'SFO', 'SJC'] },
+      { in: [[['JFK', 'SFO'], ['JFK', 'ATL'], ['SFO', 'ATL'], ['ATL', 'JFK'], ['ATL', 'SFO']]], out: ['JFK', 'ATL', 'JFK', 'SFO', 'ATL', 'SFO'] },
+      { in: [[['JFK', 'KUL'], ['JFK', 'NRT'], ['NRT', 'JFK']]] },
+      { in: [[['JFK', 'AAA'], ['AAA', 'JFK'], ['JFK', 'AAA'], ['AAA', 'JFK']]] },
+      { in: [[['JFK', 'ATL']]] },
+      { in: [[['EZE', 'AXA'], ['TIA', 'ANU'], ['ANU', 'JFK'], ['JFK', 'ANU'], ['ANU', 'EZE'], ['TIA', 'ANU'], ['AXA', 'TIA'], ['TIA', 'JFK'], ['ANU', 'TIA'], ['JFK', 'TIA']]] },
+    ],
+    ref: `class Solution {
+    public List<String> findItinerary(List<List<String>> tickets) {
+        Map<String, PriorityQueue<String>> g = new HashMap<>();
+        for (List<String> t : tickets) g.computeIfAbsent(t.get(0), k -> new PriorityQueue<>()).add(t.get(1));
+        LinkedList<String> route = new LinkedList<>();
+        Deque<String> st = new ArrayDeque<>();
+        st.push("JFK");
+        while (!st.isEmpty()) {
+            PriorityQueue<String> out = g.get(st.peek());
+            if (out != null && !out.isEmpty()) st.push(out.poll());
+            else route.addFirst(st.pop());
+        }
+        return route;
+    }
+}`,
+  },
 ];

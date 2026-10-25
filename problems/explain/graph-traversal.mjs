@@ -33,4 +33,22 @@ export default {
   'word-ladder': {
     explain: '"hit" → "hot" → "dot" → "dog" → "cog" changes one letter at a time and every word is in the list. The sequence has 5 words, the shortest possible.',
   },
+  'island-perimeter': {
+    explain: 'The island has 7 land cells and 6 pairs of neighbouring land cells. Every cell has 4 edges and every shared edge hides 2 of them, so the perimeter is 4 × 7 − 2 × 6 = 16.',
+  },
+  'find-the-town-judge': {
+    explain: 'Person 1 trusts person 2, and person 2 trusts nobody. Everyone else (just person 1) trusts person 2, so the judge is 2.',
+  },
+  'walls-and-gates': {
+    explain: 'Spreading outwards from the two gates one step at a time, each room gets the number of the step that first reaches it. Rooms boxed in by walls on the right edge are reached last, at 3 and 4 steps. Result: `[[3,-1,0,1],[2,2,1,-1],[1,-1,2,-1],[0,-1,3,4]]`.',
+  },
+  'open-the-lock': {
+    explain: 'A shortest safe route is 0000 → 1000 → 1100 → 1200 → 1201 → 1202 → 0202. The quicker-looking route through 0101 and 0102 hits deadends. The answer is 6.',
+  },
+  'evaluate-division': {
+    explain: 'a / c = (a / b) × (b / c) = 2 × 3 = 6, and b / a = 1 / 2 = 0.5. Nothing is known about e or x, so those queries give -1, while a / a is 1. The answer is `[6.0,0.5,-1.0,1.0,-1.0]`.',
+  },
+  'reconstruct-itinerary': {
+    explain: 'There is only one way to chain the tickets from JFK: JFK → MUC → LHR → SFO → SJC, so the answer is `["JFK","MUC","LHR","SFO","SJC"]`.',
+  },
 };

@@ -172,4 +172,48 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'extra-characters-in-a-string', title: 'Extra Characters in a String', level: 'Medium',
+    summary: 'Split s into non-overlapping pieces that are dictionary words, leaving some characters unused. Return the minimum number of characters left over.',
+    method: 'minExtraChar', params: [['String', 's'], ['String[]', 'dictionary']], returns: 'int',
+    tests: [
+      { in: ['leetscode', ['leet', 'code', 'leetcode']], out: 1 },
+      { in: ['sayhelloworld', ['hello', 'world']], out: 3 },
+      { in: ['a', ['b']] },
+      { in: ['abc', ['abc']] },
+      { in: ['dwmodizxvvbosxxw', ['ox', 'lb', 'diz', 'gu', 'v', 'ksv', 'o', 'nuq', 'r', 'txhe', 'e', 'wmo', 'cehy', 'tskz', 'ds', 'kzbu']] },
+      { in: ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab', ['a', 'aa', 'aaa', 'aaaa']] },
+      { in: ['ecolloycollotkvzqpdaumuqgs', ['flbri', 'uaaz', 'numy', 'laper', 'ioqyt', 'tkvz', 'ndjb', 'gmg', 'gdpbo', 'x', 'collo', 'vuh', 'qhozp', 'iwk', 'paqgn', 'm', 'mhx', 'jgren', 'qqshd', 'qr', 'qpdau', 'oeeuq', 'c', 'qkot', 'uxqvx', 'lhgid', 'vchsk', 'drqx', 'keaua', 'yaru', 'mla', 'shz', 'lby', 'vdxlv', 'xyai', 'lxtgl', 'inz', 'brhi', 'iukt', 'f', 'lbjou', 'vb', 'sz', 'ilkra', 'izwk', 'muqgs', 'gom', 'je']] },
+    ],
+    ref: `class Solution {
+    public int minExtraChar(String s, String[] dictionary) {
+        int n = s.length();
+        int[][] next = new int[1][26];
+        boolean[] end = new boolean[1];
+        int nodes = 1;
+        for (String w : dictionary) {
+            int cur = 0;
+            for (char c : w.toCharArray()) {
+                if (next[cur][c - 'a'] == 0) {
+                    if (nodes == next.length) { next = Arrays.copyOf(next, nodes * 2); end = Arrays.copyOf(end, nodes * 2); for (int k = nodes; k < next.length; k++) next[k] = new int[26]; }
+                    next[cur][c - 'a'] = nodes++;
+                }
+                cur = next[cur][c - 'a'];
+            }
+            end[cur] = true;
+        }
+        int[] dp = new int[n + 1];
+        for (int i = n - 1; i >= 0; i--) {
+            dp[i] = dp[i + 1] + 1;
+            int cur = 0;
+            for (int j = i; j < n; j++) {
+                cur = next[cur][s.charAt(j) - 'a'];
+                if (cur == 0) break;
+                if (end[cur]) dp[i] = Math.min(dp[i], dp[j + 1]);
+            }
+        }
+        return dp[0];
+    }
+}`,
+  },
 ];

@@ -96,4 +96,31 @@ Use O(n) time and O(1) extra space.`,
       'Split all values into two groups by that bit and XOR each group: pairs still cancel, and each group leaves one single. Use long or care with −2³¹ when taking the lowest bit.',
     ],
   },
+  'add-binary': {
+    statement: `\`a\` and \`b\` are binary numbers written as strings of \`0\`s and \`1\`s. Return their sum, also as a binary string.`,
+    constraints: ['1 <= a.length, b.length <= 1e4', '`a` and `b` contain only "0" and "1"', 'Neither has leading zeros, except "0" itself'],
+    hints: [
+      'With up to 10⁴ bits, converting to an int or long overflows. Add digit by digit instead.',
+      'Walk both strings from the right with a carry, like grade-school addition in base 2.',
+      'Each step: sum = bitA + bitB + carry; write sum % 2 and carry sum / 2. Keep going while either string has digits or the carry is 1, then reverse.',
+    ],
+  },
+  'bitwise-and-of-numbers-range': {
+    statement: `Given two integers \`left\` and \`right\` that describe the range \`[left, right]\`, return the bitwise AND of **every** integer in that range, including both ends.`,
+    constraints: ['0 <= left <= 2^31 - 1', '0 <= right <= 2^31 - 1', 'left <= right'],
+    hints: [
+      'ANDing every number one by one can take about 2 · 10⁹ steps.',
+      'If a bit position changes anywhere between left and right, some number in the range has a 0 there, so that bit is 0 in the answer.',
+      'The answer is the common binary prefix of left and right, followed by zeros. Shift both right until they are equal, then shift back.',
+    ],
+  },
+  'minimum-array-end': {
+    statement: `Construct an array \`nums\` of \`n\` positive integers that is **strictly increasing** and whose bitwise AND of all elements equals \`x\`. Return the minimum possible value of \`nums[n − 1]\`.`,
+    constraints: ['1 <= n, x <= 1e8'],
+    hints: [
+      'Every element must contain all the 1-bits of x, so nums[0] = x is the best start.',
+      'The bits that are 0 in x are free. The k-th valid number (counting from 0) is x with the binary digits of k written into those free positions, lowest first.',
+      'So the answer is x with the bits of n − 1 placed into x\'s zero bits. The result can exceed 2³¹: use a 64-bit value.',
+    ],
+  },
 };

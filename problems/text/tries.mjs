@@ -82,4 +82,15 @@ The words are distinct. Return them in any order.`,
       'Store the full word at its end node, record it when you reach it and clear it so it is not reported twice. Pruning leaves you have finished makes it much faster.',
     ],
   },
+  'extra-characters-in-a-string': {
+    statement: `Break \`s\` into one or more **non-overlapping** substrings so that each substring is a word in \`dictionary\`. Some characters of \`s\` may not belong to any chosen substring; these are **extra** characters.
+
+Return the minimum possible number of extra characters.`,
+    constraints: ['1 <= s.length <= 50', '1 <= dictionary.length <= 50', '1 <= dictionary[i].length <= 50', '`s` and `dictionary[i]` have only lowercase English letters', '`dictionary` contains distinct words'],
+    hints: [
+      'At each position i you either leave s[i] as an extra character, or start a dictionary word there. That suggests a recursion f(i) = fewest extras in s[i..].',
+      'f(i) = min(1 + f(i + 1), f(j) for every dictionary word s[i..j)). Memoise it, or fill dp from the end of the string backwards.',
+      'Checking every substring against a hash set costs O(n³) overall. Walking a trie from position i finds every word that starts at i in one pass, giving O(n² + total dictionary length).',
+    ],
+  },
 };

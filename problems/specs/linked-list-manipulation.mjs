@@ -205,4 +205,48 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'insert-greatest-common-divisors-in-linked-list', title: 'Insert Greatest Common Divisors in Linked List', level: 'Medium',
+    summary: 'Between every pair of adjacent nodes, insert a new node whose value is the greatest common divisor of the pair. Return the head.',
+    method: 'insertGreatestCommonDivisors', params: [['ListNode', 'head']], returns: 'ListNode',
+    tests: [
+      { in: [[18, 6, 10, 3]], out: [18, 6, 6, 2, 10, 1, 3] },
+      { in: [[7]], out: [7] },
+      { in: [[2, 4]] },
+      { in: [[1000, 1000, 999]] },
+      { in: [[12, 18, 27, 7]] },
+    ],
+    ref: `class Solution {
+    public ListNode insertGreatestCommonDivisors(ListNode head) {
+        for (ListNode a = head; a.next != null; a = a.next.next) a.next = new ListNode(gcd(a.val, a.next.val), a.next);
+        return head;
+    }
+    private int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }
+}`,
+  },
+  {
+    slug: 'copy-list-with-random-pointer', title: 'Copy List with Random Pointer', level: 'Medium',
+    summary: 'Each node has next and random (any node or null). Return a deep copy: brand-new nodes with the same values, wired the same way. Lists are written as [[val, randomIndex or null], …].',
+    method: 'copyRandomList', params: [['Node', 'head']], returns: 'Node', uses: ['RandomNode'],
+    call: 'Node orig = BCBR.build($0); Object r = BCBR.dump(s.copyRandomList(orig), orig);',
+    tests: [
+      { in: [[[7, null], [13, 0], [11, 4], [10, 2], [1, 0]]], out: [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]] },
+      { in: [[[1, 1], [2, 1]]], out: [[1, 1], [2, 1]] },
+      { in: [[[3, null], [3, 0], [3, null]]], out: [[3, null], [3, 0], [3, null]] },
+      { in: [[]] },
+      { in: [[[5, 0]]] },
+      { in: [[[-1, 3], [0, 3], [9, null], [4, 1]]] },
+    ],
+    ref: `class Solution {
+    public Node copyRandomList(Node head) {
+        Map<Node, Node> copy = new HashMap<>();
+        for (Node t = head; t != null; t = t.next) copy.put(t, new Node(t.val));
+        for (Node t = head; t != null; t = t.next) {
+            copy.get(t).next = copy.get(t.next);
+            copy.get(t).random = copy.get(t.random);
+        }
+        return copy.get(head);
+    }
+}`,
+  },
 ];

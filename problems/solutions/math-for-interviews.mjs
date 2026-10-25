@@ -242,7 +242,7 @@ public:
         ],
         time: 'O(n²)', space: 'O(1)',
         why: 'Each prime costs a full scan below it. Hopeless at n = 5·10⁶.',
-        timesOut: [5],
+        timesOut: [5, 'generated'],
         code: {
           java: r`class Solution {
     public int countPrimes(int n) {
@@ -401,7 +401,7 @@ public:
         ],
         time: 'O(|n|)', space: 'O(1)',
         why: 'Up to 2.1·10⁹ multiplications for the extreme exponents.',
-        timesOut: [3],
+        timesOut: [3, 'generated'],
         code: {
           java: r`class Solution {
     public double myPow(double x, int n) {
@@ -823,7 +823,7 @@ public:
         ],
         time: 'O(n)', space: 'O(1)',
         why: 'n can be 10¹⁵, so a loop over positions is far too slow.',
-        timesOut: [4],
+        timesOut: [4, 'generated'],
         code: {
           java: r`class Solution {
     public int countGoodNumbers(long n) {
@@ -1425,6 +1425,648 @@ public:
         const c = (b - 61) * 7 + rand7();       // 1..21
         if (c <= 20) return ((c - 1) % 10) + 1;
     }
+};`,
+        },
+      },
+    ],
+  },
+  'plus-one': {
+    pattern: 'Grade-school addition with a carry, right to left',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Convert to a number and back',
+        idea: 'Turn the digits into an integer, add one, and split the result back into digits.',
+        steps: [
+          'Build the integer by `value = value · 10 + digit` for each digit.',
+          'Add 1 and convert back into a digit array.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'It only works while the number fits in a 64-bit integer (about 18 digits). With up to 100 digits it overflows, so it fails the long test in Java, C++ and JavaScript; Python\'s unbounded integers hide the problem, which an interviewer will point out.',
+        code: {
+          java: r`class Solution {
+    public int[] plusOne(int[] digits) {
+        long value = 0;
+        for (int d : digits) value = value * 10 + d;
+        String s = Long.toString(value + 1);
+        int[] out = new int[s.length()];
+        for (int i = 0; i < out.length; i++) out[i] = s.charAt(i) - '0';
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> plusOne(vector<int>& digits) {
+        long long value = 0;
+        for (int d : digits) value = value * 10 + d;
+        string s = to_string(value + 1);
+        vector<int> out;
+        for (char c : s) out.push_back(c - '0');
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def plusOne(self, digits: List[int]) -> List[int]:
+        value = int("".join(map(str, digits)))
+        return [int(c) for c in str(value + 1)]`,
+          javascript: r`var plusOne = function(digits) {
+    let value = 0;
+    for (const d of digits) value = value * 10 + d;
+    return String(value + 1).split("").map(Number);
+};`,
+        },
+        timesOut: [6],
+      },
+      {
+        level: 'Optimal', name: 'Carry from the last digit',
+        idea: 'Add one at the end. A digit below 9 absorbs it and you stop; a 9 becomes 0 and the carry moves left.',
+        steps: [
+          'For `i` from the last index down to 0: if `digits[i] < 9`, increment it and return `digits`.',
+          'Otherwise set `digits[i] = 0` and continue left.',
+          'If the loop finishes, every digit was 9: return a new array `[1, 0, 0, …, 0]` one longer.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Usually only the last digit changes; the worst case is all 9s, which walks the whole array. Extra space is O(1) except in that one case, where a new array is unavoidable.',
+        code: {
+          java: r`class Solution {
+    public int[] plusOne(int[] digits) {
+        for (int i = digits.length - 1; i >= 0; i--) {
+            if (digits[i] < 9) { digits[i]++; return digits; }
+            digits[i] = 0;
+        }
+        int[] out = new int[digits.length + 1];
+        out[0] = 1;
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> plusOne(vector<int>& digits) {
+        for (int i = (int) digits.size() - 1; i >= 0; i--) {
+            if (digits[i] < 9) { digits[i]++; return digits; }
+            digits[i] = 0;
+        }
+        digits.insert(digits.begin(), 1);
+        return digits;
+    }
+};`,
+          python: r`class Solution:
+    def plusOne(self, digits: List[int]) -> List[int]:
+        for i in range(len(digits) - 1, -1, -1):
+            if digits[i] < 9:
+                digits[i] += 1
+                return digits
+            digits[i] = 0
+        return [1] + digits`,
+          javascript: r`var plusOne = function(digits) {
+    for (let i = digits.length - 1; i >= 0; i--) {
+        if (digits[i] < 9) { digits[i]++; return digits; }
+        digits[i] = 0;
+    }
+    return [1, ...digits];
+};`,
+        },
+      },
+    ],
+  },
+  'roman-to-integer': {
+    pattern: 'Single pass: subtract a value when the next one is larger',
+    approaches: [
+      {
+        level: 'Better', name: 'Match subtractive pairs first',
+        idea: 'At each position, check whether the next two characters form one of the six subtractive pairs; if so take the pair, otherwise take the single symbol.',
+        steps: [
+          'Keep a map with the seven symbols and the six pairs (IV, IX, XL, XC, CD, CM).',
+          'At index `i`, if `s[i..i + 1]` is a pair, add its value and move two places; otherwise add `s[i]`\'s value and move one.',
+          'Return the total.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each character is consumed once and the tables have a fixed size. It mirrors the rules exactly, at the cost of listing the six pairs.',
+        code: {
+          java: r`class Solution {
+    public int romanToInt(String s) {
+        Map<String, Integer> v = Map.ofEntries(
+            Map.entry("I", 1), Map.entry("V", 5), Map.entry("X", 10), Map.entry("L", 50), Map.entry("C", 100), Map.entry("D", 500), Map.entry("M", 1000),
+            Map.entry("IV", 4), Map.entry("IX", 9), Map.entry("XL", 40), Map.entry("XC", 90), Map.entry("CD", 400), Map.entry("CM", 900));
+        int total = 0, i = 0;
+        while (i < s.length()) {
+            if (i + 1 < s.length() && v.containsKey(s.substring(i, i + 2))) { total += v.get(s.substring(i, i + 2)); i += 2; }
+            else { total += v.get(s.substring(i, i + 1)); i++; }
+        }
+        return total;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int romanToInt(string s) {
+        unordered_map<string, int> v = {{"I", 1}, {"V", 5}, {"X", 10}, {"L", 50}, {"C", 100}, {"D", 500}, {"M", 1000},
+                                        {"IV", 4}, {"IX", 9}, {"XL", 40}, {"XC", 90}, {"CD", 400}, {"CM", 900}};
+        int total = 0;
+        size_t i = 0;
+        while (i < s.size()) {
+            if (i + 1 < s.size() && v.count(s.substr(i, 2))) { total += v[s.substr(i, 2)]; i += 2; }
+            else { total += v[s.substr(i, 1)]; i++; }
+        }
+        return total;
+    }
+};`,
+          python: r`class Solution:
+    def romanToInt(self, s: str) -> int:
+        v = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000,
+             'IV': 4, 'IX': 9, 'XL': 40, 'XC': 90, 'CD': 400, 'CM': 900}
+        total, i = 0, 0
+        while i < len(s):
+            if s[i:i + 2] in v and i + 1 < len(s):
+                total += v[s[i:i + 2]]
+                i += 2
+            else:
+                total += v[s[i]]
+                i += 1
+        return total`,
+          javascript: r`var romanToInt = function(s) {
+    const v = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000, IV: 4, IX: 9, XL: 40, XC: 90, CD: 400, CM: 900 };
+    let total = 0, i = 0;
+    while (i < s.length) {
+        const pair = s.slice(i, i + 2);
+        if (pair.length === 2 && v[pair] !== undefined) { total += v[pair]; i += 2; }
+        else { total += v[s[i]]; i++; }
+    }
+    return total;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Compare with the next symbol',
+        idea: 'In a valid numeral, a symbol is subtracted exactly when a larger symbol follows it. So add each value, or subtract it if the next one is bigger.',
+        steps: [
+          'For each index `i`, look up `v = value(s[i])`.',
+          'If `i + 1 < n` and `v < value(s[i + 1])`, subtract `v`; otherwise add it.',
+          'Return the total.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'One pass with a constant-time lookup per symbol, and no list of special pairs to remember: the six subtractive forms all follow from the single rule.',
+        code: {
+          java: r`class Solution {
+    public int romanToInt(String s) {
+        int total = 0;
+        for (int i = 0; i < s.length(); i++) {
+            int v = val(s.charAt(i));
+            if (i + 1 < s.length() && v < val(s.charAt(i + 1))) total -= v; else total += v;
+        }
+        return total;
+    }
+    private int val(char c) {
+        switch (c) {
+            case 'I': return 1; case 'V': return 5; case 'X': return 10; case 'L': return 50;
+            case 'C': return 100; case 'D': return 500; default: return 1000;
+        }
+    }
+}`,
+          cpp: r`class Solution {
+    int val(char c) {
+        switch (c) {
+            case 'I': return 1; case 'V': return 5; case 'X': return 10; case 'L': return 50;
+            case 'C': return 100; case 'D': return 500; default: return 1000;
+        }
+    }
+public:
+    int romanToInt(string s) {
+        int total = 0;
+        for (size_t i = 0; i < s.size(); i++) {
+            int v = val(s[i]);
+            if (i + 1 < s.size() && v < val(s[i + 1])) total -= v; else total += v;
+        }
+        return total;
+    }
+};`,
+          python: r`class Solution:
+    def romanToInt(self, s: str) -> int:
+        v = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
+        total = 0
+        for i, c in enumerate(s):
+            if i + 1 < len(s) and v[c] < v[s[i + 1]]:
+                total -= v[c]
+            else:
+                total += v[c]
+        return total`,
+          javascript: r`var romanToInt = function(s) {
+    const v = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+    let total = 0;
+    for (let i = 0; i < s.length; i++) {
+        if (i + 1 < s.length && v[s[i]] < v[s[i + 1]]) total -= v[s[i]];
+        else total += v[s[i]];
+    }
+    return total;
+};`,
+        },
+      },
+    ],
+  },
+  'excel-sheet-column-title': {
+    pattern: 'Bijective base-26 conversion (subtract 1 before each digit)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Count up through titles',
+        idea: 'Start from "A" and increment the title like an odometer (Z rolls over to A with a carry) `columnNumber − 1` times.',
+        steps: [
+          'Keep the title as a list of letters, starting with ["A"].',
+          'To increment, turn trailing Zs into As and bump the letter before them, or add an "A" in front if all were Z.',
+          'Repeat `columnNumber − 1` times and return the title.',
+        ],
+        time: 'O(n · log n)', space: 'O(log n)',
+        why: 'n increments, each touching O(log₂₆ n) letters in the worst case. For columnNumber near 2³¹ that is about 2 · 10⁹ steps, so it times out on the large test.',
+        code: {
+          java: r`class Solution {
+    public String convertToTitle(int columnNumber) {
+        StringBuilder t = new StringBuilder("A");
+        for (int k = 1; k < columnNumber; k++) {
+            int i = t.length() - 1;
+            while (i >= 0 && t.charAt(i) == 'Z') { t.setCharAt(i, 'A'); i--; }
+            if (i < 0) t.insert(0, 'A'); else t.setCharAt(i, (char) (t.charAt(i) + 1));
+        }
+        return t.toString();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string convertToTitle(int columnNumber) {
+        string t = "A";
+        for (int k = 1; k < columnNumber; k++) {
+            int i = (int) t.size() - 1;
+            while (i >= 0 && t[i] == 'Z') { t[i] = 'A'; i--; }
+            if (i < 0) t.insert(t.begin(), 'A'); else t[i]++;
+        }
+        return t;
+    }
+};`,
+          python: r`class Solution:
+    def convertToTitle(self, columnNumber: int) -> str:
+        t = ['A']
+        for _ in range(columnNumber - 1):
+            i = len(t) - 1
+            while i >= 0 and t[i] == 'Z':
+                t[i] = 'A'
+                i -= 1
+            if i < 0:
+                t.insert(0, 'A')
+            else:
+                t[i] = chr(ord(t[i]) + 1)
+        return "".join(t)`,
+          javascript: r`var convertToTitle = function(columnNumber) {
+    const t = ["A"];
+    for (let k = 1; k < columnNumber; k++) {
+        let i = t.length - 1;
+        while (i >= 0 && t[i] === "Z") { t[i] = "A"; i--; }
+        if (i < 0) t.unshift("A"); else t[i] = String.fromCharCode(t[i].charCodeAt(0) + 1);
+    }
+    return t.join("");
+};`,
+        },
+        timesOut: [6, 'generated'],
+      },
+      {
+        level: 'Optimal', name: 'Repeated (n − 1) % 26',
+        idea: 'Titles are base 26 with digits 1..26 instead of 0..25. Subtracting 1 first maps the last letter onto 0..25; then divide and repeat for the next letter.',
+        steps: [
+          'While `n > 0`: set `n = n − 1`.',
+          'Append the letter `"A" + n % 26`, then set `n = n / 26`.',
+          'Reverse the letters and return them.',
+        ],
+        time: 'O(log n)', space: 'O(log n)',
+        why: 'One letter per base-26 digit, so at most 7 letters for 2³¹ − 1. Forgetting the "− 1" is the classic bug: 26 would become "A@" instead of "Z".',
+        code: {
+          java: r`class Solution {
+    public String convertToTitle(int columnNumber) {
+        StringBuilder sb = new StringBuilder();
+        while (columnNumber > 0) {
+            columnNumber--;
+            sb.append((char) ('A' + columnNumber % 26));
+            columnNumber /= 26;
+        }
+        return sb.reverse().toString();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string convertToTitle(int columnNumber) {
+        string s;
+        while (columnNumber > 0) {
+            columnNumber--;
+            s += (char) ('A' + columnNumber % 26);
+            columnNumber /= 26;
+        }
+        reverse(s.begin(), s.end());
+        return s;
+    }
+};`,
+          python: r`class Solution:
+    def convertToTitle(self, columnNumber: int) -> str:
+        out = []
+        while columnNumber > 0:
+            columnNumber -= 1
+            out.append(chr(ord('A') + columnNumber % 26))
+            columnNumber //= 26
+        return "".join(reversed(out))`,
+          javascript: r`var convertToTitle = function(columnNumber) {
+    let s = "";
+    while (columnNumber > 0) {
+        columnNumber--;
+        s = String.fromCharCode(65 + (columnNumber % 26)) + s;
+        columnNumber = Math.floor(columnNumber / 26);
+    }
+    return s;
+};`,
+        },
+      },
+    ],
+  },
+  'greatest-common-divisor-of-strings': {
+    pattern: 'String periodicity: concatenation check + numeric gcd',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Try every prefix length from longest',
+        idea: 'Any common divisor is a prefix of both strings whose length divides both lengths. Try lengths from the shorter length downwards and return the first that divides both.',
+        steps: [
+          'For `len` from `min(m, n)` down to 1, skip it unless it divides both `m` and `n`.',
+          'Let `t = str1[0..len)`; check that repeating `t` gives `str1` and gives `str2`.',
+          'Return the first `t` that works, or "".',
+        ],
+        time: 'O(min(m, n) · (m + n))', space: 'O(m + n)',
+        why: 'Up to min(m, n) candidates, each checked in linear time (in practice only divisors of both lengths are checked, which is far fewer).',
+        code: {
+          java: r`class Solution {
+    public String gcdOfStrings(String str1, String str2) {
+        int m = str1.length(), n = str2.length();
+        for (int len = Math.min(m, n); len >= 1; len--) {
+            if (m % len != 0 || n % len != 0) continue;
+            String t = str1.substring(0, len);
+            if (t.repeat(m / len).equals(str1) && t.repeat(n / len).equals(str2)) return t;
+        }
+        return "";
+    }
+}`,
+          cpp: r`class Solution {
+    bool repeats(const string& s, const string& t) {
+        if (s.size() % t.size()) return false;
+        for (size_t i = 0; i < s.size(); i++) if (s[i] != t[i % t.size()]) return false;
+        return true;
+    }
+public:
+    string gcdOfStrings(string str1, string str2) {
+        for (int len = min(str1.size(), str2.size()); len >= 1; len--) {
+            string t = str1.substr(0, len);
+            if (repeats(str1, t) && repeats(str2, t)) return t;
+        }
+        return "";
+    }
+};`,
+          python: r`class Solution:
+    def gcdOfStrings(self, str1: str, str2: str) -> str:
+        m, n = len(str1), len(str2)
+        for length in range(min(m, n), 0, -1):
+            if m % length or n % length:
+                continue
+            t = str1[:length]
+            if t * (m // length) == str1 and t * (n // length) == str2:
+                return t
+        return ""`,
+          javascript: r`var gcdOfStrings = function(str1, str2) {
+    const m = str1.length, n = str2.length;
+    for (let len = Math.min(m, n); len >= 1; len--) {
+        if (m % len !== 0 || n % len !== 0) continue;
+        const t = str1.slice(0, len);
+        if (t.repeat(m / len) === str1 && t.repeat(n / len) === str2) return t;
+    }
+    return "";
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'str1 + str2 == str2 + str1, then gcd of lengths',
+        idea: 'Both strings are repetitions of one common block exactly when the two concatenations are equal. When they are, the largest such block has length gcd(m, n).',
+        steps: [
+          'If `str1 + str2 != str2 + str1`, return "".',
+          'Compute `g = gcd(m, n)` with Euclid.',
+          'Return `str1[0..g)`.',
+        ],
+        time: 'O(m + n)', space: 'O(m + n)',
+        why: 'The concatenation check is linear and Euclid is logarithmic. If both strings are made of a block t, any block whose length divides both lengths works, and the longest such length is gcd(m, n); the concatenation test rules out everything else.',
+        code: {
+          java: r`class Solution {
+    public String gcdOfStrings(String str1, String str2) {
+        if (!(str1 + str2).equals(str2 + str1)) return "";
+        return str1.substring(0, gcd(str1.length(), str2.length()));
+    }
+    private int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }
+}`,
+          cpp: r`class Solution {
+public:
+    string gcdOfStrings(string str1, string str2) {
+        if (str1 + str2 != str2 + str1) return "";
+        return str1.substr(0, gcd(str1.size(), str2.size()));
+    }
+};`,
+          python: r`class Solution:
+    def gcdOfStrings(self, str1: str, str2: str) -> str:
+        if str1 + str2 != str2 + str1:
+            return ""
+        return str1[:gcd(len(str1), len(str2))]`,
+          javascript: r`var gcdOfStrings = function(str1, str2) {
+    if (str1 + str2 !== str2 + str1) return "";
+    const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+    return str1.slice(0, gcd(str1.length, str2.length));
+};`,
+        },
+      },
+    ],
+  },
+  'multiply-strings': {
+    pattern: 'Long multiplication into a position array',
+    approaches: [
+      {
+        level: 'Better', name: 'Multiply by each digit, then add the rows',
+        idea: 'Do it exactly as on paper: multiply `num1` by one digit of `num2` at a time (shifted), and add each row into a running total with string addition.',
+        steps: [
+          'For each digit of `num2` from the right, compute `num1 × digit` as a string, followed by the right number of zeros.',
+          'Add it to the running result with grade-school string addition.',
+          'Strip leading zeros (return "0" if the result is empty).',
+        ],
+        time: 'O(m · n)', space: 'O(m + n)',
+        why: 'n rows, each built and added in O(m + n). It is correct, but creating and adding whole strings for every row does more work and allocation than needed.',
+        code: {
+          java: r`class Solution {
+    public String multiply(String num1, String num2) {
+        if (num1.equals("0") || num2.equals("0")) return "0";
+        String result = "0";
+        for (int j = num2.length() - 1, shift = 0; j >= 0; j--, shift++) {
+            int d = num2.charAt(j) - '0', carry = 0;
+            StringBuilder row = new StringBuilder();
+            for (int k = 0; k < shift; k++) row.append('0');
+            for (int i = num1.length() - 1; i >= 0; i--) {
+                int p = (num1.charAt(i) - '0') * d + carry;
+                row.append(p % 10);
+                carry = p / 10;
+            }
+            if (carry > 0) row.append(carry);
+            result = add(result, row.reverse().toString());
+        }
+        return result;
+    }
+    private String add(String a, String b) {
+        StringBuilder sb = new StringBuilder();
+        int i = a.length() - 1, j = b.length() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry > 0) {
+            int s = carry + (i >= 0 ? a.charAt(i--) - '0' : 0) + (j >= 0 ? b.charAt(j--) - '0' : 0);
+            sb.append(s % 10);
+            carry = s / 10;
+        }
+        return sb.reverse().toString();
+    }
+}`,
+          cpp: r`class Solution {
+    string add(const string& a, const string& b) {
+        string s;
+        int i = (int) a.size() - 1, j = (int) b.size() - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry) {
+            int t = carry + (i >= 0 ? a[i--] - '0' : 0) + (j >= 0 ? b[j--] - '0' : 0);
+            s += (char) ('0' + t % 10);
+            carry = t / 10;
+        }
+        reverse(s.begin(), s.end());
+        return s;
+    }
+public:
+    string multiply(string num1, string num2) {
+        if (num1 == "0" || num2 == "0") return "0";
+        string result = "0";
+        for (int j = (int) num2.size() - 1, shift = 0; j >= 0; j--, shift++) {
+            int d = num2[j] - '0', carry = 0;
+            string row(shift, '0');
+            for (int i = (int) num1.size() - 1; i >= 0; i--) {
+                int p = (num1[i] - '0') * d + carry;
+                row += (char) ('0' + p % 10);
+                carry = p / 10;
+            }
+            if (carry) row += (char) ('0' + carry);
+            reverse(row.begin(), row.end());
+            result = add(result, row);
+        }
+        return result;
+    }
+};`,
+          python: r`class Solution:
+    def multiply(self, num1: str, num2: str) -> str:
+        if num1 == "0" or num2 == "0":
+            return "0"
+        def add(a, b):
+            out, i, j, carry = [], len(a) - 1, len(b) - 1, 0
+            while i >= 0 or j >= 0 or carry:
+                s = carry + (int(a[i]) if i >= 0 else 0) + (int(b[j]) if j >= 0 else 0)
+                out.append(str(s % 10))
+                carry = s // 10
+                i -= 1
+                j -= 1
+            return "".join(reversed(out))
+        result = "0"
+        for shift, ch in enumerate(reversed(num2)):
+            d, carry, row = int(ch), 0, ['0'] * shift
+            for c in reversed(num1):
+                p = int(c) * d + carry
+                row.append(str(p % 10))
+                carry = p // 10
+            if carry:
+                row.append(str(carry))
+            result = add(result, "".join(reversed(row)))
+        return result`,
+          javascript: r`var multiply = function(num1, num2) {
+    if (num1 === "0" || num2 === "0") return "0";
+    const add = (a, b) => {
+        let out = "", i = a.length - 1, j = b.length - 1, carry = 0;
+        while (i >= 0 || j >= 0 || carry) {
+            const s = carry + (i >= 0 ? a.charCodeAt(i--) - 48 : 0) + (j >= 0 ? b.charCodeAt(j--) - 48 : 0);
+            out = (s % 10) + out;
+            carry = Math.floor(s / 10);
+        }
+        return out;
+    };
+    let result = "0";
+    for (let j = num2.length - 1, shift = 0; j >= 0; j--, shift++) {
+        const d = num2.charCodeAt(j) - 48;
+        let carry = 0, row = "0".repeat(shift);
+        for (let i = num1.length - 1; i >= 0; i--) {
+            const p = (num1.charCodeAt(i) - 48) * d + carry;
+            row = (p % 10) + row;
+            carry = Math.floor(p / 10);
+        }
+        if (carry) row = carry + row;
+        result = add(result, row);
+    }
+    return result;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Accumulate into positions i + j and i + j + 1',
+        idea: 'Digit `i` of `num1` times digit `j` of `num2` contributes to positions `i + j` (carry) and `i + j + 1` (units) of a result array of length `m + n`. Accumulate every product there directly.',
+        steps: [
+          'Create `pos` of length `m + n`, all zeros.',
+          'For `i` from `m − 1` down and `j` from `n − 1` down: `sum = d1 · d2 + pos[i + j + 1]`; set `pos[i + j + 1] = sum % 10` and add `sum / 10` to `pos[i + j]`.',
+          'Join the digits, skipping leading zeros; return "0" if nothing remains.',
+        ],
+        time: 'O(m · n)', space: 'O(m + n)',
+        why: 'Same number of digit multiplications, but no intermediate strings: one integer array of the final size. Processing from the right means each `pos[i + j + 1]` is final before it is read again. The product of an m-digit and an n-digit number has at most m + n digits.',
+        code: {
+          java: r`class Solution {
+    public String multiply(String num1, String num2) {
+        int m = num1.length(), n = num2.length();
+        int[] pos = new int[m + n];
+        for (int i = m - 1; i >= 0; i--)
+            for (int j = n - 1; j >= 0; j--) {
+                int sum = (num1.charAt(i) - '0') * (num2.charAt(j) - '0') + pos[i + j + 1];
+                pos[i + j + 1] = sum % 10;
+                pos[i + j] += sum / 10;
+            }
+        StringBuilder sb = new StringBuilder();
+        for (int d : pos) if (sb.length() > 0 || d != 0) sb.append(d);
+        return sb.length() == 0 ? "0" : sb.toString();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    string multiply(string num1, string num2) {
+        int m = num1.size(), n = num2.size();
+        vector<int> pos(m + n, 0);
+        for (int i = m - 1; i >= 0; i--)
+            for (int j = n - 1; j >= 0; j--) {
+                int sum = (num1[i] - '0') * (num2[j] - '0') + pos[i + j + 1];
+                pos[i + j + 1] = sum % 10;
+                pos[i + j] += sum / 10;
+            }
+        string s;
+        for (int d : pos) if (!s.empty() || d != 0) s += (char) ('0' + d);
+        return s.empty() ? "0" : s;
+    }
+};`,
+          python: r`class Solution:
+    def multiply(self, num1: str, num2: str) -> str:
+        m, n = len(num1), len(num2)
+        pos = [0] * (m + n)
+        for i in range(m - 1, -1, -1):
+            for j in range(n - 1, -1, -1):
+                total = int(num1[i]) * int(num2[j]) + pos[i + j + 1]
+                pos[i + j + 1] = total % 10
+                pos[i + j] += total // 10
+        s = "".join(map(str, pos)).lstrip('0')
+        return s or "0"`,
+          javascript: r`var multiply = function(num1, num2) {
+    const m = num1.length, n = num2.length, pos = new Array(m + n).fill(0);
+    for (let i = m - 1; i >= 0; i--)
+        for (let j = n - 1; j >= 0; j--) {
+            const sum = (num1.charCodeAt(i) - 48) * (num2.charCodeAt(j) - 48) + pos[i + j + 1];
+            pos[i + j + 1] = sum % 10;
+            pos[i + j] += Math.floor(sum / 10);
+        }
+    const s = pos.join("").replace(/^0+/, "");
+    return s || "0";
 };`,
         },
       },

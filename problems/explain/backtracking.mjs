@@ -44,4 +44,17 @@ export default {
   'sudoku-solver': {
     explain: 'Every empty `.` is filled so that each row, each column and each 3 × 3 box contains the digits 1 to 9 exactly once. For example the first row `5 3 . . 7 . . . .` becomes `5 3 4 6 7 8 9 1 2`; the puzzle has exactly one such completion.',
   },
+  'sum-of-all-subset-xor-totals': {
+    explain: 'The subsets are [], [1], [3] and [1,3], with XOR totals 0, 1, 3 and 1 XOR 3 = 2. Their sum is 0 + 1 + 3 + 2 = 6.',
+  },
+  'matchsticks-to-square': {
+    explain: 'The total is 8, so each side must be 2. One side uses the two 1s and each 2 forms a side on its own, so the answer is `true`.',
+    more: 'For example `[3,3,3,3,4]` has total 16, so each side would be 4. The 4 fills one side, but the four 3s cannot make three sides of 4, so that answer is `false`.',
+  },
+  'n-queens-ii': {
+    explain: 'On a 4 × 4 board there are exactly two arrangements: queens in columns 2, 4, 1, 3 (rows 1 to 4) and its mirror image 3, 1, 4, 2. The answer is 2.',
+  },
+  'word-break-ii': {
+    explain: '"catsanddog" splits as cat + sand + dog or as cats + and + dog, and no other split uses only dictionary words. The answer is `["cats and dog","cat sand dog"]` in any order.',
+  },
 };

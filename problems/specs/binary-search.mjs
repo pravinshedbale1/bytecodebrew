@@ -226,4 +226,102 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'guess-number-higher-or-lower', title: 'Guess Number Higher or Lower', level: 'Easy',
+    summary: 'A number between 1 and n has been picked. The provided guess(num) returns -1 if num is too high, 1 if it is too low and 0 if it is right. Return the picked number. (The tests also tell the judge which number was picked.)',
+    method: 'guessNumber', params: [['int', 'n'], ['int', 'pick']], starterParams: [['int', 'n']], returns: 'int',
+    uses: ['GuessGame'], extends: 'GuessGame',
+    call: 'GuessGame.PICK = BCB.I($1); Object r = s.guessNumber(BCB.I($0));',
+    tests: [
+      { in: [10, 6], out: 6 },
+      { in: [1, 1], out: 1 },
+      { in: [2, 1], out: 1 },
+      { in: [2, 2] },
+      { in: [2126753390, 1702766719] },
+      { in: [2147483647, 2147483647] },
+    ],
+    ref: `class Solution extends GuessGame {
+    public int guessNumber(int n) {
+        int lo = 1, hi = n;
+        while (true) {
+            int mid = lo + (hi - lo) / 2, g = guess(mid);
+            if (g == 0) return mid;
+            if (g < 0) hi = mid - 1; else lo = mid + 1;
+        }
+    }
+}`,
+  },
+  {
+    slug: 'search-in-rotated-sorted-array-ii', title: 'Search in Rotated Sorted Array II', level: 'Medium',
+    summary: 'nums was sorted (with possible duplicates) and then rotated at an unknown pivot. Return true if target is in nums.',
+    method: 'search', params: [['int[]', 'nums'], ['int', 'target']], returns: 'boolean',
+    tests: [
+      { in: [[2, 5, 6, 0, 0, 1, 2], 0], out: true },
+      { in: [[2, 5, 6, 0, 0, 1, 2], 3], out: false },
+      { in: [[1, 0, 1, 1, 1], 0] },
+      { in: [[1], 1] },
+      { in: [[1, 1, 1, 1, 1, 1, 1, 1, 1, 13, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 13] },
+      { in: [[3, 1], 1] },
+      { in: [[4, 5, 6, 7, 0, 1, 2], 8] },
+      { in: [[1, 3, 1, 1, 1], 3] },
+    ],
+    ref: `class Solution {
+    public boolean search(int[] nums, int target) {
+        int lo = 0, hi = nums.length - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (nums[mid] == target) return true;
+            if (nums[lo] == nums[mid] && nums[mid] == nums[hi]) { lo++; hi--; }
+            else if (nums[lo] <= nums[mid]) {
+                if (nums[lo] <= target && target < nums[mid]) hi = mid - 1; else lo = mid + 1;
+            } else {
+                if (nums[mid] < target && target <= nums[hi]) lo = mid + 1; else hi = mid - 1;
+            }
+        }
+        return false;
+    }
+}`,
+  },
+  {
+    slug: 'find-in-mountain-array', title: 'Find in Mountain Array', level: 'Hard',
+    summary: 'A mountain array strictly increases to a peak, then strictly decreases. You can read it only through MountainArray.get(index) (at most 100 calls) and length(). Return the smallest index holding target, or -1.',
+    method: 'findInMountainArray', params: [['int[]', 'mountainArr'], ['int', 'target']], starterParams: [['int', 'target'], ['MountainArray', 'mountainArr']], returns: 'int',
+    uses: ['MountainArray'],
+    call: 'Object r = s.findInMountainArray(BCB.I($1), new BCBM(BCB.IA($0)));',
+    tests: [
+      { in: [[1, 2, 3, 4, 5, 3, 1], 3], out: 2 },
+      { in: [[0, 1, 2, 4, 2, 1], 3], out: -1 },
+      { in: [[1, 5, 2], 2] },
+      { in: [[1, 5, 2], 1] },
+      { in: [[3, 5, 3, 2, 0], 0] },
+      { in: [[0, 5, 3, 1], 5] },
+      { in: [[...Array.from({ length: 700 }, (_, i) => 2 * i + 1), ...Array.from({ length: 700 }, (_, j) => 1398 - 2 * j)], 600] },
+      { in: [[...Array.from({ length: 5000 }, (_, i) => i), ...Array.from({ length: 4999 }, (_, j) => 4998 - j)], 4321] },
+      { in: [[...Array.from({ length: 300 }, (_, i) => 3 * i), ...Array.from({ length: 200 }, (_, j) => 1000 - 5 * j)], 7] },
+    ],
+    ref: `class Solution {
+    public int findInMountainArray(int target, MountainArray mountainArr) {
+        int n = mountainArr.length();
+        int lo = 0, hi = n - 1;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (mountainArr.get(mid) < mountainArr.get(mid + 1)) lo = mid + 1; else hi = mid;
+        }
+        int peak = lo;
+        lo = 0; hi = peak;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v < target) lo = mid + 1; else hi = mid - 1;
+        }
+        lo = peak + 1; hi = n - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1, v = mountainArr.get(mid);
+            if (v == target) return mid;
+            if (v > target) lo = mid + 1; else hi = mid - 1;
+        }
+        return -1;
+    }
+}`,
+  },
 ];

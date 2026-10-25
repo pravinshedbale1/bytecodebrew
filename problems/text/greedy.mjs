@@ -101,4 +101,77 @@ Return the minimum total number of candies.`,
       'Right to left: if ratings[i] > ratings[i + 1], set candy[i] = max(candy[i], candy[i + 1] + 1). Sum the result.',
     ],
   },
+  'lemonade-change': {
+    statement: `At a lemonade stand each lemonade costs \`$5\`. Customers queue up and buy one at a time, in the order given by \`bills\`. Each customer pays with a single \`$5\`, \`$10\` or \`$20\` bill, and you must give them the right change so they pay exactly \`$5\`.
+
+You start with no change at all. Return \`true\` if you can give every customer correct change, and \`false\` otherwise.`,
+    constraints: ['1 <= bills.length <= 1e5', '`bills[i]` is 5, 10 or 20'],
+    hints: [
+      'Only $5 and $10 bills are ever useful as change. Keep a count of each.',
+      'A $10 needs one $5 back. A $20 needs $15 back: either one $10 and one $5, or three $5s.',
+      'For a $20, prefer giving the $10 + $5. $5 bills are more flexible (they also pay for $10 customers), so save them when you can.',
+    ],
+  },
+  'merge-triplets-to-form-target-triplet': {
+    statement: `\`triplets[i] = [a_i, b_i, c_i]\` and \`target = [x, y, z]\`. In one operation you pick two different indices \`i\` and \`j\` and replace \`triplets[j]\` with \`[max(a_i, a_j), max(b_i, b_j), max(c_i, c_j)]\`.
+
+Return \`true\` if, after any number of operations (possibly none), \`target\` can appear as one of the triplets.`,
+    constraints: ['1 <= triplets.length <= 1e5', 'Each triplet and target has three values', '1 <= triplets[i][j] <= 1000', '1 <= target[i] <= 1000'],
+    hints: [
+      'Merging only ever increases values. So a triplet with any value larger than the target\'s at the same position can never be used.',
+      'Among the usable triplets, merging all of them gives the largest reachable values without overshooting.',
+      'The answer is yes exactly when, for each of the three positions, some usable triplet matches the target there.',
+    ],
+  },
+  'valid-parenthesis-string': {
+    statement: `\`s\` contains only \`"("\`, \`")"\` and \`"*"\`. Return \`true\` if \`s\` is valid. It is valid if:
+
+- every \`"("\` has a matching \`")"\` after it, and every \`")"\` has a matching \`"("\` before it;
+- each \`"*"\` can be treated as a single \`"("\`, a single \`")"\`, or an empty string.`,
+    constraints: ['1 <= s.length <= 100', '`s[i]` is "(", ")" or "*"'],
+    hints: [
+      'Trying all three options for every "*" is 3^k work for k stars. A DP over (index, open count) works in O(n²).',
+      'Instead of one open count, track the range of possible open counts: lo (treat every "*" as ")") and hi (treat every "*" as "(").',
+      'If hi ever drops below 0, too many ")" have appeared: fail. Never let lo go below 0, since a "*" can always be empty instead. The string is valid if lo is 0 at the end.',
+    ],
+  },
+  'hand-of-straights': {
+    statement: `Alice wants to rearrange her cards into groups of exactly \`groupSize\` cards, where each group consists of \`groupSize\` **consecutive** values (like 3, 4, 5). \`hand[i]\` is the value written on the \`i\`-th card.
+
+Return \`true\` if she can use every card exactly once in such groups, and \`false\` otherwise.`,
+    constraints: ['1 <= hand.length <= 1e4', '0 <= hand[i] <= 1e9', '1 <= groupSize <= hand.length'],
+    hints: [
+      'If the number of cards is not a multiple of groupSize, the answer is false immediately.',
+      'The smallest card left must start a group, because no smaller card exists to come before it.',
+      'Count the cards in a sorted map. Repeatedly take the smallest value v and remove one of each of v, v + 1, …, v + groupSize − 1; fail if any is missing.',
+    ],
+  },
+  'dota2-senate': {
+    statement: `The Dota2 senate has senators from two parties, Radiant (\`"R"\`) and Dire (\`"D"\`); \`senate[i]\` is the party of the \`i\`-th senator. Voting goes round by round, and in each round the senators act in order from first to last. A senator who has not been banned can do one of two things:
+
+- **ban** one senator of the other party, who loses all rights in this and every later round;
+- **announce victory**, if every senator still able to vote belongs to their own party.
+
+Every senator plays the best strategy for their party. Return \`"Radiant"\` or \`"Dire"\`, the party that announces victory.`,
+    constraints: ['1 <= senate.length <= 1e4', '`senate[i]` is "R" or "D"'],
+    hints: [
+      'Greedy: each senator should ban the next opposing senator who would act after them, since that opponent is the most immediate threat.',
+      'Simulating round by round and scanning for the next opponent costs O(n²).',
+      'Use two queues of positions, one per party. Compare the fronts: the earlier one bans the other and re-enters its queue at position + n (the next round); the later one is removed. The party whose queue empties loses.',
+    ],
+  },
+  'jump-game-vii': {
+    statement: `\`s\` is a binary string, and \`s[0]\` is \`"0"\`. You start at index \`0\`. From index \`i\` you can jump to index \`j\` if:
+
+- \`i + minJump <= j <= min(i + maxJump, s.length − 1)\`, and
+- \`s[j] == "0"\`.
+
+Return \`true\` if you can reach index \`s.length − 1\`, and \`false\` otherwise.`,
+    constraints: ['2 <= s.length <= 1e5', '`s[i]` is "0" or "1"', '`s[0]` is "0"', '1 <= minJump <= maxJump < s.length'],
+    hints: [
+      'reach[j] is true when s[j] is "0" and some reachable i lies in the window [j − maxJump, j − minJump]. Checking the whole window for every j is O(n · (maxJump − minJump)).',
+      'Keep a running count of reachable indices inside that window as it slides: add index j − minJump when it enters, remove j − maxJump − 1 when it leaves.',
+      'Alternatively, BFS while remembering the farthest index already scheduled, so each index is examined only once.',
+    ],
+  },
 };

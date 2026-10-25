@@ -27,4 +27,26 @@ export default {
     explain: 'One unit sits at index 2, between the bars of height 1 and 2. Between the bars of height 2 and 3 four units collect (1 + 2 + 1 at indices 4 to 6). One more sits at index 9. In total 1 + 4 + 1 = 6.',
     more: 'The water above bar `i` is the smaller of the tallest bar to its left and the tallest bar to its right, minus `height[i]` (or 0 if that is negative).',
   },
+  'remove-element': {
+    explain: 'Two values in `[3,2,2,3]` are not 3, so k = 2 and the first two slots hold `[2,2]`. The judge prints `[2,[2,2]]`.',
+  },
+  'reverse-string': {
+    explain: 'Swapping the ends of "hello" and moving inwards gives `["o","l","l","e","h"]`: the h and o swap, the e and second l swap, and the middle l stays put.',
+  },
+  'valid-palindrome-ii': {
+    explain: '"aba" already reads the same in both directions, so no deletion is needed and the answer is `true`.',
+    more: 'For example "abca" also gives `true`: delete the "c" (or the "b") and "aba" is left.',
+  },
+  'merge-strings-alternately': {
+    explain: 'Taking a letter from each word in turn: a, p, b, q, c, r. The merged string is "apbqcr".',
+  },
+  'merge-sorted-array': {
+    explain: 'The real values are `[1,2,3]` and `[2,5,6]`. Merged in sorted order they give `[1,2,2,3,5,6]`, which fills all six slots of `nums1`.',
+  },
+  '4sum': {
+    explain: 'Sorted, the array is `[-2,-1,0,0,1,2]`. Three different value sets add up to 0: −2 − 1 + 1 + 2, −2 + 0 + 0 + 2 and −1 + 0 + 0 + 1, so the answer is `[[-2,-1,1,2],[-2,0,0,2],[-1,0,0,1]]`.',
+  },
+  'rotate-array': {
+    explain: 'Rotating right by one step three times moves 7, 6 and 5 to the front in turn, giving `[5,6,7,1,2,3,4]`.',
+  },
 };

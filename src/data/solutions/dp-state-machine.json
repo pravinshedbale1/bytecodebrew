@@ -19,7 +19,10 @@
      "cpp": "class Solution {\n    int best(vector<int>& p, int i, bool holding) {\n        if (i == (int) p.size()) return 0;\n        int skip = best(p, i + 1, holding);\n        int act = holding ? p[i] + best(p, i + 1, false) : -p[i] + best(p, i + 1, true);\n        return max(skip, act);\n    }\npublic:\n    int maxProfit(vector<int>& prices) {\n        return best(prices, 0, false);\n    }\n};",
      "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        n = len(prices)\n        def best(i, holding):\n            if i == n:\n                return 0\n            skip = best(i + 1, holding)\n            act = prices[i] + best(i + 1, False) if holding else -prices[i] + best(i + 1, True)\n            return max(skip, act)\n        return best(0, False)",
      "javascript": "var maxProfit = function(prices) {\n    const n = prices.length;\n    const best = (i, holding) => {\n        if (i === n) return 0;\n        const skip = best(i + 1, holding);\n        const act = holding ? prices[i] + best(i + 1, false) : -prices[i] + best(i + 1, true);\n        return Math.max(skip, act);\n    };\n    return best(0, false);\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Better",
@@ -206,7 +209,10 @@
      "cpp": "class Solution {\n    int best(vector<int>& p, int i, int left, bool holding) {\n        if (i == (int) p.size() || left == 0) return 0;\n        int skip = best(p, i + 1, left, holding);\n        int act = holding ? p[i] + best(p, i + 1, left - 1, false) : -p[i] + best(p, i + 1, left, true);\n        return max(skip, act);\n    }\npublic:\n    int maxProfit(int k, vector<int>& prices) {\n        return best(prices, 0, k, false);\n    }\n};",
      "python": "class Solution:\n    def maxProfit(self, k: int, prices: List[int]) -> int:\n        n = len(prices)\n        def best(i, left, holding):\n            if i == n or left == 0:\n                return 0\n            skip = best(i + 1, left, holding)\n            if holding:\n                act = prices[i] + best(i + 1, left - 1, False)\n            else:\n                act = -prices[i] + best(i + 1, left, True)\n            return max(skip, act)\n        return best(0, k, False)",
      "javascript": "var maxProfit = function(k, prices) {\n    const n = prices.length;\n    const best = (i, left, holding) => {\n        if (i === n || left === 0) return 0;\n        const skip = best(i + 1, left, holding);\n        const act = holding ? prices[i] + best(i + 1, left - 1, false) : -prices[i] + best(i + 1, left, true);\n        return Math.max(skip, act);\n    };\n    return best(0, k, false);\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Better",
@@ -267,7 +273,8 @@
     "why": "It visits every eligible record one by one, and their number grows exponentially.",
     "timesOut": [
      2,
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    private static final int MOD = 1_000_000_007;\n\n    public int checkRecord(int n) {\n        return count(n, 0, 0, 0);\n    }\n\n    private int count(int n, int i, int a, int l) {\n        if (i == n) return 1;\n        long total = count(n, i + 1, a, 0);\n        if (a == 0) total += count(n, i + 1, 1, 0);\n        if (l < 2) total += count(n, i + 1, a, l + 1);\n        return (int) (total % MOD);\n    }\n}",
@@ -331,7 +338,8 @@
     "space": "O(n)",
     "why": "All n! orders are built, each checked in O(n). n = 15 means 1.3·10¹² permutations — far too many.",
     "timesOut": [
-     4
+     4,
+     "generated"
     ],
     "code": {
      "java": "class Solution {\n    private int count = 0;\n\n    public int countArrangement(int n) {\n        int[] perm = new int[n];\n        for (int i = 0; i < n; i++) perm[i] = i + 1;\n        permute(perm, 0);\n        return count;\n    }\n\n    private void permute(int[] a, int pos) {\n        if (pos == a.length) {\n            for (int i = 0; i < a.length; i++)\n                if (a[i] % (i + 1) != 0 && (i + 1) % a[i] != 0) return;\n            count++;\n            return;\n        }\n        for (int i = pos; i < a.length; i++) {\n            int t = a[pos]; a[pos] = a[i]; a[i] = t;\n            permute(a, pos + 1);\n            t = a[pos]; a[pos] = a[i]; a[i] = t;\n        }\n    }\n}",
@@ -527,7 +535,10 @@
      "cpp": "class Solution {\npublic:\n    int shortestPathLength(vector<vector<int>>& graph) {\n        int n = graph.size();\n        vector<vector<int>> dist(n, vector<int>(n, -1));\n        for (int s = 0; s < n; s++) {\n            dist[s][s] = 0;\n            queue<int> q;\n            q.push(s);\n            while (!q.empty()) {\n                int u = q.front();\n                q.pop();\n                for (int v : graph[u])\n                    if (dist[s][v] < 0) { dist[s][v] = dist[s][u] + 1; q.push(v); }\n            }\n        }\n        vector<int> order(n);\n        iota(order.begin(), order.end(), 0);\n        int best = INT_MAX;\n        do {\n            int len = 0;\n            for (int i = 1; i < n; i++) len += dist[order[i - 1]][order[i]];\n            best = min(best, len);\n        } while (next_permutation(order.begin(), order.end()));\n        return best;\n    }\n};",
      "python": "class Solution:\n    def shortestPathLength(self, graph: List[List[int]]) -> int:\n        n = len(graph)\n        dist = [[-1] * n for _ in range(n)]\n        for s in range(n):\n            dist[s][s] = 0\n            q = deque([s])\n            while q:\n                u = q.popleft()\n                for v in graph[u]:\n                    if dist[s][v] < 0:\n                        dist[s][v] = dist[s][u] + 1\n                        q.append(v)\n        return min(sum(dist[a][b] for a, b in zip(order, order[1:])) for order in permutations(range(n)))",
      "javascript": "var shortestPathLength = function(graph) {\n    const n = graph.length;\n    const dist = Array.from({ length: n }, () => new Array(n).fill(-1));\n    for (let s = 0; s < n; s++) {\n        dist[s][s] = 0;\n        const q = [s];\n        for (let head = 0; head < q.length; head++) {\n            const u = q[head];\n            for (const v of graph[u]) if (dist[s][v] < 0) { dist[s][v] = dist[s][u] + 1; q.push(v); }\n        }\n    }\n    let best = Infinity;\n    const used = new Array(n).fill(false);\n    const tour = (at, seen, len) => {\n        if (seen === n) { best = Math.min(best, len); return; }\n        for (let v = 0; v < n; v++)\n            if (!used[v]) {\n                used[v] = true;\n                tour(v, seen + 1, len + dist[at][v]);\n                used[v] = false;\n            }\n    };\n    for (let s = 0; s < n; s++) {\n        used[s] = true;\n        tour(s, 1, 0);\n        used[s] = false;\n    }\n    return best;\n};"
-    }
+    },
+    "timesOut": [
+     "generated"
+    ]
    },
    {
     "level": "Optimal",

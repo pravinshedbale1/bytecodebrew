@@ -28,4 +28,10 @@ export default {
     explain: 'The first "(" is never closed, but the last two characters "()" form a matched pair. The longest well-formed piece has length 2.',
     more: 'For example in ")()())" the answer is 4, from "()()". Pieces must be contiguous, so the stray ")" in the middle of a string breaks it into separate runs.',
   },
+  'baseball-game': {
+    explain: 'Record 5 and 2; "C" removes the 2; "D" records 10; "+" records 5 + 10 = 15. The record is 5, 10, 15, which sums to 30.',
+  },
+  'car-fleet': {
+    explain: 'Solo arrival times are 1 (pos 10), 1 (pos 8), 12 (pos 0), 7 (pos 5) and 3 (pos 3). The cars at 10 and 8 arrive together; the car at 3 catches the one at 5 and they arrive at time 7; the car at 0 arrives alone at 12. That is 3 fleets.',
+  },
 };

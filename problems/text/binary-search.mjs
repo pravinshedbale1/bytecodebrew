@@ -109,4 +109,48 @@ The intended solution runs in O(log(m + n)) time; merging the arrays is O(m + n)
       'Treat out-of-range neighbours as −∞ and +∞. Once the split is right, the median comes from max(left sides) and min(right sides).',
     ],
   },
+  'guess-number-higher-or-lower': {
+    statement: `We have picked a number \`pick\` between \`1\` and \`n\`. Find it.
+
+Each time you guess, call the provided \`guess(num)\`. It returns:
+
+- \`-1\` if \`num\` is higher than the picked number,
+- \`1\` if \`num\` is lower than the picked number,
+- \`0\` if \`num\` is the picked number.
+
+Return the picked number. (In our tests the second input tells the judge which number was picked; your code only receives \`n\`.)`,
+    constraints: ['1 <= n <= 2^31 - 1', '1 <= pick <= n'],
+    hints: [
+      'Guessing 1, 2, 3, … needs up to n calls, which is about 2 · 10⁹ in the worst case.',
+      'Each answer tells you which half the number is in. Keep a range [lo, hi] and always guess the middle.',
+      'Compute the middle as lo + (hi − lo) / 2: lo + hi can overflow a 32-bit int when n is close to 2³¹ − 1.',
+    ],
+  },
+  'search-in-rotated-sorted-array-ii': {
+    statement: `\`nums\` was sorted in non-decreasing order (it **may contain duplicates**) and then rotated at an unknown index \`k\`, so it reads \`[nums[k], …, nums[n − 1], nums[0], …, nums[k − 1]]\`. For example \`[0,1,2,4,4,4,5,6,6,7]\` might become \`[4,5,6,6,7,0,1,2,4,4]\`.
+
+Return \`true\` if \`target\` is in \`nums\`, and \`false\` otherwise. Try to use as few steps as you can.`,
+    constraints: ['1 <= nums.length <= 5000', '-1e4 <= nums[i] <= 1e4', '`nums` is a sorted array rotated at some index', '-1e4 <= target <= 1e4'],
+    hints: [
+      'Without duplicates, one half around mid is always sorted, and you can tell which by comparing nums[lo] with nums[mid].',
+      'Duplicates break that test: when nums[lo] == nums[mid] == nums[hi], you cannot tell which side is sorted.',
+      'In that case, shrink both ends by one (lo++, hi−−); they are not the target, since they equal nums[mid]. Otherwise search the sorted half as usual. Worst case O(n), for arrays like [1,1,1,…,13,1,1].',
+    ],
+  },
+  'find-in-mountain-array': {
+    statement: `A **mountain array** \`arr\` has length at least 3 and a peak index \`p\` (\`0 < p < arr.length − 1\`) such that values strictly increase up to \`arr[p]\` and strictly decrease after it.
+
+You cannot read the array directly. You only get a \`MountainArray\` object with:
+
+- \`get(k)\`, which returns the value at index \`k\`,
+- \`length()\`, which returns the array's length.
+
+Return the **smallest** index whose value equals \`target\`, or \`-1\` if there is none. Calling \`get\` more than **100** times is treated as a wrong answer.`,
+    constraints: ['3 <= mountainArr.length <= 1e4', '0 <= target <= 1e9', '0 <= mountainArr[i] <= 1e9'],
+    hints: [
+      'A linear scan needs up to 10⁴ calls. With 100 allowed, you need a few binary searches of about 14 steps each.',
+      'First find the peak: if get(mid) < get(mid + 1), the peak is to the right of mid; otherwise it is at mid or to its left.',
+      'Then binary-search the increasing part [0, peak]. Only if the target is not there, binary-search the decreasing part with the comparison reversed. Searching the left side first gives the smallest index.',
+    ],
+  },
 };

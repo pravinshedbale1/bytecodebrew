@@ -161,4 +161,92 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'meeting-rooms', title: 'Meeting Rooms', level: 'Easy',
+    summary: 'intervals[i] = [start, end]. Return true if one person could attend every meeting: no two meetings overlap (one ending exactly when another starts is fine).',
+    method: 'canAttendMeetings', params: [['int[][]', 'intervals']], returns: 'boolean',
+    tests: [
+      { in: [[[0, 30], [5, 10], [15, 20]]], out: false },
+      { in: [[[7, 10], [2, 4]]], out: true },
+      { in: [[]] },
+      { in: [[[1, 5]]] },
+      { in: [[[5, 10], [10, 15], [0, 5]]] },
+      { in: [[[1, 3], [6, 9], [2, 7]]] },
+    ],
+    ref: `class Solution {
+    public boolean canAttendMeetings(int[][] intervals) {
+        int[][] a = intervals.clone();
+        Arrays.sort(a, (x, y) -> Integer.compare(x[0], y[0]));
+        for (int i = 1; i < a.length; i++) if (a[i][0] < a[i - 1][1]) return false;
+        return true;
+    }
+}`,
+  },
+  {
+    slug: 'meeting-rooms-ii', title: 'Meeting Rooms II', level: 'Medium',
+    summary: 'intervals[i] = [start, end]. Return the minimum number of rooms needed so every meeting has a room. A room freed at time t can host a meeting starting at t.',
+    method: 'minMeetingRooms', params: [['int[][]', 'intervals']], returns: 'int',
+    tests: [
+      { in: [[[0, 30], [5, 10], [15, 20]]], out: 2 },
+      { in: [[[7, 10], [2, 4]]], out: 1 },
+      { in: [[[1, 5]]] },
+      { in: [[[1, 10], [2, 9], [3, 8], [4, 7]]] },
+      { in: [[[5, 10], [10, 15], [0, 5]]] },
+      { in: [[[9, 10], [4, 9], [4, 17]]] },
+      { in: [[[1, 5], [8, 9], [8, 9]]] },
+    ],
+    ref: `class Solution {
+    public int minMeetingRooms(int[][] intervals) {
+        int n = intervals.length;
+        int[] starts = new int[n], ends = new int[n];
+        for (int i = 0; i < n; i++) { starts[i] = intervals[i][0]; ends[i] = intervals[i][1]; }
+        Arrays.sort(starts); Arrays.sort(ends);
+        int rooms = 0, best = 0, e = 0;
+        for (int s = 0; s < n; s++) {
+            while (ends[e] <= starts[s]) { e++; rooms--; }
+            rooms++;
+            best = Math.max(best, rooms);
+        }
+        return best;
+    }
+}`,
+  },
+  {
+    slug: 'meeting-rooms-iii', title: 'Meeting Rooms III', level: 'Hard',
+    summary: 'n rooms are numbered 0..n − 1. Meetings (unique start times) are handled in start order: each takes the free room with the lowest number; if none is free, it waits for the earliest room to free up (lowest number on ties) and keeps its length. Return the room that hosted the most meetings (lowest number on ties).',
+    method: 'mostBooked', params: [['int', 'n'], ['int[][]', 'meetings']], returns: 'int',
+    tests: [
+      { in: [2, [[0, 10], [1, 5], [2, 7], [3, 4]]], out: 0 },
+      { in: [3, [[1, 20], [2, 10], [3, 5], [4, 9], [6, 8]]], out: 1 },
+      { in: [1, [[0, 1]]] },
+      { in: [4, [[18, 19], [3, 12], [17, 19], [2, 13], [7, 10]]] },
+      { in: [2, [[0, 10], [1, 2], [12, 14], [13, 15]]] },
+      { in: [3, [[0, 500000], [1, 500000], [2, 500000], [3, 500000], [4, 500000], [5, 500000], [6, 500000], [7, 500000], [8, 500000], [9, 500000], [10, 500000], [11, 500000], [12, 500000], [13, 500000], [14, 500000], [15, 500000], [16, 500000]]] },
+    ],
+    ref: `class Solution {
+    public int mostBooked(int n, int[][] meetings) {
+        int[][] m = meetings.clone();
+        Arrays.sort(m, (x, y) -> Integer.compare(x[0], y[0]));
+        PriorityQueue<Integer> free = new PriorityQueue<>();
+        for (int i = 0; i < n; i++) free.add(i);
+        PriorityQueue<long[]> busy = new PriorityQueue<>((x, y) -> x[0] != y[0] ? Long.compare(x[0], y[0]) : Long.compare(x[1], y[1]));
+        int[] count = new int[n];
+        for (int[] mt : m) {
+            long start = mt[0], len = mt[1] - mt[0];
+            while (!busy.isEmpty() && busy.peek()[0] <= start) free.add((int) busy.poll()[1]);
+            if (free.isEmpty()) {
+                long[] b = busy.poll();
+                start = b[0];
+                free.add((int) b[1]);
+            }
+            int room = free.poll();
+            count[room]++;
+            busy.add(new long[] { start + len, room });
+        }
+        int best = 0;
+        for (int i = 1; i < n; i++) if (count[i] > count[best]) best = i;
+        return best;
+    }
+}`,
+  },
 ];

@@ -202,4 +202,140 @@ export default [
     private void union(int a, int b) { p[find(a)] = find(b); }
 }`,
   },
+  {
+    slug: 'graph-valid-tree', title: 'Graph Valid Tree', level: 'Medium',
+    summary: 'Nodes are labelled 0..n − 1 and edges are undirected. Return true if the edges form a valid tree: connected and without cycles.',
+    method: 'validTree', params: [['int', 'n'], ['int[][]', 'edges']], returns: 'boolean',
+    tests: [
+      { in: [5, [[0, 1], [0, 2], [0, 3], [1, 4]]], out: true },
+      { in: [5, [[0, 1], [1, 2], [2, 3], [1, 3], [1, 4]]], out: false },
+      { in: [1, []] },
+      { in: [2, []] },
+      { in: [4, [[0, 1], [2, 3]]] },
+      { in: [4, [[0, 1], [1, 2], [2, 0]]] },
+      { in: [3, [[1, 0], [2, 0]]] },
+    ],
+    ref: `class Solution {
+    public boolean validTree(int n, int[][] edges) {
+        if (edges.length != n - 1) return false;
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+        for (int[] e : edges) {
+            int a = find(parent, e[0]), b = find(parent, e[1]);
+            if (a == b) return false;
+            parent[a] = b;
+        }
+        return true;
+    }
+    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }
+}`,
+  },
+  {
+    slug: 'number-of-connected-components-in-an-undirected-graph', title: 'Number of Connected Components in an Undirected Graph', level: 'Medium',
+    summary: 'Nodes are labelled 0..n − 1 and edges are undirected. Return the number of connected components.',
+    method: 'countComponents', params: [['int', 'n'], ['int[][]', 'edges']], returns: 'int',
+    tests: [
+      { in: [5, [[0, 1], [1, 2], [3, 4]]], out: 2 },
+      { in: [5, [[0, 1], [1, 2], [2, 3], [3, 4]]], out: 1 },
+      { in: [1, []] },
+      { in: [4, []] },
+      { in: [6, [[0, 1], [1, 2], [2, 0], [3, 4]]] },
+      { in: [3, [[2, 1]]] },
+    ],
+    ref: `class Solution {
+    public int countComponents(int n, int[][] edges) {
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+        int comps = n;
+        for (int[] e : edges) {
+            int a = find(parent, e[0]), b = find(parent, e[1]);
+            if (a != b) { parent[a] = b; comps--; }
+        }
+        return comps;
+    }
+    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }
+}`,
+  },
+  {
+    slug: 'find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree', title: 'Find Critical and Pseudo-Critical Edges in Minimum Spanning Tree', level: 'Hard',
+    summary: 'edges[i] = [a, b, weight] in a connected undirected graph. An edge is critical if every minimum spanning tree uses it, and pseudo-critical if some but not all do. Return [critical indices, pseudo-critical indices]; each list may be in any order.',
+    method: 'findCriticalAndPseudoCriticalEdges', params: [['int', 'n'], ['int[][]', 'edges']], returns: 'List<List<Integer>>', check: 'custom:twoSets',
+    tests: [
+      { in: [5, [[0, 1, 1], [1, 2, 1], [2, 3, 2], [0, 3, 2], [0, 4, 3], [3, 4, 3], [1, 4, 6]]], out: [[0, 1], [2, 3, 4, 5]] },
+      { in: [4, [[0, 1, 1], [1, 2, 1], [2, 3, 1], [0, 3, 1]]], out: [[], [0, 1, 2, 3]] },
+      { in: [2, [[0, 1, 5]]] },
+      { in: [3, [[0, 1, 1], [1, 2, 2], [0, 2, 3]]] },
+      { in: [4, [[0, 1, 1], [0, 3, 1], [0, 2, 1], [1, 2, 1], [1, 3, 1], [2, 3, 1]]] },
+      { in: [6, [[0, 1, 1], [1, 2, 1], [0, 2, 1], [2, 3, 4], [3, 4, 2], [3, 5, 2], [4, 5, 2]]] },
+    ],
+    ref: `class Solution {
+    public List<List<Integer>> findCriticalAndPseudoCriticalEdges(int n, int[][] edges) {
+        int m = edges.length;
+        Integer[] order = new Integer[m];
+        for (int i = 0; i < m; i++) order[i] = i;
+        Arrays.sort(order, (x, y) -> edges[x][2] - edges[y][2]);
+        int best = mst(n, edges, order, -1, -1);
+        List<Integer> critical = new ArrayList<>(), pseudo = new ArrayList<>();
+        for (int i = 0; i < m; i++) {
+            if (mst(n, edges, order, i, -1) > best) critical.add(i);
+            else if (mst(n, edges, order, -1, i) == best) pseudo.add(i);
+        }
+        return Arrays.asList(critical, pseudo);
+    }
+    private int mst(int n, int[][] edges, Integer[] order, int skip, int force) {
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+        int total = 0, used = 0;
+        if (force >= 0) { parent[find(parent, edges[force][0])] = find(parent, edges[force][1]); total += edges[force][2]; used++; }
+        for (int i : order) {
+            if (i == skip) continue;
+            int a = find(parent, edges[i][0]), b = find(parent, edges[i][1]);
+            if (a == b) continue;
+            parent[a] = b; total += edges[i][2]; used++;
+        }
+        return used == n - 1 ? total : Integer.MAX_VALUE;
+    }
+    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }
+}`,
+  },
+  {
+    slug: 'greatest-common-divisor-traversal', title: 'Greatest Common Divisor Traversal', level: 'Hard',
+    summary: 'You may move between indices i and j when gcd(nums[i], nums[j]) > 1. Return true if every pair of indices is connected by some sequence of moves.',
+    method: 'canTraverseAllPairs', params: [['int[]', 'nums']], returns: 'boolean',
+    tests: [
+      { in: [[2, 3, 6]], out: true },
+      { in: [[3, 9, 5]], out: false },
+      { in: [[4, 3, 12, 8]], out: true },
+      { in: [[1]] },
+      { in: [[1, 1]] },
+      { in: [[7]] },
+      { in: [[10, 21, 55, 143, 13]] },
+      { in: [[30, 7, 49, 11]] },
+    ],
+    ref: `class Solution {
+    public boolean canTraverseAllPairs(int[] nums) {
+        int n = nums.length;
+        if (n == 1) return true;
+        int max = 0;
+        for (int x : nums) { if (x == 1) return false; max = Math.max(max, x); }
+        int[] spf = new int[max + 1];
+        for (int i = 2; i <= max; i++) if (spf[i] == 0) for (int j = i; j <= max; j += i) if (spf[j] == 0) spf[j] = i;
+        int[] parent = new int[n + max + 1];
+        for (int i = 0; i < parent.length; i++) parent[i] = i;
+        for (int i = 0; i < n; i++) {
+            int x = nums[i];
+            while (x > 1) {
+                int p = spf[x];
+                union(parent, i, n + p);
+                while (x % p == 0) x /= p;
+            }
+        }
+        int root = find(parent, 0);
+        for (int i = 1; i < n; i++) if (find(parent, i) != root) return false;
+        return true;
+    }
+    private int find(int[] p, int x) { while (p[x] != x) { p[x] = p[p[x]]; x = p[x]; } return x; }
+    private void union(int[] p, int a, int b) { p[find(p, a)] = find(p, b); }
+}`,
+  },
 ];

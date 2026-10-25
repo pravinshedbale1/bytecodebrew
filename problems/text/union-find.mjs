@@ -87,4 +87,49 @@ Return the number of nodes in the largest connected component.`,
       'Two values sharing a prime end up in the same set. Count how many values have each root and return the largest count.',
     ],
   },
+  'graph-valid-tree': {
+    statement: `You have a graph of \`n\` nodes labelled \`0\` to \`n − 1\`, and a list of undirected \`edges\` where \`edges[i] = [a_i, b_i]\`.
+
+Return \`true\` if these edges make up a **valid tree**: every node is reachable from every other node, and there are no cycles.`,
+    constraints: ['1 <= n <= 2000', '0 <= edges.length <= 5000', 'edges[i].length == 2', '0 <= edges[i][j] < n', 'No self-loops or repeated edges'],
+    hints: [
+      'A tree on n nodes has exactly n − 1 edges. If the count is different, you can answer straight away.',
+      'With exactly n − 1 edges, the graph is a tree if and only if it has no cycle (equivalently, if it is connected).',
+      'Union-find: for each edge, if both ends already have the same root, that edge closes a cycle. Otherwise merge their sets. DFS or BFS from node 0 that checks it reaches all n nodes also works.',
+    ],
+  },
+  'number-of-connected-components-in-an-undirected-graph': {
+    statement: `You have a graph of \`n\` nodes labelled \`0\` to \`n − 1\`, and a list of undirected \`edges\` where \`edges[i] = [a_i, b_i]\`. Return the number of **connected components** in the graph: groups of nodes that can reach each other.`,
+    constraints: ['1 <= n <= 2000', '0 <= edges.length <= 5000', 'edges[i].length == 2', '0 <= edges[i][j] < n', 'No self-loops or repeated edges'],
+    hints: [
+      'Each DFS or BFS started from a node that has not been visited yet discovers one whole component.',
+      'Count how many times you have to start a new search.',
+      'With union-find, start with n components and subtract one every time an edge joins two different sets.',
+    ],
+  },
+  'find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree': {
+    statement: `You have a connected, weighted, undirected graph with \`n\` nodes labelled \`0\` to \`n − 1\`, and \`edges[i] = [a_i, b_i, weight_i]\`. A **minimum spanning tree** (MST) is a subset of edges that connects all nodes, has no cycles and has the smallest possible total weight.
+
+- An edge is **critical** if removing it from the graph would make the MST weight larger (or the graph disconnected): every MST uses it.
+- An edge is **pseudo-critical** if it appears in some MSTs but not in all of them.
+
+Return \`[critical, pseudoCritical]\`: two lists of edge indices. The indices inside each list may be in any order.`,
+    constraints: ['2 <= n <= 100', '1 <= edges.length <= min(200, n · (n − 1) / 2)', 'edges[i].length == 3', '0 <= edges[i][0], edges[i][1] < n', '1 <= edges[i][2] <= 1000', 'All pairs (a_i, b_i) are distinct'],
+    hints: [
+      'Compute the MST weight once with Kruskal: sort edges by weight and add each one that joins two different union-find sets.',
+      'Edge i is critical if the MST built while skipping it is heavier, or does not connect all nodes.',
+      'Otherwise, edge i is pseudo-critical if an MST built with edge i forced in first still has the optimal weight. Sort once and reuse the order: about 2E Kruskal runs in total.',
+    ],
+  },
+  'greatest-common-divisor-traversal': {
+    statement: `You can move between index \`i\` and index \`j\` (\`i != j\`) if and only if \`gcd(nums[i], nums[j]) > 1\`.
+
+Return \`true\` if, for **every** pair of indices \`i < j\`, there is a sequence of moves that takes you from \`i\` to \`j\`. Otherwise return \`false\`.`,
+    constraints: ['1 <= nums.length <= 1e5', '1 <= nums[i] <= 1e5'],
+    hints: [
+      'This asks whether a graph is connected. Checking the gcd of every pair builds the graph in O(n²), which is too slow for 10⁵ numbers.',
+      'Two numbers can be joined exactly when they share a prime factor. Instead of connecting numbers to numbers, connect each number to its prime factors.',
+      'Use union-find over indices plus one node per prime. Factor each value quickly with a smallest-prime-factor sieve. Watch out for 1: it has no prime factors, so it is isolated unless it is the only element.',
+    ],
+  },
 };

@@ -102,4 +102,73 @@ You choose the format. The judge serialises with one \`Codec\` object, deseriali
       'Use a StringBuilder, not string concatenation, and avoid deep recursion for very tall trees (or build iteratively), since a 10⁵-node chain is possible.',
     ],
   },
+  'binary-tree-inorder-traversal': {
+    statement: `Return the **inorder** traversal of the tree's values: for every node, first everything in its left subtree, then the node itself, then everything in its right subtree.
+
+Follow-up: the recursive solution is short. Can you do it iteratively?`,
+    constraints: ['0 <= root.nodes <= 100', '-100 <= root.val <= 100'],
+    hints: [
+      'Recursively: traverse(left), add the node, traverse(right).',
+      'Iteratively, a stack replaces the call stack. Go as far left as you can, pushing each node you pass.',
+      'Pop a node, record it, then move to its right child and repeat the "go left" step. Stop when both the current pointer is null and the stack is empty.',
+    ],
+  },
+  'binary-tree-preorder-traversal': {
+    statement: `Return the **preorder** traversal of the tree's values: for every node, first the node itself, then everything in its left subtree, then everything in its right subtree.
+
+Follow-up: can you do it iteratively?`,
+    constraints: ['0 <= root.nodes <= 100', '-100 <= root.val <= 100'],
+    hints: [
+      'Recursively: add the node, traverse(left), traverse(right).',
+      'Iteratively, pop a node from a stack, record it and push its children.',
+      'Push the right child before the left one, so the left child is popped (and visited) first.',
+    ],
+  },
+  'binary-tree-postorder-traversal': {
+    statement: `Return the **postorder** traversal of the tree's values: for every node, first everything in its left subtree, then everything in its right subtree, then the node itself.
+
+Follow-up: can you do it iteratively?`,
+    constraints: ['0 <= root.nodes <= 100', '-100 <= root.val <= 100'],
+    hints: [
+      'Recursively: traverse(left), traverse(right), add the node.',
+      'Postorder reversed is "node, right, left", which is just preorder with the children swapped.',
+      'Run that modified preorder with a stack (push left, then right) and reverse the result, or add each value to the front of the list.',
+    ],
+  },
+  'subtree-of-another-tree': {
+    statement: `Return \`true\` if \`root\` contains a subtree with exactly the same structure and node values as \`subRoot\`, and \`false\` otherwise.
+
+A subtree of \`root\` is a node of \`root\` together with **all** of its descendants. \`root\` counts as a subtree of itself.`,
+    constraints: ['1 <= root.nodes <= 2000', '1 <= subRoot.nodes <= 1000', '-1e4 <= root.val <= 1e4', '-1e4 <= subRoot.val <= 1e4'],
+    hints: [
+      'Write a helper sameTree(a, b) that checks whether two trees are identical.',
+      'Then try every node of root as a starting point: isSubtree(root) = sameTree(root, subRoot) || isSubtree(root.left) || isSubtree(root.right).',
+      'That is O(m · n). For O(m + n), serialise both trees with markers for null children and between values (like ",4,1,#,#,2,#,#"), then search for one string in the other with KMP.',
+    ],
+  },
+  'construct-quad-tree': {
+    statement: `\`grid\` is an \`n × n\` matrix of 0s and 1s, where \`n\` is a power of 2. Represent it as a **quad tree** and return the root.
+
+Each quad tree node has \`val\` (true for 1, false for 0) and \`isLeaf\`, plus four children \`topLeft\`, \`topRight\`, \`bottomLeft\` and \`bottomRight\`. To build the node for a square region:
+
+- if every cell in the region has the same value, the node is a leaf: \`isLeaf = true\`, \`val\` = that value, and no children;
+- otherwise \`isLeaf = false\` (\`val\` can be anything) and the region is split into four equal quarters, each built the same way.
+
+The output lists the nodes level by level as \`[isLeaf, val]\` (1 for true, 0 for false), writing \`null\` for the missing children of leaves, as LeetCode does. Inner nodes are shown with \`val = 1\`, whatever you set.`,
+    constraints: ['n == grid.length', 'n == grid[i].length', 'n is a power of 2 between 1 and 64', '0 <= grid[i][j] <= 1'],
+    hints: [
+      'Write build(row, col, size) for the square starting at (row, col). A 1 × 1 square is always a leaf.',
+      'Top-down: if all cells in the square are equal, return a leaf; otherwise recurse on the four quarters. Checking every square costs O(n²) per level, O(n² log n) in total.',
+      'Bottom-up is O(n²): build the four quarters first, and if all four are leaves with the same value, merge them into one leaf instead of creating an inner node.',
+    ],
+  },
+  'delete-leaves-with-a-given-value': {
+    statement: `Delete every **leaf** node whose value is \`target\`. If deleting a leaf turns its parent into a leaf with value \`target\`, delete the parent too, and keep going until no such leaf is left. Return the root of the remaining tree (which may be empty).`,
+    constraints: ['1 <= root.nodes <= 3000', '1 <= root.val <= 1000', '1 <= target <= 1000'],
+    hints: [
+      'Whether a node becomes a leaf depends on what happens to its children first. Which traversal order handles children before their parent?',
+      'Postorder: recursively clean the left and right subtrees and assign the results back to root.left and root.right.',
+      'After that, if root has no children and root.val == target, return null; otherwise return root. One pass handles the chain reaction.',
+    ],
+  },
 };

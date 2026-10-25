@@ -98,4 +98,79 @@ Return the total units of water trapped.`,
       'For O(1) space, use two pointers and track leftMax and rightMax. Whichever side has the smaller max is the limiting side, so you can settle that position and move inward.',
     ],
   },
+  'remove-element': {
+    statement: `Remove every occurrence of \`val\` from \`nums\` **in place** and return \`k\`, the number of elements that are not equal to \`val\`.
+
+After your function returns, the first \`k\` positions of \`nums\` must hold exactly those kept values, in any order. What is left beyond position \`k\` does not matter. The judge prints \`k\` followed by the first \`k\` elements sorted, so any order you leave them in is accepted.`,
+    constraints: ['0 <= nums.length <= 100', '0 <= nums[i] <= 50', '0 <= val <= 100'],
+    hints: [
+      'You do not need to delete anything. Overwriting is enough, because only the first k slots are checked.',
+      'Keep a write index w. Scan every element with a read index.',
+      'When the element is not val, copy it to nums[w] and move w forward. At the end, w is k.',
+    ],
+  },
+  'reverse-string': {
+    statement: `\`s\` is an array of characters. Reverse it **in place**, so the first character becomes the last and so on.
+
+Use O(1) extra memory: no second array.`,
+    constraints: ['1 <= s.length <= 1e5', '`s[i]` is a printable ASCII character'],
+    hints: [
+      'The first and last characters swap places, then the second and second-to-last, and so on.',
+      'Use two indices, one at each end, and swap the characters they point to.',
+      'Move both indices towards the middle and stop when they meet or cross.',
+    ],
+  },
+  'valid-palindrome-ii': {
+    statement: `Return \`true\` if \`s\` can become a palindrome (a string that reads the same forwards and backwards) by deleting **at most one** character. Deleting nothing is allowed, so a string that is already a palindrome counts.`,
+    constraints: ['1 <= s.length <= 1e5', '`s` has only lowercase English letters'],
+    hints: [
+      'Trying every possible deletion and checking each result is O(n²). Where can the deletion possibly be?',
+      'Compare characters from both ends moving inwards. While they match, no deletion is needed.',
+      'At the first mismatch, the deleted character must be one of those two. Check whether the rest is a palindrome after skipping the left one, or after skipping the right one.',
+    ],
+  },
+  'merge-strings-alternately': {
+    statement: `Merge \`word1\` and \`word2\` by taking letters from them in turn: the first letter of \`word1\`, then the first letter of \`word2\`, then the second letter of \`word1\`, and so on.
+
+If one word is longer, add its remaining letters to the end. Return the merged string.`,
+    constraints: ['1 <= word1.length, word2.length <= 100', '`word1` and `word2` have only lowercase English letters'],
+    hints: [
+      'Walk an index i from 0 upwards and look at position i in both words.',
+      'Append word1[i] if word1 is long enough, then word2[i] if word2 is long enough.',
+      'Stop once i passes the longer word. Use a StringBuilder so building the result stays O(n).',
+    ],
+  },
+  'merge-sorted-array': {
+    statement: `\`nums1\` has length \`m + n\`: its first \`m\` values are sorted in non-decreasing order and its last \`n\` slots are zeros you can overwrite. \`nums2\` holds \`n\` values, also sorted.
+
+Merge \`nums2\` into \`nums1\` **in place** so that \`nums1\` holds all \`m + n\` values in sorted order. Don't return anything: the judge prints \`nums1\` after your call.`,
+    constraints: ['nums1.length == m + n', 'n == nums2.length', '0 <= m, n <= 200', '1 <= m + n <= 200', '-1e9 <= nums1[i], nums2[j] <= 1e9'],
+    hints: [
+      'Copying nums2 into the spare slots and sorting works in O((m + n) log(m + n)). Can you use the fact that both parts are already sorted?',
+      'Merging from the front would overwrite values of nums1 you haven\'t used yet. The free space is at the back.',
+      'Fill nums1 from the end: compare the largest remaining value of each array and write the bigger one at the last free position. Stop when nums2 is used up.',
+    ],
+  },
+  '4sum': {
+    statement: `Return every **unique** quadruplet \`[nums[a], nums[b], nums[c], nums[d]]\` where \`a\`, \`b\`, \`c\` and \`d\` are four different indices and the four values add up to \`target\`.
+
+Two quadruplets are the same if they contain the same values. Return them in any order.`,
+    constraints: ['1 <= nums.length <= 200', '-1e9 <= nums[i] <= 1e9', '-1e9 <= target <= 1e9'],
+    hints: [
+      'This is 3Sum with one more fixed number. Sort the array first so duplicates sit next to each other.',
+      'Fix the first two numbers with two nested loops, then find the remaining pair with two pointers moving inwards.',
+      'Skip a fixed number when it equals the previous one, and skip repeats after recording a match. Add the four values as long: four values near 10⁹ overflow an int.',
+    ],
+  },
+  'rotate-array': {
+    statement: `Rotate \`nums\` to the right by \`k\` steps, **in place**. Each value moves \`k\` positions to the right, and values pushed off the end wrap around to the front.
+
+\`k\` can be larger than the array's length. Don't return anything: the judge prints \`nums\` after your call.`,
+    constraints: ['1 <= nums.length <= 1e5', '-2^31 <= nums[i] <= 2^31 - 1', '0 <= k <= 1e5'],
+    hints: [
+      'Rotating by k is the same as rotating by k % n, so first reduce k.',
+      'With a second array, the value at i moves to (i + k) % n. That is O(n) memory. Can you do it with O(1)?',
+      'Reverse the whole array, then reverse the first k values, then reverse the rest. Each value lands exactly where it belongs.',
+    ],
+  },
 };

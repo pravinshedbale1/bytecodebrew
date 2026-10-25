@@ -34,4 +34,23 @@ export default {
   'implement-rand10-using-rand7': {
     explain: 'Called once, `rand10` must return a number from 1 to 10, each equally likely. Any such value is accepted; the example shows `[7]`.',
   },
+  'plus-one': {
+    explain: 'The digits represent 123, and 123 + 1 = 124, so the answer is `[1,2,4]`.',
+    more: 'For example `[9]` becomes `[1,0]`: the carry runs off the front, so the result has one more digit.',
+  },
+  'roman-to-integer': {
+    explain: '"III" is three I symbols, 1 + 1 + 1 = 3.',
+    more: 'For example "MCMXCIV" = M (1000) + CM (900) + XC (90) + IV (4) = 1994.',
+  },
+  'excel-sheet-column-title': {
+    explain: 'Column 1 is the very first column of the sheet, so its title is "A".',
+    more: 'For example 28 is "AB": after A–Z come AA (27) and AB (28).',
+  },
+  'greatest-common-divisor-of-strings': {
+    explain: '"ABC" repeated twice gives "ABCABC" and once gives "ABC", and no longer string divides both, so the answer is "ABC".',
+  },
+  'multiply-strings': {
+    explain: 'The numbers are 2 and 3, and 2 × 3 = 6, so the answer is "6".',
+    more: 'For example "123" × "456" = "56088", with every digit product added into its place.',
+  },
 };

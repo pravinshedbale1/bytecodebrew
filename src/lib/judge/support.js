@@ -446,4 +446,142 @@ class SolBase {
  * @return a random integer in the range 1 to 7
  */`,
   },
+  GuessGame: {
+    decl: String.raw`
+class GuessGame {
+    static int PICK = 1;
+    int guess(int num) { return num > PICK ? -1 : num < PICK ? 1 : 0; }
+}
+`,
+    comment: `/**
+ * Forward declaration of guess API (defined in the parent class GuessGame).
+ * @param  num   your guess
+ * @return       -1 if num is higher than the picked number
+ *               1 if num is lower than the picked number
+ *               otherwise return 0
+ * int guess(int num);
+ */`,
+  },
+  MountainArray: {
+    decl: String.raw`
+interface MountainArray {
+    public int get(int index);
+    public int length();
+}
+final class BCBM implements MountainArray {
+    private final int[] a; private int calls = 0;
+    BCBM(int[] a) { this.a = a; }
+    public int get(int index) {
+        if (++calls > 100) throw new IllegalStateException("more than 100 calls to MountainArray.get");
+        return a[index];
+    }
+    public int length() { return a.length; }
+}
+`,
+    comment: `/**
+ * // This is MountainArray's API interface (provided).
+ * // You should not implement it, or speculate about its implementation
+ * interface MountainArray {
+ *     public int get(int index);   // at most 100 calls in total
+ *     public int length();
+ * }
+ */`,
+  },
+  RandomNode: {
+    decl: String.raw`
+class Node {
+    int val; Node next; Node random;
+    public Node(int val) { this.val = val; this.next = null; this.random = null; }
+}
+final class BCBR {
+    /** [[val, randomIndex or null], …] into a list. */
+    static Node build(String s) {
+        List<?> v = (List<?>) BCB.parse(s);
+        Node[] n = new Node[v.size()];
+        for (int i = 0; i < n.length; i++) n[i] = new Node(BCB.I(((List<?>) v.get(i)).get(0)));
+        for (int i = 0; i < n.length; i++) {
+            if (i + 1 < n.length) n[i].next = n[i + 1];
+            Object r = ((List<?>) v.get(i)).get(1);
+            if (r != null) n[i].random = n[BCB.I(r)];
+        }
+        return n.length == 0 ? null : n[0];
+    }
+    /** The copy in the same format, or an error string if it shares nodes with the original. */
+    static Object dump(Node copy, Node original) {
+        Set<Node> orig = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Node t = original; t != null; t = t.next) orig.add(t);
+        Map<Node, Integer> at = new IdentityHashMap<>(); List<Node> order = new ArrayList<>();
+        for (Node t = copy; t != null && order.size() < 100000; t = t.next) {
+            if (orig.contains(t)) return "copy shares nodes with the original";
+            at.put(t, order.size()); order.add(t);
+        }
+        List<Object> out = new ArrayList<>();
+        for (Node t : order) {
+            if (t.random != null && orig.contains(t.random)) return "copy points into the original list";
+            out.add(Arrays.asList(t.val, t.random == null ? null : at.get(t.random)));
+        }
+        return out;
+    }
+}
+`,
+    comment: `/*
+// Definition for a Node (provided).
+class Node {
+    int val;
+    Node next;
+    Node random;
+
+    public Node(int val) {
+        this.val = val;
+        this.next = null;
+        this.random = null;
+    }
+}
+*/`,
+  },
+  QuadNode: {
+    decl: String.raw`
+class Node {
+    public boolean val; public boolean isLeaf;
+    public Node topLeft; public Node topRight; public Node bottomLeft; public Node bottomRight;
+    public Node() {}
+    public Node(boolean val, boolean isLeaf) { this.val = val; this.isLeaf = isLeaf; }
+    public Node(boolean val, boolean isLeaf, Node topLeft, Node topRight, Node bottomLeft, Node bottomRight) {
+        this.val = val; this.isLeaf = isLeaf;
+        this.topLeft = topLeft; this.topRight = topRight; this.bottomLeft = bottomLeft; this.bottomRight = bottomRight;
+    }
+}
+final class BCBQ {
+    /** LeetCode's level-order output: [isLeaf, val] per node (val shown as 1 on inner nodes, where it doesn't matter). */
+    static Object dump(Node root) {
+        List<Object> out = new ArrayList<>();
+        List<Node> level = new ArrayList<>(); level.add(root);
+        int guard = 0;
+        for (int i = 0; i < level.size() && guard++ < 2000000; i++) {
+            Node n = level.get(i);
+            if (n == null) { out.add(null); continue; }
+            out.add(Arrays.asList(n.isLeaf ? 1 : 0, n.isLeaf ? (n.val ? 1 : 0) : 1));
+            if (n.isLeaf) for (int k = 0; k < 4; k++) level.add(null);
+            else { level.add(n.topLeft); level.add(n.topRight); level.add(n.bottomLeft); level.add(n.bottomRight); }
+        }
+        while (!out.isEmpty() && out.get(out.size() - 1) == null) out.remove(out.size() - 1);
+        return out;
+    }
+}
+`,
+    comment: `/*
+// Definition for a QuadTree node (provided).
+class Node {
+    public boolean val;
+    public boolean isLeaf;
+    public Node topLeft;
+    public Node topRight;
+    public Node bottomLeft;
+    public Node bottomRight;
+
+    public Node() / Node(boolean val, boolean isLeaf)
+    public Node(boolean val, boolean isLeaf, Node topLeft, Node topRight, Node bottomLeft, Node bottomRight)
+}
+*/`,
+  },
 };

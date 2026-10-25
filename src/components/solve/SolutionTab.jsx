@@ -135,7 +135,7 @@ export function SolutionTab({ spec, slug, solved, lang, climbing = false, onReve
         </p>
         <p className={styles.why}><Inline text={a.why} /></p>
         {a.timesOut && (
-          <p className={styles.slow}>Correct, but too slow for the largest test{a.timesOut.length > 1 ? 's' : ''}: Submit would time out with this approach.</p>
+          <p className={styles.slow}>Correct, but too slow for the largest test{a.timesOut.length > 1 || a.timesOut.includes('generated') ? 's' : ''}: Submit would time out with this approach.</p>
         )}
 
         <CodeBlock code={a.code} lang={codeLang} setLang={setCodeLang} />

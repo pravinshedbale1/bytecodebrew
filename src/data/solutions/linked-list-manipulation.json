@@ -452,5 +452,108 @@
     }
    }
   ]
+ },
+ "insert-greatest-common-divisors-in-linked-list": {
+  "pattern": "Insert after the current node, then skip the new one",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "GCD by trying divisors",
+    "idea": "Walk the list and insert a node between each pair, finding the GCD by testing candidates from the smaller value downwards.",
+    "steps": [
+     "For each node `a` with a next node `b`: let `g` start at `min(a.val, b.val)` and decrease it until it divides both.",
+     "Insert a node with value `g` between `a` and `b`, then move `a` to `b`."
+    ],
+    "time": "O(n · V)",
+    "space": "O(1)",
+    "why": "V is the largest value (1000). The trial-division GCD costs up to V steps per pair, so this is fine here but grows with the values. Output nodes are not counted as extra space.",
+    "code": {
+     "java": "class Solution {\n    public ListNode insertGreatestCommonDivisors(ListNode head) {\n        ListNode a = head;\n        while (a.next != null) {\n            ListNode b = a.next;\n            int g = Math.min(a.val, b.val);\n            while (a.val % g != 0 || b.val % g != 0) g--;\n            a.next = new ListNode(g, b);\n            a = b;\n        }\n        return head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* insertGreatestCommonDivisors(ListNode* head) {\n        ListNode* a = head;\n        while (a->next) {\n            ListNode* b = a->next;\n            int g = min(a->val, b->val);\n            while (a->val % g != 0 || b->val % g != 0) g--;\n            a->next = new ListNode(g, b);\n            a = b;\n        }\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        a = head\n        while a.next:\n            b = a.next\n            g = min(a.val, b.val)\n            while a.val % g or b.val % g:\n                g -= 1\n            a.next = ListNode(g, b)\n            a = b\n        return head",
+     "javascript": "var insertGreatestCommonDivisors = function(head) {\n    let a = head;\n    while (a.next) {\n        const b = a.next;\n        let g = Math.min(a.val, b.val);\n        while (a.val % g !== 0 || b.val % g !== 0) g--;\n        a.next = new ListNode(g, b);\n        a = b;\n    }\n    return head;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Euclid's GCD",
+    "idea": "Same walk, but compute each GCD with Euclid's algorithm: `gcd(a, b) = gcd(b, a mod b)`.",
+    "steps": [
+     "For each node `a` with a next node `b`, compute `g = gcd(a.val, b.val)` with Euclid.",
+     "Set `a.next = new node(g, b)` and continue from `b`, skipping the inserted node."
+    ],
+    "time": "O(n · log V)",
+    "space": "O(1)",
+    "why": "Euclid's algorithm takes O(log V) steps because the remainder at least halves every two steps. Jumping straight to `b` matters: advancing one node at a time would land on the new node and insert endlessly.",
+    "code": {
+     "java": "class Solution {\n    public ListNode insertGreatestCommonDivisors(ListNode head) {\n        for (ListNode a = head; a.next != null; a = a.next.next) a.next = new ListNode(gcd(a.val, a.next.val), a.next);\n        return head;\n    }\n    private int gcd(int a, int b) {\n        while (b != 0) { int t = a % b; a = b; b = t; }\n        return a;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* insertGreatestCommonDivisors(ListNode* head) {\n        for (ListNode* a = head; a->next; a = a->next->next) a->next = new ListNode(gcd(a->val, a->next->val), a->next);\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        a = head\n        while a.next:\n            a.next = ListNode(gcd(a.val, a.next.val), a.next)\n            a = a.next.next\n        return head",
+     "javascript": "var insertGreatestCommonDivisors = function(head) {\n    const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));\n    for (let a = head; a.next; a = a.next.next) a.next = new ListNode(gcd(a.val, a.next.val), a.next);\n    return head;\n};"
+    }
+   }
+  ]
+ },
+ "copy-list-with-random-pointer": {
+  "pattern": "Old-to-new node map (or interleave copies in place)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Copy by position",
+    "idea": "Copy the values and `next` links into an array of new nodes, then, for each original random pointer, find its position by walking the original list from the head.",
+    "steps": [
+     "Put the original nodes in a list `orig` and create `copy[i]` for each, linking `copy[i].next = copy[i + 1]`.",
+     "For each `i` with `orig[i].random != null`, scan `orig` to find the index `j` of that node.",
+     "Set `copy[i].random = copy[j]` and return `copy[0]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Finding each random target by scanning costs O(n), so the whole copy is quadratic. It works because node identity (not value) is compared, which matters when values repeat.",
+    "code": {
+     "java": "class Solution {\n    public Node copyRandomList(Node head) {\n        List<Node> orig = new ArrayList<>();\n        for (Node t = head; t != null; t = t.next) orig.add(t);\n        int n = orig.size();\n        if (n == 0) return null;\n        Node[] copy = new Node[n];\n        for (int i = 0; i < n; i++) copy[i] = new Node(orig.get(i).val);\n        for (int i = 0; i + 1 < n; i++) copy[i].next = copy[i + 1];\n        for (int i = 0; i < n; i++) {\n            Node r = orig.get(i).random;\n            if (r == null) continue;\n            for (int j = 0; j < n; j++) if (orig.get(j) == r) { copy[i].random = copy[j]; break; }\n        }\n        return copy[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* copyRandomList(Node* head) {\n        vector<Node*> orig;\n        for (Node* t = head; t; t = t->next) orig.push_back(t);\n        int n = orig.size();\n        if (n == 0) return nullptr;\n        vector<Node*> copy(n);\n        for (int i = 0; i < n; i++) copy[i] = new Node(orig[i]->val);\n        for (int i = 0; i + 1 < n; i++) copy[i]->next = copy[i + 1];\n        for (int i = 0; i < n; i++) {\n            Node* r = orig[i]->random;\n            if (!r) continue;\n            for (int j = 0; j < n; j++) if (orig[j] == r) { copy[i]->random = copy[j]; break; }\n        }\n        return copy[0];\n    }\n};",
+     "python": "class Solution:\n    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':\n        orig = []\n        t = head\n        while t:\n            orig.append(t)\n            t = t.next\n        if not orig:\n            return None\n        copy = [Node(o.val) for o in orig]\n        for i in range(len(copy) - 1):\n            copy[i].next = copy[i + 1]\n        for i, o in enumerate(orig):\n            if o.random is not None:\n                j = next(k for k, p in enumerate(orig) if p is o.random)\n                copy[i].random = copy[j]\n        return copy[0]",
+     "javascript": "var copyRandomList = function(head) {\n    const orig = [];\n    for (let t = head; t; t = t.next) orig.push(t);\n    if (orig.length === 0) return null;\n    const copy = orig.map((o) => new _Node(o.val, null, null));\n    for (let i = 0; i + 1 < copy.length; i++) copy[i].next = copy[i + 1];\n    orig.forEach((o, i) => {\n        if (o.random) copy[i].random = copy[orig.indexOf(o.random)];\n    });\n    return copy[0];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Hash map from old node to new node",
+    "idea": "First pass: create a copy of every node and store `old → new`. Second pass: wire each copy's `next` and `random` through the map.",
+    "steps": [
+     "For each original node `t`, put `map[t] = new Node(t.val)`.",
+     "For each `t`, set `map[t].next = map[t.next]` and `map[t].random = map[t.random]` (with `map[null] = null`).",
+     "Return `map[head]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two linear passes with O(1) map lookups. The map is the clean, interview-friendly answer and also works for general graphs (Clone Graph is the same idea).",
+    "code": {
+     "java": "class Solution {\n    public Node copyRandomList(Node head) {\n        Map<Node, Node> copy = new HashMap<>();\n        for (Node t = head; t != null; t = t.next) copy.put(t, new Node(t.val));\n        for (Node t = head; t != null; t = t.next) {\n            copy.get(t).next = copy.get(t.next);\n            copy.get(t).random = copy.get(t.random);\n        }\n        return copy.get(head);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* copyRandomList(Node* head) {\n        unordered_map<Node*, Node*> copy;\n        copy[nullptr] = nullptr;\n        for (Node* t = head; t; t = t->next) copy[t] = new Node(t->val);\n        for (Node* t = head; t; t = t->next) {\n            copy[t]->next = copy[t->next];\n            copy[t]->random = copy[t->random];\n        }\n        return copy[head];\n    }\n};",
+     "python": "class Solution:\n    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':\n        copy = {None: None}\n        t = head\n        while t:\n            copy[t] = Node(t.val)\n            t = t.next\n        t = head\n        while t:\n            copy[t].next = copy[t.next]\n            copy[t].random = copy[t.random]\n            t = t.next\n        return copy[head]",
+     "javascript": "var copyRandomList = function(head) {\n    const copy = new Map([[null, null]]);\n    for (let t = head; t; t = t.next) copy.set(t, new _Node(t.val, null, null));\n    for (let t = head; t; t = t.next) {\n        copy.get(t).next = copy.get(t.next);\n        copy.get(t).random = copy.get(t.random);\n    }\n    return copy.get(head);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Interleave copies, then split",
+    "idea": "Put each copy directly after its original: `A → A' → B → B' …`. Then the copy of `X.random` is simply `X.random.next`, so no map is needed. Finally pull the two lists apart.",
+    "steps": [
+     "Weave: for each original `t`, insert `new Node(t.val)` between `t` and `t.next`.",
+     "Randoms: for each original `t`, set `t.next.random = t.random == null ? null : t.random.next`.",
+     "Split: restore `t.next = t.next.next` for each original and link each copy to the next copy. Return the first copy."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Three linear passes and no extra structure besides the output. The original list must be fully restored at the end; the judge checks that the copy shares no node with it.",
+    "code": {
+     "java": "class Solution {\n    public Node copyRandomList(Node head) {\n        if (head == null) return null;\n        for (Node t = head; t != null; t = t.next.next) {\n            Node c = new Node(t.val);\n            c.next = t.next;\n            t.next = c;\n        }\n        for (Node t = head; t != null; t = t.next.next) t.next.random = t.random == null ? null : t.random.next;\n        Node newHead = head.next;\n        for (Node t = head; t != null; t = t.next) {\n            Node c = t.next;\n            t.next = c.next;\n            c.next = c.next == null ? null : c.next.next;\n        }\n        return newHead;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    Node* copyRandomList(Node* head) {\n        if (!head) return nullptr;\n        for (Node* t = head; t; t = t->next->next) {\n            Node* c = new Node(t->val);\n            c->next = t->next;\n            t->next = c;\n        }\n        for (Node* t = head; t; t = t->next->next) t->next->random = t->random ? t->random->next : nullptr;\n        Node* newHead = head->next;\n        for (Node* t = head; t; t = t->next) {\n            Node* c = t->next;\n            t->next = c->next;\n            c->next = c->next ? c->next->next : nullptr;\n        }\n        return newHead;\n    }\n};",
+     "python": "class Solution:\n    def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':\n        if not head:\n            return None\n        t = head\n        while t:\n            t.next = Node(t.val, t.next)\n            t = t.next.next\n        t = head\n        while t:\n            t.next.random = t.random.next if t.random else None\n            t = t.next.next\n        new_head = head.next\n        t = head\n        while t:\n            c = t.next\n            t.next = c.next\n            c.next = c.next.next if c.next else None\n            t = t.next\n        return new_head",
+     "javascript": "var copyRandomList = function(head) {\n    if (!head) return null;\n    for (let t = head; t; t = t.next.next) t.next = new _Node(t.val, t.next, null);\n    for (let t = head; t; t = t.next.next) t.next.random = t.random ? t.random.next : null;\n    const newHead = head.next;\n    for (let t = head; t; t = t.next) {\n        const c = t.next;\n        t.next = c.next;\n        c.next = c.next ? c.next.next : null;\n    }\n    return newHead;\n};"
+    }
+   }
+  ]
  }
 }

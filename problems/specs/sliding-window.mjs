@@ -218,4 +218,54 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'contains-duplicate-ii', title: 'Contains Duplicate II', level: 'Easy',
+    summary: 'Return true if two different indices i and j hold the same value and are at most k apart (|i − j| <= k).',
+    method: 'containsNearbyDuplicate', params: [['int[]', 'nums'], ['int', 'k']], returns: 'boolean',
+    tests: [
+      { in: [[1, 2, 3, 1], 3], out: true },
+      { in: [[1, 0, 1, 1], 1], out: true },
+      { in: [[1, 2, 3, 1, 2, 3], 2], out: false },
+      { in: [[1], 1] },
+      { in: [[1, 1], 0] },
+      { in: [[99, 99], 2] },
+      { in: [[4, 1, 2, 3, 1, 5], 2] },
+    ],
+    ref: `class Solution {
+    public boolean containsNearbyDuplicate(int[] nums, int k) {
+        Set<Integer> window = new HashSet<>();
+        for (int i = 0; i < nums.length; i++) {
+            if (!window.add(nums[i])) return true;
+            if (window.size() > k) window.remove(nums[i - k]);
+        }
+        return false;
+    }
+}`,
+  },
+  {
+    slug: 'find-k-closest-elements', title: 'Find K Closest Elements', level: 'Medium',
+    summary: 'arr is sorted. Return the k values closest to x, sorted ascending. On a tie in distance, the smaller value counts as closer.',
+    method: 'findClosestElements', params: [['int[]', 'arr'], ['int', 'k'], ['int', 'x']], returns: 'List<Integer>',
+    tests: [
+      { in: [[1, 2, 3, 4, 5], 4, 3], out: [1, 2, 3, 4] },
+      { in: [[1, 1, 2, 3, 4, 5], 4, -1], out: [1, 1, 2, 3] },
+      { in: [[1, 2, 3, 4, 5], 4, 9] },
+      { in: [[1], 1, 1] },
+      { in: [[0, 0, 1, 2, 3, 3, 4, 7, 7, 8], 3, 5] },
+      { in: [[1, 3], 1, 2] },
+      { in: [[1, 1, 1, 10, 10, 10], 1, 9] },
+    ],
+    ref: `class Solution {
+    public List<Integer> findClosestElements(int[] arr, int k, int x) {
+        int lo = 0, hi = arr.length - k;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (x - arr[mid] > arr[mid + k] - x) lo = mid + 1; else hi = mid;
+        }
+        List<Integer> out = new ArrayList<>();
+        for (int i = lo; i < lo + k; i++) out.add(arr[i]);
+        return out;
+    }
+}`,
+  },
 ];

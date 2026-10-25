@@ -1367,4 +1367,1038 @@ var deserialize = function(data) {
       },
     ],
   },
+  'binary-tree-inorder-traversal': {
+    pattern: 'DFS: recursion, an explicit stack, or Morris threading',
+    approaches: [
+      {
+        level: 'Better', name: 'Recursion',
+        idea: 'Visit the left subtree, record the node, visit the right subtree.',
+        steps: [
+          'If the node is null, return.',
+          'Recurse left, append `node.val`, recurse right.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'Every node is visited once. The call stack grows to the tree\'s height h: O(log n) when balanced, O(n) for a chain.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        walk(root, out);
+        return out;
+    }
+    private void walk(TreeNode n, List<Integer> out) {
+        if (n == null) return;
+        walk(n.left, out);
+        out.add(n.val);
+        walk(n.right, out);
+    }
+}`,
+          cpp: r`class Solution {
+    void walk(TreeNode* n, vector<int>& out) {
+        if (!n) return;
+        walk(n->left, out);
+        out.push_back(n->val);
+        walk(n->right, out);
+    }
+public:
+    vector<int> inorderTraversal(TreeNode* root) {
+        vector<int> out;
+        walk(root, out);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out = []
+        def walk(n):
+            if n:
+                walk(n.left)
+                out.append(n.val)
+                walk(n.right)
+        walk(root)
+        return out`,
+          javascript: r`var inorderTraversal = function(root) {
+    const out = [];
+    const walk = (n) => {
+        if (!n) return;
+        walk(n.left);
+        out.push(n.val);
+        walk(n.right);
+    };
+    walk(root);
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Explicit stack',
+        idea: 'Simulate the recursion: slide left pushing nodes, pop one, record it, then continue from its right child.',
+        steps: [
+          'Set `cur = root`. While `cur` is not null or the stack is not empty:',
+          'Push nodes while moving `cur = cur.left` until `cur` is null.',
+          'Pop a node, record it, and set `cur` to its right child.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'Each node is pushed and popped once. This is the answer to the iterative follow-up and avoids stack-overflow risk on very deep trees in languages with small call stacks.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        TreeNode cur = root;
+        while (cur != null || !st.isEmpty()) {
+            while (cur != null) { st.push(cur); cur = cur.left; }
+            cur = st.pop();
+            out.add(cur.val);
+            cur = cur.right;
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> inorderTraversal(TreeNode* root) {
+        vector<int> out;
+        stack<TreeNode*> st;
+        TreeNode* cur = root;
+        while (cur || !st.empty()) {
+            while (cur) { st.push(cur); cur = cur->left; }
+            cur = st.top(); st.pop();
+            out.push_back(cur->val);
+            cur = cur->right;
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, st, cur = [], [], root
+        while cur or st:
+            while cur:
+                st.append(cur)
+                cur = cur.left
+            cur = st.pop()
+            out.append(cur.val)
+            cur = cur.right
+        return out`,
+          javascript: r`var inorderTraversal = function(root) {
+    const out = [], st = [];
+    let cur = root;
+    while (cur || st.length) {
+        while (cur) { st.push(cur); cur = cur.left; }
+        cur = st.pop();
+        out.push(cur.val);
+        cur = cur.right;
+    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Morris traversal',
+        idea: 'Instead of a stack, temporarily point the rightmost node of each left subtree back to its ancestor, so you can climb back up; remove the link on the way back.',
+        steps: [
+          'While `cur` is not null: if it has no left child, record it and go right.',
+          'Otherwise find `pre`, the rightmost node of `cur.left`. If `pre.right` is null, set it to `cur` and go left.',
+          'If `pre.right == cur` (we came back), reset `pre.right = null`, record `cur`, and go right.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each edge is walked a constant number of times, so it is still linear, with no stack at all. The tree is modified during the walk but fully restored. Mention it as the O(1)-space follow-up; the stack version is easier to get right under pressure.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        TreeNode cur = root;
+        while (cur != null) {
+            if (cur.left == null) { out.add(cur.val); cur = cur.right; continue; }
+            TreeNode pre = cur.left;
+            while (pre.right != null && pre.right != cur) pre = pre.right;
+            if (pre.right == null) { pre.right = cur; cur = cur.left; }
+            else { pre.right = null; out.add(cur.val); cur = cur.right; }
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> inorderTraversal(TreeNode* root) {
+        vector<int> out;
+        TreeNode* cur = root;
+        while (cur) {
+            if (!cur->left) { out.push_back(cur->val); cur = cur->right; continue; }
+            TreeNode* pre = cur->left;
+            while (pre->right && pre->right != cur) pre = pre->right;
+            if (!pre->right) { pre->right = cur; cur = cur->left; }
+            else { pre->right = nullptr; out.push_back(cur->val); cur = cur->right; }
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, cur = [], root
+        while cur:
+            if not cur.left:
+                out.append(cur.val)
+                cur = cur.right
+                continue
+            pre = cur.left
+            while pre.right and pre.right is not cur:
+                pre = pre.right
+            if pre.right is None:
+                pre.right = cur
+                cur = cur.left
+            else:
+                pre.right = None
+                out.append(cur.val)
+                cur = cur.right
+        return out`,
+          javascript: r`var inorderTraversal = function(root) {
+    const out = [];
+    let cur = root;
+    while (cur) {
+        if (!cur.left) { out.push(cur.val); cur = cur.right; continue; }
+        let pre = cur.left;
+        while (pre.right && pre.right !== cur) pre = pre.right;
+        if (!pre.right) { pre.right = cur; cur = cur.left; }
+        else { pre.right = null; out.push(cur.val); cur = cur.right; }
+    }
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'binary-tree-preorder-traversal': {
+    pattern: 'DFS: recursion, an explicit stack, or Morris threading',
+    approaches: [
+      {
+        level: 'Better', name: 'Recursion',
+        idea: 'Record the node, then visit the left subtree, then the right subtree.',
+        steps: [
+          'If the node is null, return.',
+          'Append `node.val`, recurse left, recurse right.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'One visit per node; the call stack holds one frame per level of the tree.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> preorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        walk(root, out);
+        return out;
+    }
+    private void walk(TreeNode n, List<Integer> out) {
+        if (n == null) return;
+        out.add(n.val);
+        walk(n.left, out);
+        walk(n.right, out);
+    }
+}`,
+          cpp: r`class Solution {
+    void walk(TreeNode* n, vector<int>& out) {
+        if (!n) return;
+        out.push_back(n->val);
+        walk(n->left, out);
+        walk(n->right, out);
+    }
+public:
+    vector<int> preorderTraversal(TreeNode* root) {
+        vector<int> out;
+        walk(root, out);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def preorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out = []
+        def walk(n):
+            if n:
+                out.append(n.val)
+                walk(n.left)
+                walk(n.right)
+        walk(root)
+        return out`,
+          javascript: r`var preorderTraversal = function(root) {
+    const out = [];
+    const walk = (n) => {
+        if (!n) return;
+        out.push(n.val);
+        walk(n.left);
+        walk(n.right);
+    };
+    walk(root);
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Explicit stack',
+        idea: 'Pop a node, record it, and push its right child and then its left child so the left one comes out first.',
+        steps: [
+          'Push the root (if any).',
+          'While the stack is not empty: pop a node and record it.',
+          'Push its right child, then its left child.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'Each node is pushed and popped once. Pushing right before left is the whole trick: the stack is last-in, first-out.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> preorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        if (root != null) st.push(root);
+        while (!st.isEmpty()) {
+            TreeNode n = st.pop();
+            out.add(n.val);
+            if (n.right != null) st.push(n.right);
+            if (n.left != null) st.push(n.left);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> preorderTraversal(TreeNode* root) {
+        vector<int> out;
+        stack<TreeNode*> st;
+        if (root) st.push(root);
+        while (!st.empty()) {
+            TreeNode* n = st.top(); st.pop();
+            out.push_back(n->val);
+            if (n->right) st.push(n->right);
+            if (n->left) st.push(n->left);
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def preorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, st = [], [root] if root else []
+        while st:
+            n = st.pop()
+            out.append(n.val)
+            if n.right:
+                st.append(n.right)
+            if n.left:
+                st.append(n.left)
+        return out`,
+          javascript: r`var preorderTraversal = function(root) {
+    const out = [], st = root ? [root] : [];
+    while (st.length) {
+        const n = st.pop();
+        out.push(n.val);
+        if (n.right) st.push(n.right);
+        if (n.left) st.push(n.left);
+    }
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Morris traversal',
+        idea: 'Same threading as Morris inorder, but record a node the first time you reach it (when creating the thread) rather than when you return.',
+        steps: [
+          'While `cur` is not null: if it has no left child, record it and go right.',
+          'Otherwise find `pre`, the rightmost node of `cur.left`. If `pre.right` is null, record `cur`, set `pre.right = cur` and go left.',
+          'If `pre.right == cur`, remove the thread and go right.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Linear time with no stack, and the tree is restored by the end. The only change from inorder is where the value is recorded.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> preorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        TreeNode cur = root;
+        while (cur != null) {
+            if (cur.left == null) { out.add(cur.val); cur = cur.right; continue; }
+            TreeNode pre = cur.left;
+            while (pre.right != null && pre.right != cur) pre = pre.right;
+            if (pre.right == null) { out.add(cur.val); pre.right = cur; cur = cur.left; }
+            else { pre.right = null; cur = cur.right; }
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> preorderTraversal(TreeNode* root) {
+        vector<int> out;
+        TreeNode* cur = root;
+        while (cur) {
+            if (!cur->left) { out.push_back(cur->val); cur = cur->right; continue; }
+            TreeNode* pre = cur->left;
+            while (pre->right && pre->right != cur) pre = pre->right;
+            if (!pre->right) { out.push_back(cur->val); pre->right = cur; cur = cur->left; }
+            else { pre->right = nullptr; cur = cur->right; }
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def preorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, cur = [], root
+        while cur:
+            if not cur.left:
+                out.append(cur.val)
+                cur = cur.right
+                continue
+            pre = cur.left
+            while pre.right and pre.right is not cur:
+                pre = pre.right
+            if pre.right is None:
+                out.append(cur.val)
+                pre.right = cur
+                cur = cur.left
+            else:
+                pre.right = None
+                cur = cur.right
+        return out`,
+          javascript: r`var preorderTraversal = function(root) {
+    const out = [];
+    let cur = root;
+    while (cur) {
+        if (!cur.left) { out.push(cur.val); cur = cur.right; continue; }
+        let pre = cur.left;
+        while (pre.right && pre.right !== cur) pre = pre.right;
+        if (!pre.right) { out.push(cur.val); pre.right = cur; cur = cur.left; }
+        else { pre.right = null; cur = cur.right; }
+    }
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'binary-tree-postorder-traversal': {
+    pattern: 'DFS: recursion, reversed modified preorder, or one stack with a last-visited pointer',
+    approaches: [
+      {
+        level: 'Better', name: 'Recursion',
+        idea: 'Visit the left subtree, then the right subtree, then record the node.',
+        steps: [
+          'If the node is null, return.',
+          'Recurse left, recurse right, append `node.val`.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'One visit per node; the call stack holds one frame per level.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> postorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        walk(root, out);
+        return out;
+    }
+    private void walk(TreeNode n, List<Integer> out) {
+        if (n == null) return;
+        walk(n.left, out);
+        walk(n.right, out);
+        out.add(n.val);
+    }
+}`,
+          cpp: r`class Solution {
+    void walk(TreeNode* n, vector<int>& out) {
+        if (!n) return;
+        walk(n->left, out);
+        walk(n->right, out);
+        out.push_back(n->val);
+    }
+public:
+    vector<int> postorderTraversal(TreeNode* root) {
+        vector<int> out;
+        walk(root, out);
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def postorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out = []
+        def walk(n):
+            if n:
+                walk(n.left)
+                walk(n.right)
+                out.append(n.val)
+        walk(root)
+        return out`,
+          javascript: r`var postorderTraversal = function(root) {
+    const out = [];
+    const walk = (n) => {
+        if (!n) return;
+        walk(n.left);
+        walk(n.right);
+        out.push(n.val);
+    };
+    walk(root);
+    return out;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Reverse of "node, right, left"',
+        idea: 'Postorder (left, right, node) read backwards is (node, right, left), a preorder with the children swapped. Produce that with a stack and reverse it.',
+        steps: [
+          'Push the root. While the stack is not empty, pop a node and record it.',
+          'Push its left child, then its right child (so right is popped first).',
+          'Reverse the recorded list.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Simple and popular. The output is built in reverse, so it keeps all values before returning; the stack itself is O(h).',
+        code: {
+          java: r`class Solution {
+    public List<Integer> postorderTraversal(TreeNode root) {
+        LinkedList<Integer> out = new LinkedList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        if (root != null) st.push(root);
+        while (!st.isEmpty()) {
+            TreeNode n = st.pop();
+            out.addFirst(n.val);
+            if (n.left != null) st.push(n.left);
+            if (n.right != null) st.push(n.right);
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> postorderTraversal(TreeNode* root) {
+        vector<int> out;
+        stack<TreeNode*> st;
+        if (root) st.push(root);
+        while (!st.empty()) {
+            TreeNode* n = st.top(); st.pop();
+            out.push_back(n->val);
+            if (n->left) st.push(n->left);
+            if (n->right) st.push(n->right);
+        }
+        reverse(out.begin(), out.end());
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def postorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, st = [], [root] if root else []
+        while st:
+            n = st.pop()
+            out.append(n.val)
+            if n.left:
+                st.append(n.left)
+            if n.right:
+                st.append(n.right)
+        return out[::-1]`,
+          javascript: r`var postorderTraversal = function(root) {
+    const out = [], st = root ? [root] : [];
+    while (st.length) {
+        const n = st.pop();
+        out.push(n.val);
+        if (n.left) st.push(n.left);
+        if (n.right) st.push(n.right);
+    }
+    return out.reverse();
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'One stack with a last-visited pointer',
+        idea: 'Walk like inorder, but before recording a node check whether its right subtree is finished. Remember the last recorded node to tell whether you are coming back from the right.',
+        steps: [
+          'Slide left from `cur`, pushing nodes. Peek the top node `n`.',
+          'If `n.right` exists and is not the last recorded node, move `cur = n.right` and repeat.',
+          'Otherwise pop `n`, record it, and set `last = n`.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'Values come out in true postorder, so nothing is reversed, and the stack never holds more than one path. This is the variant to reach for when each node must be processed only after both children, such as freeing memory.',
+        code: {
+          java: r`class Solution {
+    public List<Integer> postorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        TreeNode cur = root, last = null;
+        while (cur != null || !st.isEmpty()) {
+            while (cur != null) { st.push(cur); cur = cur.left; }
+            TreeNode n = st.peek();
+            if (n.right != null && n.right != last) cur = n.right;
+            else { st.pop(); out.add(n.val); last = n; }
+        }
+        return out;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    vector<int> postorderTraversal(TreeNode* root) {
+        vector<int> out;
+        stack<TreeNode*> st;
+        TreeNode *cur = root, *last = nullptr;
+        while (cur || !st.empty()) {
+            while (cur) { st.push(cur); cur = cur->left; }
+            TreeNode* n = st.top();
+            if (n->right && n->right != last) cur = n->right;
+            else { st.pop(); out.push_back(n->val); last = n; }
+        }
+        return out;
+    }
+};`,
+          python: r`class Solution:
+    def postorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        out, st = [], []
+        cur, last = root, None
+        while cur or st:
+            while cur:
+                st.append(cur)
+                cur = cur.left
+            n = st[-1]
+            if n.right and n.right is not last:
+                cur = n.right
+            else:
+                st.pop()
+                out.append(n.val)
+                last = n
+        return out`,
+          javascript: r`var postorderTraversal = function(root) {
+    const out = [], st = [];
+    let cur = root, last = null;
+    while (cur || st.length) {
+        while (cur) { st.push(cur); cur = cur.left; }
+        const n = st[st.length - 1];
+        if (n.right && n.right !== last) cur = n.right;
+        else { st.pop(); out.push(n.val); last = n; }
+    }
+    return out;
+};`,
+        },
+      },
+    ],
+  },
+  'subtree-of-another-tree': {
+    pattern: 'Tree equality at every node (or serialise + string matching)',
+    approaches: [
+      {
+        level: 'Better', name: 'Compare at every node',
+        idea: 'For each node of `root`, check whether the tree starting there is identical to `subRoot`.',
+        steps: [
+          'Write `same(a, b)`: both null → true; one null or values differ → false; otherwise compare left with left and right with right.',
+          '`isSubtree(node)` is false for a null node; otherwise `same(node, subRoot)` or `isSubtree(node.left)` or `isSubtree(node.right)`.',
+        ],
+        time: 'O(m · n)', space: 'O(h)',
+        why: 'm and n are the sizes of the two trees: each of m starting nodes may compare up to n nodes. In practice most comparisons fail at the first value. h is the height of `root` (recursion depth).',
+        code: {
+          java: r`class Solution {
+    public boolean isSubtree(TreeNode root, TreeNode subRoot) {
+        if (root == null) return false;
+        return same(root, subRoot) || isSubtree(root.left, subRoot) || isSubtree(root.right, subRoot);
+    }
+    private boolean same(TreeNode a, TreeNode b) {
+        if (a == null || b == null) return a == b;
+        return a.val == b.val && same(a.left, b.left) && same(a.right, b.right);
+    }
+}`,
+          cpp: r`class Solution {
+    bool same(TreeNode* a, TreeNode* b) {
+        if (!a || !b) return a == b;
+        return a->val == b->val && same(a->left, b->left) && same(a->right, b->right);
+    }
+public:
+    bool isSubtree(TreeNode* root, TreeNode* subRoot) {
+        if (!root) return false;
+        return same(root, subRoot) || isSubtree(root->left, subRoot) || isSubtree(root->right, subRoot);
+    }
+};`,
+          python: r`class Solution:
+    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:
+        def same(a, b):
+            if not a or not b:
+                return a is b
+            return a.val == b.val and same(a.left, b.left) and same(a.right, b.right)
+        if not root:
+            return False
+        return same(root, subRoot) or self.isSubtree(root.left, subRoot) or self.isSubtree(root.right, subRoot)`,
+          javascript: r`var isSubtree = function(root, subRoot) {
+    const same = (a, b) => {
+        if (!a || !b) return a === b;
+        return a.val === b.val && same(a.left, b.left) && same(a.right, b.right);
+    };
+    const walk = (n) => n !== null && (same(n, subRoot) || walk(n.left) || walk(n.right));
+    return walk(root);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Serialise both, then KMP',
+        idea: 'Write each tree in preorder with a marker for every null child and a separator before every value. A subtree of `root` is then exactly a substring of its serialisation, found in linear time with KMP.',
+        steps: [
+          'Serialise in preorder: for a node append `,` + value, then recurse; for null append `,#`.',
+          'Build the KMP failure table for the `subRoot` string.',
+          'Scan the `root` string with KMP; return `true` if the pattern is found.',
+        ],
+        time: 'O(m + n)', space: 'O(m + n)',
+        why: 'The leading separator stops "2" from matching inside "12", and the null markers pin down the shape, so substring ⇔ subtree. KMP guarantees linear time (a library `contains` might be quadratic in the worst case). Hashing each subtree (Merkle-style) is another linear option.',
+        code: {
+          java: r`class Solution {
+    public boolean isSubtree(TreeNode root, TreeNode subRoot) {
+        StringBuilder a = new StringBuilder(), b = new StringBuilder();
+        ser(root, a); ser(subRoot, b);
+        return kmp(a.toString(), b.toString());
+    }
+    private void ser(TreeNode n, StringBuilder sb) {
+        if (n == null) { sb.append(",#"); return; }
+        sb.append(',').append(n.val);
+        ser(n.left, sb); ser(n.right, sb);
+    }
+    private boolean kmp(String text, String pat) {
+        int[] fail = new int[pat.length()];
+        for (int i = 1, k = 0; i < pat.length(); i++) {
+            while (k > 0 && pat.charAt(i) != pat.charAt(k)) k = fail[k - 1];
+            if (pat.charAt(i) == pat.charAt(k)) k++;
+            fail[i] = k;
+        }
+        for (int i = 0, k = 0; i < text.length(); i++) {
+            while (k > 0 && text.charAt(i) != pat.charAt(k)) k = fail[k - 1];
+            if (text.charAt(i) == pat.charAt(k)) k++;
+            if (k == pat.length()) return true;
+        }
+        return false;
+    }
+}`,
+          cpp: r`class Solution {
+    void ser(TreeNode* n, string& s) {
+        if (!n) { s += ",#"; return; }
+        s += "," + to_string(n->val);
+        ser(n->left, s); ser(n->right, s);
+    }
+    bool kmp(const string& text, const string& pat) {
+        vector<int> fail(pat.size(), 0);
+        for (size_t i = 1, k = 0; i < pat.size(); i++) {
+            while (k > 0 && pat[i] != pat[k]) k = fail[k - 1];
+            if (pat[i] == pat[k]) k++;
+            fail[i] = k;
+        }
+        for (size_t i = 0, k = 0; i < text.size(); i++) {
+            while (k > 0 && text[i] != pat[k]) k = fail[k - 1];
+            if (text[i] == pat[k]) k++;
+            if (k == pat.size()) return true;
+        }
+        return false;
+    }
+public:
+    bool isSubtree(TreeNode* root, TreeNode* subRoot) {
+        string a, b;
+        ser(root, a); ser(subRoot, b);
+        return kmp(a, b);
+    }
+};`,
+          python: r`class Solution:
+    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:
+        def ser(n, out):
+            if not n:
+                out.append(',#')
+                return
+            out.append(',' + str(n.val))
+            ser(n.left, out)
+            ser(n.right, out)
+        a, b = [], []
+        ser(root, a)
+        ser(subRoot, b)
+        text, pat = ''.join(a), ''.join(b)
+        fail = [0] * len(pat)
+        k = 0
+        for i in range(1, len(pat)):
+            while k and pat[i] != pat[k]:
+                k = fail[k - 1]
+            if pat[i] == pat[k]:
+                k += 1
+            fail[i] = k
+        k = 0
+        for c in text:
+            while k and c != pat[k]:
+                k = fail[k - 1]
+            if c == pat[k]:
+                k += 1
+            if k == len(pat):
+                return True
+        return False`,
+          javascript: r`var isSubtree = function(root, subRoot) {
+    const ser = (n, out) => {
+        if (!n) { out.push(",#"); return; }
+        out.push("," + n.val);
+        ser(n.left, out); ser(n.right, out);
+    };
+    const a = [], b = [];
+    ser(root, a); ser(subRoot, b);
+    const text = a.join(""), pat = b.join("");
+    const fail = new Array(pat.length).fill(0);
+    for (let i = 1, k = 0; i < pat.length; i++) {
+        while (k > 0 && pat[i] !== pat[k]) k = fail[k - 1];
+        if (pat[i] === pat[k]) k++;
+        fail[i] = k;
+    }
+    for (let i = 0, k = 0; i < text.length; i++) {
+        while (k > 0 && text[i] !== pat[k]) k = fail[k - 1];
+        if (text[i] === pat[k]) k++;
+        if (k === pat.length) return true;
+    }
+    return false;
+};`,
+        },
+      },
+    ],
+  },
+  'construct-quad-tree': {
+    pattern: 'Divide and conquer on quarters (merge uniform children)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Top-down: scan, then split',
+        idea: 'For each square, scan all its cells. If they are all equal it is a leaf; otherwise split into four quarters and recurse.',
+        steps: [
+          'build(r, c, size): check whether every cell in the square equals `grid[r][c]`.',
+          'If so, return a leaf with that value.',
+          'Otherwise return an inner node whose children are build on the four quarters of size `size / 2`.',
+        ],
+        time: 'O(n² log n)', space: 'O(log n)',
+        why: 'Every level of the recursion may rescan all n² cells, and there are log n levels. The recursion depth is log n (output nodes not counted).',
+        code: {
+          java: r`class Solution {
+    public Node construct(int[][] grid) { return build(grid, 0, 0, grid.length); }
+    private Node build(int[][] g, int r, int c, int size) {
+        boolean same = true;
+        for (int i = r; i < r + size && same; i++)
+            for (int j = c; j < c + size; j++)
+                if (g[i][j] != g[r][c]) { same = false; break; }
+        if (same) return new Node(g[r][c] == 1, true);
+        int h = size / 2;
+        return new Node(true, false, build(g, r, c, h), build(g, r, c + h, h), build(g, r + h, c, h), build(g, r + h, c + h, h));
+    }
+}`,
+          cpp: r`class Solution {
+    Node* build(vector<vector<int>>& g, int r, int c, int size) {
+        bool same = true;
+        for (int i = r; i < r + size && same; i++)
+            for (int j = c; j < c + size; j++)
+                if (g[i][j] != g[r][c]) { same = false; break; }
+        if (same) return new Node(g[r][c] == 1, true);
+        int h = size / 2;
+        return new Node(true, false, build(g, r, c, h), build(g, r, c + h, h), build(g, r + h, c, h), build(g, r + h, c + h, h));
+    }
+public:
+    Node* construct(vector<vector<int>>& grid) { return build(grid, 0, 0, grid.size()); }
+};`,
+          python: r`class Solution:
+    def construct(self, grid: List[List[int]]) -> 'Node':
+        def build(r, c, size):
+            v = grid[r][c]
+            if all(grid[i][j] == v for i in range(r, r + size) for j in range(c, c + size)):
+                return Node(v == 1, True)
+            h = size // 2
+            return Node(True, False, build(r, c, h), build(r, c + h, h), build(r + h, c, h), build(r + h, c + h, h))
+        return build(0, 0, len(grid))`,
+          javascript: r`var construct = function(grid) {
+    const build = (r, c, size) => {
+        let same = true;
+        for (let i = r; i < r + size && same; i++)
+            for (let j = c; j < c + size; j++)
+                if (grid[i][j] !== grid[r][c]) { same = false; break; }
+        if (same) return new _Node(grid[r][c] === 1, true, null, null, null, null);
+        const h = size / 2;
+        return new _Node(true, false, build(r, c, h), build(r, c + h, h), build(r + h, c, h), build(r + h, c + h, h));
+    };
+    return build(0, 0, grid.length);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Bottom-up: build quarters, then merge',
+        idea: 'Build the four quarters first. If they are all leaves with the same value, the square is uniform and becomes one leaf; otherwise it is an inner node over those four.',
+        steps: [
+          'build(r, c, size): a 1 × 1 square is a leaf with `grid[r][c]`.',
+          'Otherwise build the four quarters of size `size / 2`.',
+          'If all four are leaves with equal values, return one leaf with that value; else return an inner node with the four as children.',
+        ],
+        time: 'O(n²)', space: 'O(log n)',
+        why: 'Each cell is read once at the bottom and every node is created with O(1) work, so the total is linear in the number of cells. Prefix sums over the grid are another way to test a square in O(1).',
+        code: {
+          java: r`class Solution {
+    public Node construct(int[][] grid) { return build(grid, 0, 0, grid.length); }
+    private Node build(int[][] g, int r, int c, int size) {
+        if (size == 1) return new Node(g[r][c] == 1, true);
+        int h = size / 2;
+        Node tl = build(g, r, c, h), tr = build(g, r, c + h, h), bl = build(g, r + h, c, h), br = build(g, r + h, c + h, h);
+        if (tl.isLeaf && tr.isLeaf && bl.isLeaf && br.isLeaf && tl.val == tr.val && tr.val == bl.val && bl.val == br.val) return new Node(tl.val, true);
+        return new Node(true, false, tl, tr, bl, br);
+    }
+}`,
+          cpp: r`class Solution {
+    Node* build(vector<vector<int>>& g, int r, int c, int size) {
+        if (size == 1) return new Node(g[r][c] == 1, true);
+        int h = size / 2;
+        Node *tl = build(g, r, c, h), *tr = build(g, r, c + h, h), *bl = build(g, r + h, c, h), *br = build(g, r + h, c + h, h);
+        if (tl->isLeaf && tr->isLeaf && bl->isLeaf && br->isLeaf && tl->val == tr->val && tr->val == bl->val && bl->val == br->val) return new Node(tl->val, true);
+        return new Node(true, false, tl, tr, bl, br);
+    }
+public:
+    Node* construct(vector<vector<int>>& grid) { return build(grid, 0, 0, grid.size()); }
+};`,
+          python: r`class Solution:
+    def construct(self, grid: List[List[int]]) -> 'Node':
+        def build(r, c, size):
+            if size == 1:
+                return Node(grid[r][c] == 1, True)
+            h = size // 2
+            kids = [build(r, c, h), build(r, c + h, h), build(r + h, c, h), build(r + h, c + h, h)]
+            if all(k.isLeaf for k in kids) and len({k.val for k in kids}) == 1:
+                return Node(kids[0].val, True)
+            return Node(True, False, *kids)
+        return build(0, 0, len(grid))`,
+          javascript: r`var construct = function(grid) {
+    const build = (r, c, size) => {
+        if (size === 1) return new _Node(grid[r][c] === 1, true, null, null, null, null);
+        const h = size / 2;
+        const tl = build(r, c, h), tr = build(r, c + h, h), bl = build(r + h, c, h), br = build(r + h, c + h, h);
+        if (tl.isLeaf && tr.isLeaf && bl.isLeaf && br.isLeaf && tl.val === tr.val && tr.val === bl.val && bl.val === br.val)
+            return new _Node(tl.val, true, null, null, null, null);
+        return new _Node(true, false, tl, tr, bl, br);
+    };
+    return build(0, 0, grid.length);
+};`,
+        },
+      },
+    ],
+  },
+  'delete-leaves-with-a-given-value': {
+    pattern: 'Postorder DFS: fix the children, then decide about the node',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Repeat single passes until nothing changes',
+        idea: 'Delete the current target leaves in one pass, then repeat, because deletions can create new target leaves.',
+        steps: [
+          'Write a pass that removes every node that is currently a leaf with value `target`, and reports whether anything was removed.',
+          'Run passes until one removes nothing (or the root itself was removed).',
+        ],
+        time: 'O(n · h)', space: 'O(h)',
+        why: 'Each pass is O(n), and a chain of target values of length h needs h passes, one level per pass. The postorder version gets the chain reaction for free in a single pass.',
+        code: {
+          java: r`class Solution {
+    private boolean changed;
+    public TreeNode removeLeafNodes(TreeNode root, int target) {
+        do {
+            changed = false;
+            if (root != null && root.left == null && root.right == null && root.val == target) return null;
+            pass(root, target);
+        } while (changed);
+        return root;
+    }
+    private void pass(TreeNode n, int target) {
+        if (n == null) return;
+        if (isTargetLeaf(n.left, target)) { n.left = null; changed = true; }
+        if (isTargetLeaf(n.right, target)) { n.right = null; changed = true; }
+        pass(n.left, target);
+        pass(n.right, target);
+    }
+    private boolean isTargetLeaf(TreeNode n, int target) {
+        return n != null && n.left == null && n.right == null && n.val == target;
+    }
+}`,
+          cpp: r`class Solution {
+    bool changed = false;
+    bool isTargetLeaf(TreeNode* n, int target) { return n && !n->left && !n->right && n->val == target; }
+    void pass(TreeNode* n, int target) {
+        if (!n) return;
+        if (isTargetLeaf(n->left, target)) { n->left = nullptr; changed = true; }
+        if (isTargetLeaf(n->right, target)) { n->right = nullptr; changed = true; }
+        pass(n->left, target);
+        pass(n->right, target);
+    }
+public:
+    TreeNode* removeLeafNodes(TreeNode* root, int target) {
+        do {
+            changed = false;
+            if (isTargetLeaf(root, target)) return nullptr;
+            pass(root, target);
+        } while (changed);
+        return root;
+    }
+};`,
+          python: r`class Solution:
+    def removeLeafNodes(self, root: Optional[TreeNode], target: int) -> Optional[TreeNode]:
+        def leaf(n):
+            return n is not None and n.left is None and n.right is None and n.val == target
+        def run(n):
+            if n is None:
+                return False
+            changed = False
+            if leaf(n.left):
+                n.left = None
+                changed = True
+            if leaf(n.right):
+                n.right = None
+                changed = True
+            a = run(n.left)
+            b = run(n.right)
+            return changed or a or b
+        while True:
+            if leaf(root):
+                return None
+            if not run(root):
+                return root`,
+          javascript: r`var removeLeafNodes = function(root, target) {
+    const leaf = (n) => n !== null && n.left === null && n.right === null && n.val === target;
+    const run = (n) => {
+        if (n === null) return false;
+        let changed = false;
+        if (leaf(n.left)) { n.left = null; changed = true; }
+        if (leaf(n.right)) { n.right = null; changed = true; }
+        const a = run(n.left), b = run(n.right);
+        return changed || a || b;
+    };
+    while (true) {
+        if (leaf(root)) return null;
+        if (!run(root)) return root;
+    }
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Postorder recursion',
+        idea: 'Clean both subtrees first and reattach the results. Only then can you tell whether the node itself has become a target leaf.',
+        steps: [
+          'If `root` is null, return null.',
+          'Set `root.left = removeLeafNodes(root.left)` and `root.right = removeLeafNodes(root.right)`.',
+          'If both children are now null and `root.val == target`, return null; otherwise return `root`.',
+        ],
+        time: 'O(n)', space: 'O(h)',
+        why: 'Every node is visited once, and children are always settled before their parent, so a chain of target values collapses upwards in the same pass. h is the tree height (recursion depth).',
+        code: {
+          java: r`class Solution {
+    public TreeNode removeLeafNodes(TreeNode root, int target) {
+        if (root == null) return null;
+        root.left = removeLeafNodes(root.left, target);
+        root.right = removeLeafNodes(root.right, target);
+        return root.left == null && root.right == null && root.val == target ? null : root;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    TreeNode* removeLeafNodes(TreeNode* root, int target) {
+        if (!root) return nullptr;
+        root->left = removeLeafNodes(root->left, target);
+        root->right = removeLeafNodes(root->right, target);
+        return !root->left && !root->right && root->val == target ? nullptr : root;
+    }
+};`,
+          python: r`class Solution:
+    def removeLeafNodes(self, root: Optional[TreeNode], target: int) -> Optional[TreeNode]:
+        if not root:
+            return None
+        root.left = self.removeLeafNodes(root.left, target)
+        root.right = self.removeLeafNodes(root.right, target)
+        if not root.left and not root.right and root.val == target:
+            return None
+        return root`,
+          javascript: r`var removeLeafNodes = function(root, target) {
+    if (!root) return null;
+    root.left = removeLeafNodes(root.left, target);
+    root.right = removeLeafNodes(root.right, target);
+    return !root.left && !root.right && root.val === target ? null : root;
+};`,
+        },
+      },
+    ],
+  },
 };

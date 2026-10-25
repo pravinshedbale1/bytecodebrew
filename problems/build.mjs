@@ -20,6 +20,7 @@ import { tmpdir, cpus } from 'node:os';
 import { buildProgram, parseOutput } from '../src/lib/judge/harness.js';
 import { accept, parseJson } from '../src/lib/judge/check.js';
 import { lessonContent } from '../build/content-plugin.js';
+import { generate } from './fuzz/lib.mjs';
 
 const run = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -49,10 +50,22 @@ const PERF = (await import(pathToFileURL(join(here, 'perf.mjs')).href)).default;
 // A reference must finish its performance test well inside the runner's 5 s CPU limit.
 const REF_BUDGET_MS = CHECK ? 3000 : 600;   // CI machines are slower; timings are only recorded from local builds
 
-/** Specs write test values as plain JS; the harness and the site use LeetCode-format JSON strings. */
-function normalise(spec) {
+// Generated hidden tests, kept apart from the specs: problems/fuzz/<lesson>.mjs (see problems/fuzz/lib.mjs)
+async function loadFuzz(lesson) {
+  const f = join(here, 'fuzz', `${lesson}.mjs`);
+  return existsSync(f) ? (await import(pathToFileURL(f).href)).default : {};
+}
+const unfuzzed = [];
+
+/**
+ * Specs write test values as plain JS; the harness and the site use LeetCode-format JSON strings.
+ * Order: the spec's own tests (examples first), then the generated ones, then the performance test.
+ */
+function normalise(spec, fuzz) {
   const j = (v) => JSON.stringify(v);
   const tests = spec.tests.map((t) => ({ in: t.in.map(j), ...(t.out !== undefined ? { out: j(t.out) } : {}) }));
+  if (fuzz[spec.slug]) for (const input of generate(spec.slug, fuzz[spec.slug], spec.tests.map((t) => t.in))) tests.push({ in: input.map(j), g: 1 });
+  else unfuzzed.push(spec.slug);
   if (PERF[spec.slug]) tests.push({ in: [], perf: PERF[spec.slug] });
   return { ...spec, tests };
 }
@@ -121,7 +134,10 @@ const calibrations = [];
 
 for (const file of files) {
   const lesson = file.slice(0, -4);
-  const specs = (await import(pathToFileURL(join(specDir, file)).href)).default.map(normalise);
+  const fuzz = await loadFuzz(lesson);
+  const raw = (await import(pathToFileURL(join(specDir, file)).href)).default;
+  for (const slug of Object.keys(fuzz)) if (!raw.some((p) => p.slug === slug)) { failed += 1; console.log(`✗ problems/fuzz/${lesson}.mjs: ${slug} is not a problem of this lesson`); }
+  const specs = raw.map((spec) => normalise(spec, fuzz));
   const verdicts = await pool(specs, Math.max(2, cpus().length - 1), judge);
   const shipped = [];
   specs.forEach((spec, i) => {
@@ -136,7 +152,7 @@ for (const file of files) {
     const anchor = anchorFor(lesson, spec.title);
     shipped.push({
       ...rest, lesson, ...(anchor ? { anchor } : {}),
-      tests: spec.tests.map((t, k) => ({ in: t.in, out: v.outs[k], ...(t.perf ? { perf: t.perf, refMs: Math.max(1, timings[spec.slug] ?? 1) } : {}) })),
+      tests: spec.tests.map((t, k) => ({ in: t.in, out: v.outs[k], ...(t.g ? { g: 1 } : {}), ...(t.perf ? { perf: t.perf, refMs: Math.max(1, timings[spec.slug] ?? 1) } : {}) })),
     });
     index[spec.slug] = lesson;
   });
@@ -171,5 +187,9 @@ if (calibrations.length && !CHECK) {
 }
 const timed = Object.entries(timings).sort((a, b) => b[1] - a[1]);
 if (timed.length) console.log(`\nPerformance tests: ${timed.length}; slowest references: ${timed.slice(0, 5).map(([s, ms]) => `${s} ${ms} ms`).join(', ')}`);
+if (unfuzzed.length) {
+  console.log(`\n${unfuzzed.length} problems have no generated tests (problems/fuzz): ${unfuzzed.slice(0, 10).join(', ')}${unfuzzed.length > 10 ? ', …' : ''}`);
+  if (CHECK && !only.length) failed += unfuzzed.length;
+}
 console.log(failed ? `\n${failed} of ${total} problems failed` : `\nAll ${total} problems verified`);
 process.exit(failed ? 1 : 0);

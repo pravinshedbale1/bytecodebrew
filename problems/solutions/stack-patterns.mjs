@@ -1426,4 +1426,338 @@ public:
       },
     ],
   },
+  'baseball-game': {
+    pattern: 'Stack of recent values (undo = pop)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'List with removals at the end',
+        idea: 'Keep the scores in a plain list, look back by index, and recompute the total at the end.',
+        steps: [
+          'For each operation, append, double, add the last two, or delete the last element of the list.',
+          'Sum the list at the end.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'A dynamic list used only at its end already behaves like a stack, so this is linear too. It is the same idea with less explicit structure.',
+        code: {
+          java: r`class Solution {
+    public int calPoints(String[] operations) {
+        List<Integer> rec = new ArrayList<>();
+        for (String op : operations) {
+            int n = rec.size();
+            switch (op) {
+                case "+": rec.add(rec.get(n - 1) + rec.get(n - 2)); break;
+                case "D": rec.add(2 * rec.get(n - 1)); break;
+                case "C": rec.remove(n - 1); break;
+                default: rec.add(Integer.parseInt(op));
+            }
+        }
+        int sum = 0;
+        for (int x : rec) sum += x;
+        return sum;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int calPoints(vector<string>& operations) {
+        vector<int> rec;
+        for (const string& op : operations) {
+            int n = rec.size();
+            if (op == "+") rec.push_back(rec[n - 1] + rec[n - 2]);
+            else if (op == "D") rec.push_back(2 * rec[n - 1]);
+            else if (op == "C") rec.pop_back();
+            else rec.push_back(stoi(op));
+        }
+        return accumulate(rec.begin(), rec.end(), 0);
+    }
+};`,
+          python: r`class Solution:
+    def calPoints(self, operations: List[str]) -> int:
+        rec = []
+        for op in operations:
+            if op == '+':
+                rec.append(rec[-1] + rec[-2])
+            elif op == 'D':
+                rec.append(2 * rec[-1])
+            elif op == 'C':
+                rec.pop()
+            else:
+                rec.append(int(op))
+        return sum(rec)`,
+          javascript: r`var calPoints = function(operations) {
+    const rec = [];
+    for (const op of operations) {
+        const n = rec.length;
+        if (op === "+") rec.push(rec[n - 1] + rec[n - 2]);
+        else if (op === "D") rec.push(2 * rec[n - 1]);
+        else if (op === "C") rec.pop();
+        else rec.push(Number(op));
+    }
+    return rec.reduce((a, b) => a + b, 0);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Stack with a running total',
+        idea: 'Push scores on a stack and keep the total up to date as you go, so no final pass is needed.',
+        steps: [
+          'For a number, push it and add it to `total`. For "D", push twice the top and add it.',
+          'For "+", pop the top `a`, peek `b`, push `a` back, push `a + b` and add it.',
+          'For "C", pop the top and subtract it. Return `total`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'Each operation is O(1). Only the most recent scores are ever read, which is exactly what a stack provides, and "C" is a pop. The stack can hold up to n scores.',
+        code: {
+          java: r`class Solution {
+    public int calPoints(String[] operations) {
+        Deque<Integer> st = new ArrayDeque<>();
+        int total = 0;
+        for (String op : operations) {
+            int v;
+            if (op.equals("C")) { total -= st.pop(); continue; }
+            if (op.equals("+")) { int a = st.pop(); v = a + st.peek(); st.push(a); }
+            else if (op.equals("D")) v = 2 * st.peek();
+            else v = Integer.parseInt(op);
+            st.push(v);
+            total += v;
+        }
+        return total;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int calPoints(vector<string>& operations) {
+        stack<int> st;
+        int total = 0;
+        for (const string& op : operations) {
+            int v;
+            if (op == "C") { total -= st.top(); st.pop(); continue; }
+            if (op == "+") { int a = st.top(); st.pop(); v = a + st.top(); st.push(a); }
+            else if (op == "D") v = 2 * st.top();
+            else v = stoi(op);
+            st.push(v);
+            total += v;
+        }
+        return total;
+    }
+};`,
+          python: r`class Solution:
+    def calPoints(self, operations: List[str]) -> int:
+        st, total = [], 0
+        for op in operations:
+            if op == 'C':
+                total -= st.pop()
+                continue
+            if op == '+':
+                v = st[-1] + st[-2]
+            elif op == 'D':
+                v = 2 * st[-1]
+            else:
+                v = int(op)
+            st.append(v)
+            total += v
+        return total`,
+          javascript: r`var calPoints = function(operations) {
+    const st = [];
+    let total = 0;
+    for (const op of operations) {
+        if (op === "C") { total -= st.pop(); continue; }
+        let v;
+        if (op === "+") v = st[st.length - 1] + st[st.length - 2];
+        else if (op === "D") v = 2 * st[st.length - 1];
+        else v = Number(op);
+        st.push(v);
+        total += v;
+    }
+    return total;
+};`,
+        },
+      },
+    ],
+  },
+  'car-fleet': {
+    pattern: 'Sort by position, then a monotonic stack of arrival times',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Check every car ahead',
+        idea: 'A car leads a fleet exactly when no car in front of it arrives later (or at the same time) on its own. Check that for each car by scanning all the others.',
+        steps: [
+          'Compute each car\'s solo time `t[i] = (target − position[i]) / speed[i]`.',
+          'Car `i` starts a fleet if no car `j` with `position[j] > position[i]` has `t[j] >= t[i]`.',
+          'Count such cars.',
+        ],
+        time: 'O(n²)', space: 'O(n)',
+        why: 'If some car ahead is no faster to arrive, car `i` catches it (or the fleet it is in) before or at `target`. Otherwise car `i` is never blocked. Correct, but 10¹⁰ checks for n = 10⁵.',
+        code: {
+          java: r`class Solution {
+    public int carFleet(int target, int[] position, int[] speed) {
+        int n = position.length, fleets = 0;
+        double[] t = new double[n];
+        for (int i = 0; i < n; i++) t[i] = (double) (target - position[i]) / speed[i];
+        for (int i = 0; i < n; i++) {
+            boolean blocked = false;
+            for (int j = 0; j < n && !blocked; j++)
+                if (position[j] > position[i] && t[j] >= t[i]) blocked = true;
+            if (!blocked) fleets++;
+        }
+        return fleets;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int carFleet(int target, vector<int>& position, vector<int>& speed) {
+        int n = position.size(), fleets = 0;
+        vector<double> t(n);
+        for (int i = 0; i < n; i++) t[i] = (double) (target - position[i]) / speed[i];
+        for (int i = 0; i < n; i++) {
+            bool blocked = false;
+            for (int j = 0; j < n && !blocked; j++)
+                if (position[j] > position[i] && t[j] >= t[i]) blocked = true;
+            if (!blocked) fleets++;
+        }
+        return fleets;
+    }
+};`,
+          python: r`class Solution:
+    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:
+        n = len(position)
+        t = [(target - p) / s for p, s in zip(position, speed)]
+        return sum(1 for i in range(n)
+                   if not any(position[j] > position[i] and t[j] >= t[i] for j in range(n)))`,
+          javascript: r`var carFleet = function(target, position, speed) {
+    const n = position.length;
+    const t = position.map((p, i) => (target - p) / speed[i]);
+    let fleets = 0;
+    for (let i = 0; i < n; i++) {
+        let blocked = false;
+        for (let j = 0; j < n && !blocked; j++)
+            if (position[j] > position[i] && t[j] >= t[i]) blocked = true;
+        if (!blocked) fleets++;
+    }
+    return fleets;
+};`,
+        },
+      },
+      {
+        level: 'Better', name: 'Sort, then a stack of fleet times',
+        idea: 'Visit cars from the closest to `target` backwards. Push each car\'s solo time; if it is not more than the fleet time on top of the stack, the car merges into that fleet and is popped again.',
+        steps: [
+          'Pair each position with its speed and sort by position, descending.',
+          'For each car compute its time `t`. If the stack is not empty and `t <=` the top, the car catches that fleet and merges: skip it. Otherwise push `t` as a new fleet.',
+          'The stack size is the number of fleets.',
+        ],
+        time: 'O(n log n)', space: 'O(n)',
+        why: 'A merged car takes on the fleet\'s (slower) time, so only each fleet\'s leading time matters. The stack is strictly increasing from bottom to top, which is the monotonic-stack shape.',
+        code: {
+          java: r`class Solution {
+    public int carFleet(int target, int[] position, int[] speed) {
+        int n = position.length;
+        Integer[] idx = new Integer[n];
+        for (int i = 0; i < n; i++) idx[i] = i;
+        Arrays.sort(idx, (a, b) -> position[b] - position[a]);
+        Deque<Double> st = new ArrayDeque<>();
+        for (int i : idx) {
+            double t = (double) (target - position[i]) / speed[i];
+            if (!st.isEmpty() && t <= st.peek()) continue;
+            st.push(t);
+        }
+        return st.size();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int carFleet(int target, vector<int>& position, vector<int>& speed) {
+        int n = position.size();
+        vector<pair<int, int>> cars(n);
+        for (int i = 0; i < n; i++) cars[i] = {position[i], speed[i]};
+        sort(cars.rbegin(), cars.rend());
+        vector<double> st;
+        for (auto& [p, s] : cars) {
+            double t = (double) (target - p) / s;
+            if (!st.empty() && t <= st.back()) continue;
+            st.push_back(t);
+        }
+        return st.size();
+    }
+};`,
+          python: r`class Solution:
+    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:
+        st = []
+        for p, s in sorted(zip(position, speed), reverse=True):
+            t = (target - p) / s
+            if st and t <= st[-1]:
+                continue
+            st.append(t)
+        return len(st)`,
+          javascript: r`var carFleet = function(target, position, speed) {
+    const cars = position.map((p, i) => [p, speed[i]]).sort((a, b) => b[0] - a[0]);
+    const st = [];
+    for (const [p, s] of cars) {
+        const t = (target - p) / s;
+        if (st.length && t <= st[st.length - 1]) continue;
+        st.push(t);
+    }
+    return st.length;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Bucket by position, keep only the slowest time',
+        idea: 'Positions are integers below `target`, so place each car in an array indexed by position instead of sorting. Then sweep from `target` down, keeping just the time of the fleet in front.',
+        steps: [
+          'Make `time[p]` for `p` in `[0, target)`, filled with 0, and set `time[position[i]]` to car `i`\'s solo time.',
+          'Sweep `p` from `target − 1` down to 0 with `slowest = 0`.',
+          'When `time[p] > slowest`, a new fleet starts: count it and set `slowest = time[p]`.',
+        ],
+        time: 'O(n + target)', space: 'O(target)',
+        why: 'Counting-sort by position removes the log factor; it is a win when `target` is not much larger than n (here up to 10⁶). The stack is replaced by one variable, because a new fleet only ever compares with the fleet directly ahead. Equal times merge (`>` not `>=`), matching "catches up exactly at target".',
+        code: {
+          java: r`class Solution {
+    public int carFleet(int target, int[] position, int[] speed) {
+        double[] time = new double[target];
+        for (int i = 0; i < position.length; i++) time[position[i]] = (double) (target - position[i]) / speed[i];
+        int fleets = 0;
+        double slowest = 0;
+        for (int p = target - 1; p >= 0; p--) {
+            if (time[p] > slowest) { fleets++; slowest = time[p]; }
+        }
+        return fleets;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int carFleet(int target, vector<int>& position, vector<int>& speed) {
+        vector<double> time(target, 0);
+        for (size_t i = 0; i < position.size(); i++) time[position[i]] = (double) (target - position[i]) / speed[i];
+        int fleets = 0;
+        double slowest = 0;
+        for (int p = target - 1; p >= 0; p--) {
+            if (time[p] > slowest) { fleets++; slowest = time[p]; }
+        }
+        return fleets;
+    }
+};`,
+          python: r`class Solution:
+    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:
+        time = [0.0] * target
+        for p, s in zip(position, speed):
+            time[p] = (target - p) / s
+        fleets, slowest = 0, 0.0
+        for p in range(target - 1, -1, -1):
+            if time[p] > slowest:
+                fleets += 1
+                slowest = time[p]
+        return fleets`,
+          javascript: r`var carFleet = function(target, position, speed) {
+    const time = new Float64Array(target);
+    for (let i = 0; i < position.length; i++) time[position[i]] = (target - position[i]) / speed[i];
+    let fleets = 0, slowest = 0;
+    for (let p = target - 1; p >= 0; p--) {
+        if (time[p] > slowest) { fleets++; slowest = time[p]; }
+    }
+    return fleets;
+};`,
+        },
+      },
+    ],
+  },
 };

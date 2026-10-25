@@ -87,7 +87,7 @@ export default [
     ref: `class RandomizedSet {
     private final Map<Integer, Integer> at = new HashMap<>();
     private final List<Integer> vals = new ArrayList<>();
-    private final Random rnd = new Random();
+    private final Random rnd = new Random(1);
     public RandomizedSet() {}
     public boolean insert(int val) { if (at.containsKey(val)) return false; at.put(val, vals.size()); vals.add(val); return true; }
     public boolean remove(int val) {
@@ -262,7 +262,7 @@ export default [
     ref: `class RandomizedCollection {
     private final List<Integer> vals = new ArrayList<>();
     private final Map<Integer, Set<Integer>> at = new HashMap<>();
-    private final Random rnd = new Random();
+    private final Random rnd = new Random(1);
     public RandomizedCollection() {}
     public boolean insert(int val) {
         Set<Integer> s = at.computeIfAbsent(val, k -> new LinkedHashSet<>());
@@ -279,6 +279,119 @@ export default [
         return true;
     }
     public int getRandom() { return vals.get(rnd.nextInt(vals.size())); }
+}`,
+  },
+  {
+    slug: 'design-hashset', title: 'Design HashSet', level: 'Easy',
+    summary: 'Build MyHashSet without built-in hash tables: add(key), remove(key) and contains(key).',
+    design: { cls: 'MyHashSet', ctor: [], methods: [['void', 'add', [['int', 'key']]], ['void', 'remove', [['int', 'key']]], ['boolean', 'contains', [['int', 'key']]]] },
+    tests: [
+      { in: [['MyHashSet', 'add', 'add', 'contains', 'contains', 'add', 'contains', 'remove', 'contains'], [[], [1], [2], [1], [3], [2], [2], [2], [2]]], out: [null, null, null, true, false, null, true, null, false] },
+      { in: [['MyHashSet', 'remove', 'contains', 'add', 'add', 'contains', 'remove', 'contains'], [[], [5], [5], [0], [1000000], [1000000], [0], [0]]] },
+      { in: [['MyHashSet', 'add', 'add', 'add', 'remove', 'contains', 'contains'], [[], [1009], [2018], [0], [1009], [2018], [1009]]] },
+    ],
+    ref: `class MyHashSet {
+    private static final int SIZE = 1009;
+    private final List<Integer>[] buckets = new List[SIZE];
+    public MyHashSet() {}
+    private List<Integer> bucket(int key) { int b = key % SIZE; if (buckets[b] == null) buckets[b] = new ArrayList<>(); return buckets[b]; }
+    public void add(int key) { if (!bucket(key).contains(key)) bucket(key).add(key); }
+    public void remove(int key) { bucket(key).remove(Integer.valueOf(key)); }
+    public boolean contains(int key) { return bucket(key).contains(key); }
+}`,
+  },
+  {
+    slug: 'implement-stack-using-queues', title: 'Implement Stack using Queues', level: 'Easy',
+    summary: 'Build a last-in-first-out stack MyStack (push, pop, top, empty) using only queue operations: add to the back, remove from the front, peek the front, size and isEmpty.',
+    design: { cls: 'MyStack', ctor: [], methods: [['void', 'push', [['int', 'x']]], ['int', 'pop', []], ['int', 'top', []], ['boolean', 'empty', []]] },
+    tests: [
+      { in: [['MyStack', 'push', 'push', 'top', 'pop', 'empty'], [[], [1], [2], [], [], []]], out: [null, null, null, 2, 2, false] },
+      { in: [['MyStack', 'empty', 'push', 'empty', 'pop', 'empty'], [[], [], [9], [], [], []]] },
+      { in: [['MyStack', 'push', 'push', 'push', 'pop', 'push', 'top', 'pop', 'pop', 'top'], [[], [1], [2], [3], [], [4], [], [], [], []]] },
+    ],
+    ref: `class MyStack {
+    private final Queue<Integer> q = new ArrayDeque<>();
+    public MyStack() {}
+    public void push(int x) { q.add(x); for (int i = 1; i < q.size(); i++) q.add(q.poll()); }
+    public int pop() { return q.poll(); }
+    public int top() { return q.peek(); }
+    public boolean empty() { return q.isEmpty(); }
+}`,
+  },
+  {
+    slug: 'design-circular-queue', title: 'Design Circular Queue', level: 'Medium',
+    summary: 'Build MyCircularQueue(k), a fixed-capacity FIFO queue on a ring buffer: enQueue and deQueue return whether they succeeded, Front and Rear return -1 when empty, plus isEmpty and isFull.',
+    design: {
+      cls: 'MyCircularQueue', ctor: [['int', 'k']],
+      methods: [['boolean', 'enQueue', [['int', 'value']]], ['boolean', 'deQueue', []], ['int', 'Front', []], ['int', 'Rear', []], ['boolean', 'isEmpty', []], ['boolean', 'isFull', []]],
+    },
+    tests: [
+      { in: [['MyCircularQueue', 'enQueue', 'enQueue', 'enQueue', 'enQueue', 'Rear', 'isFull', 'deQueue', 'enQueue', 'Rear'], [[3], [1], [2], [3], [4], [], [], [], [4], []]], out: [null, true, true, true, false, 3, true, true, true, 4] },
+      { in: [['MyCircularQueue', 'Front', 'Rear', 'deQueue', 'isEmpty', 'enQueue', 'Front', 'Rear', 'isFull'], [[1], [], [], [], [], [7], [], [], []]] },
+      { in: [['MyCircularQueue', 'enQueue', 'enQueue', 'deQueue', 'enQueue', 'enQueue', 'deQueue', 'Front', 'Rear', 'deQueue', 'deQueue', 'isEmpty'], [[2], [1], [2], [], [3], [4], [], [], [], [], [], []]] },
+    ],
+    ref: `class MyCircularQueue {
+    private final int[] a; private int head = 0, size = 0;
+    public MyCircularQueue(int k) { a = new int[k]; }
+    public boolean enQueue(int value) { if (isFull()) return false; a[(head + size) % a.length] = value; size++; return true; }
+    public boolean deQueue() { if (isEmpty()) return false; head = (head + 1) % a.length; size--; return true; }
+    public int Front() { return isEmpty() ? -1 : a[head]; }
+    public int Rear() { return isEmpty() ? -1 : a[(head + size - 1) % a.length]; }
+    public boolean isEmpty() { return size == 0; }
+    public boolean isFull() { return size == a.length; }
+}`,
+  },
+  {
+    slug: 'detect-squares', title: 'Detect Squares', level: 'Medium',
+    summary: 'DetectSquares stores points (duplicates count separately). count(point) returns how many ways you can pick three stored points that, with the query point, form an axis-aligned square of positive area.',
+    design: { cls: 'DetectSquares', ctor: [], methods: [['void', 'add', [['int[]', 'point']]], ['int', 'count', [['int[]', 'point']]]] },
+    tests: [
+      { in: [['DetectSquares', 'add', 'add', 'add', 'count', 'count', 'add', 'count'], [[], [[3, 10]], [[11, 2]], [[3, 2]], [[11, 10]], [[14, 8]], [[11, 2]], [[11, 10]]]], out: [null, null, null, null, 1, 0, null, 2] },
+      { in: [['DetectSquares', 'count', 'add', 'add', 'add', 'count', 'count'], [[], [[0, 0]], [[0, 1]], [[1, 0]], [[1, 1]], [[0, 0]], [[1, 1]]]] },
+      { in: [['DetectSquares', 'add', 'add', 'add', 'add', 'add', 'count', 'count'], [[], [[5, 5]], [[5, 7]], [[7, 5]], [[3, 5]], [[3, 7]], [[5, 5]], [[7, 7]]]] },
+      { in: [['DetectSquares', 'add', 'add', 'count'], [[], [[2, 2]], [[2, 2]], [[2, 2]]]] },
+    ],
+    ref: `class DetectSquares {
+    private final int[][] cnt = new int[1001][1001];
+    private final List<int[]> pts = new ArrayList<>();
+    public DetectSquares() {}
+    public void add(int[] point) { if (cnt[point[0]][point[1]]++ == 0) pts.add(point); }
+    public int count(int[] point) {
+        int x = point[0], y = point[1], total = 0;
+        for (int[] p : pts) {
+            int px = p[0], py = p[1];
+            if (Math.abs(px - x) != Math.abs(py - y) || px == x) continue;
+            total += cnt[px][py] * cnt[x][py] * cnt[px][y];
+        }
+        return total;
+    }
+}`,
+  },
+  {
+    slug: 'maximum-frequency-stack', title: 'Maximum Frequency Stack', level: 'Hard',
+    summary: 'FreqStack: push(val) adds a value; pop() removes and returns the most frequent value in the stack, and among equally frequent values the one pushed most recently.',
+    design: { cls: 'FreqStack', ctor: [], methods: [['void', 'push', [['int', 'val']]], ['int', 'pop', []]] },
+    tests: [
+      { in: [['FreqStack', 'push', 'push', 'push', 'push', 'push', 'push', 'pop', 'pop', 'pop', 'pop'], [[], [5], [7], [5], [7], [4], [5], [], [], [], []]], out: [null, null, null, null, null, null, null, 5, 7, 5, 4] },
+      { in: [['FreqStack', 'push', 'pop', 'push', 'push', 'pop', 'pop'], [[], [1], [], [2], [3], [], []]] },
+      { in: [['FreqStack', 'push', 'push', 'push', 'push', 'pop', 'push', 'pop', 'pop', 'pop', 'pop'], [[], [1000000000], [0], [1000000000], [0], [], [0], [], [], [], []]] },
+    ],
+    ref: `class FreqStack {
+    private final Map<Integer, Integer> freq = new HashMap<>();
+    private final List<Deque<Integer>> groups = new ArrayList<>();
+    public FreqStack() {}
+    public void push(int val) {
+        int f = freq.merge(val, 1, Integer::sum);
+        if (f > groups.size()) groups.add(new ArrayDeque<>());
+        groups.get(f - 1).push(val);
+    }
+    public int pop() {
+        Deque<Integer> top = groups.get(groups.size() - 1);
+        int val = top.pop();
+        if (top.isEmpty()) groups.remove(groups.size() - 1);
+        freq.merge(val, -1, Integer::sum);
+        return val;
+    }
 }`,
   },
 ];

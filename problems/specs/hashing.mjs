@@ -178,4 +178,140 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'concatenation-of-array', title: 'Concatenation of Array', level: 'Easy',
+    summary: 'Return an array of length 2n that is nums followed by nums again.',
+    method: 'getConcatenation', params: [['int[]', 'nums']], returns: 'int[]',
+    tests: [
+      { in: [[1, 2, 1]], out: [1, 2, 1, 1, 2, 1] },
+      { in: [[1, 3, 2, 1]], out: [1, 3, 2, 1, 1, 3, 2, 1] },
+      { in: [[7]] },
+      { in: [[1000, 1]] },
+    ],
+    ref: `class Solution {
+    public int[] getConcatenation(int[] nums) {
+        int n = nums.length;
+        int[] ans = new int[2 * n];
+        for (int i = 0; i < n; i++) { ans[i] = nums[i]; ans[i + n] = nums[i]; }
+        return ans;
+    }
+}`,
+  },
+  {
+    slug: 'majority-element', title: 'Majority Element', level: 'Easy',
+    summary: 'Return the value that appears more than n / 2 times. Such a value always exists.',
+    method: 'majorityElement', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[3, 2, 3]], out: 3 },
+      { in: [[2, 2, 1, 1, 1, 2, 2]], out: 2 },
+      { in: [[5]] },
+      { in: [[-1, -1, 4]] },
+      { in: [[6, 5, 5]] },
+      { in: [[1, 2, 1, 3, 1, 4, 1]] },
+    ],
+    ref: `class Solution {
+    public int majorityElement(int[] nums) {
+        int cand = 0, count = 0;
+        for (int x : nums) {
+            if (count == 0) cand = x;
+            count += x == cand ? 1 : -1;
+        }
+        return cand;
+    }
+}`,
+  },
+  {
+    slug: 'encode-and-decode-strings', title: 'Encode and Decode Strings', level: 'Medium',
+    summary: 'Design Codec: encode(strs) turns a list of strings into one string and decode(s) turns it back into the same list. The strings may contain any character. The judge encodes with one Codec, decodes with another, and prints the decoded list.',
+    design: { cls: 'Codec', ctor: [], methods: [['String', 'encode', [['List<String>', 'strs']]], ['List<String>', 'decode', [['String', 's']]]] },
+    params: [['List<String>', 'strs']],
+    call: 'Codec enc = new Codec(), dec = new Codec(); Object r = dec.decode(enc.encode(BCB.LS($0)));',
+    tests: [
+      { in: [['neet', 'code', 'love', 'you']], out: ['neet', 'code', 'love', 'you'] },
+      { in: [['we', 'say', ':', 'yes']], out: ['we', 'say', ':', 'yes'] },
+      { in: [['']] },
+      { in: [[]] },
+      { in: [['#', '4#ab', '', 'a,b', '12']] },
+      { in: [['say "hi"', 'back\\slash', '  ']] },
+      { in: [['', '', '']] },
+    ],
+    ref: `class Codec {
+    public String encode(List<String> strs) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : strs) sb.append(s.length()).append('#').append(s);
+        return sb.toString();
+    }
+    public List<String> decode(String s) {
+        List<String> out = new ArrayList<>();
+        int i = 0;
+        while (i < s.length()) {
+            int j = s.indexOf('#', i);
+            int len = Integer.parseInt(s.substring(i, j));
+            out.add(s.substring(j + 1, j + 1 + len));
+            i = j + 1 + len;
+        }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'majority-element-ii', title: 'Majority Element II', level: 'Medium',
+    summary: 'Return every value that appears more than n / 3 times, in any order.',
+    method: 'majorityElement', params: [['int[]', 'nums']], returns: 'List<Integer>', check: 'any-order',
+    tests: [
+      { in: [[3, 2, 3]], out: [3] },
+      { in: [[1]], out: [1] },
+      { in: [[1, 2]], out: [1, 2] },
+      { in: [[1, 2, 3]] },
+      { in: [[2, 2, 1, 3, 3, 1, 3, 2]] },
+      { in: [[0, 0, 0, -5, 7]] },
+      { in: [[4, 4, 1, 1, 2, 2, 4, 1]] },
+    ],
+    ref: `class Solution {
+    public List<Integer> majorityElement(int[] nums) {
+        int c1 = 0, c2 = 1, n1 = 0, n2 = 0;
+        for (int x : nums) {
+            if (x == c1) n1++;
+            else if (x == c2) n2++;
+            else if (n1 == 0) { c1 = x; n1 = 1; }
+            else if (n2 == 0) { c2 = x; n2 = 1; }
+            else { n1--; n2--; }
+        }
+        n1 = 0; n2 = 0;
+        for (int x : nums) { if (x == c1) n1++; else if (x == c2) n2++; }
+        List<Integer> out = new ArrayList<>();
+        if (n1 > nums.length / 3) out.add(c1);
+        if (n2 > nums.length / 3) out.add(c2);
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'verifying-an-alien-dictionary', title: 'Verifying an Alien Dictionary', level: 'Easy',
+    summary: 'An alien language uses the lowercase letters in a different order, given as order. Return true if words is sorted in that language\'s dictionary order.',
+    method: 'isAlienSorted', params: [['String[]', 'words'], ['String', 'order']], returns: 'boolean',
+    tests: [
+      { in: [['hello', 'leetcode'], 'hlabcdefgijkmnopqrstuvwxyz'], out: true },
+      { in: [['word', 'world', 'row'], 'worldabcefghijkmnpqstuvxyz'], out: false },
+      { in: [['apple', 'app'], 'abcdefghijklmnopqrstuvwxyz'], out: false },
+      { in: [['app', 'apple'], 'abcdefghijklmnopqrstuvwxyz'] },
+      { in: [['z'], 'zyxwvutsrqponmlkjihgfedcba'] },
+      { in: [['cba', 'cab', 'ab'], 'cbazyxwvutsrqponmlkjihgfed'] },
+      { in: [['kuvp', 'q'], 'ngxlkthsjuoqcpavbfdermiywz'] },
+    ],
+    ref: `class Solution {
+    public boolean isAlienSorted(String[] words, String order) {
+        int[] rank = new int[26];
+        for (int i = 0; i < 26; i++) rank[order.charAt(i) - 'a'] = i;
+        for (int w = 0; w + 1 < words.length; w++) {
+            String a = words[w], b = words[w + 1];
+            int k = 0;
+            while (k < a.length() && k < b.length() && a.charAt(k) == b.charAt(k)) k++;
+            if (k == b.length()) { if (a.length() > b.length()) return false; continue; }
+            if (k < a.length() && rank[a.charAt(k) - 'a'] > rank[b.charAt(k) - 'a']) return false;
+        }
+        return true;
+    }
+}`,
+  },
 ];

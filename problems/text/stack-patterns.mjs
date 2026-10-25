@@ -104,4 +104,33 @@ Decode \`s\` and return the result. The input is always valid, digits appear onl
       'An O(1)-space alternative counts open and close brackets in a left-to-right pass and again right to left, resetting when the counts become invalid.',
     ],
   },
+  'baseball-game': {
+    statement: `You keep score for a game with odd rules. Start with an empty record and apply each string in \`operations\` in order:
+
+- an integer \`x\`: record a new score of \`x\`;
+- \`"+"\`: record a new score equal to the sum of the previous two scores;
+- \`"D"\`: record a new score equal to double the previous score;
+- \`"C"\`: remove the previous score from the record.
+
+Return the sum of all scores left in the record. Every operation is valid: \`"+"\` always has two previous scores, and \`"D"\` and \`"C"\` always have one.`,
+    constraints: ['1 <= operations.length <= 1000', '`operations[i]` is "C", "D", "+" or an integer in [-3·10⁴, 3·10⁴]', 'All intermediate values and the answer fit in a 32-bit integer'],
+    hints: [
+      'Every operation only looks at the most recent scores, and "C" undoes the most recent one. Which structure gives you the latest item first?',
+      'Push each recorded score onto a stack. "C" pops, "D" pushes twice the top.',
+      'For "+", read the top two values (pop one, peek the next, push the first back) and push their sum. Finally add up the stack.',
+    ],
+  },
+  'car-fleet': {
+    statement: `\`n\` cars drive along a one-lane road towards \`target\`. Car \`i\` starts at \`position[i]\` (all positions are different) and drives at \`speed[i]\` miles per hour.
+
+A car can never pass the car in front of it. If a faster car catches up with a slower one, it slows down and the two drive on together, bumper to bumper, as one **fleet**. A car that catches up exactly at \`target\` still joins that fleet. A single car is a fleet too.
+
+Return the number of fleets that arrive at \`target\`.`,
+    constraints: ['n == position.length', 'n == speed.length', '1 <= n <= 1e5', '1 <= target <= 1e6', '0 <= position[i] < target', '1 <= speed[i] <= 1e6', 'All values of `position` are distinct'],
+    hints: [
+      'Work out the time each car would need to reach target on its own: (target − position) / speed.',
+      'Process the cars from the one closest to target backwards. A car behind can only be slowed down by cars in front of it.',
+      'If a car\'s solo time is no more than the time of the fleet just ahead, it catches that fleet and merges. Otherwise it arrives later and starts a new fleet. Keep the fleet times on a stack (or just the latest one).',
+    ],
+  },
 };

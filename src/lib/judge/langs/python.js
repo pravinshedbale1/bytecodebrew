@@ -12,7 +12,7 @@ const HINTS = {
   'List<Integer>': 'List[int]', 'List<String>': 'List[str]', 'List<List<Integer>>': 'List[List[int]]',
   'List<List<String>>': 'List[List[str]]', 'List<Boolean>': 'List[bool]', 'List<Double>': 'List[float]',
   TreeNode: 'Optional[TreeNode]', ListNode: 'Optional[ListNode]', 'ListNode[]': 'List[Optional[ListNode]]', Node: "Optional['Node']",
-  'Iterator<Integer>': null, 'List<NestedInteger>': "[NestedInteger]",
+  'Iterator<Integer>': null, 'List<NestedInteger>': "[NestedInteger]", MountainArray: "'MountainArray'",
 };
 
 function hint(t) {
@@ -341,6 +341,123 @@ class Iterator:
     pre: '\n_bcb_rng = random.Random(7)\ndef rand7():\n    return _bcb_rng.randint(1, 7)\n',
     comment: '# The rand7() API is already defined for you.\n# def rand7():\n# @return a random integer in the range 1 to 7',
   },
+  GuessGame: {
+    pre: '\n_bcb_pick = [0]\ndef guess(num: int) -> int:\n    return -1 if num > _bcb_pick[0] else 1 if num < _bcb_pick[0] else 0\n',
+    comment: `# The guess API is already defined for you.
+# @param num, your guess
+# @return -1 if num is higher than the picked number
+#          1 if num is lower than the picked number
+#          otherwise return 0
+# def guess(num: int) -> int:`,
+  },
+  MountainArray: {
+    pre: String.raw`
+class MountainArray:
+    def __init__(self, a):
+        self._bcb_a = a
+        self._bcb_calls = 0
+    def get(self, index: int) -> int:
+        self._bcb_calls += 1
+        if self._bcb_calls > 100:
+            raise RuntimeError('more than 100 calls to MountainArray.get')
+        return self._bcb_a[index]
+    def length(self) -> int:
+        return len(self._bcb_a)
+`,
+    comment: `# """
+# This is MountainArray's API interface (provided).
+# You should not implement it, or speculate about its implementation
+# """
+# class MountainArray:
+#    def get(self, index: int) -> int:   # at most 100 calls in total
+#    def length(self) -> int:`,
+  },
+  RandomNode: {
+    pre: String.raw`
+class Node:
+    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):
+        self.val = int(x)
+        self.next = next
+        self.random = random
+
+def _bcb_random_list(v):
+    n = [Node(x[0]) for x in v]
+    for i, x in enumerate(v):
+        if i + 1 < len(n):
+            n[i].next = n[i + 1]
+        if x[1] is not None:
+            n[i].random = n[x[1]]
+    return n[0] if n else None
+
+def _bcb_random_dump(copy, original):
+    orig = set()
+    t = original
+    while t is not None:
+        orig.add(id(t))
+        t = t.next
+    at, order, t = {}, [], copy
+    while t is not None and len(order) < 100000:
+        if id(t) in orig:
+            return 'copy shares nodes with the original'
+        at[id(t)] = len(order)
+        order.append(t)
+        t = t.next
+    out = []
+    for t in order:
+        if t.random is not None and id(t.random) in orig:
+            return 'copy points into the original list'
+        out.append([t.val, None if t.random is None else at.get(id(t.random))])
+    return out
+`,
+    comment: `"""
+# Definition for a Node.
+class Node:
+    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):
+        self.val = int(x)
+        self.next = next
+        self.random = random
+"""`,
+  },
+  QuadNode: {
+    pre: String.raw`
+class Node:
+    def __init__(self, val=False, isLeaf=False, topLeft=None, topRight=None, bottomLeft=None, bottomRight=None):
+        self.val = val
+        self.isLeaf = isLeaf
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomLeft = bottomLeft
+        self.bottomRight = bottomRight
+
+def _bcb_quad_dump(root):
+    level, out, i = [root], [], 0
+    while i < len(level) and i < 2000000:
+        n = level[i]
+        i += 1
+        if n is None:
+            out.append(None)
+            continue
+        out.append([1 if n.isLeaf else 0, (1 if n.val else 0) if n.isLeaf else 1])
+        if n.isLeaf:
+            level.extend([None] * 4)
+        else:
+            level.extend([n.topLeft, n.topRight, n.bottomLeft, n.bottomRight])
+    while out and out[-1] is None:
+        out.pop()
+    return out
+`,
+    comment: `"""
+# Definition for a QuadTree node.
+class Node:
+    def __init__(self, val, isLeaf, topLeft, topRight, bottomLeft, bottomRight):
+        self.val = val
+        self.isLeaf = isLeaf
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomLeft = bottomLeft
+        self.bottomRight = bottomRight
+"""`,
+  },
 };
 
 /** Drivers for odd signatures: lines of a function body that returns the result, using `s` and $0, $1… */
@@ -355,6 +472,12 @@ const CALLS = {
   'implement-rand10-using-rand7': ['return [s.rand10() for _ in range(json.loads($0))]'],
   'populating-next-right-pointers-in-each-node': ['return _bcb_next_dump(s.connect(_bcb_next_tree(json.loads($0))))'],
   'serialize-and-deserialize-binary-tree': ['ser, deser = Codec(), Codec()', 'r = deser.deserialize(ser.serialize(_bcb_tree(json.loads($0))))', 'return [] if r is None else r'],
+  'guess-number-higher-or-lower': ['_bcb_pick[0] = json.loads($1)', 'return s.guessNumber(json.loads($0))'],
+  'find-in-mountain-array': ['return s.findInMountainArray(json.loads($1), MountainArray(json.loads($0)))'],
+  'copy-list-with-random-pointer': ['o = _bcb_random_list(json.loads($0))', 'return _bcb_random_dump(s.copyRandomList(o), o)'],
+  'construct-quad-tree': ['return _bcb_quad_dump(s.construct(json.loads($0)))'],
+  'encode-and-decode-strings': ['enc, dec = Codec(), Codec()', 'return dec.decode(enc.encode(json.loads($0)))'],
+  'remove-element': ['a = json.loads($0)', 'k = s.removeElement(a, json.loads($1))', 'return [k, sorted(a[:max(0, min(k, len(a)))])]'],
   'remove-duplicates-from-sorted-array': ['a = json.loads($0)', 'k = s.removeDuplicates(a)', 'return [k, a[:max(0, min(k, len(a)))]]'],
 };
 

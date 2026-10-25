@@ -21,4 +21,13 @@ export default {
   'minimum-interval-to-include-each-query': {
     explain: 'Query 2 is inside `[2,4]` (size 3), query 3 too, query 4 is inside `[4,4]` (size 1) and query 5 is inside `[3,6]` (size 4). The answer lists the smallest size for each: `[3,3,1,4]`.',
   },
+  'meeting-rooms': {
+    explain: '[0,30] overlaps both [5,10] and [15,20], so one person cannot attend everything and the answer is `false`.',
+  },
+  'meeting-rooms-ii': {
+    explain: '[0,30] runs the whole time, and [5,10] and [15,20] each overlap it but not each other. Two rooms are enough, and needed, so the answer is 2.',
+  },
+  'meeting-rooms-iii': {
+    explain: 'Meetings at 0 and 1 take rooms 0 and 1. The one starting at 2 waits until room 1 frees at 5 and runs to 10. The one at 3 waits until room 0 frees at 10. Rooms 0 and 1 both hold two meetings, so the answer is the lower number, 0.',
+  },
 };

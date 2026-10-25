@@ -207,4 +207,154 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'binary-tree-inorder-traversal', title: 'Binary Tree Inorder Traversal', level: 'Easy',
+    summary: 'Return the values of the tree in inorder: left subtree, then the node, then right subtree.',
+    method: 'inorderTraversal', params: [['TreeNode', 'root']], returns: 'List<Integer>',
+    tests: [
+      { in: [[1, null, 2, 3]], out: [1, 3, 2] },
+      { in: [[1, 2, 3, 4, 5, null, 8, null, null, 6, 7, 9]], out: [4, 2, 6, 5, 7, 1, 3, 9, 8] },
+      { in: [[]], out: [] },
+      { in: [[1]], out: [1] },
+      { in: [[5, 3, 7, 2, 4, 6, 8]] },
+      { in: [[3, 2, null, 1]] },
+    ],
+    ref: `class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        TreeNode cur = root;
+        while (cur != null || !st.isEmpty()) {
+            while (cur != null) { st.push(cur); cur = cur.left; }
+            cur = st.pop();
+            out.add(cur.val);
+            cur = cur.right;
+        }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'binary-tree-preorder-traversal', title: 'Binary Tree Preorder Traversal', level: 'Easy',
+    summary: 'Return the values of the tree in preorder: the node, then left subtree, then right subtree.',
+    method: 'preorderTraversal', params: [['TreeNode', 'root']], returns: 'List<Integer>',
+    tests: [
+      { in: [[1, null, 2, 3]], out: [1, 2, 3] },
+      { in: [[1, 2, 3, 4, 5, null, 8, null, null, 6, 7, 9]], out: [1, 2, 4, 5, 6, 7, 3, 8, 9] },
+      { in: [[]], out: [] },
+      { in: [[1]], out: [1] },
+      { in: [[5, 3, 7, 2, 4, 6, 8]] },
+      { in: [[1, 2, null, 3, null, 4]] },
+    ],
+    ref: `class Solution {
+    public List<Integer> preorderTraversal(TreeNode root) {
+        List<Integer> out = new ArrayList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        if (root != null) st.push(root);
+        while (!st.isEmpty()) {
+            TreeNode n = st.pop();
+            out.add(n.val);
+            if (n.right != null) st.push(n.right);
+            if (n.left != null) st.push(n.left);
+        }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'binary-tree-postorder-traversal', title: 'Binary Tree Postorder Traversal', level: 'Easy',
+    summary: 'Return the values of the tree in postorder: left subtree, then right subtree, then the node.',
+    method: 'postorderTraversal', params: [['TreeNode', 'root']], returns: 'List<Integer>',
+    tests: [
+      { in: [[1, null, 2, 3]], out: [3, 2, 1] },
+      { in: [[1, 2, 3, 4, 5, null, 8, null, null, 6, 7, 9]], out: [4, 6, 7, 5, 2, 9, 8, 3, 1] },
+      { in: [[]], out: [] },
+      { in: [[1]], out: [1] },
+      { in: [[5, 3, 7, 2, 4, 6, 8]] },
+      { in: [[1, null, 2, null, 3]] },
+    ],
+    ref: `class Solution {
+    public List<Integer> postorderTraversal(TreeNode root) {
+        LinkedList<Integer> out = new LinkedList<>();
+        Deque<TreeNode> st = new ArrayDeque<>();
+        if (root != null) st.push(root);
+        while (!st.isEmpty()) {
+            TreeNode n = st.pop();
+            out.addFirst(n.val);
+            if (n.left != null) st.push(n.left);
+            if (n.right != null) st.push(n.right);
+        }
+        return out;
+    }
+}`,
+  },
+  {
+    slug: 'subtree-of-another-tree', title: 'Subtree of Another Tree', level: 'Easy',
+    summary: 'Return true if root contains a subtree identical to subRoot: some node of root together with all of its descendants, same structure and values.',
+    method: 'isSubtree', params: [['TreeNode', 'root'], ['TreeNode', 'subRoot']], returns: 'boolean',
+    tests: [
+      { in: [[3, 4, 5, 1, 2], [4, 1, 2]], out: true },
+      { in: [[3, 4, 5, 1, 2, null, null, null, null, 0], [4, 1, 2]], out: false },
+      { in: [[1], [1]] },
+      { in: [[1, 1], [1]] },
+      { in: [[12], [2]] },
+      { in: [[2, 2, 2, 2, null, null, 2, 1], [2, 2]] },
+      { in: [[3, 4, 5, 1, null, 2], [3, 1, 2]] },
+    ],
+    ref: `class Solution {
+    public boolean isSubtree(TreeNode root, TreeNode subRoot) {
+        if (root == null) return false;
+        return same(root, subRoot) || isSubtree(root.left, subRoot) || isSubtree(root.right, subRoot);
+    }
+    private boolean same(TreeNode a, TreeNode b) {
+        if (a == null || b == null) return a == b;
+        return a.val == b.val && same(a.left, b.left) && same(a.right, b.right);
+    }
+}`,
+  },
+  {
+    slug: 'construct-quad-tree', title: 'Construct Quad Tree', level: 'Medium',
+    summary: 'Build the quad tree of an n × n grid of 0s and 1s: a region whose cells are all equal is a leaf with that value; otherwise it splits into four quarters. The output lists [isLeaf, val] per node in level order.',
+    method: 'construct', params: [['int[][]', 'grid']], returns: 'Node', uses: ['QuadNode'],
+    call: 'Object r = BCBQ.dump(s.construct(BCB.IAA($0)));',
+    tests: [
+      { in: [[[0, 1], [1, 0]]], out: [[0, 1], [1, 0], [1, 1], [1, 1], [1, 0]] },
+      { in: [[[1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0]]] },
+      { in: [[[1]]] },
+      { in: [[[0]]] },
+      { in: [[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]] },
+      { in: [[[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]] },
+    ],
+    ref: `class Solution {
+    public Node construct(int[][] grid) { return build(grid, 0, 0, grid.length); }
+    private Node build(int[][] g, int r, int c, int size) {
+        if (size == 1) return new Node(g[r][c] == 1, true);
+        int h = size / 2;
+        Node tl = build(g, r, c, h), tr = build(g, r, c + h, h), bl = build(g, r + h, c, h), br = build(g, r + h, c + h, h);
+        if (tl.isLeaf && tr.isLeaf && bl.isLeaf && br.isLeaf && tl.val == tr.val && tr.val == bl.val && bl.val == br.val) return new Node(tl.val, true);
+        return new Node(true, false, tl, tr, bl, br);
+    }
+}`,
+  },
+  {
+    slug: 'delete-leaves-with-a-given-value', title: 'Delete Leaves With a Given Value', level: 'Medium',
+    summary: 'Delete every leaf whose value is target. Keep going: a parent that becomes a leaf with value target is deleted too. Return the remaining tree.',
+    method: 'removeLeafNodes', params: [['TreeNode', 'root'], ['int', 'target']], returns: 'TreeNode',
+    tests: [
+      { in: [[1, 2, 3, 2, null, 2, 4], 2], out: [1, null, 3, null, 4] },
+      { in: [[1, 3, 3, 3, 2], 3], out: [1, 3, null, null, 2] },
+      { in: [[1, 2, null, 2, null, 2], 2], out: [1] },
+      { in: [[1, 1, 1], 1] },
+      { in: [[5], 4] },
+      { in: [[2, 1, 2, null, 2, 2, 2], 2] },
+    ],
+    ref: `class Solution {
+    public TreeNode removeLeafNodes(TreeNode root, int target) {
+        if (root == null) return null;
+        root.left = removeLeafNodes(root.left, target);
+        root.right = removeLeafNodes(root.right, target);
+        return root.left == null && root.right == null && root.val == target ? null : root;
+    }
+}`,
+  },
 ];
