@@ -121,11 +121,12 @@ const patterns = {
     {
       id: 'searching-sorting',
       title: 'Searching & Sorting',
-      description: 'Binary search is far more than finding a number in a sorted array.',
+      description: 'Binary search is far more than finding a number in a sorted array, and an array of 1 to n can sort itself.',
       lessons: [
         L('binary-search', 'Binary Search', 'One bug-free template: find the first position where a condition becomes true.', 20, 'Beginner'),
         L('binary-search-on-answer', 'Binary Search on the Answer', 'When the answer is a number and "can I do it with X?" is monotonic.', 18, 'Intermediate'),
         L('sorting-and-selection', 'Sorting as a Tool', 'Custom comparators, counting sort and quickselect for the k-th element.', 16, 'Intermediate'),
+        L('cyclic-sort', 'Cyclic Sort', 'Values 1 to n each have a home index: find missing and duplicate numbers in O(n) time and O(1) space, and count minimum swaps.', 18, 'Intermediate'),
       ],
     },
     {

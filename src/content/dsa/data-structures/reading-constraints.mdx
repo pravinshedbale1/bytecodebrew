@@ -226,7 +226,7 @@ When values are small, an array beats a hash map. It is faster, uses less memory
 | ASCII characters | `int[128]` |
 | `0 <= nums[i] <= 1000` | `int[] freq = new int[1001];`, or counting sort in O(n + 1000) |
 | Total sum ≤ 20,000 | DP over the sums: `boolean[] canMake = new boolean[sum + 1]` |
-| `1 <= nums[i] <= n` | The array is its own hash table: put value v at index v − 1, or mark index v − 1 as seen by making it negative. O(1) extra space ([First Missing Positive](https://leetcode.com/problems/first-missing-positive/) uses this) |
+| `1 <= nums[i] <= n` | The array is its own hash table: put value v at index v − 1, or mark index v − 1 as seen by making it negative. O(1) extra space ([Cyclic Sort](/dsa/patterns/cyclic-sort); [First Missing Positive](https://leetcode.com/problems/first-missing-positive/) uses this) |
 | 26 letters, and you need sets of them | A bitmask in one int: bit i means letter i is present |
 
 ### A huge value range with few values: compress it

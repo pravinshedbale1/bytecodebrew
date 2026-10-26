@@ -1132,6 +1132,49 @@ public:
         },
       },
       {
+        level: 'Better', name: 'Cyclic sort (breaks the "do not modify" rule)',
+        idea: 'With n + 1 slots and values 1..n, give value v the home index v; slot 0 belongs to nobody. Keep swapping the value in slot 0 to its home. When its home already holds the same value, that value is the duplicate.',
+        steps: [
+          'While `nums[0] != nums[nums[0]]`: swap `nums[0]` with `nums[nums[0]]` (this sends the value home).',
+          'Return `nums[0]`: its home already holds a copy of it.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each swap sends one value home for good, so it stops within n swaps. It is fast and uses no memory, but it reorders the array, which the problem forbids, so it is only a stepping stone: say so, then move to Floyd.',
+        code: {
+          java: r`class Solution {
+    public int findDuplicate(int[] nums) {
+        while (nums[0] != nums[nums[0]]) {
+            int home = nums[0];
+            nums[0] = nums[home];
+            nums[home] = home;
+        }
+        return nums[0];
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int findDuplicate(vector<int>& nums) {
+        while (nums[0] != nums[nums[0]]) swap(nums[0], nums[nums[0]]);
+        return nums[0];
+    }
+};`,
+          python: r`class Solution:
+    def findDuplicate(self, nums: List[int]) -> int:
+        while nums[0] != nums[nums[0]]:
+            home = nums[0]
+            nums[0], nums[home] = nums[home], home
+        return nums[0]`,
+          javascript: r`var findDuplicate = function(nums) {
+    while (nums[0] !== nums[nums[0]]) {
+        const home = nums[0];
+        nums[0] = nums[home];
+        nums[home] = home;
+    }
+    return nums[0];
+};`,
+        },
+      },
+      {
         level: 'Optimal', name: "Floyd's cycle detection on i → nums[i]",
         idea: 'Read the array as a linked list where index `i` points to index `nums[i]`. Every value is in 1..n, so nothing points back to index 0: the walk from 0 must eventually enter a cycle. The duplicate value is pointed to by two different indices, so it is exactly where the path joins the cycle — the cycle\'s entrance.',
         steps: [

@@ -1,5 +1,5 @@
 /**
- * The Daily Coach's view of the 36 DSA pattern lessons: a short name for drill answers and, for each
+ * The Daily Coach's view of the 37 DSA pattern lessons: a short name for drill answers and, for each
  * pattern, the patterns learners most often mistake it for (wrong answers in recognition drills).
  * Ids are the pattern lesson ids (src/curriculum/tracks/dsa.js); every judged problem belongs to one
  * (src/data/problems/index.json).
@@ -13,6 +13,7 @@ export const PATTERNS = {
   'binary-search': { name: 'Binary search', confused: ['binary-search-on-answer', 'two-pointers', 'bst-patterns', 'sorting-and-selection'] },
   'binary-search-on-answer': { name: 'Binary search on the answer', confused: ['binary-search', 'greedy', 'dp-linear', 'sliding-window'] },
   'sorting-and-selection': { name: 'Sorting as a tool', confused: ['heap-patterns', 'hashing', 'greedy', 'intervals'] },
+  'cyclic-sort': { name: 'Cyclic sort (value v goes to index v − 1)', confused: ['hashing', 'bit-manipulation', 'fast-slow-pointers', 'sorting-and-selection'] },
   'fast-slow-pointers': { name: 'Fast & slow pointers', confused: ['two-pointers', 'linked-list-manipulation', 'hashing', 'math-for-interviews'] },
   'linked-list-manipulation': { name: 'Linked-list reversal & dummy nodes', confused: ['fast-slow-pointers', 'two-pointers', 'stack-patterns', 'design-data-structures'] },
   'stack-patterns': { name: 'Stack', confused: ['monotonic-stack', 'two-pointers', 'dp-linear', 'tree-dfs'] },

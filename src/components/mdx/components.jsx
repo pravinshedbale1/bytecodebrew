@@ -34,12 +34,28 @@ import { Quiz } from './Quiz';
 import { FullCode } from './FullCode';
 import { InterviewScope } from './InterviewScope';
 import { ConstraintDecoder, ComplexityRuler, MagnitudeBars, ModClock } from './ConstraintVisuals';
+import { lazyViz } from './viz/lazyViz';
 import { problemSlug } from '../../hooks/useSolved';
 import { useLessonKey } from '../lesson/LessonContext';
 import { openInPlayground } from '../../lib/playground';
 import { SolveLink } from '../solve/SolveLink';
 import { PremiumGate } from '../access/PremiumGate';
 import { usePremium } from '../../hooks/useAccess';
+
+// DSA step-throughs, loaded with the lesson that uses them (free, like the other DSA visualisers)
+const CyclicSortViz = lazyViz(() => import('./viz/CyclicSortViz'), 'CyclicSortViz');
+const TwoSumMapViz = lazyViz(() => import('./viz/HashingViz'), 'TwoSumMapViz');
+const ConsecutiveSetViz = lazyViz(() => import('./viz/HashingViz'), 'ConsecutiveSetViz');
+const PairSumViz = lazyViz(() => import('./viz/TwoPointersViz'), 'PairSumViz');
+const ContainerViz = lazyViz(() => import('./viz/TwoPointersViz'), 'ContainerViz');
+const ReadWriteViz = lazyViz(() => import('./viz/TwoPointersViz'), 'ReadWriteViz');
+const DutchFlagViz = lazyViz(() => import('./viz/TwoPointersViz'), 'DutchFlagViz');
+const SlidingWindowViz = lazyViz(() => import('./viz/SlidingWindowViz'), 'SlidingWindowViz');
+const PrefixQueryViz = lazyViz(() => import('./viz/PrefixSumsViz'), 'PrefixQueryViz');
+const SubarraySumViz = lazyViz(() => import('./viz/PrefixSumsViz'), 'SubarraySumViz');
+const DifferenceArrayViz = lazyViz(() => import('./viz/PrefixSumsViz'), 'DifferenceArrayViz');
+const IntervalsViz = lazyViz(() => import('./viz/IntervalsViz'), 'IntervalsViz');
+const MeetingRoomsViz = lazyViz(() => import('./viz/IntervalsViz'), 'MeetingRoomsViz');
 
 /** Plain text of rendered (highlighted) code. */
 function nodeText(node) {
@@ -159,4 +175,17 @@ export const mdxComponents = {
   ComplexityRuler,
   MagnitudeBars,
   ModClock,
+  CyclicSortViz,
+  TwoSumMapViz,
+  ConsecutiveSetViz,
+  PairSumViz,
+  ContainerViz,
+  ReadWriteViz,
+  DutchFlagViz,
+  SlidingWindowViz,
+  PrefixQueryViz,
+  SubarraySumViz,
+  DifferenceArrayViz,
+  IntervalsViz,
+  MeetingRoomsViz,
 };

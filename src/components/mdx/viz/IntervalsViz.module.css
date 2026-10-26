@@ -1,0 +1,122 @@
+.stage {
+  position: relative;
+  margin: 0 auto;
+}
+
+.tick {
+  position: absolute;
+  width: 0;
+  border-left: 1px dashed var(--color-border);
+}
+
+.tickLabel {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  background: var(--color-surface);
+  padding: 0 2px;
+}
+
+.bar {
+  position: absolute;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 5px;
+  background: var(--color-surface-muted);
+  z-index: 1;
+  transition: top 0.6s cubic-bezier(0.45, 0, 0.25, 1), left 0.45s ease, width 0.45s ease, background 0.25s, border-color 0.25s, opacity 0.25s;
+}
+
+.jump .bar { transition: background 0.25s, border-color 0.25s, opacity 0.25s; }
+
+.barLabel,
+.barLabelOut {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.barLabel { left: 6px; }
+.barLabelOut { left: calc(100% + 4px); color: var(--color-text-muted); }
+
+.current {
+  border: 2px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  z-index: 2;
+}
+
+.past { opacity: 0.45; }
+
+.kept { border-color: var(--color-success); background: var(--color-success-soft); }
+
+.removed {
+  border-style: dashed;
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+  opacity: 0.7;
+}
+
+.removed .barLabel,
+.removed .barLabelOut { text-decoration: line-through; }
+
+.on { border-color: var(--color-note); background: var(--color-note-soft); }
+
+.laneLabel {
+  position: absolute;
+  left: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.merged { border-color: var(--color-interview); background: var(--color-interview-soft); }
+.mergedGrow { box-shadow: 0 0 0 3px var(--color-interview-soft); border-width: 2px; }
+.mergedNew { border-width: 2px; animation: pop 0.45s ease-out; }
+
+.marker {
+  position: absolute;
+  width: 0;
+  z-index: 3;
+  transition: left 0.45s ease;
+}
+
+.marker_warn { border-left: 2px dashed var(--color-warn); }
+.marker_accent { border-left: 2px solid var(--color-accent); }
+
+.markerLabel {
+  position: absolute;
+  top: -16px;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.marker_warn .markerLabel { background: var(--color-warn-soft); color: var(--color-warn); }
+.marker_accent .markerLabel { background: var(--color-accent); color: var(--color-accent-contrast); }
+
+@keyframes pop {
+  0% { transform: scaleX(0.6); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mergedNew { animation: none; }
+}

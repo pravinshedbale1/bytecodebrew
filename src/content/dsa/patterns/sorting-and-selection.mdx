@@ -201,7 +201,7 @@ Sort an array of indexes rather than the data: `Integer[] idx = {0, 1, …, n−
 
 <Practice task="An array contains n integers in the range 1 to n, some repeated. Find all duplicates in O(n) time and O(1) extra space. Which idea from this lesson does it use?">
 
-The values are a small known range, so they can serve as **indexes** — counting sort's idea, but storing the "count" in the input itself. For each value `v`, look at position `|v| − 1`: if it's already negative, `|v|` is a duplicate; otherwise negate it to mark `|v|` as seen. (Or swap each value to its "home" index — cyclic sort.) Restore signs afterwards if the input must be preserved.
+The values are a small known range, so they can serve as **indexes** — counting sort's idea, but storing the "count" in the input itself. For each value `v`, look at position `|v| − 1`: if it's already negative, `|v|` is a duplicate; otherwise negate it to mark `|v|` as seen. (Or swap each value to its "home" index: [cyclic sort](/dsa/patterns/cyclic-sort).) Restore signs afterwards if the input must be preserved.
 
 </Practice>
 
@@ -216,5 +216,5 @@ The values are a small known range, so they can serve as **indexes** — countin
 
 ## Further reading
 
-- Next: [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers).
+- Next: [Cyclic Sort](/dsa/patterns/cyclic-sort), where values 1 to n sort themselves in O(n).
 - Thomas Cormen et al., *Introduction to Algorithms* (4th ed., 2022) — chapters 7–9 (quicksort, linear-time sorting, selection).

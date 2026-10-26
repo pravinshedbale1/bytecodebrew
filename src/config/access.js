@@ -34,7 +34,7 @@ export const PREMIUM_FEATURES = [
   ['All advanced lessons', 'the senior-level case studies (payments, stock exchange, Kafka, key-value store, video streaming…) and advanced patterns'],
   ['Interactive simulations', 'hash rings, rate limiters, quorums, cache eviction, load balancing, Bloom filters, consumer groups and more — change the inputs and watch what happens'],
   ['Step-through diagrams', 'walk every architecture and sequence diagram one step at a time, with each step explained'],
-  ['390 problems with tests', 'a LeetCode-style editor in Java, C++, Python or JavaScript, with full statements, constraints, hints, hidden tests, performance checks and your submissions saved to your account'],
+  ['397 problems with tests', 'a LeetCode-style editor in Java, C++, Python or JavaScript, with full statements, constraints, hints, hidden tests, performance checks and your submissions saved to your account'],
   ['Mock interviews', 'timed DSA, system design, LLD, behavioral and machine-coding rounds, with a rubric and one-click AI review'],
   ['Daily Coach', 'a 20-minute session every day built from your own skill map: recognition drills on unseen problems, re-solves from memory just before you forget, and a stretch problem where you are weakest'],
   ['Review deck', 'spaced repetition of everything you studied, so it is still there on interview day'],

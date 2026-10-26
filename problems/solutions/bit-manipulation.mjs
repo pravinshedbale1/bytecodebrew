@@ -443,6 +443,68 @@ public:
         },
       },
       {
+        level: 'Optimal', name: 'Cyclic sort: value v belongs at index v',
+        idea: 'Values are 0..n in n slots, so every value except n has a home index equal to itself. Swap each value home and leave n wherever it lands; the slot that does not hold its own index is the missing number.',
+        steps: [
+          'While `i < n`: let `home = nums[i]`. If `home < n` and `nums[home] != nums[i]`, swap them (and stay at `i`); otherwise `i++`.',
+          'Return the first `i` with `nums[i] != i`, or `n` if every slot is right.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Each swap sends one value home for good, so there are at most n swaps. It changes the array, which XOR does not, but it is the version that still works when several numbers are missing (see the Cyclic Sort lesson).',
+        code: {
+          java: r`class Solution {
+    public int missingNumber(int[] nums) {
+        int n = nums.length, i = 0;
+        while (i < n) {
+            int home = nums[i];
+            if (home < n && nums[i] != nums[home]) {
+                int t = nums[i]; nums[i] = nums[home]; nums[home] = t;
+            } else i++;
+        }
+        for (i = 0; i < n; i++) if (nums[i] != i) return i;
+        return n;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int missingNumber(vector<int>& nums) {
+        int n = nums.size(), i = 0;
+        while (i < n) {
+            int home = nums[i];
+            if (home < n && nums[i] != nums[home]) swap(nums[i], nums[home]);
+            else i++;
+        }
+        for (i = 0; i < n; i++) if (nums[i] != i) return i;
+        return n;
+    }
+};`,
+          python: r`class Solution:
+    def missingNumber(self, nums: List[int]) -> int:
+        n, i = len(nums), 0
+        while i < n:
+            home = nums[i]
+            if home < n and nums[i] != nums[home]:
+                nums[i], nums[home] = nums[home], nums[i]
+            else:
+                i += 1
+        for i in range(n):
+            if nums[i] != i:
+                return i
+        return n`,
+          javascript: r`var missingNumber = function(nums) {
+    const n = nums.length;
+    let i = 0;
+    while (i < n) {
+        const home = nums[i];
+        if (home < n && nums[i] !== nums[home]) [nums[i], nums[home]] = [nums[home], nums[i]];
+        else i++;
+    }
+    for (i = 0; i < n; i++) if (nums[i] !== i) return i;
+    return n;
+};`,
+        },
+      },
+      {
         level: 'Optimal', name: 'XOR indices with values',
         idea: 'XOR together every index 0..n and every value. Each present number appears twice (once as an index, once as a value) and cancels; only the missing number is left.',
         steps: [

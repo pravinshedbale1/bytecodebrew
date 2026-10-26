@@ -72,6 +72,13 @@ export default {
   'sort-an-array': P('n = 50,000', 'int[] a0 = BCB.ints(50000, -50000, 50000);'),
   'maximum-gap': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 0, 1000000000);'),
 
+  // ---- cyclic sort
+  'find-all-numbers-disappeared-in-an-array': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 1, 100000);'),
+  'set-mismatch': P('n = 10,000', 'int[] a0 = BCB.perm(10000, 1); a0[1234] = a0[4321];'),
+  'find-all-duplicates-in-an-array': P('n = 100,000, 40,000 values twice', 'int[] p = BCB.perm(100000, 1); int[] a0 = new int[100000]; for (int i = 0; i < 100000; i++) a0[i] = p[i < 60000 ? i : i - 40000]; for (int i = a0.length - 1; i > 0; i--) { int j = BCB.R.nextInt(i + 1); int t = a0[i]; a0[i] = a0[j]; a0[j] = t; }'),
+  'array-nesting': P('n = 100,000, one long cycle', 'int[] o = BCB.perm(100000, 0); int[] a0 = new int[100000]; for (int i = 0; i < 100000; i++) a0[o[i]] = o[(i + 1) % 100000];'),
+  'minimum-number-of-operations-to-sort-a-binary-tree-by-level': P('a tree of 100,000 nodes', 'TreeNode a0 = BCBT.random(BCB.perm(100000, 1));'),
+
   // ---- binary search on the answer
   'koko-eating-bananas': P('10,000 piles of up to 10⁹', 'int[] a0 = BCB.ints(10000, 1, 1000000000); int a1 = 20000;'),
   'find-the-smallest-divisor-given-a-threshold': P('n = 50,000', 'int[] a0 = BCB.ints(50000, 1, 1000000); int a1 = 60000;'),

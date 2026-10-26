@@ -20,12 +20,9 @@ Two pointers come in two flavours, and recognising which one you need is half th
 
 ## Flavour 1: opposite ends, moving inward
 
-<ArrayViz title="Two Sum on a sorted array" frames={[
-  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 6 }, window: [0, 6], vars: { target: 14 }, note: "Sorted array, target 14. Start with the smallest (L) and largest (R) numbers." },
-  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 6 }, window: [0, 6], highlight: [6], done: [], vars: { target: 14, sum: 16 }, note: "16 is too big. 15 paired with the SMALLEST remaining number is still too big, so 15 is out. Discard it: R--." },
-  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 0, R: 5 }, window: [0, 5], highlight: [0], done: [6], vars: { target: 14, sum: 12 }, note: "12 is too small. 1 paired with the LARGEST remaining number is still too small, so 1 can't be in any answer. Discard it: L++." },
-  { arr: [1, 3, 4, 6, 8, 11, 15], pointers: { L: 1, R: 5 }, window: [1, 5], highlight: [1, 5], done: [6, 0], vars: { target: 14, sum: 14 }, note: "3 + 11 = 14. Found it in 3 steps instead of checking every pair." }
-]} />
+The grid under the array lists every pair with its sum (row = left value, column = right value). Brute force would check all of them. Each two-pointer step checks one cell and rules out a whole row or column, and you can see exactly which ones and why.
+
+<PairSumViz examples={['basic', 'none']} />
 
 **Why it's safe to discard.** When `a[L] + a[R]` is too small, `a[L]` is paired with the *largest* number still available — and that's still not enough. So `a[L]` can't be part of any answer, and moving `L` right loses nothing. The mirror argument works for `R` when the sum is too big. Each step throws away one number for good, so there are at most n steps.
 
@@ -43,17 +40,9 @@ while (left < right) {
 
 One pointer (**read**) scans every element; the other (**write**) marks where the next "kept" element goes. Everything before `write` is the finished result.
 
-<ArrayViz title="Remove duplicates from a sorted array, in place" frames={[
-  { arr: [1, 1, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 1 }, window: [0, 0], note: "Remove duplicates in place. Everything left of `write` is the clean result so far (shaded). `read` scans ahead." },
-  { arr: [1, 1, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 1 }, window: [0, 0], highlight: [1], note: "1 equals the last kept value: skip it. Only read moves." },
-  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 1, read: 2 }, window: [0, 1], highlight: [1], note: "2 differs from the last kept value (1): copy it to position 1, then write++." },
-  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 2, read: 3 }, window: [0, 1], highlight: [3], note: "2 equals the last kept value: skip it. Only read moves." },
-  { arr: [1, 2, 2, 2, 2, 3, 5, 5], pointers: { write: 2, read: 4 }, window: [0, 1], highlight: [4], note: "2 equals the last kept value: skip it. Only read moves." },
-  { arr: [1, 2, 3, 2, 2, 3, 5, 5], pointers: { write: 2, read: 5 }, window: [0, 2], highlight: [2], note: "3 differs from the last kept value (2): copy it to position 2, then write++." },
-  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 3, read: 6 }, window: [0, 3], highlight: [3], note: "5 differs from the last kept value (3): copy it to position 3, then write++." },
-  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 4, read: 7 }, window: [0, 3], highlight: [7], note: "5 equals the last kept value: skip it. Only read moves." },
-  { arr: [1, 2, 3, 5, 2, 3, 5, 5], pointers: { write: 4 }, window: [0, 3], note: "Done. The first 4 cells hold the distinct values; return 4. O(n) time, O(1) extra space." }
-]} />
+Step through both classics. In Remove Duplicates, `read` compares each value with the last kept one and copies only new values to `write`. In Move Zeroes, every non-zero is swapped into `write`, so the zeros drift right.
+
+<ReadWriteViz examples={['dedupe', 'zeroes']} />
 
 ```java
 int write = 0;
@@ -116,6 +105,10 @@ static int maxArea(int[] height) {
     return best;
 }
 ```
+
+Step through it. The blue area is the current container and the red wall is the shorter one, the wall that gets dropped next. The dashed box is the best container so far.
+
+<ContainerViz />
 
 ### 3Sum — fix one, two-pointer the rest
 
@@ -199,6 +192,10 @@ static void sortColors(int[] a) {
     }
 }
 ```
+
+Step through it and watch the four regions. After a swap with `high`, `mid` stays where it is: the value that just arrived from the right hasn't been checked yet.
+
+<DutchFlagViz />
 
 ## Which flavour?
 

@@ -128,7 +128,7 @@ const coursesOf = (t) => t.courses.filter((c) => c.modules.some((m) => m.lessons
 add({
   path: '/',
   title: `${site.name}: Interview preparation, in depth`,
-  description: 'Free, in-depth interview preparation: system design (HLD and LLD), DSA patterns in Java with 390 problems you can solve with tests, and behavioral interviews.',
+  description: 'Free, in-depth interview preparation: system design (HLD and LLD), DSA patterns in Java with 397 problems you can solve with tests, and behavioral interviews.',
   index: true,
   html: `<h1>${esc(site.name)}: interview preparation, in depth</h1><p>${esc(site.tagline)}</p>${tracks.map((t) => `<h2><a href="/${t.id}">${esc(t.title)}</a></h2><p>${esc(t.description)}</p>${linkList(coursesOf(t).map((c) => [`/${t.id}/${c.id}`, c.title, c.description]))}`).join('')}`,
   home: true,
@@ -212,13 +212,13 @@ for (const c of COMPANIES) {
 
 // fixed pages
 const FIXED = [
-  ['/premium', 'Premium', 'Everything in ByteCodeBrew: advanced lessons, simulations, 390 problems with tests, mock interviews, the Daily Coach, Runway study plans and Climb ratings.', true],
+  ['/premium', 'Premium', 'Everything in ByteCodeBrew: advanced lessons, simulations, 397 problems with tests, mock interviews, the Daily Coach, Runway study plans and Climb ratings.', true],
   ['/contact', 'Contact us', `Questions about ${site.name}, Premium or your account: how to reach us.`, true],
   ['/terms', 'Terms & Conditions', `The terms for using ${site.name}.`, true],
   ['/privacy', 'Privacy Policy', `What ${site.name} stores about you and why.`, true],
   ['/refund-policy', 'Refund & Cancellation', `${site.name}'s refund and cancellation policy.`, true],
   ['/delivery-policy', 'Delivery Policy', `How ${site.name} Premium is delivered.`, true],
-  ['/problems', 'Problems', '390 interview problems by pattern, with tests in Java, C++, Python and JavaScript, hints and worked solutions.', false],
+  ['/problems', 'Problems', '397 interview problems by pattern, with tests in Java, C++, Python and JavaScript, hints and worked solutions.', false],
   ['/companies', 'Companies', 'How the best-paying tech companies in India interview software engineers.', false],
   ['/companies/ai-assisted-round', 'The AI-assisted debugging round', 'What the AI-assisted coding round looks like and how to practise it.', false],
   ['/mock', 'Mock interview', 'Timed DSA, system design, LLD and behavioral mock interviews.', false],

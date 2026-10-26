@@ -80,6 +80,15 @@ export default {
   'binary-search-tree-iterator': ['1', 'O(1) amortised per call, O(h) space'],
   'recover-binary-search-tree': ['n', 'O(n)'],
 
+  // ---- cyclic sort
+  'find-all-numbers-disappeared-in-an-array': ['n', 'O(n), O(1) extra space'],
+  'set-mismatch': ['n', 'O(n), O(1) extra space'],
+  'find-missing-and-repeated-values': ['n2', 'O(n²) for the n × n grid, O(1) extra space'],
+  'find-all-duplicates-in-an-array': ['n', 'O(n), O(1) extra space'],
+  'array-nesting': ['n', 'O(n), each cycle walked once'],
+  'minimum-number-of-operations-to-sort-a-binary-tree-by-level': ['nlogn', 'O(n log n), sorting each level'],
+  'couples-holding-hands': ['n', 'O(n) with a seat index'],
+
   // ---- designing data structures (per operation)
   'implement-queue-using-stacks': ['1', 'O(1) amortised per operation'],
   'design-hashmap': ['1', 'O(1) average per operation'],

@@ -20,14 +20,9 @@ This lesson assumes you know how a hash map finds a key in O(1), and what collis
 
 A nested loop asks, for every element, "is there a partner somewhere else?" — re-scanning the array each time. Instead, walk once and **store** what you've passed in a hash map. Now "is the partner there?" is one lookup.
 
-<ArrayViz title="Two Sum with a hash map" frames={[
-  { arr: [3, 8, 11, 2, 6], vars: { target: 9 }, aux: { label: "seen", items: [] }, note: "Find two numbers that add up to 9. Walk left to right; at each number ask: is its partner (target − x) already in the map?" },
-  { arr: [3, 8, 11, 2, 6], pointers: { i: 0 }, highlight: [0], vars: { target: 9, x: 3, need: 6 }, aux: { label: "seen", items: [] }, note: "Need 6. Not in the map yet, so store 3→0 and move on." },
-  { arr: [3, 8, 11, 2, 6], pointers: { i: 1 }, highlight: [1], vars: { target: 9, x: 8, need: 1 }, aux: { label: "seen", items: ["3→0"] }, note: "Need 1. Not in the map yet, so store 8→1 and move on." },
-  { arr: [3, 8, 11, 2, 6], pointers: { i: 2 }, highlight: [2], vars: { target: 9, x: 11, need: -2 }, aux: { label: "seen", items: ["3→0", "8→1"] }, note: "Need -2. Not in the map yet, so store 11→2 and move on." },
-  { arr: [3, 8, 11, 2, 6], pointers: { i: 3 }, highlight: [3], vars: { target: 9, x: 2, need: 7 }, aux: { label: "seen", items: ["3→0", "8→1", "11→2"] }, note: "Need 7. Not in the map yet, so store 2→3 and move on." },
-  { arr: [3, 8, 11, 2, 6], pointers: { i: 4 }, highlight: [0, 4], vars: { target: 9, x: 6, need: 3 }, aux: { label: "seen", items: ["3→0", "8→1", "11→2", "2→3"] }, note: "Need 3, and 3 is in the map at index 0. Answer: [0, 4]. One pass, no nested loop." }
-]} />
+Step through it below. Each number takes two steps: first **check** the map for its partner (`need = target − x`), then **store** the number so later numbers can find it. Watch the map grow under the array. The second example shows why the check has to come before the store.
+
+<TwoSumMapViz examples={['basic', 'self']} />
 
 The trade-off is explicit: **O(n) extra memory to save O(n) time per element**. In interviews that trade is almost always worth it — say it out loud.
 
@@ -135,6 +130,10 @@ static int longestConsecutive(int[] nums) {
 
 The `while` looks like a nested loop, but each number is visited by it at most once across the whole run — O(n) total. (Iterate the **set**, not the array, so duplicates don't trigger repeated walks.)
 
+Step through it. A value whose predecessor is present is skipped at once; only the start of a run walks upwards. Keep an eye on the lookup counter: it never goes above about two per value.
+
+<ConsecutiveSetViz examples={['basic', 'repeats']} />
+
 ### First Unique Character
 
 Two passes: count everything, then find the first index whose count is 1. Counting first and deciding second is a common shape.
@@ -186,7 +185,7 @@ static int firstUniqChar(String s) {
 | 380 | [Insert Delete GetRandom O(1)](https://leetcode.com/problems/insert-delete-getrandom-o1/) | Medium | Map + array together |
 | 271 | [Encode and Decode Strings](https://leetcode.com/problems/encode-and-decode-strings/) | Medium | Length-prefix framing (LeetCode Premium) |
 | 229 | [Majority Element II](https://leetcode.com/problems/majority-element-ii/) | Medium | Voting with two candidates |
-| 41 | [First Missing Positive](https://leetcode.com/problems/first-missing-positive/) | Hard | Using the array itself as the hash table |
+| 41 | [First Missing Positive](https://leetcode.com/problems/first-missing-positive/) | Hard | Using the array itself as the hash table ([cyclic sort](/dsa/patterns/cyclic-sort)) |
 
 ## Interview questions
 

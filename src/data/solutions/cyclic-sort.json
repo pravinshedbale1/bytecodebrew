@@ -1,0 +1,474 @@
+{
+ "find-all-numbers-disappeared-in-an-array": {
+  "pattern": "Cyclic sort: value v belongs at index v − 1 (or mark index v − 1 as seen)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Scan for each number 1..n",
+    "idea": "For every k from 1 to n, scan the whole array for k; if it is not there, k is missing.",
+    "steps": [
+     "For `k` from 1 to n: scan `nums` for `k`.",
+     "If no element equals `k`, add `k` to the answer."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n candidates, each needing a full O(n) scan. With n = 10⁵ that is 10¹⁰ comparisons, far too slow.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDisappearedNumbers(int[] nums) {\n        List<Integer> missing = new ArrayList<>();\n        for (int k = 1; k <= nums.length; k++) {\n            boolean found = false;\n            for (int x : nums) if (x == k) { found = true; break; }\n            if (!found) missing.add(k);\n        }\n        return missing;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDisappearedNumbers(vector<int>& nums) {\n        vector<int> missing;\n        int n = nums.size();\n        for (int k = 1; k <= n; k++)\n            if (find(nums.begin(), nums.end(), k) == nums.end()) missing.push_back(k);\n        return missing;\n    }\n};",
+     "python": "class Solution:\n    def findDisappearedNumbers(self, nums: List[int]) -> List[int]:\n        return [k for k in range(1, len(nums) + 1) if k not in nums]",
+     "javascript": "var findDisappearedNumbers = function(nums) {\n    const missing = [];\n    for (let k = 1; k <= nums.length; k++) if (!nums.includes(k)) missing.push(k);\n    return missing;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Seen array",
+    "idea": "Mark every value in a boolean array of size n + 1, then collect the unmarked numbers.",
+    "steps": [
+     "Create `seen` of size n + 1 and set `seen[x] = true` for every `x` in `nums`.",
+     "Return every `k` from 1 to n with `seen[k]` false."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Two linear passes. The seen array is the O(n) extra space the follow-up asks you to avoid; it is still the right first answer to give in an interview.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDisappearedNumbers(int[] nums) {\n        boolean[] seen = new boolean[nums.length + 1];\n        for (int x : nums) seen[x] = true;\n        List<Integer> missing = new ArrayList<>();\n        for (int k = 1; k <= nums.length; k++) if (!seen[k]) missing.add(k);\n        return missing;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDisappearedNumbers(vector<int>& nums) {\n        int n = nums.size();\n        vector<bool> seen(n + 1, false);\n        for (int x : nums) seen[x] = true;\n        vector<int> missing;\n        for (int k = 1; k <= n; k++) if (!seen[k]) missing.push_back(k);\n        return missing;\n    }\n};",
+     "python": "class Solution:\n    def findDisappearedNumbers(self, nums: List[int]) -> List[int]:\n        seen = set(nums)\n        return [k for k in range(1, len(nums) + 1) if k not in seen]",
+     "javascript": "var findDisappearedNumbers = function(nums) {\n    const seen = new Array(nums.length + 1).fill(false);\n    for (const x of nums) seen[x] = true;\n    const missing = [];\n    for (let k = 1; k <= nums.length; k++) if (!seen[k]) missing.push(k);\n    return missing;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cyclic sort, then read the wrong slots",
+    "idea": "Value v has a home at index v − 1. Swap every value into its home; afterwards, each index i that does not hold i + 1 is a number nobody came home to.",
+    "steps": [
+     "Set `i = 0`. While `i < n`: let `home = nums[i] − 1`. If `nums[i] != nums[home]`, swap them (and stay at `i`); otherwise `i++`.",
+     "Scan: for every `i` with `nums[i] != i + 1`, add `i + 1` to the answer."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each swap puts one value in its home for good, so there are at most n − 1 swaps plus n increments. Comparing `nums[i]` with `nums[home]` (not with `i + 1`) is what stops an endless loop when the home already holds a duplicate. In Python, compute `home` first: `nums[i], nums[nums[i] - 1] = …` assigns `nums[i]` before evaluating the second index.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDisappearedNumbers(int[] nums) {\n        int i = 0;\n        while (i < nums.length) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) {\n                int t = nums[i]; nums[i] = nums[home]; nums[home] = t;\n            } else i++;\n        }\n        List<Integer> missing = new ArrayList<>();\n        for (i = 0; i < nums.length; i++) if (nums[i] != i + 1) missing.add(i + 1);\n        return missing;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDisappearedNumbers(vector<int>& nums) {\n        int n = nums.size(), i = 0;\n        while (i < n) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) swap(nums[i], nums[home]);\n            else i++;\n        }\n        vector<int> missing;\n        for (i = 0; i < n; i++) if (nums[i] != i + 1) missing.push_back(i + 1);\n        return missing;\n    }\n};",
+     "python": "class Solution:\n    def findDisappearedNumbers(self, nums: List[int]) -> List[int]:\n        i = 0\n        while i < len(nums):\n            home = nums[i] - 1\n            if nums[i] != nums[home]:\n                nums[i], nums[home] = nums[home], nums[i]\n            else:\n                i += 1\n        return [i + 1 for i in range(len(nums)) if nums[i] != i + 1]",
+     "javascript": "var findDisappearedNumbers = function(nums) {\n    let i = 0;\n    while (i < nums.length) {\n        const home = nums[i] - 1;\n        if (nums[i] !== nums[home]) [nums[i], nums[home]] = [nums[home], nums[i]];\n        else i++;\n    }\n    const missing = [];\n    for (let k = 0; k < nums.length; k++) if (nums[k] !== k + 1) missing.push(k + 1);\n    return missing;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sign marking",
+    "idea": "Use the sign of nums[v − 1] as the \"seen\" flag for v: make it negative. Numbers whose slot stays positive were never seen.",
+    "steps": [
+     "For each value `v` (use `|v|`, it may already be negated): if `nums[|v| − 1] > 0`, negate it.",
+     "Every index `i` whose value is still positive means `i + 1` is missing."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Two passes and no extra memory. Unlike cyclic sort, nothing moves, so flipping the signs back afterwards restores the input exactly. It relies on every value being at least 1.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDisappearedNumbers(int[] nums) {\n        for (int v : nums) {\n            int home = Math.abs(v) - 1;\n            if (nums[home] > 0) nums[home] = -nums[home];\n        }\n        List<Integer> missing = new ArrayList<>();\n        for (int i = 0; i < nums.length; i++) if (nums[i] > 0) missing.add(i + 1);\n        return missing;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDisappearedNumbers(vector<int>& nums) {\n        for (int v : nums) {\n            int home = abs(v) - 1;\n            if (nums[home] > 0) nums[home] = -nums[home];\n        }\n        vector<int> missing;\n        for (int i = 0; i < (int) nums.size(); i++) if (nums[i] > 0) missing.push_back(i + 1);\n        return missing;\n    }\n};",
+     "python": "class Solution:\n    def findDisappearedNumbers(self, nums: List[int]) -> List[int]:\n        for v in nums:\n            home = abs(v) - 1\n            if nums[home] > 0:\n                nums[home] = -nums[home]\n        return [i + 1 for i, x in enumerate(nums) if x > 0]",
+     "javascript": "var findDisappearedNumbers = function(nums) {\n    for (const v of nums) {\n        const home = Math.abs(v) - 1;\n        if (nums[home] > 0) nums[home] = -nums[home];\n    }\n    const missing = [];\n    for (let i = 0; i < nums.length; i++) if (nums[i] > 0) missing.push(i + 1);\n    return missing;\n};"
+    }
+   }
+  ]
+ },
+ "set-mismatch": {
+  "pattern": "Cyclic sort: the one wrong slot holds the duplicate, and its index gives the missing number",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count each number with a scan",
+    "idea": "For every v from 1 to n, count how many times it appears: twice means repeated, zero means missing.",
+    "steps": [
+     "For `v` from 1 to n, count the elements equal to `v`.",
+     "A count of 2 gives the repeated value; a count of 0 gives the missing one."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n values, each counted with a full scan.",
+    "code": {
+     "java": "class Solution {\n    public int[] findErrorNums(int[] nums) {\n        int dup = 0, missing = 0;\n        for (int v = 1; v <= nums.length; v++) {\n            int count = 0;\n            for (int x : nums) if (x == v) count++;\n            if (count == 2) dup = v;\n            if (count == 0) missing = v;\n        }\n        return new int[] { dup, missing };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findErrorNums(vector<int>& nums) {\n        int n = nums.size(), dup = 0, missing = 0;\n        for (int v = 1; v <= n; v++) {\n            int c = count(nums.begin(), nums.end(), v);\n            if (c == 2) dup = v;\n            if (c == 0) missing = v;\n        }\n        return {dup, missing};\n    }\n};",
+     "python": "class Solution:\n    def findErrorNums(self, nums: List[int]) -> List[int]:\n        dup = missing = 0\n        for v in range(1, len(nums) + 1):\n            c = nums.count(v)\n            if c == 2:\n                dup = v\n            elif c == 0:\n                missing = v\n        return [dup, missing]",
+     "javascript": "var findErrorNums = function(nums) {\n    let dup = 0, missing = 0;\n    for (let v = 1; v <= nums.length; v++) {\n        let c = 0;\n        for (const x of nums) if (x === v) c++;\n        if (c === 2) dup = v;\n        if (c === 0) missing = v;\n    }\n    return [dup, missing];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count array",
+    "idea": "Count every value in an array of size n + 1 in one pass, then read off the 2 and the 0.",
+    "steps": [
+     "Fill `count[x]++` for every `x`.",
+     "For `v` from 1 to n: `count[v] == 2` is the repeated value, `count[v] == 0` the missing one."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Linear and simple, at the cost of an O(n) count array.",
+    "code": {
+     "java": "class Solution {\n    public int[] findErrorNums(int[] nums) {\n        int n = nums.length;\n        int[] count = new int[n + 1];\n        for (int x : nums) count[x]++;\n        int dup = 0, missing = 0;\n        for (int v = 1; v <= n; v++) {\n            if (count[v] == 2) dup = v;\n            if (count[v] == 0) missing = v;\n        }\n        return new int[] { dup, missing };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findErrorNums(vector<int>& nums) {\n        int n = nums.size(), dup = 0, missing = 0;\n        vector<int> count(n + 1, 0);\n        for (int x : nums) count[x]++;\n        for (int v = 1; v <= n; v++) {\n            if (count[v] == 2) dup = v;\n            if (count[v] == 0) missing = v;\n        }\n        return {dup, missing};\n    }\n};",
+     "python": "class Solution:\n    def findErrorNums(self, nums: List[int]) -> List[int]:\n        n = len(nums)\n        count = [0] * (n + 1)\n        for x in nums:\n            count[x] += 1\n        return [count.index(2), count.index(0, 1)]",
+     "javascript": "var findErrorNums = function(nums) {\n    const n = nums.length, count = new Array(n + 1).fill(0);\n    for (const x of nums) count[x]++;\n    let dup = 0, missing = 0;\n    for (let v = 1; v <= n; v++) {\n        if (count[v] === 2) dup = v;\n        if (count[v] === 0) missing = v;\n    }\n    return [dup, missing];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cyclic sort, then find the wrong slot",
+    "idea": "Swap every value v into index v − 1. Exactly one index ends up wrong: the value sitting there is the duplicate and the index tells you the missing number.",
+    "steps": [
+     "Cyclic sort: while `i < n`, if `nums[i] != nums[nums[i] − 1]` swap `nums[i]` into its home, otherwise `i++`.",
+     "Find the `i` with `nums[i] != i + 1` and return `[nums[i], i + 1]`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "At most n − 1 swaps plus n increments. All present values reach their homes, so the missing number's home is the only slot left with a wrong value, and the only value that could not go home is the spare copy.",
+    "code": {
+     "java": "class Solution {\n    public int[] findErrorNums(int[] nums) {\n        int i = 0;\n        while (i < nums.length) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) {\n                int t = nums[i]; nums[i] = nums[home]; nums[home] = t;\n            } else i++;\n        }\n        for (i = 0; i < nums.length; i++)\n            if (nums[i] != i + 1) return new int[] { nums[i], i + 1 };\n        return new int[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findErrorNums(vector<int>& nums) {\n        int n = nums.size(), i = 0;\n        while (i < n) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) swap(nums[i], nums[home]);\n            else i++;\n        }\n        for (i = 0; i < n; i++)\n            if (nums[i] != i + 1) return {nums[i], i + 1};\n        return {};\n    }\n};",
+     "python": "class Solution:\n    def findErrorNums(self, nums: List[int]) -> List[int]:\n        i = 0\n        while i < len(nums):\n            home = nums[i] - 1\n            if nums[i] != nums[home]:\n                nums[i], nums[home] = nums[home], nums[i]\n            else:\n                i += 1\n        for i, x in enumerate(nums):\n            if x != i + 1:\n                return [x, i + 1]\n        return []",
+     "javascript": "var findErrorNums = function(nums) {\n    let i = 0;\n    while (i < nums.length) {\n        const home = nums[i] - 1;\n        if (nums[i] !== nums[home]) [nums[i], nums[home]] = [nums[home], nums[i]];\n        else i++;\n    }\n    for (i = 0; i < nums.length; i++)\n        if (nums[i] !== i + 1) return [nums[i], i + 1];\n    return [];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two equations from sums",
+    "idea": "Compared with 1..n, the array's sum is off by dup − missing and its sum of squares by dup² − missing² = (dup − missing)(dup + missing). Divide to get dup + missing, then solve.",
+    "steps": [
+     "`diff` = sum of `nums` − n(n + 1)/2 = dup − missing.",
+     "`squares` = sum of squares − n(n + 1)(2n + 1)/6 = dup² − missing².",
+     "`total = squares / diff` = dup + missing; then dup = (total + diff)/2 and missing = (total − diff)/2."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass and the input is left untouched. `diff` is never 0 because the duplicate differs from the missing number. Sums of squares reach about 3·10¹¹ for n = 10⁴, so use 64-bit integers in Java and C++.",
+    "code": {
+     "java": "class Solution {\n    public int[] findErrorNums(int[] nums) {\n        long n = nums.length;\n        long diff = -n * (n + 1) / 2, squares = -n * (n + 1) * (2 * n + 1) / 6;\n        for (int x : nums) { diff += x; squares += (long) x * x; }\n        long total = squares / diff;\n        return new int[] { (int) ((total + diff) / 2), (int) ((total - diff) / 2) };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findErrorNums(vector<int>& nums) {\n        long long n = nums.size();\n        long long diff = -n * (n + 1) / 2, squares = -n * (n + 1) * (2 * n + 1) / 6;\n        for (int x : nums) { diff += x; squares += 1LL * x * x; }\n        long long total = squares / diff;\n        return {(int) ((total + diff) / 2), (int) ((total - diff) / 2)};\n    }\n};",
+     "python": "class Solution:\n    def findErrorNums(self, nums: List[int]) -> List[int]:\n        n = len(nums)\n        diff = sum(nums) - n * (n + 1) // 2\n        squares = sum(x * x for x in nums) - n * (n + 1) * (2 * n + 1) // 6\n        total = squares // diff\n        return [(total + diff) // 2, (total - diff) // 2]",
+     "javascript": "var findErrorNums = function(nums) {\n    const n = nums.length;\n    let diff = -n * (n + 1) / 2, squares = -n * (n + 1) * (2 * n + 1) / 6;\n    for (const x of nums) { diff += x; squares += x * x; }\n    const total = squares / diff;\n    return [(total + diff) / 2, (total - diff) / 2];\n};"
+    }
+   }
+  ]
+ },
+ "find-missing-and-repeated-values": {
+  "pattern": "The grid is one array of n² values from 1..n²: cyclic sort it in place (or use sums)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count each value with a full scan",
+    "idea": "For every v from 1 to n², count its occurrences in the grid.",
+    "steps": [
+     "For `v` from 1 to n², count the cells equal to `v`.",
+     "Count 2 → `a`; count 0 → `b`."
+    ],
+    "time": "O(n⁴)",
+    "space": "O(1)",
+    "why": "n² values, each needing a scan of n² cells. Fine for n ≤ 50 (about 6 million steps), but it does not scale.",
+    "code": {
+     "java": "class Solution {\n    public int[] findMissingAndRepeatedValues(int[][] grid) {\n        int n = grid.length, a = 0, b = 0;\n        for (int v = 1; v <= n * n; v++) {\n            int count = 0;\n            for (int[] row : grid) for (int x : row) if (x == v) count++;\n            if (count == 2) a = v;\n            if (count == 0) b = v;\n        }\n        return new int[] { a, b };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMissingAndRepeatedValues(vector<vector<int>>& grid) {\n        int n = grid.size(), a = 0, b = 0;\n        for (int v = 1; v <= n * n; v++) {\n            int c = 0;\n            for (auto& row : grid) c += count(row.begin(), row.end(), v);\n            if (c == 2) a = v;\n            if (c == 0) b = v;\n        }\n        return {a, b};\n    }\n};",
+     "python": "class Solution:\n    def findMissingAndRepeatedValues(self, grid: List[List[int]]) -> List[int]:\n        n = len(grid)\n        a = b = 0\n        for v in range(1, n * n + 1):\n            c = sum(row.count(v) for row in grid)\n            if c == 2:\n                a = v\n            elif c == 0:\n                b = v\n        return [a, b]",
+     "javascript": "var findMissingAndRepeatedValues = function(grid) {\n    const n = grid.length;\n    let a = 0, b = 0;\n    for (let v = 1; v <= n * n; v++) {\n        let c = 0;\n        for (const row of grid) for (const x of row) if (x === v) c++;\n        if (c === 2) a = v;\n        if (c === 0) b = v;\n    }\n    return [a, b];\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Count array",
+    "idea": "Count every value in an array of size n² + 1, then read off the 2 and the 0.",
+    "steps": [
+     "For every cell value `x`, `count[x]++`.",
+     "For `v` from 1 to n²: `count[v] == 2` is `a`, `count[v] == 0` is `b`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n²)",
+    "why": "Each cell is read once. The count array is as big as the grid.",
+    "code": {
+     "java": "class Solution {\n    public int[] findMissingAndRepeatedValues(int[][] grid) {\n        int total = grid.length * grid.length, a = 0, b = 0;\n        int[] count = new int[total + 1];\n        for (int[] row : grid) for (int x : row) count[x]++;\n        for (int v = 1; v <= total; v++) {\n            if (count[v] == 2) a = v;\n            if (count[v] == 0) b = v;\n        }\n        return new int[] { a, b };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMissingAndRepeatedValues(vector<vector<int>>& grid) {\n        int total = grid.size() * grid.size(), a = 0, b = 0;\n        vector<int> count(total + 1, 0);\n        for (auto& row : grid) for (int x : row) count[x]++;\n        for (int v = 1; v <= total; v++) {\n            if (count[v] == 2) a = v;\n            if (count[v] == 0) b = v;\n        }\n        return {a, b};\n    }\n};",
+     "python": "class Solution:\n    def findMissingAndRepeatedValues(self, grid: List[List[int]]) -> List[int]:\n        total = len(grid) ** 2\n        count = [0] * (total + 1)\n        for row in grid:\n            for x in row:\n                count[x] += 1\n        return [count.index(2), count.index(0, 1)]",
+     "javascript": "var findMissingAndRepeatedValues = function(grid) {\n    const total = grid.length * grid.length, count = new Array(total + 1).fill(0);\n    for (const row of grid) for (const x of row) count[x]++;\n    let a = 0, b = 0;\n    for (let v = 1; v <= total; v++) {\n        if (count[v] === 2) a = v;\n        if (count[v] === 0) b = v;\n    }\n    return [a, b];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cyclic sort the grid in place",
+    "idea": "Number the cells 0..n² − 1 row by row (cell k is grid[k / n][k % n]). Then it is Set Mismatch: send value v to cell v − 1, and the one wrong cell holds a while its number gives b.",
+    "steps": [
+     "For cell `k` from 0: let `v` be its value and `home = v − 1`. If cell `home` does not already hold `v`, swap the two cells and stay at `k`; otherwise `k++`.",
+     "Find the cell `k` whose value is not `k + 1`: return `[its value, k + 1]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "At most n² − 1 swaps and n² increments, with no memory beyond a few integers. The index arithmetic `k / n`, `k % n` is the only new idea; the rest is the 1D template.",
+    "code": {
+     "java": "class Solution {\n    public int[] findMissingAndRepeatedValues(int[][] grid) {\n        int n = grid.length, total = n * n, k = 0;\n        while (k < total) {\n            int v = grid[k / n][k % n], home = v - 1;\n            int there = grid[home / n][home % n];\n            if (v != there) {\n                grid[home / n][home % n] = v;\n                grid[k / n][k % n] = there;\n            } else k++;\n        }\n        for (k = 0; k < total; k++)\n            if (grid[k / n][k % n] != k + 1) return new int[] { grid[k / n][k % n], k + 1 };\n        return new int[0];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMissingAndRepeatedValues(vector<vector<int>>& grid) {\n        int n = grid.size(), total = n * n, k = 0;\n        auto cell = [&](int i) -> int& { return grid[i / n][i % n]; };\n        while (k < total) {\n            int home = cell(k) - 1;\n            if (cell(k) != cell(home)) swap(cell(k), cell(home));\n            else k++;\n        }\n        for (k = 0; k < total; k++)\n            if (cell(k) != k + 1) return {cell(k), k + 1};\n        return {};\n    }\n};",
+     "python": "class Solution:\n    def findMissingAndRepeatedValues(self, grid: List[List[int]]) -> List[int]:\n        n = len(grid)\n        total, k = n * n, 0\n        while k < total:\n            v = grid[k // n][k % n]\n            home = v - 1\n            there = grid[home // n][home % n]\n            if v != there:\n                grid[home // n][home % n] = v\n                grid[k // n][k % n] = there\n            else:\n                k += 1\n        for k in range(total):\n            if grid[k // n][k % n] != k + 1:\n                return [grid[k // n][k % n], k + 1]\n        return []",
+     "javascript": "var findMissingAndRepeatedValues = function(grid) {\n    const n = grid.length, total = n * n;\n    const get = (i) => grid[Math.floor(i / n)][i % n];\n    const set = (i, v) => { grid[Math.floor(i / n)][i % n] = v; };\n    let k = 0;\n    while (k < total) {\n        const v = get(k), home = v - 1, there = get(home);\n        if (v !== there) { set(home, v); set(k, there); }\n        else k++;\n    }\n    for (k = 0; k < total; k++) if (get(k) !== k + 1) return [get(k), k + 1];\n    return [];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Two equations from sums",
+    "idea": "Against 1..n², the grid's sum is off by a − b and its sum of squares by a² − b² = (a − b)(a + b). Divide to get a + b, then solve for both.",
+    "steps": [
+     "`diff` = (sum of cells) − N(N + 1)/2 with N = n², which equals a − b.",
+     "`squares` = (sum of squared cells) − N(N + 1)(2N + 1)/6, which equals a² − b².",
+     "`total = squares / diff` = a + b; return `[(total + diff) / 2, (total − diff) / 2]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "One pass over the grid and nothing is modified. With N up to 2500 the sum of squares is about 5·10⁹, beyond 32-bit range, so use long / long long.",
+    "code": {
+     "java": "class Solution {\n    public int[] findMissingAndRepeatedValues(int[][] grid) {\n        long N = (long) grid.length * grid.length;\n        long diff = -N * (N + 1) / 2, squares = -N * (N + 1) * (2 * N + 1) / 6;\n        for (int[] row : grid) for (int x : row) { diff += x; squares += (long) x * x; }\n        long total = squares / diff;\n        return new int[] { (int) ((total + diff) / 2), (int) ((total - diff) / 2) };\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findMissingAndRepeatedValues(vector<vector<int>>& grid) {\n        long long N = 1LL * grid.size() * grid.size();\n        long long diff = -N * (N + 1) / 2, squares = -N * (N + 1) * (2 * N + 1) / 6;\n        for (auto& row : grid) for (int x : row) { diff += x; squares += 1LL * x * x; }\n        long long total = squares / diff;\n        return {(int) ((total + diff) / 2), (int) ((total - diff) / 2)};\n    }\n};",
+     "python": "class Solution:\n    def findMissingAndRepeatedValues(self, grid: List[List[int]]) -> List[int]:\n        N = len(grid) ** 2\n        values = [x for row in grid for x in row]\n        diff = sum(values) - N * (N + 1) // 2\n        squares = sum(x * x for x in values) - N * (N + 1) * (2 * N + 1) // 6\n        total = squares // diff\n        return [(total + diff) // 2, (total - diff) // 2]",
+     "javascript": "var findMissingAndRepeatedValues = function(grid) {\n    const N = grid.length * grid.length;\n    let diff = -N * (N + 1) / 2, squares = -N * (N + 1) * (2 * N + 1) / 6;\n    for (const row of grid) for (const x of row) { diff += x; squares += x * x; }\n    const total = squares / diff;\n    return [(total + diff) / 2, (total - diff) / 2];\n};"
+    }
+   }
+  ]
+ },
+ "find-all-duplicates-in-an-array": {
+  "pattern": "Cyclic sort (or sign marking): a value whose home is already taken is a duplicate",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count each value with a scan",
+    "idea": "For every v from 1 to n, count it with a full scan; a count of 2 makes it a duplicate.",
+    "steps": [
+     "For `v` from 1 to n, count the elements equal to `v`.",
+     "If the count is 2, add `v` to the answer."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n values times a full scan each.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDuplicates(int[] nums) {\n        List<Integer> twice = new ArrayList<>();\n        for (int v = 1; v <= nums.length; v++) {\n            int count = 0;\n            for (int x : nums) if (x == v) count++;\n            if (count == 2) twice.add(v);\n        }\n        return twice;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDuplicates(vector<int>& nums) {\n        vector<int> twice;\n        int n = nums.size();\n        for (int v = 1; v <= n; v++)\n            if (count(nums.begin(), nums.end(), v) == 2) twice.push_back(v);\n        return twice;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicates(self, nums: List[int]) -> List[int]:\n        return [v for v in range(1, len(nums) + 1) if nums.count(v) == 2]",
+     "javascript": "var findDuplicates = function(nums) {\n    const twice = [];\n    for (let v = 1; v <= nums.length; v++) {\n        let c = 0;\n        for (const x of nums) if (x === v) c++;\n        if (c === 2) twice.push(v);\n    }\n    return twice;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Seen array",
+    "idea": "Walk once with a boolean array; a value already marked is a duplicate.",
+    "steps": [
+     "Create `seen` of size n + 1, all false.",
+     "For each `x`: if `seen[x]` is already true, add `x` to the answer; otherwise set it."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass, but the seen array breaks the constant-space requirement.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDuplicates(int[] nums) {\n        boolean[] seen = new boolean[nums.length + 1];\n        List<Integer> twice = new ArrayList<>();\n        for (int x : nums) {\n            if (seen[x]) twice.add(x);\n            seen[x] = true;\n        }\n        return twice;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDuplicates(vector<int>& nums) {\n        vector<bool> seen(nums.size() + 1, false);\n        vector<int> twice;\n        for (int x : nums) {\n            if (seen[x]) twice.push_back(x);\n            seen[x] = true;\n        }\n        return twice;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicates(self, nums: List[int]) -> List[int]:\n        seen, twice = set(), []\n        for x in nums:\n            if x in seen:\n                twice.append(x)\n            seen.add(x)\n        return twice",
+     "javascript": "var findDuplicates = function(nums) {\n    const seen = new Array(nums.length + 1).fill(false), twice = [];\n    for (const x of nums) {\n        if (seen[x]) twice.push(x);\n        seen[x] = true;\n    }\n    return twice;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Cyclic sort, then read the spare copies",
+    "idea": "Swap every value v into index v − 1. A copy whose home is already taken stays put, so after placement every slot i that does not hold i + 1 holds a duplicate.",
+    "steps": [
+     "Cyclic sort: while `i < n`, if `nums[i] != nums[nums[i] − 1]` swap it home, else `i++`.",
+     "For every `i` with `nums[i] != i + 1`, add `nums[i]`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "At most n − 1 swaps plus n increments, and only the output list grows. Because each value appears at most twice, each duplicate has exactly one spare copy, so it is reported exactly once.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDuplicates(int[] nums) {\n        int i = 0;\n        while (i < nums.length) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) {\n                int t = nums[i]; nums[i] = nums[home]; nums[home] = t;\n            } else i++;\n        }\n        List<Integer> twice = new ArrayList<>();\n        for (i = 0; i < nums.length; i++) if (nums[i] != i + 1) twice.add(nums[i]);\n        return twice;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDuplicates(vector<int>& nums) {\n        int n = nums.size(), i = 0;\n        while (i < n) {\n            int home = nums[i] - 1;\n            if (nums[i] != nums[home]) swap(nums[i], nums[home]);\n            else i++;\n        }\n        vector<int> twice;\n        for (i = 0; i < n; i++) if (nums[i] != i + 1) twice.push_back(nums[i]);\n        return twice;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicates(self, nums: List[int]) -> List[int]:\n        i = 0\n        while i < len(nums):\n            home = nums[i] - 1\n            if nums[i] != nums[home]:\n                nums[i], nums[home] = nums[home], nums[i]\n            else:\n                i += 1\n        return [x for i, x in enumerate(nums) if x != i + 1]",
+     "javascript": "var findDuplicates = function(nums) {\n    let i = 0;\n    while (i < nums.length) {\n        const home = nums[i] - 1;\n        if (nums[i] !== nums[home]) [nums[i], nums[home]] = [nums[home], nums[i]];\n        else i++;\n    }\n    const twice = [];\n    for (let k = 0; k < nums.length; k++) if (nums[k] !== k + 1) twice.push(nums[k]);\n    return twice;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sign marking",
+    "idea": "For each value v, look at slot |v| − 1. If it is already negative, |v| was seen before; otherwise negate it to record the first sighting.",
+    "steps": [
+     "For each `v` in `nums`, take `home = |v| − 1` (the value may already have been negated).",
+     "If `nums[home] < 0`, this is the second sighting: add `home + 1`. Otherwise negate `nums[home]`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "A single pass. The sign is a free bit per slot because every value is positive. Duplicates come out in the order their second copy appears.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> findDuplicates(int[] nums) {\n        List<Integer> twice = new ArrayList<>();\n        for (int v : nums) {\n            int home = Math.abs(v) - 1;\n            if (nums[home] < 0) twice.add(home + 1);\n            else nums[home] = -nums[home];\n        }\n        return twice;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> findDuplicates(vector<int>& nums) {\n        vector<int> twice;\n        for (int v : nums) {\n            int home = abs(v) - 1;\n            if (nums[home] < 0) twice.push_back(home + 1);\n            else nums[home] = -nums[home];\n        }\n        return twice;\n    }\n};",
+     "python": "class Solution:\n    def findDuplicates(self, nums: List[int]) -> List[int]:\n        twice = []\n        for v in nums:\n            home = abs(v) - 1\n            if nums[home] < 0:\n                twice.append(home + 1)\n            else:\n                nums[home] = -nums[home]\n        return twice",
+     "javascript": "var findDuplicates = function(nums) {\n    const twice = [];\n    for (const v of nums) {\n        const home = Math.abs(v) - 1;\n        if (nums[home] < 0) twice.push(home + 1);\n        else nums[home] = -nums[home];\n    }\n    return twice;\n};"
+    }
+   }
+  ]
+ },
+ "array-nesting": {
+  "pattern": "Cycles of a permutation: walk each cycle once (mark visited)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Walk the cycle from every start",
+    "idea": "Each set s[k] is the cycle through k. From every index, follow the arrows until you come back to it, counting steps.",
+    "steps": [
+     "For each `start`: set `len = 1` and `i = nums[start]`; while `i != start`, move `i = nums[i]` and `len++`.",
+     "Return the largest `len`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "In a permutation the walk always returns to its start, but if the whole array is one cycle, every one of the n starts walks all n steps.",
+    "code": {
+     "java": "class Solution {\n    public int arrayNesting(int[] nums) {\n        int best = 0;\n        for (int start = 0; start < nums.length; start++) {\n            int len = 1;\n            for (int i = nums[start]; i != start; i = nums[i]) len++;\n            best = Math.max(best, len);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int arrayNesting(vector<int>& nums) {\n        int best = 0;\n        for (int start = 0; start < (int) nums.size(); start++) {\n            int len = 1;\n            for (int i = nums[start]; i != start; i = nums[i]) len++;\n            best = max(best, len);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def arrayNesting(self, nums: List[int]) -> int:\n        best = 0\n        for start in range(len(nums)):\n            length, i = 1, nums[start]\n            while i != start:\n                i = nums[i]\n                length += 1\n            best = max(best, length)\n        return best",
+     "javascript": "var arrayNesting = function(nums) {\n    let best = 0;\n    for (let start = 0; start < nums.length; start++) {\n        let len = 1;\n        for (let i = nums[start]; i !== start; i = nums[i]) len++;\n        best = Math.max(best, len);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Visited array: each cycle once",
+    "idea": "Every index on a cycle gives the same set, so once a cycle has been walked, skip all its indexes.",
+    "steps": [
+     "Keep `seen`. For each `start` not yet seen, walk `i = nums[i]` marking `seen[i]` and counting, until you reach a seen index.",
+     "Return the longest walk."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index is marked once and never walked again, so all walks together take n steps.",
+    "code": {
+     "java": "class Solution {\n    public int arrayNesting(int[] nums) {\n        boolean[] seen = new boolean[nums.length];\n        int best = 0;\n        for (int start = 0; start < nums.length; start++) {\n            int len = 0;\n            for (int i = start; !seen[i]; i = nums[i]) { seen[i] = true; len++; }\n            best = Math.max(best, len);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int arrayNesting(vector<int>& nums) {\n        vector<bool> seen(nums.size(), false);\n        int best = 0;\n        for (int start = 0; start < (int) nums.size(); start++) {\n            int len = 0;\n            for (int i = start; !seen[i]; i = nums[i]) { seen[i] = true; len++; }\n            best = max(best, len);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def arrayNesting(self, nums: List[int]) -> int:\n        seen = [False] * len(nums)\n        best = 0\n        for start in range(len(nums)):\n            length, i = 0, start\n            while not seen[i]:\n                seen[i] = True\n                i = nums[i]\n                length += 1\n            best = max(best, length)\n        return best",
+     "javascript": "var arrayNesting = function(nums) {\n    const seen = new Array(nums.length).fill(false);\n    let best = 0;\n    for (let start = 0; start < nums.length; start++) {\n        let len = 0;\n        for (let i = start; !seen[i]; i = nums[i]) { seen[i] = true; len++; }\n        best = Math.max(best, len);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Mark visited in place",
+    "idea": "Values are 0..n − 1, so overwrite a visited slot with −1 instead of keeping a separate array.",
+    "steps": [
+     "For each `start`: walk while `nums[i] >= 0`, saving `next = nums[i]`, setting `nums[i] = −1`, moving to `next` and counting.",
+     "Return the longest walk."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "The same single walk per cycle, with the array doubling as the visited marks. Save `next` before overwriting the slot.",
+    "code": {
+     "java": "class Solution {\n    public int arrayNesting(int[] nums) {\n        int best = 0;\n        for (int start = 0; start < nums.length; start++) {\n            int len = 0;\n            for (int i = start; nums[i] >= 0; len++) {\n                int next = nums[i];\n                nums[i] = -1;\n                i = next;\n            }\n            best = Math.max(best, len);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int arrayNesting(vector<int>& nums) {\n        int best = 0;\n        for (int start = 0; start < (int) nums.size(); start++) {\n            int len = 0;\n            for (int i = start; nums[i] >= 0; len++) {\n                int next = nums[i];\n                nums[i] = -1;\n                i = next;\n            }\n            best = max(best, len);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def arrayNesting(self, nums: List[int]) -> int:\n        best = 0\n        for start in range(len(nums)):\n            length, i = 0, start\n            while nums[i] >= 0:\n                nums[i], i = -1, nums[i]\n                length += 1\n            best = max(best, length)\n        return best",
+     "javascript": "var arrayNesting = function(nums) {\n    let best = 0;\n    for (let start = 0; start < nums.length; start++) {\n        let len = 0;\n        for (let i = start; nums[i] >= 0; len++) {\n            const next = nums[i];\n            nums[i] = -1;\n            i = next;\n        }\n        best = Math.max(best, len);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "minimum-number-of-operations-to-sort-a-binary-tree-by-level": {
+  "pattern": "BFS by level, then minimum swaps to sort each level = size − cycles (cyclic sort to sorted positions)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "BFS, then selection sort each level counting swaps",
+    "idea": "Collect each level with a BFS and selection-sort it, counting the swaps that actually move something. Selection sort happens to use the minimum number of swaps.",
+    "steps": [
+     "BFS level by level, copying each level's values into an array.",
+     "For each position `i`, find the smallest value in `a[i..]`; if it is not already at `i`, swap it in and count one operation.",
+     "Add up the counts over all levels."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each swap puts the right value at position i for good, which detaches exactly one element from its cycle: that is all an optimal swap can do, so the count is minimal. But a level can hold about n/2 nodes, and selection sort is quadratic in the level size.",
+    "code": {
+     "java": "class Solution {\n    public int minimumOperations(TreeNode root) {\n        int ops = 0;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            int[] a = new int[queue.size()];\n            for (int k = 0; k < a.length; k++) {\n                TreeNode node = queue.poll();\n                a[k] = node.val;\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            for (int i = 0; i < a.length; i++) {\n                int min = i;\n                for (int j = i + 1; j < a.length; j++) if (a[j] < a[min]) min = j;\n                if (min != i) { int t = a[i]; a[i] = a[min]; a[min] = t; ops++; }\n            }\n        }\n        return ops;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumOperations(TreeNode* root) {\n        int ops = 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            vector<int> a;\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                a.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            for (int i = 0; i < (int) a.size(); i++) {\n                int mn = min_element(a.begin() + i, a.end()) - a.begin();\n                if (mn != i) { swap(a[i], a[mn]); ops++; }\n            }\n        }\n        return ops;\n    }\n};",
+     "python": "class Solution:\n    def minimumOperations(self, root: Optional[TreeNode]) -> int:\n        ops, level = 0, [root]\n        while level:\n            a = [node.val for node in level]\n            for i in range(len(a)):\n                m = min(range(i, len(a)), key=a.__getitem__)\n                if m != i:\n                    a[i], a[m] = a[m], a[i]\n                    ops += 1\n            level = [c for node in level for c in (node.left, node.right) if c]\n        return ops",
+     "javascript": "var minimumOperations = function(root) {\n    let ops = 0, level = [root];\n    while (level.length) {\n        const a = level.map((node) => node.val);\n        for (let i = 0; i < a.length; i++) {\n            let m = i;\n            for (let j = i + 1; j < a.length; j++) if (a[j] < a[m]) m = j;\n            if (m !== i) { [a[i], a[m]] = [a[m], a[i]]; ops++; }\n        }\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n    }\n    return ops;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS, then cyclic sort each level to its sorted positions",
+    "idea": "A value's target is its index in a sorted copy of the level. Cyclic-sort each value to its target, counting swaps: that count is size − cycles, the minimum.",
+    "steps": [
+     "BFS level by level, copying each level's values into `a`.",
+     "Sort a copy and map each value to its index in it (its target).",
+     "For each `i`: while `a[i]` is not at its target, swap it there and count one operation."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Each swap sends one value to its final position, so a level of size w needs at most w − 1 swaps, which equals w − cycles. Sorting each level dominates: O(w log w) summed over levels is O(n log n). The queue and the map hold one level at a time.",
+    "code": {
+     "java": "class Solution {\n    public int minimumOperations(TreeNode root) {\n        int ops = 0;\n        Deque<TreeNode> queue = new ArrayDeque<>();\n        queue.add(root);\n        while (!queue.isEmpty()) {\n            int[] a = new int[queue.size()];\n            for (int k = 0; k < a.length; k++) {\n                TreeNode node = queue.poll();\n                a[k] = node.val;\n                if (node.left != null) queue.add(node.left);\n                if (node.right != null) queue.add(node.right);\n            }\n            int[] sorted = a.clone();\n            Arrays.sort(sorted);\n            Map<Integer, Integer> target = new HashMap<>();\n            for (int i = 0; i < sorted.length; i++) target.put(sorted[i], i);\n            for (int i = 0; i < a.length; i++) {\n                while (target.get(a[i]) != i) {\n                    int j = target.get(a[i]);\n                    int t = a[i]; a[i] = a[j]; a[j] = t;\n                    ops++;\n                }\n            }\n        }\n        return ops;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minimumOperations(TreeNode* root) {\n        int ops = 0;\n        queue<TreeNode*> q;\n        q.push(root);\n        while (!q.empty()) {\n            vector<int> a;\n            for (int k = q.size(); k > 0; k--) {\n                TreeNode* node = q.front();\n                q.pop();\n                a.push_back(node->val);\n                if (node->left) q.push(node->left);\n                if (node->right) q.push(node->right);\n            }\n            vector<int> sorted = a;\n            sort(sorted.begin(), sorted.end());\n            unordered_map<int, int> target;\n            for (int i = 0; i < (int) sorted.size(); i++) target[sorted[i]] = i;\n            for (int i = 0; i < (int) a.size(); i++)\n                while (target[a[i]] != i) { swap(a[i], a[target[a[i]]]); ops++; }\n        }\n        return ops;\n    }\n};",
+     "python": "class Solution:\n    def minimumOperations(self, root: Optional[TreeNode]) -> int:\n        ops, level = 0, [root]\n        while level:\n            a = [node.val for node in level]\n            target = {v: i for i, v in enumerate(sorted(a))}\n            for i in range(len(a)):\n                while target[a[i]] != i:\n                    j = target[a[i]]\n                    a[i], a[j] = a[j], a[i]\n                    ops += 1\n            level = [c for node in level for c in (node.left, node.right) if c]\n        return ops",
+     "javascript": "var minimumOperations = function(root) {\n    let ops = 0, level = [root];\n    while (level.length) {\n        const a = level.map((node) => node.val);\n        const sorted = [...a].sort((x, y) => x - y);\n        const target = new Map(sorted.map((v, i) => [v, i]));\n        for (let i = 0; i < a.length; i++) {\n            while (target.get(a[i]) !== i) {\n                const j = target.get(a[i]);\n                [a[i], a[j]] = [a[j], a[i]];\n                ops++;\n            }\n        }\n        const next = [];\n        for (const node of level) {\n            if (node.left) next.push(node.left);\n            if (node.right) next.push(node.right);\n        }\n        level = next;\n    }\n    return ops;\n};"
+    }
+   }
+  ]
+ },
+ "couples-holding-hands": {
+  "pattern": "Greedy seat-pair swaps; the answer is seat pairs − cycles (partner of x is x ^ 1)",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Greedy, scanning for the partner",
+    "idea": "Fix the seat pairs left to right: if seat 2j + 1 does not hold the partner of the person in seat 2j, find the partner further right and swap them in.",
+    "steps": [
+     "For `i = 0, 2, 4, …`: the partner is `row[i] ^ 1`.",
+     "If `row[i + 1]` is not the partner, scan `j > i + 1` for it, swap `row[i + 1]` and `row[j]`, and count one swap."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n seat pairs, each possibly scanning the row. Each swap seats one couple for good and never breaks another, which is why the greedy is optimal (see the last approach). With at most 60 seats this is already fast.",
+    "code": {
+     "java": "class Solution {\n    public int minSwapsCouples(int[] row) {\n        int swaps = 0;\n        for (int i = 0; i < row.length; i += 2) {\n            int partner = row[i] ^ 1;\n            if (row[i + 1] == partner) continue;\n            for (int j = i + 2; j < row.length; j++) {\n                if (row[j] == partner) {\n                    row[j] = row[i + 1];\n                    row[i + 1] = partner;\n                    swaps++;\n                    break;\n                }\n            }\n        }\n        return swaps;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minSwapsCouples(vector<int>& row) {\n        int swaps = 0, n = row.size();\n        for (int i = 0; i < n; i += 2) {\n            int partner = row[i] ^ 1;\n            if (row[i + 1] == partner) continue;\n            int j = find(row.begin() + i + 2, row.end(), partner) - row.begin();\n            swap(row[i + 1], row[j]);\n            swaps++;\n        }\n        return swaps;\n    }\n};",
+     "python": "class Solution:\n    def minSwapsCouples(self, row: List[int]) -> int:\n        swaps = 0\n        for i in range(0, len(row), 2):\n            partner = row[i] ^ 1\n            if row[i + 1] != partner:\n                j = row.index(partner, i + 2)\n                row[i + 1], row[j] = row[j], row[i + 1]\n                swaps += 1\n        return swaps",
+     "javascript": "var minSwapsCouples = function(row) {\n    let swaps = 0;\n    for (let i = 0; i < row.length; i += 2) {\n        const partner = row[i] ^ 1;\n        if (row[i + 1] === partner) continue;\n        const j = row.indexOf(partner, i + 2);\n        [row[i + 1], row[j]] = [row[j], row[i + 1]];\n        swaps++;\n    }\n    return swaps;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Greedy with a seat index",
+    "idea": "The same greedy, but keep seat[person] so the partner is found in O(1). Update both people's seats on every swap.",
+    "steps": [
+     "Build `seat[row[i]] = i`.",
+     "For `i = 0, 2, 4, …`: if `row[i + 1]` is not `row[i] ^ 1`, let `j = seat[partner]`; swap `row[i + 1]` and `row[j]`, update their seats, count one swap."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "One pass with O(1) work per seat pair. Forgetting to update `seat` for the person moved out of seat i + 1 is the usual bug.",
+    "code": {
+     "java": "class Solution {\n    public int minSwapsCouples(int[] row) {\n        int[] seat = new int[row.length];\n        for (int i = 0; i < row.length; i++) seat[row[i]] = i;\n        int swaps = 0;\n        for (int i = 0; i < row.length; i += 2) {\n            int partner = row[i] ^ 1;\n            if (row[i + 1] == partner) continue;\n            int j = seat[partner];\n            row[j] = row[i + 1]; seat[row[j]] = j;\n            row[i + 1] = partner; seat[partner] = i + 1;\n            swaps++;\n        }\n        return swaps;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int minSwapsCouples(vector<int>& row) {\n        int n = row.size(), swaps = 0;\n        vector<int> seat(n);\n        for (int i = 0; i < n; i++) seat[row[i]] = i;\n        for (int i = 0; i < n; i += 2) {\n            int partner = row[i] ^ 1;\n            if (row[i + 1] == partner) continue;\n            int j = seat[partner];\n            row[j] = row[i + 1]; seat[row[j]] = j;\n            row[i + 1] = partner; seat[partner] = i + 1;\n            swaps++;\n        }\n        return swaps;\n    }\n};",
+     "python": "class Solution:\n    def minSwapsCouples(self, row: List[int]) -> int:\n        seat = [0] * len(row)\n        for i, person in enumerate(row):\n            seat[person] = i\n        swaps = 0\n        for i in range(0, len(row), 2):\n            partner = row[i] ^ 1\n            if row[i + 1] == partner:\n                continue\n            j = seat[partner]\n            row[j], seat[row[i + 1]] = row[i + 1], j\n            row[i + 1], seat[partner] = partner, i + 1\n            swaps += 1\n        return swaps",
+     "javascript": "var minSwapsCouples = function(row) {\n    const seat = new Array(row.length);\n    row.forEach((person, i) => { seat[person] = i; });\n    let swaps = 0;\n    for (let i = 0; i < row.length; i += 2) {\n        const partner = row[i] ^ 1;\n        if (row[i + 1] === partner) continue;\n        const j = seat[partner];\n        row[j] = row[i + 1]; seat[row[j]] = j;\n        row[i + 1] = partner; seat[partner] = i + 1;\n        swaps++;\n    }\n    return swaps;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count cycles with union-find",
+    "idea": "Make each couple a node, and join the two couples sitting on each seat pair. A group of k couples tangled together needs k − 1 swaps, so the answer is couples − groups.",
+    "steps": [
+     "Start with n / 2 separate couples (couple of person x is x / 2).",
+     "For each seat pair (`2j`, `2j + 1`), union the couples of its two occupants; count every union that merges two groups.",
+     "That count, couples − groups, is the answer."
+    ],
+    "time": "O(n α(n))",
+    "space": "O(n)",
+    "why": "Each couple touches at most two seat pairs, so every group is a cycle (a seated couple is a cycle of one). The goal is one cycle per couple, and a swap can split at most one cycle into two, so at least couples − groups swaps are needed; the greedy reaches it. The number of successful unions is exactly couples − groups.",
+    "code": {
+     "java": "class Solution {\n    public int minSwapsCouples(int[] row) {\n        int[] parent = new int[row.length / 2];\n        for (int c = 0; c < parent.length; c++) parent[c] = c;\n        int swaps = 0;\n        for (int i = 0; i < row.length; i += 2) {\n            int a = find(parent, row[i] / 2), b = find(parent, row[i + 1] / 2);\n            if (a != b) { parent[a] = b; swaps++; }\n        }\n        return swaps;\n    }\n\n    private int find(int[] parent, int x) {\n        while (parent[x] != x) x = parent[x] = parent[parent[x]];\n        return x;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) {\n        while (parent[x] != x) x = parent[x] = parent[parent[x]];\n        return x;\n    }\npublic:\n    int minSwapsCouples(vector<int>& row) {\n        parent.assign(row.size() / 2, 0);\n        iota(parent.begin(), parent.end(), 0);\n        int swaps = 0;\n        for (int i = 0; i < (int) row.size(); i += 2) {\n            int a = find(row[i] / 2), b = find(row[i + 1] / 2);\n            if (a != b) { parent[a] = b; swaps++; }\n        }\n        return swaps;\n    }\n};",
+     "python": "class Solution:\n    def minSwapsCouples(self, row: List[int]) -> int:\n        parent = list(range(len(row) // 2))\n\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n\n        swaps = 0\n        for i in range(0, len(row), 2):\n            a, b = find(row[i] // 2), find(row[i + 1] // 2)\n            if a != b:\n                parent[a] = b\n                swaps += 1\n        return swaps",
+     "javascript": "var minSwapsCouples = function(row) {\n    const parent = Array.from({ length: row.length / 2 }, (_, c) => c);\n    const find = (x) => {\n        while (parent[x] !== x) x = parent[x] = parent[parent[x]];\n        return x;\n    };\n    let swaps = 0;\n    for (let i = 0; i < row.length; i += 2) {\n        const a = find(row[i] >> 1), b = find(row[i + 1] >> 1);\n        if (a !== b) { parent[a] = b; swaps++; }\n    }\n    return swaps;\n};"
+    }
+   }
+  ]
+ }
+}

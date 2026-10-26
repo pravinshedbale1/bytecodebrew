@@ -67,6 +67,17 @@ export default {
       ['Duplicates; use a set', 'Original indexes; sort indexes or (value, index) pairs', 'Negative numbers; use abs', 'Nothing'],
       1, 'Problems that return positions need the original indexes.'),
   ],
+  'cyclic-sort': [
+    Q('In cyclic sort on values 1..n with duplicates, which swap condition avoids an infinite loop?',
+      ['while (nums[i] != i + 1)', 'while (nums[i] != nums[nums[i] - 1])', 'while (nums[i] > i)', 'while (i < nums[i])'],
+      1, 'Comparing with the value already at home stops when that home holds a copy of the same value: a duplicate.'),
+    Q('After placing every value 1..n at index v − 1, slot i holds x ≠ i + 1. What does that tell you?',
+      ['Nothing until the array is sorted', 'i + 1 is missing and x is a duplicate', 'x is missing and i + 1 is a duplicate', 'The input was invalid'],
+      1, 'Every present value went home, so nobody came home to slot i, and x had to stay because its home was taken.'),
+    Q('What is the minimum number of swaps to sort a permutation of n elements with c cycles?',
+      ['n − 1', 'c', 'n − c', 'n log n'],
+      2, 'A cycle of length L needs L − 1 swaps; summing over the cycles gives n − c, and cyclic sort uses exactly that many.'),
+  ],
   'binary-search': [
     Q('How does the lesson frame every binary search?',
       ['Find the exact value', 'Find the first index where a monotonic condition becomes true', 'Find the middle', 'Find the maximum'],

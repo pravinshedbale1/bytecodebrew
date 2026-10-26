@@ -1,0 +1,360 @@
+Some arrays come with a promise: **n numbers, each between 1 and n** (or 0 and n − 1). That promise means every value has a **home** — value `v` belongs at index `v − 1` — so the array can sort itself by swapping each value straight into its home. No comparisons, no extra memory, O(n). After that, the array reads like a checklist: a slot that doesn't hold its own number tells you which number is **missing**, and the value sitting there is a **duplicate**. One short loop solves missing numbers, duplicates, Set Mismatch and First Missing Positive, and the same idea counts the minimum swaps needed to sort any array of distinct values.
+
+<Callout type="note" title="New to arrays?">
+
+This lesson assumes you're comfortable with indexes and swapping two elements. If not, read [Arrays & Strings](/dsa/data-structures/arrays-and-strings) in Data Structures Basics first.
+
+</Callout>
+
+<Callout type="tip" title="How to spot it">
+
+- The values sit in a **range tied to the length**: "n integers in the range [1, n]", "0 to n", "a permutation of 0 … n − 1". (In the constraints: `1 <= nums[i] <= n`. See [Reading Constraints](/dsa/data-structures/reading-constraints).)
+- You're asked for the **missing** number(s), the **duplicate(s)**, or the **smallest missing positive**.
+- The problem wants **O(n) time and O(1) extra space**, and you **may modify** the array.
+- A permutation where the question is about **cycles** or the **minimum number of swaps** to sort.
+
+</Callout>
+
+## The idea: every value has a home
+
+Picture a row of numbered lockers and a pile of numbered bags dumped into them at random. To tidy up, open locker i. If the bag inside isn't locker i's, carry it to its own locker and swap it with whatever is there. You're now holding a different bag in locker i: check it the same way. Only when locker i holds its own bag (or the bag's locker already has an identical bag) do you move to locker i + 1.
+
+At every step the algorithm asks the same three questions about slot `i`:
+
+1. **What is here?** The value `v = nums[i]`.
+2. **Where does it belong?** Its home, `v − 1`.
+3. **Is its home already holding a `v`?** If not, **swap** `v` home, and **stay at `i`**, because a new value has just arrived there. If it is (either `i` is the home, or a copy of `v` already lives there), there is nothing left to do at `i`, so **move `i` forward**.
+
+Step through it below. Each swap takes two steps: first the **plan**, where the top arrow shows the value at `i` travelling to its home and the bottom arrow shows the value it displaces travelling back to `i`; then the **result**, with both values moved. The panel spells out the check with the real numbers and highlights the line of code that runs.
+
+<CyclicSortViz examples={['basic']} />
+
+The same run as a table (each row is one look at slot `i`):
+
+| Look | i | nums[i] | home | nums[home] | What happens | Array after |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0 | 3 | 2 | 5 | 3 ≠ 5: swap. 3 goes right to index 2, 5 comes back to index 0 | [5, 1, 3, 4, 2] |
+| 2 | 0 | 5 | 4 | 2 | 5 ≠ 2: swap. 5 goes right to index 4, 2 comes back to index 0 | [2, 1, 3, 4, 5] |
+| 3 | 0 | 2 | 1 | 1 | 2 ≠ 1: swap. 2 goes to index 1, and 1 lands at index 0, its own home | [1, 2, 3, 4, 5] |
+| 4 | 0 | 1 | 0 | 1 | home is i: nothing to swap, i++ | unchanged |
+| 5–8 | 1 … 4 | 2 … 5 | = i | — | each already home, i++ | unchanged |
+
+`i` stayed on index 0 for four looks while the swaps chased values around the cycle 0 → 2 → 4 → 1 → 0, then walked straight to the end. Three swaps for five values, and 4 was home from the start.
+
+```java
+static void cyclicSort(int[] nums) {                     // values 1..n, repeats allowed
+    int i = 0;
+    while (i < nums.length) {
+        int home = nums[i] - 1;                          // where nums[i] belongs
+        if (nums[i] != nums[home]) swap(nums, i, home);  // send it home; check what came back
+        else i++;                                        // home already holds this value: move on
+    }
+}
+```
+
+Two details carry the whole template:
+
+- **`i` only moves when nothing more can happen at `i`.** After a swap, a new value has arrived at `i` and hasn't been checked yet.
+- **Compare values, not indexes: `nums[i] != nums[home]`.** If `i` *is* the home, the two are the same element and the test fails, so `i` moves on. If the home already holds a copy of the same value, the test also fails — that's a duplicate, and swapping it would loop forever. Writing `nums[i] != i + 1` instead is the classic infinite loop.
+
+### Why it is O(n) even though i stands still
+
+Count the work, not the loops. Each swap puts at least one value **into its home for good** (it never moves again), so there are at most n − 1 swaps in the whole run. Every other step increments `i`, at most n times. Total: fewer than 2n steps, and O(1) extra space — the array is its own bookkeeping.
+
+## Read the slots: what's missing, what's doubled
+
+When values can repeat (and some are therefore missing), placement ends with every **present** value at its home. Each slot that still holds the wrong number tells you two things at once: **`i + 1` never came home, so it's missing**, and **the value sitting there is a spare copy, so it's a duplicate**.
+
+Watch two moments in the run below: the red dashed arrow, where a value's home is **already taken by an identical value** (that copy is a spare, so `i` moves on), and the final scan, where every slot that doesn't hold `i + 1` adds one number to each answer.
+
+<CyclicSortViz examples={['duplicates']} title="Missing and duplicate numbers, step by step" />
+
+```java
+static List<Integer> findDisappearedNumbers(int[] nums) {
+    cyclicSort(nums);
+    List<Integer> missing = new ArrayList<>();
+    for (int i = 0; i < nums.length; i++) if (nums[i] != i + 1) missing.add(i + 1);
+    return missing;
+}
+
+static List<Integer> findDuplicates(int[] nums) {        // each value appears at most twice
+    cyclicSort(nums);
+    List<Integer> twice = new ArrayList<>();
+    for (int i = 0; i < nums.length; i++) if (nums[i] != i + 1) twice.add(nums[i]);
+    return twice;
+}
+```
+
+**Set Mismatch** is the same read-out with exactly one wrong slot: one number was replaced by a copy of another, so the slot that isn't right holds the duplicate and its index gives the missing one.
+
+```java
+static int[] findErrorNums(int[] nums) {                 // returns {duplicate, missing}
+    cyclicSort(nums);
+    for (int i = 0; i < nums.length; i++)
+        if (nums[i] != i + 1) return new int[] { nums[i], i + 1 };
+    throw new IllegalArgumentException("nothing is missing");
+}
+```
+
+## When some values have no home
+
+The template assumes every value has a valid home. Two classic problems break that, and the fix is the same: **values without a home stay where they are.**
+
+### Missing Number: the range is 0 … n, but there are only n slots
+
+With values 0 … n in an array of length n, value `v` lives at index `v`, and the value `n` has nowhere to go. Skip it. After placement, the one slot `i` that doesn't hold `i` is the missing number; if every slot is right, the missing one is `n`.
+
+```java
+static int missingNumber(int[] nums) {
+    int i = 0, n = nums.length;
+    while (i < n) {
+        int home = nums[i];                              // range 0..n: value v belongs at index v
+        if (home < n && nums[i] != nums[home]) swap(nums, i, home);
+        else i++;
+    }
+    for (i = 0; i < n; i++) if (nums[i] != i) return i;  // the slot nobody came home to
+    return n;
+}
+```
+
+(XOR or the sum formula also solve this one in O(1) space without touching the array: see [Bit Manipulation](/dsa/patterns/bit-manipulation). Cyclic sort wins when the question grows to *several* missing numbers.)
+
+### First Missing Positive: any values at all
+
+Negatives, zeros, huge numbers and repeats are all allowed. The trick is a counting argument: **n values can cover at most 1 … n, so the answer is between 1 and n + 1.** Values outside 1 … n can't affect it, so give them no home. After placement, the first slot `i` without `i + 1` gives the answer; if every slot is right, it's n + 1.
+
+```java
+static int firstMissingPositive(int[] nums) {
+    int i = 0, n = nums.length;
+    while (i < n) {
+        int v = nums[i];
+        if (v >= 1 && v <= n && nums[v - 1] != v) swap(nums, i, v - 1);
+        else i++;                                        // out of range, or already home
+    }
+    for (i = 0; i < n; i++) if (nums[i] != i + 1) return i + 1;
+    return n + 1;
+}
+```
+
+This is a Hard problem that's ten lines once you see the pattern — and a favourite because it combines the range argument with the in-place template.
+
+| Range of values | Home of `v` | Values with no home |
+| --- | --- | --- |
+| 1 … n | `v − 1` | none |
+| 0 … n − 1 | `v` | none |
+| 0 … n (one missing) | `v` | `n` |
+| anything (first missing positive) | `v − 1` | `v < 1` or `v > n` |
+
+Step through both cases. A value with no home gets the ∅ tag and is skipped without a swap; the scan afterwards stops at the first slot nobody came home to.
+
+<CyclicSortViz examples={['missing', 'positive']} title="Values with no home, step by step" />
+
+## The other in-place trick: sign marking
+
+Cyclic sort isn't the only way to use the array as its own "seen" table. When values are **positive**, you can **mark** that `v` was seen by making `nums[v − 1]` negative. Nothing moves, so the original order survives, and flipping the signs back restores the input exactly.
+
+```java
+static List<Integer> findDisappearedByMarking(int[] nums) {
+    for (int v : nums) {
+        int home = Math.abs(v) - 1;                      // |v|: this slot may already be marked
+        if (nums[home] > 0) nums[home] = -nums[home];    // mark "|v| is present"
+    }
+    List<Integer> missing = new ArrayList<>();
+    for (int i = 0; i < nums.length; i++) {
+        if (nums[i] > 0) missing.add(i + 1);
+        else nums[i] = -nums[i];                         // undo the mark
+    }
+    return missing;
+}
+```
+
+For Find All Duplicates, the marking version reports `|v|` the moment it finds `nums[|v| − 1]` already negative. Both techniques are O(n) time and O(1) space; mention both in an interview, then pick one.
+
+| Technique | Extra space | Changes the input? | Good for |
+| --- | --- | --- | --- |
+| `HashSet` or `boolean[]` | O(n) | No | Anything — the baseline to mention first |
+| Cyclic sort | O(1) | Reorders it | Missing, duplicates, first missing positive, minimum swaps |
+| Sign marking | O(1) | Temporarily (restorable) | Missing and duplicates when all values are ≥ 1 |
+| XOR or sum | O(1) | No | Exactly one missing (or one missing + one duplicate, with more algebra) |
+| [Floyd's cycle detection](/dsa/patterns/fast-slow-pointers) | O(1) | No | The repeated value in n + 1 values from 1 … n |
+
+That last row matters: [Find the Duplicate Number](https://leetcode.com/problems/find-the-duplicate-number/) looks like a cyclic-sort problem, but it **forbids modifying the array**, which rules out both cyclic sort and sign marking. Spotting that constraint is half the problem.
+
+## Cycles: the minimum number of swaps
+
+Why the name *cyclic* sort? Draw an arrow from each index to the index its value belongs at. In a permutation, every index has exactly one arrow out and one arrow in, so the arrows split into separate **cycles**: values chasing each other's seats in a ring.
+
+<GraphViz title="A permutation is a set of cycles" directed nodes={[{ id: "3", label: "3", x: 0.15, y: 0 }, { id: "4", label: "4", x: 1.35, y: 0 }, { id: "5", label: "5", x: 2.5, y: 0 }, { id: "0", label: "0", x: 0, y: 1.5 }, { id: "2", label: "2", x: 1.25, y: 1.5 }, { id: "1", label: "1", x: 2.5, y: 1.5 }]} edges={[{ from: "0", to: "2" }, { from: "2", to: "1" }, { from: "1", to: "0", bend: 40 }, { from: "4", to: "5", bend: 16 }, { from: "5", to: "4", bend: 16 }]} frames={[
+  { notes: { "0": "holds 2", "1": "holds 0", "2": "holds 1", "3": "holds 3", "4": "holds 5", "5": "holds 4" }, note: "nums = [2, 0, 1, 3, 5, 4]: values 0..5, so value v belongs at index v. Circles are indexes; each arrow goes from an index to where its value belongs. One arrow out and one in per index, so the arrows can only form separate cycles." },
+  { highlight: ["0", "2", "1"], activeEdges: ["0>2", "2>1", "1>0"], notes: { "0": "holds 2", "1": "holds 0", "2": "holds 1", "3": "holds 3", "4": "holds 5", "5": "holds 4" }, vars: { cycles: 1, swaps: 2 }, note: "Cycle 0 → 2 → 1 → 0, length 3. Each swap sends one value home and shortens the cycle by one; the last swap sends two values home. A cycle of length L takes L − 1 swaps: 2 here." },
+  { marked: ["3"], done: ["0", "1", "2"], notes: { "0": "holds 2", "1": "holds 0", "2": "holds 1", "3": "holds 3", "4": "holds 5", "5": "holds 4" }, vars: { cycles: 2, swaps: 2 }, note: "Index 3 holds 3: a cycle of length 1. Already home, 0 swaps." },
+  { highlight: ["4", "5"], activeEdges: ["4>5", "5>4"], done: ["0", "1", "2", "3"], notes: { "0": "holds 2", "1": "holds 0", "2": "holds 1", "3": "holds 3", "4": "holds 5", "5": "holds 4" }, vars: { cycles: 3, swaps: 3 }, note: "4 ↔ 5: a cycle of length 2, so 1 swap." },
+  { notes: { "0": "holds 2", "1": "holds 0", "2": "holds 1", "3": "holds 3", "4": "holds 5", "5": "holds 4" }, vars: { cycles: 3, swaps: 3 }, note: "6 indexes, 3 cycles: 6 − 3 = 3 swaps. Nothing does better: one swap can raise the number of cycles by at most one, and a sorted array is n cycles of length 1. Array Nesting asks for the longest cycle (3 here)." }
+]} />
+
+So **minimum swaps to sort = n − (number of cycles)**, and cyclic sort performs exactly that many swaps, because each of its swaps fixes one element of one cycle. Three ladder problems use this directly.
+
+**Array Nesting** wants the longest cycle in a permutation of 0 … n − 1. Walk each cycle once and mark indexes as you pass, so no cycle is walked twice — O(n) overall.
+
+```java
+static int arrayNesting(int[] nums) {
+    int best = 0;
+    for (int start = 0; start < nums.length; start++) {
+        int len = 0;
+        for (int i = start; nums[i] >= 0; len++) {
+            int next = nums[i];
+            nums[i] = -1;                                // visited: never walked again
+            i = next;
+        }
+        best = Math.max(best, len);
+    }
+    return best;
+}
+```
+
+**Minimum swaps to sort any distinct values** (the core of *Minimum Number of Operations to Sort a Binary Tree by Level*, applied to each level): values aren't 1 … n, so first compute each value's home — its index in a sorted copy — then run cyclic sort and count the swaps. O(n log n) for the sort.
+
+```java
+static int minSwapsToSort(int[] a) {
+    int[] sorted = a.clone();
+    Arrays.sort(sorted);
+    Map<Integer, Integer> home = new HashMap<>();        // value → its index once sorted
+    for (int i = 0; i < sorted.length; i++) home.put(sorted[i], i);
+    int swaps = 0;
+    for (int i = 0; i < a.length; i++)
+        while (home.get(a[i]) != i) { swap(a, i, home.get(a[i])); swaps++; }
+    return swaps;
+}
+```
+
+**Couples Holding Hands** hides the same structure. Couples are (0, 1), (2, 3), … and seats come in pairs. For each pair of seats in turn, if the person in the left seat isn't next to their partner (`row[i] ^ 1`), fetch the partner. Each swap seats one couple for good. Why is that optimal? Treat each pair of seats as a node and each couple as an edge joining the two seat pairs its members sit in. Every node has exactly two edges, so the graph is a set of cycles; a cycle through k seat pairs needs k − 1 swaps, the same "n − cycles" count as before, and every greedy swap removes one seat pair from a cycle.
+
+```java
+static int minSwapsCouples(int[] row) {
+    int[] seat = new int[row.length];                    // seat[person] = where they sit
+    for (int i = 0; i < row.length; i++) seat[row[i]] = i;
+    int swaps = 0;
+    for (int i = 0; i < row.length; i += 2) {
+        int partner = row[i] ^ 1;                        // 0↔1, 2↔3, 4↔5…
+        if (row[i + 1] == partner) continue;
+        int j = seat[partner];                           // swap the partner into seat i + 1
+        row[j] = row[i + 1]; seat[row[j]] = j;
+        row[i + 1] = partner; seat[partner] = i + 1;
+        swaps++;
+    }
+    return swaps;
+}
+```
+
+The reference solutions check every function here against brute force on thousands of random inputs; the minimum-swap answers are checked against a breadth-first search over every arrangement.
+
+<Callout type="warning" title="Common mistakes">
+
+- **`while (nums[i] != i + 1)` as the swap condition** — loops forever on a duplicate whose home is already taken. Compare with the value at home: `nums[i] != nums[home]`.
+- **Moving `i` after a swap** — the value that just arrived at `i` hasn't been placed yet.
+- **Off-by-one homes** — 1 … n lives at `v − 1`; 0 … n − 1 lives at `v`. Write the range down before coding.
+- **Indexing with a value that has no home** — 0, negatives, `n` in Missing Number or anything above `n` throws `ArrayIndexOutOfBoundsException`. Check the range first.
+- **Computing `home` after the swap** — save it in a local first; `nums[i]` changes during the swap.
+- **Using it when the input must not change** (Find the Duplicate Number) or when the values aren't tied to n. Then it's Floyd's cycle detection, XOR, or a hash set.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 268 | [Missing Number](https://leetcode.com/problems/missing-number/) | Easy | Range 0 … n: the value n has no home |
+| 448 | [Find All Numbers Disappeared in an Array](https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/) | Easy | Read every wrong slot |
+| 645 | [Set Mismatch](https://leetcode.com/problems/set-mismatch/) | Easy | One wrong slot gives both answers |
+| 2965 | [Find Missing and Repeated Values](https://leetcode.com/problems/find-missing-and-repeated-values/) | Easy | The same idea on a grid read as one array |
+| 442 | [Find All Duplicates in an Array](https://leetcode.com/problems/find-all-duplicates-in-an-array/) | Medium | The value in a wrong slot is a duplicate |
+| 287 | [Find the Duplicate Number](https://leetcode.com/problems/find-the-duplicate-number/) | Medium | Looks like cyclic sort, but you may not modify: Floyd |
+| 565 | [Array Nesting](https://leetcode.com/problems/array-nesting/) | Medium | Walk each cycle once |
+| 2471 | [Minimum Number of Operations to Sort a Binary Tree by Level](https://leetcode.com/problems/minimum-number-of-operations-to-sort-a-binary-tree-by-level/) | Medium | Minimum swaps = n − cycles, per level |
+| 41 | [First Missing Positive](https://leetcode.com/problems/first-missing-positive/) | Hard | Ignore values outside 1 … n |
+| 765 | [Couples Holding Hands](https://leetcode.com/problems/couples-holding-hands/) | Hard | Each swap seats one couple |
+
+## Interview questions
+
+<QA q="Your cyclic sort has a while loop that doesn't always advance i. Why is it O(n) and not O(n²)?">
+Count swaps instead of loop iterations. Every swap moves one value into its home, and a value at home is never moved again, so there are at most n − 1 swaps over the whole run. Every iteration that doesn't swap increments i, which happens at most n times. So the loop runs fewer than 2n times in total: amortised O(n), the same argument as for a monotonic stack.
+</QA>
+
+<QA q="Cyclic sort, sign marking or a hash set: which would you use for Find All Numbers Disappeared?">
+I'd mention the hash set first (O(n) extra space, doesn't touch the input), then offer an O(1)-space version. Sign marking keeps the original order and can be undone, so it suits a caller who needs the array back; it needs all values to be positive. Cyclic sort reorders the array, but it also handles ranges that include 0 and leads straight to First Missing Positive and minimum-swap problems. Both are O(n) time and O(1) space; the right choice depends on whether the caller can live with a modified input.
+</QA>
+
+<QA q="Why is the minimum number of swaps to sort a permutation n minus the number of cycles?">
+A sorted array is n cycles of length 1. Swapping two elements of the same cycle splits it into two cycles; swapping elements of different cycles merges them into one. So a swap changes the number of cycles by exactly one, and at best increases it. Starting from c cycles you need at least n − c swaps to reach n, and cyclic sort achieves it, because every one of its swaps sends a value home, splitting off a cycle of length 1.
+</QA>
+
+<QA q="Find the Duplicate Number has n + 1 values in 1 … n. Why doesn't cyclic sort solve it?">
+Cyclic sort would find the duplicate in O(n) time and O(1) space, but the problem forbids modifying the array, and cyclic sort reorders it (sign marking modifies it too). The intended solution reads the array as a linked list where index i points to nums[i]: the duplicate value has two arrows into it, so it's the entrance of a cycle, which Floyd's fast and slow pointers find without changing anything. Binary search on the value range, counting how many values are at most mid, also works in O(n log n).
+</QA>
+
+<Practice task="The array holds n integers in the range 0 … n − 1, and at least one value repeats. Return any repeated value in O(n) time and O(1) extra space. You may modify the array.">
+
+Cyclic sort with home `v` (not `v − 1`, because the range starts at 0). While placing, the first time `nums[i] != i` but `nums[nums[i]] == nums[i]`, the value `nums[i]` has found its home already taken: return it. No scan afterwards is needed.
+
+```java
+static int anyDuplicate(int[] nums) {
+    int i = 0;
+    while (i < nums.length) {
+        int home = nums[i];
+        if (home == i) i++;
+        else if (nums[home] == nums[i]) return nums[i];  // its home is already taken
+        else swap(nums, i, home);
+    }
+    throw new IllegalArgumentException("no duplicate");
+}
+```
+
+</Practice>
+
+<Practice task="Return the first k missing positive numbers of an unsorted array (values can be anything). For [3, -1, 4, 5, 5] and k = 3, the answer is [1, 2, 6].">
+
+Run the First Missing Positive placement. Scanning slots 0 … n − 1, every slot `i` without `i + 1` gives a missing number `i + 1`; collect them until you have k. If you still need more, the rest come from n + 1, n + 2, …, but some of those may be in the array: a value above n has no home, so it sits in one of the wrong slots. Put the values above n that you meet in those slots into a set, and skip them while counting on from n + 1. O(n + k) time; the set holds at most n values, and only those up to n + k matter. For the example, placement gives [5, -1, 3, 4, 5]: slots 0 and 1 give 1 and 2, nothing above 5 was seen, so the third is 6.
+
+```java
+static List<Integer> firstKMissing(int[] nums, int k) {
+    int i = 0, n = nums.length;
+    while (i < n) {
+        int v = nums[i];
+        if (v >= 1 && v <= n && nums[v - 1] != v) swap(nums, i, v - 1);
+        else i++;
+    }
+    List<Integer> out = new ArrayList<>();
+    Set<Integer> above = new HashSet<>();                // values > n: present, but homeless
+    for (i = 0; i < n; i++) {
+        if (nums[i] == i + 1) continue;
+        if (out.size() < k) out.add(i + 1);              // nobody came home: i + 1 is missing
+        if (nums[i] > n) above.add(nums[i]);
+    }
+    for (int v = n + 1; out.size() < k; v++) if (!above.contains(v)) out.add(v);
+    return out;
+}
+```
+
+</Practice>
+
+<Practice task="What is the minimum number of swaps to sort [4, 3, 1, 2]? Answer by finding the cycles, not by trying swaps.">
+
+Value v belongs at index v − 1. Follow the arrows from index 0: it holds 4 → index 3, which holds 2 → index 1, which holds 3 → index 2, which holds 1 → back to index 0. One cycle of length 4, so 4 − 1 = **3 swaps**. Cyclic sort uses exactly three: [2, 3, 1, 4], then [3, 2, 1, 4], then [1, 2, 3, 4].
+
+</Practice>
+
+<Takeaways>
+
+- Values in a range tied to the length (1 … n, 0 … n) mean every value has a home index; swapping each value home sorts the array in O(n) time and O(1) space.
+- Swap while `nums[i] != nums[home]`, and move `i` only when no swap happens. Comparing values, not indexes, is what makes duplicates safe.
+- After placement, a slot `i` without `i + 1` means `i + 1` is missing and the value there is a duplicate.
+- Values with no home (0, n, negatives, anything above n) stay where they are; for First Missing Positive the answer is always in 1 … n + 1.
+- A permutation is a set of cycles; the minimum number of swaps to sort it is n − cycles, and cyclic sort achieves it.
+- If the input must stay untouched, cyclic sort is out: use Floyd's cycle detection (one repeated value), XOR or the sum formula (one missing value), or a hash set.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers), where Find the Duplicate Number shows the array-as-linked-list view.
+- Donald Knuth, *The Art of Computer Programming*, Vol. 1 — section 1.3.3, Applications to Permutations (cycle notation and rearranging in place).

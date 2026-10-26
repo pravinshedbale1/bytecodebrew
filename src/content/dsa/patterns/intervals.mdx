@@ -22,17 +22,9 @@ Whether touching counts (`[1, 3]` and `[3, 5]`) depends on the problem. Merging 
 
 ## Merge: sort by start, then one pass
 
-<ArrayViz title="Merge overlapping intervals" frames={[
-  { arr: ["8–10", "1–3", "2–6", "15–18", "9–12", "17–20"], note: "Six intervals in random order. Overlaps can hide anywhere, so first sort by start time." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], note: "Sorted by start. Now an interval can only overlap the one being built just before it — one pass is enough." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 0 }, highlight: [0], done: [], aux: { label: "merged", items: ["1–3"] }, note: "The first interval starts the merged list." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 1 }, highlight: [1], done: [0], aux: { label: "merged", items: ["1–6"] }, note: "2–6 starts at 2, before 1–3 ends — they overlap. Extend the last merged interval to end at 6." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 2 }, highlight: [2], done: [0, 1], aux: { label: "merged", items: ["1–6", "8–10"] }, note: "8–10 starts after 1–6 ends — a gap. Start a new merged interval." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 3 }, highlight: [3], done: [0, 1, 2], aux: { label: "merged", items: ["1–6", "8–12"] }, note: "9–12 starts at 9, before 8–10 ends — they overlap. Extend the last merged interval to end at 12." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 4 }, highlight: [4], done: [0, 1, 2, 3], aux: { label: "merged", items: ["1–6", "8–12", "15–18"] }, note: "15–18 starts after 8–12 ends — a gap. Start a new merged interval." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], pointers: { cur: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], aux: { label: "merged", items: ["1–6", "8–12", "15–20"] }, note: "17–20 starts at 17, before 15–18 ends — they overlap. Extend the last merged interval to end at 20." },
-  { arr: ["1–3", "2–6", "8–10", "9–12", "15–18", "17–20"], done: [0, 1, 2, 3, 4, 5], aux: { label: "merged", items: ["1–6", "8–12", "15–20"] }, note: "Done: 3 intervals. O(n log n) for the sort, O(n) for the pass." }
-]} />
+Step through it on a timeline. First the rows slide into order by start. Then each interval is compared with the end of the last merged interval (the dashed line): start ≤ end means overlap, so extend; otherwise there's a gap, so start a new merged interval.
+
+<IntervalsViz examples={['merge']} title="Merge intervals, step by step" />
 
 ```java
 static int[][] merge(int[][] intervals) {
@@ -97,6 +89,10 @@ static int eraseOverlapIntervals(int[][] intervals) {
 
 Why end, not start? Sorting by start would happily keep `[1, 100]` first and then have to drop everything inside it. The earliest-ending interval is never a worse choice than any other first choice — the classic activity-selection argument (see [Greedy](/dsa/patterns/greedy)).
 
+Step through it: after sorting by end, an interval is kept only if it starts at or after the end of the last kept one (the dashed line). Watch the long `[1, 10]` sink to the bottom and get removed.
+
+<IntervalsViz examples={['erase']} title="Remove the fewest intervals, step by step" />
+
 ### Minimum arrows to burst balloons
 
 Same idea, closed intervals: one arrow at the end of the earliest-ending balloon bursts every balloon that has already started by then.
@@ -134,6 +130,10 @@ static int minMeetingRooms(int[][] meetings) {
 ```
 
 The `<=` means a meeting ending at 3 frees its room for one starting at 3. An equivalent approach uses a min-heap of end times (see [Heaps](/dsa/patterns/heap-patterns)); the sweep line generalises to "how many X are active at the busiest moment".
+
+Step through the sweep. The vertical line jumps from start to start; before each start, every meeting that has already ended gives its room back. The meetings in a room at that moment are highlighted, so the count is easy to verify.
+
+<MeetingRoomsViz />
 
 ### Intersection of two sorted interval lists
 

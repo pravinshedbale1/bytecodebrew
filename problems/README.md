@@ -1,6 +1,6 @@
 # Practice problems with tests
 
-Every problem on the DSA practice ladders (390) can be solved on the site, LeetCode style, in Java,
+Every problem on the DSA practice ladders (397) can be solved on the site, LeetCode style, in Java,
 C++, Python or JavaScript: a starter `Solution` (or design class), **Run** on the examples and
 **Submit** on every test. Passing all tests marks the problem solved. The browser sends code to Judge0
 (`src/lib/judge0.js`). Specs and reference solutions are Java; the other languages share the tests

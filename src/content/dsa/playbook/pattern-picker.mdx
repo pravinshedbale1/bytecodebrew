@@ -19,7 +19,7 @@ If n is 10⁵, anything with nested loops over pairs is ruled out before you sta
 
 | Input is… | First patterns to consider |
 | --- | --- |
-| Unsorted array | Hashing, prefix sums, sliding window, monotonic stack, heap, sort first |
+| Unsorted array | Hashing, prefix sums, sliding window, monotonic stack, heap, sort first; values 1…n → cyclic sort |
 | **Sorted** array | Two pointers, binary search |
 | String | Sliding window, hashing (counts), two pointers, string DP, trie |
 | Intervals / ranges | Sort + [intervals](/dsa/patterns/intervals) sweep, heap |
@@ -61,6 +61,7 @@ If n is 10⁵, anything with nested loops over pairs is ruled out before you sta
 | "two strings", "edit / common / interleave" | String DP |
 | "starts with", "prefix", "autocomplete", "many words in a grid" | Trie |
 | "appears twice except one", "without extra space" on 0…n | Bit manipulation (XOR) |
+| "n numbers in the range [1, n]", "all missing / all duplicates", "first missing positive" | [Cyclic sort](/dsa/patterns/cyclic-sort) (or sign marking) |
 | "design / implement", "O(1) get and put", "evict" | Two structures combined (LRU = hash map + linked list) |
 | "spiral", "rotate the image", "in place" on a matrix | Matrix boundaries, transpose + reverse, markers |
 | "modulo 10⁹ + 7", "gcd", "prime", huge exponent | Math: modular arithmetic, sieve, fast power |
@@ -102,6 +103,7 @@ The flow gives you **candidates**, not certainty. Confirm by writing the brute f
 | BFS vs DFS on graphs | Fewest steps → BFS; explore/count regions → either; path properties → DFS |
 | Binary search vs binary search on the answer | Searching positions in sorted data vs searching a range of possible answers with a yes/no check |
 | Heap vs sorting | Need everything ordered once → sort; need the best repeatedly or on a stream → heap |
+| Cyclic sort vs fast & slow pointers (values 1…n, find the duplicate) | May you modify the array? Yes → cyclic sort; no → Floyd's cycle detection on i → nums[i] |
 | Union-find vs DFS | Edges arriving over time → union-find; static graph → either |
 | Prefix sums vs Fenwick tree | No updates → prefix sums; updates mixed with queries → Fenwick or segment tree |
 | Interval DP vs plain 2D DP | Splitting a range at every k (O(n³)) vs two indexes moving forward (O(n²)) |
