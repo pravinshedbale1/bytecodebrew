@@ -20,15 +20,9 @@ This is one of the highest-value patterns to learn: it turns many "hard-looking"
 
 Total cost: O(n · log(range)).
 
-<ArrayViz title="Koko eating bananas: search the speeds, not the piles" frames={[
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], vars: { piles: "[3, 6, 7, 11]", h: 8 }, note: "Koko eats bananas at speed k per hour (one pile per hour at most). The cells are not data — they are the possible ANSWERS k = 1…11. Find the smallest k that finishes within 8 hours." },
-  { arr: ["✗1", "✗2", "✗3", "✓4", "✓5", "✓6", "✓7", "✓8", "✓9", "✓10", "✓11"], note: "If speed k works, any faster speed also works: the answers go ✗ ✗ ✗ … ✓ ✓ ✓. That monotonic flip is all binary search needs — but we never compute every cell." },
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 0, mid: 5, hi: 10 }, window: [0, 10], highlight: [5], vars: { k: 6, hours: 6, ok: true }, note: "Speed 6 takes 6 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 0, mid: 2, hi: 5 }, window: [0, 5], highlight: [2], vars: { k: 3, hours: 10, ok: false }, note: "Speed 3 takes 10 hours > 8 — too slow, and so is everything slower: lo = mid + 1." },
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 3, mid: 4, hi: 5 }, window: [3, 5], highlight: [4], vars: { k: 5, hours: 8, ok: true }, note: "Speed 5 takes 8 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { lo: 3, mid: 3, hi: 4 }, window: [3, 4], highlight: [3], vars: { k: 4, hours: 8, ok: true }, note: "Speed 4 takes 8 hours ≤ 8 — works. Maybe slower works too: hi = mid." },
-  { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], pointers: { answer: 3 }, highlight: [3], vars: { k: 4, hours: 8 }, note: "Smallest workable speed: 4. Only 4 feasibility checks, each O(n) — O(n log max)." }
-]} />
+Step through it on Koko's problem. The number line is the range of possible answers (speeds), not the input. Every probe runs the real check, shown under the line: the hours each pile takes at that speed. ✓ and ✗ mark the probes; the search ends where ✗ turns into ✓.
+
+<AnswerSearchViz examples={['koko']} title="Koko eating bananas, step by step" />
 
 ```java
 /** First x in [lo, hi] where ok(x) is true. Same template as before, over a long range. */
@@ -91,6 +85,10 @@ static boolean canShip(int[] weights, int days, long cap) {
 
 **Split Array Largest Sum** ("split into k contiguous parts, minimise the largest part's sum") is *the same problem* with different words — the parts are days and the largest sum is the capacity. Recognising that is exactly the pattern skill.
 
+Step through it: at every probed capacity, the greedy check loads the packages day by day (the coloured groups) and counts the days.
+
+<AnswerSearchViz examples={['ship']} title="Ship within D days, step by step" />
+
 ### Minimum days to make m bouquets
 
 ```java
@@ -134,6 +132,10 @@ static boolean canPlace(int[] sorted, int m, long gap) {
 ```
 
 The greedy check ("place each ball at the first position at least `gap` after the last") is safe: placing earlier never leaves less room for the balls that follow.
+
+Step through it. Here the ✓s come first and the ✗s after, so the search looks for the first gap that fails, then steps back one.
+
+<AnswerSearchViz examples={['cows']} title="Maximise the minimum gap, step by step" />
 
 ## Minimise vs maximise
 

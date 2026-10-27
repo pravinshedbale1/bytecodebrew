@@ -28,17 +28,9 @@ Position `i` (1-based) stores the sum of the range that **ends at i** and whose 
 
 Both walks visit at most log₂ n boxes.
 
-<ArrayViz title="Fenwick tree: query prefix(7), then add 10 at position 3" frames={[
-  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], vars: { a: "[5, 2, 9, -1, 6, 3, 4, 7]" }, note: "A Fenwick tree for a = [5, 2, 9, −1, 6, 3, 4, 7] (positions 1..8). Box i stores the sum of a range ENDING at i whose length is i's lowest set bit: [7] alone, [5..6], [1..4], [1..8]. Indexes below the boxes are 0-based; the labels use the 1-based positions." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6], vars: { "prefix(7)": 4, i: 7, "next i": 6 }, note: "Query prefix(7): add box 7 (covers 7..7), then strip the lowest set bit: i = 7 − 1 = 6." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5], vars: { "prefix(7)": 13, i: 6, "next i": 4 }, note: "Query prefix(7): add box 6 (covers 5..6), then strip the lowest set bit: i = 6 − 2 = 4." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5, 3], vars: { "prefix(7)": 28, i: 4, "next i": 0 }, note: "Query prefix(7): add box 4 (covers 1..4), then strip the lowest set bit: i = 4 − 4 = 0." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 9", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [6, 5, 3], vars: { "prefix(7)": 28 }, note: "i = 0: stop. prefix(7) = 28 from 3 boxes — the boxes 7, 5..6 and 1..4 tile 1..7 with no overlap. O(log n)." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 15", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [2], vars: { update: "a[3] += 10", i: 3, "next i": 4 }, note: "Update position 3 by +10: box 3 covers 3..3, which includes 3, so add 10. Then climb: i = 3 + 1 = 4." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 35"], highlight: [3], vars: { update: "a[3] += 10", i: 4, "next i": 8 }, note: "Update position 3 by +10: box 4 covers 1..4, which includes 3, so add 10. Then climb: i = 4 + 4 = 8." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 45"], highlight: [7], vars: { update: "a[3] += 10", i: 8, "next i": 16 }, note: "Update position 3 by +10: box 8 covers 1..8, which includes 3, so add 10. Then climb: i = 8 + 8 = 16." },
-  { arr: ["[1] 5", "[1..2] 7", "[3] 19", "[1..4] 25", "[5] 6", "[5..6] 9", "[7] 4", "[1..8] 45"], highlight: [2, 3, 7], note: "i > 8: stop. Exactly the boxes whose range contains position 3 (3, 1..4 and 1..8) were updated — again O(log n). A plain prefix-sum array would need O(n) to absorb this update." }
-]} />
+Step through it: each box sits under the positions it covers, so you can see a query walk down and an update climb up.
+
+<FenwickViz examples={['query', 'update']} />
 
 ```java
 static class Fenwick {
@@ -190,6 +182,10 @@ The three query cases are what to explain in an interview:
 3. **Partial overlap**: recurse into both children and combine.
 
 At most four nodes per level are visited, so a query is O(log n).
+
+Step through a query: green nodes are used whole, orange ones are split, faded ones are outside the range.
+
+<SegTreeViz examples={['query', 'wide']} />
 
 ### Range updates: lazy propagation (awareness level)
 

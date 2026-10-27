@@ -1,0 +1,235 @@
+/* Stage layouts for the HLD step-throughs that are not plain sequences or topologies. */
+
+.pop { animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes pop {
+  0% { transform: scale(0.6) rotate(var(--tilt, 0deg)); opacity: 0; }
+  100% { transform: scale(1) rotate(var(--tilt, 0deg)); opacity: 1; }
+}
+
+/* ---- the interview */
+
+.interview { margin: 0 auto; }
+
+.timebar {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  margin: 22px 0 6px;
+}
+
+.seg {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+
+.seg span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg small { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-subtle); }
+.segDone { background: var(--color-accent-soft); color: var(--color-accent); border-color: transparent; }
+.segNow { background: var(--color-accent); color: var(--color-accent-contrast); border-color: var(--color-accent); }
+.segNow small { color: var(--color-accent-contrast); }
+
+.timeHand {
+  position: absolute;
+  top: -20px;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  transition: left 0.6s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+.signal {
+  margin: 4px 0 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.signal strong { color: var(--color-interview); }
+
+.board {
+  display: grid;
+  grid-template-columns: minmax(0, 0.48fr) minmax(0, 0.52fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 1px 1px, var(--color-border) 1px, transparent 0) 0 0 / 16px 16px,
+    var(--color-surface);
+}
+
+.boardNarrow { grid-template-columns: minmax(0, 1fr); }
+
+.board h4 {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.boardLeft { display: flex; flex-direction: column; gap: 10px; }
+.boardSec { min-height: 44px; }
+.empty { margin: 0; font-size: var(--text-xs); color: var(--color-text-subtle); font-style: italic; }
+
+.stickies { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.sticky {
+  display: inline-block;
+  padding: 6px 8px;
+  max-width: 150px;
+  border-radius: 3px 3px 10px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: 0 3px 8px -5px rgb(0 0 0 / 0.45);
+}
+
+.sticky_accent { background: var(--color-accent-soft); color: var(--color-text); border-top: 3px solid var(--color-accent); }
+.sticky_warn { background: var(--color-warn-soft); color: var(--color-text); border-top: 3px solid var(--color-warn); }
+.sticky_muted { background: var(--color-surface-muted); color: var(--color-text-muted); border-top: 3px dashed var(--color-border-strong); }
+
+.numbers { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.number {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 4px 9px;
+  border: 1.5px solid var(--color-interview);
+  border-radius: 8px;
+  background: var(--color-interview-soft);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-interview);
+}
+
+.number small { font-family: var(--font-sans); font-size: 9.5px; font-weight: 600; color: var(--color-text-muted); }
+
+.codeNotes { display: flex; flex-direction: column; gap: 4px; }
+.codeNotes code { font-family: var(--font-mono); font-size: 10.5px; padding: 3px 6px; border-radius: 5px; background: var(--color-code-bg); overflow-wrap: anywhere; }
+
+.boardRight { min-width: 0; }
+
+/* ---- estimation */
+
+.estimate { margin: 0 auto; }
+
+.assumptions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+.assumptions span {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 4px 9px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.assumptions small { font-family: var(--font-sans); font-size: 9.5px; font-weight: 600; color: var(--color-text-muted); }
+
+.cards { display: grid; gap: 8px; }
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 70px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+}
+
+.card small { font-size: 10px; font-weight: 650; color: var(--color-text-muted); }
+.card strong { font-family: var(--font-mono); font-size: 18px; font-weight: 750; }
+
+.cardNum {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-text-muted);
+}
+
+.cardGhost { border-style: dashed; background: var(--color-surface-muted); }
+.cardGhost strong { color: var(--color-text-subtle); }
+.cardDone strong { color: var(--color-text); }
+.cardNow { border-color: var(--color-accent); background: var(--color-accent-soft); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+.cardNow strong { color: var(--color-accent); }
+
+.compare {
+  margin-top: 3px;
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--color-accent);
+}
+
+/* ---- request journey: where the time went */
+
+.budget {
+  display: flex;
+  gap: 2px;
+  height: 24px;
+  margin-top: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
+.budgetPart {
+  display: grid;
+  place-items: center;
+  min-width: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: flex 0.5s ease;
+}
+
+.budgetEmpty { margin: auto; font-size: 10.5px; color: var(--color-text-subtle); font-style: italic; }
+
+.bp_interview { background: var(--color-interview-soft); color: var(--color-interview); }
+.bp_warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.bp_note { background: var(--color-note-soft); color: var(--color-note); }
+.bp_accent { background: var(--color-accent-soft); color: var(--color-accent); }
+.bp_success { background: var(--color-success-soft); color: var(--color-success); }
+.bp_muted { background: var(--color-border); color: var(--color-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop { animation: none; }
+}

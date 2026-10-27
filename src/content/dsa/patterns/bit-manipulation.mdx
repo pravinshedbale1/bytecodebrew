@@ -38,18 +38,9 @@ int lowest = n & -n;                   // isolate the lowest set bit
 
 Subtracting 1 turns the lowest 1-bit into 0 and every 0 below it into 1. AND-ing with `n` wipes all of them.
 
-<ArrayViz title="Counting set bits with n & (n − 1)" frames={[
-  { arr: ["1", "0", "1", "1", "0", "1", "0", "0"], vars: { n: 180, "set bits": 0 }, note: "Count the 1-bits of 180 (binary 10110100). Trick: n & (n − 1) clears the LOWEST set bit. Subtracting 1 flips that bit to 0 and every 0 below it to 1; AND-ing with n wipes them all." },
-  { arr: ["1", "0", "1", "1", "0", "1", "0", "0"], highlight: [5], vars: { n: 180, "n − 1": "10110011", "set bits": 0 }, note: "Lowest set bit is highlighted. n − 1 = 10110011." },
-  { arr: ["1", "0", "1", "1", "0", "0", "0", "0"], vars: { n: 176, "set bits": 1 }, note: "n & (n − 1) = 10110000 — one bit gone. count = 1." },
-  { arr: ["1", "0", "1", "1", "0", "0", "0", "0"], highlight: [3], vars: { n: 176, "n − 1": "10101111", "set bits": 1 }, note: "Lowest set bit is highlighted. n − 1 = 10101111." },
-  { arr: ["1", "0", "1", "0", "0", "0", "0", "0"], vars: { n: 160, "set bits": 2 }, note: "n & (n − 1) = 10100000 — one bit gone. count = 2." },
-  { arr: ["1", "0", "1", "0", "0", "0", "0", "0"], highlight: [2], vars: { n: 160, "n − 1": "10011111", "set bits": 2 }, note: "Lowest set bit is highlighted. n − 1 = 10011111." },
-  { arr: ["1", "0", "0", "0", "0", "0", "0", "0"], vars: { n: 128, "set bits": 3 }, note: "n & (n − 1) = 10000000 — one bit gone. count = 3." },
-  { arr: ["1", "0", "0", "0", "0", "0", "0", "0"], highlight: [0], vars: { n: 128, "n − 1": "01111111", "set bits": 3 }, note: "Lowest set bit is highlighted. n − 1 = 01111111." },
-  { arr: ["0", "0", "0", "0", "0", "0", "0", "0"], vars: { n: 0, "set bits": 4 }, note: "n & (n − 1) = 00000000 — one bit gone. count = 4." },
-  { arr: ["0", "0", "0", "0", "0", "0", "0", "0"], vars: { "set bits": 4 }, note: "n is 0 after 4 steps: 4 set bits. The loop runs once per 1-bit, not once per bit. (Also: n > 0 && (n & (n − 1)) == 0 means \"power of two\".)" }
-]} />
+Step through it bit by bit: the lowest 1-bit is highlighted, and n − 1 flips it and everything below it.
+
+<BitsViz examples={['popcount']} />
 
 ```java
 static int hammingWeight(int n) {               // number of 1-bits
@@ -102,6 +93,10 @@ static int missingNumber(int[] a) {
 ```
 
 (The sum formula `n(n + 1)/2 − sum` also works; XOR has no overflow concerns. When several numbers are missing, or there are duplicates too, use [cyclic sort](/dsa/patterns/cyclic-sort).)
+
+Step through both: watch each pair of equal values cancel out in the running XOR.
+
+<BitsViz examples={['single', 'missing']} />
 
 ## Identity 3: count each bit position
 

@@ -1,0 +1,261 @@
+/* The load-balancer step-through: people send requests, the balancer picks, servers juggle jobs. */
+
+.t_accent { --tone: var(--color-accent); --tone-soft: var(--color-accent-soft); }
+.t_note { --tone: var(--color-note); --tone-soft: var(--color-note-soft); }
+.t_interview { --tone: var(--color-interview); --tone-soft: var(--color-interview-soft); }
+.t_warn { --tone: var(--color-warn); --tone-soft: var(--color-warn-soft); }
+
+.pop { animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.lb { margin: 0 auto; }
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tone);
+  color: var(--color-surface);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---- people waiting to send */
+
+.queue { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.q:not(:has(svg)) { padding: 2px; }   /* phones drop the job icon */
+
+.q {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 5px 2px 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  transition: opacity 0.4s, transform 0.4s, box-shadow 0.4s;
+}
+
+.qWait { opacity: 0.85; }
+.qGone { opacity: 0.2; transform: scale(0.85); }
+.qNow { background: var(--color-surface); box-shadow: 0 0 0 2px var(--color-accent), 0 6px 14px -8px rgb(0 0 0 / 0.5); transform: translateY(-3px) scale(1.12); color: var(--color-text); }
+
+/* ---- the balancer and what it says */
+
+.hub { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; }
+
+.lbBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px solid var(--color-accent);
+  border-radius: 12px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.bubble {
+  position: relative;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bubble::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  border: 6px solid transparent;
+  border-right-color: var(--color-text);
+  border-left: 0;
+  transform: translateY(-50%);
+}
+
+/* ---- routes to the servers, and the request travelling along one */
+
+.routes { position: relative; height: 40px; }
+.routes svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.route, .routeOn, .routeBad { fill: none; vector-effect: non-scaling-stroke; }
+.route { stroke: var(--color-border-strong); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.routeOn { stroke: var(--color-accent); stroke-width: 3; stroke-dasharray: 8 5; animation: flow 0.6s linear infinite; }
+.routeBad { stroke: var(--color-danger); stroke-width: 2; stroke-dasharray: 2 4; }
+
+@keyframes flow { to { stroke-dashoffset: -13; } }
+
+.token {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 50%;
+  display: grid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--color-surface), 0 6px 14px -6px rgb(0 0 0 / 0.6);
+  transform: translate(-50%, -50%);
+  animation: fly 0.9s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+
+@keyframes fly {
+  0% { left: 50%; top: 0; opacity: 1; }
+  85% { left: var(--x2); top: 100%; opacity: 1; }
+  100% { left: var(--x2); top: 100%; opacity: 0; }
+}
+
+.tokenBounce { animation: bounce 1.8s cubic-bezier(0.45, 0, 0.25, 1) forwards; }
+
+@keyframes bounce {
+  0% { left: 50%; top: 0; opacity: 1; }
+  35% { left: var(--x1); top: 100%; }
+  42% { left: calc(var(--x1) - 2%); top: 100%; }
+  49% { left: calc(var(--x1) + 2%); top: 100%; }
+  56% { left: var(--x1); top: 70%; }
+  90% { left: var(--x2); top: 100%; opacity: 1; }
+  100% { left: var(--x2); top: 100%; opacity: 0; }
+}
+
+/* ---- the servers */
+
+.servers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  transition: background 0.4s, border-color 0.4s, box-shadow 0.4s, opacity 0.4s;
+}
+
+.load_calm { background: var(--color-surface); }
+.load_ok { background: var(--color-success-soft); border-color: color-mix(in srgb, var(--color-success) 45%, transparent); }
+.load_warm { background: var(--color-warn-soft); border-color: var(--color-warn); }
+.load_hot { background: var(--color-danger-soft); border-color: var(--color-danger); }
+.load_down { background: var(--color-surface-muted); border-style: dashed; border-color: var(--color-danger); opacity: 0.75; }
+
+.cardPick { box-shadow: 0 0 0 4px var(--color-accent-soft); border-color: var(--color-accent); }
+.cardMost { box-shadow: 0 0 0 4px var(--color-warn-soft); }
+
+.cardHead { display: flex; align-items: center; gap: 5px; font-size: 12.5px; }
+.cardHead svg { color: var(--color-text-muted); }
+.load_down .cardHead svg { color: var(--color-danger); }
+
+.weight {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.load_warm .status { color: var(--color-warn); border-color: var(--color-warn); }
+.load_hot .status, .load_down .status { color: var(--color-danger); border-color: var(--color-danger); }
+
+.checks { display: flex; align-items: center; gap: 3px; color: var(--color-text-muted); }
+
+.checks i {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.checks .ok { background: var(--color-success-soft); color: var(--color-success); }
+.checks .miss { background: var(--color-danger); color: var(--color-surface); }
+
+.jobs { display: flex; flex-direction: column; gap: 4px; min-height: 26px; }
+
+.job {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px 3px 3px;
+  border-radius: 9px;
+  background: var(--color-surface);
+  box-shadow: 0 2px 6px -4px rgb(0 0 0 / 0.4);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.job svg { color: var(--color-text-muted); }
+.jobLabel { grid-column: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job small { grid-column: 4; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted); }
+
+.timeLeft { grid-column: 2 / 5; height: 4px; border-radius: 2px; background: var(--color-surface-muted); overflow: hidden; }
+.timeLeft i { display: block; height: 100%; background: var(--color-accent); transition: width 0.6s ease; }
+
+.jobNew { animation: drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s both; }
+
+@keyframes drop {
+  0% { transform: translateY(-14px) scale(0.6); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+.jobDone {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 10.5px;
+  font-weight: 700;
+  animation: fadeOut 2.4s ease forwards;
+}
+
+@keyframes fadeOut {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0.35; }
+}
+
+.free { font-size: 11px; font-style: italic; color: var(--color-text-subtle); }
+
+.work { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 6px; margin-top: auto; font-size: 10px; color: var(--color-text-muted); }
+.work span:first-child { grid-column: 1 / -1; }
+.work b { font-family: var(--font-mono); font-size: 11px; color: var(--color-text); }
+.workBar { height: 6px; border-radius: 3px; background: var(--color-surface-muted); overflow: hidden; }
+.workBar i { display: block; height: 100%; background: var(--color-text-subtle); transition: width 0.6s ease; }
+.cardMost .workBar i { background: var(--color-warn); }
+
+.legendRow { display: inline-flex; align-items: center; gap: 3px; }
+
+.swatch { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border: 1px solid var(--color-border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop, .routeOn, .token, .tokenBounce, .jobNew, .jobDone { animation: none; }
+  .token { display: none; }
+  .q, .card, .timeLeft i, .workBar i { transition: none; }
+}

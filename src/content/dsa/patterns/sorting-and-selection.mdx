@@ -89,6 +89,10 @@ static int[] topKFrequent(int[] nums, int k) {
 
 A heap does it in O(n log k) (see [Heaps](/dsa/patterns/heap-patterns)); buckets do it in O(n). Mentioning both is a strong answer.
 
+Step through both ideas: counting sort uses each value as an index, and Top K Frequent uses each count as an index.
+
+<BucketViz examples={['counting', 'topk']} />
+
 ### H-Index with counting
 
 > The h-index is the largest h such that at least h papers have h or more citations.
@@ -113,17 +117,9 @@ static int hIndex(int[] citations) {
 
 To find the k-th largest, you don't need the full order — just the element that would land at index `n − k`. **Partition** around a pivot (as in quicksort), and the pivot ends up at its final sorted position. Then continue into **only one side**.
 
-<ArrayViz title="One partition step" frames={[
-  { arr: [7, 2, 9, 4, 3, 8, 5], pointers: { pivot: 6 }, highlight: [6], vars: { pivot: 5 }, note: "Partition around the pivot 5 (parked at the end). Goal: smaller values to the left, larger to the right. Shaded = \"smaller than pivot\" zone, which grows from the left." },
-  { arr: [7, 2, 9, 4, 3, 8, 5], pointers: { store: 0, i: 0 }, highlight: [0], vars: { pivot: 5 }, note: "7 ≥ 5: leave it. Only i moves." },
-  { arr: [2, 7, 9, 4, 3, 8, 5], pointers: { store: 0, i: 1 }, window: [0, 0], highlight: [0], vars: { pivot: 5 }, note: "2 < 5: swap it into the smaller zone at position 0, then store++." },
-  { arr: [2, 7, 9, 4, 3, 8, 5], pointers: { store: 1, i: 2 }, window: [0, 0], highlight: [2], vars: { pivot: 5 }, note: "9 ≥ 5: leave it. Only i moves." },
-  { arr: [2, 4, 9, 7, 3, 8, 5], pointers: { store: 1, i: 3 }, window: [0, 1], highlight: [1], vars: { pivot: 5 }, note: "4 < 5: swap it into the smaller zone at position 1, then store++." },
-  { arr: [2, 4, 3, 7, 9, 8, 5], pointers: { store: 2, i: 4 }, window: [0, 2], highlight: [2], vars: { pivot: 5 }, note: "3 < 5: swap it into the smaller zone at position 2, then store++." },
-  { arr: [2, 4, 3, 7, 9, 8, 5], pointers: { store: 3, i: 5 }, window: [0, 2], highlight: [5], vars: { pivot: 5 }, note: "8 ≥ 5: leave it. Only i moves." },
-  { arr: [2, 4, 3, 5, 9, 8, 7], pointers: { pivot: 3 }, window: [0, 2], highlight: [3], vars: { "pivot index": 3 }, note: "Swap the pivot into position 3. It is now exactly where it would be in sorted order: everything left is smaller, everything right is larger." },
-  { arr: [2, 4, 3, 5, 9, 8, 7], pointers: { pivot: 3 }, highlight: [3], done: [0, 1, 2], vars: { "pivot index": 3, want: 4 }, note: "Looking for index 4 (the 3rd largest)? 4 > 3, so the answer is on the right. Discard the left side — and never sort it. Average total work n + n/2 + n/4 + … ≈ 2n." }
-]} />
+Step through a full quickselect. The shaded zones show the partition invariant (smaller than the pivot on the left, not smaller after it). The pivot then drops into its final sorted place (✓), and only the side holding the target index survives.
+
+<QuickselectViz examples={['basic', 'dups']} />
 
 ```java
 static int findKthLargest(int[] a, int k, Random rnd) {

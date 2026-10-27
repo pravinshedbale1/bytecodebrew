@@ -35,14 +35,9 @@ static int firstTrue(int lo, int hi, IntPredicate ok) {
 }
 ```
 
-<ArrayViz title="First index with a[i] ≥ 8" frames={[
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { lo: 0 }, window: [0, 9], vars: { x: 8, condition: "a[i] ≥ 8" }, note: "Find the FIRST index where a[i] ≥ 8. The answer is somewhere in [lo, hi) — shaded. hi = 10 (past the end) means \"maybe none\"." },
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { lo: 0, mid: 5 }, window: [0, 9], highlight: [5], done: [], vars: { x: 8, "a[mid]": 8, ok: true }, note: "a[5] = 8 ≥ 8: true. mid might be the first one, so keep it: hi = mid." },
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { lo: 0, mid: 2, hi: 5 }, window: [0, 4], highlight: [2], done: [5, 6, 7, 8, 9], vars: { x: 8, "a[mid]": 3, ok: false }, note: "a[2] = 3 < 8: false. mid and everything left of it are out: lo = mid + 1." },
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { lo: 3, mid: 4, hi: 5 }, window: [3, 4], highlight: [4], done: [0, 1, 2, 5, 6, 7, 8, 9], vars: { x: 8, "a[mid]": 8, ok: true }, note: "a[4] = 8 ≥ 8: true. mid might be the first one, so keep it: hi = mid." },
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { lo: 3, mid: 3, hi: 4 }, window: [3, 3], highlight: [3], done: [0, 1, 2, 4, 5, 6, 7, 8, 9], vars: { x: 8, "a[mid]": 5, ok: false }, note: "a[3] = 5 < 8: false. mid and everything left of it are out: lo = mid + 1." },
-  { arr: [1, 3, 3, 5, 8, 8, 8, 10, 13, 17], pointers: { "lo=hi": 4 }, highlight: [4], done: [0, 1, 2, 3, 5, 6, 7, 8, 9], vars: { x: 8, answer: 4 }, note: "lo meets hi at 4: the first 8. 4 checks instead of scanning — log₂(10) ≈ 4." }
-]} />
+Step through it. The row under the cells is the condition, false…true, but it stays hidden (?) except where `mid` probes it: binary search never needs the rest. Each probe drops half of the candidates. Try the other two examples: a missing x gives its insert position, and "last x" reuses the same template with `a[i] > x`.
+
+<FirstTrueViz examples={['lower', 'insert', 'upper']} />
 
 Why this template never loops forever or skips the answer:
 
@@ -124,6 +119,10 @@ static int searchRotated(int[] a, int target) {
 
 (An alternative that reuses the template: find the rotation point with `findMin`'s condition, then run a normal lower bound on the correct half.)
 
+Step through it. The dots above the cells show the two ascending runs. At each probe the bracket marks the sorted half, and the only question is whether the target lies between that half's two ends.
+
+<RotatedSearchViz examples={['found', 'missing']} />
+
 ### Find a peak element
 
 > Neighbours always differ. Return any index that is greater than its neighbours.
@@ -135,6 +134,10 @@ static int findPeakElement(int[] a) {
     return firstTrue(0, a.length - 1, i -> a[i] > a[i + 1]);   // the last index if it never goes down
 }
 ```
+
+The same template, unchanged, on three different conditions. In the square root the cells are plain integers, not an array. The rotated minimum uses `a[i] <= a[last]`. The peak shows the template ending on a flip even when the condition isn't monotonic.
+
+<FirstTrueViz examples={['sqrt', 'rotmin', 'peak']} title="One template, three more conditions" />
 
 ### Search a 2D matrix
 

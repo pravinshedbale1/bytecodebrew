@@ -31,15 +31,7 @@ flowchart LR
   R -->|"wait"| R
 ```
 
-<ArrayViz title="Stock with cooldown: three states per day" frames={[
-  { arr: [1, 2, 3, 0, 2], vars: { hold: "−∞", sold: 0, rest: 0 }, note: "Stock with cooldown, prices [1, 2, 3, 0, 2]. Three states at the end of each day: hold (own a share), sold (sold today, so tomorrow is a forced rest), rest (no share, free to buy). Each value = best profit so far in that state." },
-  { arr: [1, 2, 3, 0, 2], pointers: { day: 0 }, highlight: [0], vars: { hold: "−1", sold: "−∞", rest: 0 }, note: "Day 0, price 1. sold = yesterday's hold + 1 = −∞. hold = max(keep −∞, buy from rest 0 − 1 = −1) = −1. rest = max(0, yesterday's sold 0) = 0." },
-  { arr: [1, 2, 3, 0, 2], pointers: { day: 1 }, highlight: [1], vars: { hold: "−1", sold: 1, rest: 0 }, note: "Day 1, price 2. sold = yesterday's hold + 2 = 1. hold = max(keep −1, buy from rest 0 − 2 = −2) = −1. rest = max(0, yesterday's sold −∞) = 0." },
-  { arr: [1, 2, 3, 0, 2], pointers: { day: 2 }, highlight: [2], vars: { hold: "−1", sold: 2, rest: 1 }, note: "Day 2, price 3. sold = yesterday's hold + 3 = 2. hold = max(keep −1, buy from rest 0 − 3 = −3) = −1. rest = max(0, yesterday's sold 1) = 1." },
-  { arr: [1, 2, 3, 0, 2], pointers: { day: 3 }, highlight: [3], vars: { hold: 1, sold: "−1", rest: 2 }, note: "Day 3, price 0. sold = yesterday's hold + 0 = −1. hold = max(keep −1, buy from rest 1 − 0 = 1) = 1. rest = max(1, yesterday's sold 2) = 2." },
-  { arr: [1, 2, 3, 0, 2], pointers: { day: 4 }, highlight: [4], vars: { hold: 1, sold: 3, rest: 2 }, note: "Day 4, price 2. sold = yesterday's hold + 2 = 3. hold = max(keep 1, buy from rest 2 − 2 = 0) = 1. rest = max(2, yesterday's sold −1) = 2." },
-  { arr: [1, 2, 3, 0, 2], done: [], vars: { answer: 3 }, note: "Answer = max(sold, rest) = 3 (buy 1, sell 2, cool down, buy 0, sell 2). Three numbers per day replace an exponential search over buy/sell/wait sequences — O(n) time, O(1) memory." }
-]} />
+<DpGridViz examples={['stock']} />
 
 ```java
 static int maxProfitCooldown(int[] prices) {

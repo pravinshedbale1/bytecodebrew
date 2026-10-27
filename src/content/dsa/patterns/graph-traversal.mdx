@@ -68,6 +68,10 @@ static int area(int[][] g, int r, int c) {
 
 Same shape as tree DFS: the answer for a cell is 1 plus the answers from its neighbours — with the visited mark preventing double counting.
 
+Step through both: each island gets its own colour as the DFS floods it, and the small numbers show how deep the recursion is.
+
+<IslandsViz examples={['count', 'area']} />
+
 ## BFS: explore in rings of distance
 
 BFS visits nodes in order of their distance from the start, so the **first time it reaches a node is by a shortest path** (in an unweighted graph). Use BFS whenever the question says "fewest steps", "shortest", or "minimum time".
@@ -110,17 +114,17 @@ static int shortestPathBinaryMatrix(int[][] grid) {
 }
 ```
 
+Step through it ring by ring: every cell in a ring is the same number of steps from the start.
+
+<GridBfsViz examples={['path']} />
+
 ## Multi-source BFS: many starting points at once
 
 When something spreads from **several** sources simultaneously, put **all of them** in the queue before starting. BFS levels then measure the distance from the *nearest* source.
 
-<ArrayViz title="Rotting oranges: all rotten oranges start in the queue" frames={[
-  { grid: [["R", "F", "F", "·"], ["F", "F", "·", "F"], ["·", "F", "F", "F"], ["·", "·", "F", "R"]], window: [[0, 0], [3, 3]], vars: { minute: 0, fresh: 9 }, note: "R = rotten, F = fresh, · = empty. Every minute, rot spreads to fresh neighbours. Put ALL rotten oranges in the queue at the start — multi-source BFS — so they spread at the same time." },
-  { grid: [["R", "R", "F", "·"], ["R", "F", "·", "F"], ["·", "F", "F", "R"], ["·", "·", "R", "R"]], highlight: [[1, 0], [0, 1], [2, 3], [3, 2]], done: [[0, 0], [3, 3]], vars: { minute: 1, fresh: 5 }, note: "Minute 1: the 2 oranges in the queue rot 4 neighbours (highlighted). They form the next BFS level." },
-  { grid: [["R", "R", "R", "·"], ["R", "R", "·", "R"], ["·", "F", "R", "R"], ["·", "·", "R", "R"]], highlight: [[1, 1], [0, 2], [1, 3], [2, 2]], done: [[0, 0], [3, 3], [1, 0], [0, 1], [2, 3], [3, 2]], vars: { minute: 2, fresh: 1 }, note: "Minute 2: the 4 oranges in the queue rot 4 neighbours (highlighted). They form the next BFS level." },
-  { grid: [["R", "R", "R", "·"], ["R", "R", "·", "R"], ["·", "R", "R", "R"], ["·", "·", "R", "R"]], highlight: [[2, 1]], done: [[0, 0], [3, 3], [1, 0], [0, 1], [2, 3], [3, 2], [1, 1], [0, 2], [1, 3], [2, 2]], vars: { minute: 3, fresh: 0 }, note: "Minute 3: the 4 oranges in the queue rot 1 neighbour (highlighted). They form the next BFS level." },
-  { grid: [["R", "R", "R", "·"], ["R", "R", "·", "R"], ["·", "R", "R", "R"], ["·", "·", "R", "R"]], done: [[0, 0], [3, 3], [1, 0], [0, 1], [2, 3], [3, 2], [1, 1], [0, 2], [1, 3], [2, 2], [2, 1]], vars: { minute: 3, fresh: 0 }, note: "No fresh oranges left after 3 minutes. BFS levels = minutes, because BFS reaches every cell by the shortest number of steps." }
-]} />
+Step through it minute by minute; the second example has an orange that the rot can never reach.
+
+<GridBfsViz examples={['oranges', 'stuck']} />
 
 ```java
 static int orangesRotting(int[][] grid) {

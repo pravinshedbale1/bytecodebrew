@@ -88,6 +88,10 @@ When membership changes, only one arc of the ring is affected:
 With virtual nodes, this happens for each of the server's vnodes, so the moved data comes from (or goes to) many different servers in small slices.
 
 
+Step through it first: lookups, a server joining, a server leaving, and virtual nodes evening out the shares. Then try your own changes in the simulator below.
+
+<RingViz examples={['lookup', 'add', 'remove', 'vnodes']} />
+
 <HashRingSim />
 
 ## Implementation sketch

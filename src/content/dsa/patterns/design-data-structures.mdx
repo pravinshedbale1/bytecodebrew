@@ -38,17 +38,9 @@ If no single row covers every operation, pick two rows whose strengths cover eac
 
 The map stores **key → list node**, so after a lookup you can unlink the node directly, without searching.
 
-<ArrayViz title="LRU cache with capacity 3" frames={[
-  { arr: ["(empty)"], highlight: [], aux: { label: "map keys", items: [] }, note: "Capacity 3. The list keeps keys in order of use: most recent at the front (left), least recent at the back. The hash map points at each list node, so we can find and move any key in O(1)." },
-  { arr: ["1:A"], highlight: [0], pointers: { MRU: 0, LRU: 0 }, aux: { label: "map keys", items: [1] }, note: "put(1, A): new key — add a node at the front and to the map." },
-  { arr: ["2:B", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 1 }, aux: { label: "map keys", items: [1, 2] }, note: "put(2, B): new key — add a node at the front and to the map." },
-  { arr: ["3:C", "2:B", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 2, 3] }, note: "put(3, C): new key — add a node at the front and to the map." },
-  { arr: ["1:A", "3:C", "2:B"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 2, 3] }, note: "get(1) → A: found through the map; unlink the node and move it to the front — it's now the most recent." },
-  { arr: ["4:D", "1:A", "3:C"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "put(4, D): full, so evict the node at the back (key 2), remove 2 from the map, then add 4 at the front." },
-  { arr: ["4:D", "1:A", "3:C"], highlight: [], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "get(2) → −1: not in the map." },
-  { arr: ["3:Z", "4:D", "1:A"], highlight: [0], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "put(3, Z): 3 exists — update the value and move it to the front." },
-  { arr: ["3:Z", "4:D", "1:A"], highlight: [], pointers: { MRU: 0, LRU: 2 }, aux: { label: "map keys", items: [1, 3, 4] }, note: "Every operation is a map lookup plus a constant number of pointer changes: O(1). The list answers \"who is least recent?\"; the map answers \"where is key k?\". Neither can do both alone." }
-]} />
+Step through it: the map's arrows point straight at list nodes, a used node slides to the front, and the node at the back is the one evicted.
+
+<LruViz examples={['lesson', 'refresh']} />
 
 ```java
 static class LRUCache {

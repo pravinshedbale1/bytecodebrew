@@ -88,6 +88,10 @@ Failover is full of pitfalls:
 - **Split brain.** If the old leader didn't actually die (just a network partition), two nodes may both believe they're the leader and accept conflicting writes. Systems use **fencing** — e.g., epoch numbers or STONITH ("shoot the other node in the head") — to ensure the old leader can't continue writing.
 - **Reused IDs.** A newly promoted leader that missed some auto-increment values may hand out IDs that the old leader already used.
 
+Step through single-leader replication message by message: a semi-synchronous write, a stale read caused by lag, and a failover. Each node shows the end of its replication log.
+
+<ReplicationViz examples={['semisync', 'lag', 'failover']} />
+
 ## Multi-leader replication
 
 Multiple nodes accept writes, and each replicates its changes to the others.
@@ -168,6 +172,10 @@ Common configurations:
 | N=3, W=3, R=1 | Fast reads; writes fail if any node is down |
 | N=3, W=1, R=3 | Fast writes; reads fail if any node is down |
 | W + R ≤ N | Faster and more available, but reads may be stale (eventual consistency) |
+
+Here is the N = 3, W = 2, R = 2 case step by step, including the read repair and what goes wrong with R = 1.
+
+<ReplicationViz examples={['quorum']} />
 
 ### Keeping replicas in sync
 

@@ -22,17 +22,9 @@ Walk left to right. The stack holds indexes that **haven't found their next grea
 
 Because we pop everything smaller before pushing, the waiting values are always in **decreasing** order from bottom to top — that's the "monotonic" part.
 
-<ArrayViz title="Next greater element with a monotonic stack" frames={[
-  { arr: [2, 1, 2, 4, 3, 1, 5], aux: { label: "stack (waiting, as values)", items: [] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "Next greater element for every position. The stack holds indexes still WAITING for a bigger number — their values are always decreasing from bottom to top." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 0 }, highlight: [0], aux: { label: "stack (waiting, as values)", items: [2] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "2 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 1 }, highlight: [1], aux: { label: "stack (waiting, as values)", items: [2, 1] }, vars: { answers: "? ? ? ? ? ? ?" }, note: "1 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 2 }, highlight: [1], aux: { label: "stack (waiting, as values)", items: [2, 2] }, vars: { answers: "? 2 ? ? ? ? ?" }, note: "2 is bigger than 1 on top of the stack — it's their next greater. Pop them, record 2, then push 2 to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 3 }, highlight: [2, 0], aux: { label: "stack (waiting, as values)", items: [4] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "4 is bigger than 2, 2 on top of the stack — it's their next greater. Pop them, record 4, then push 4 to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 4 }, highlight: [4], aux: { label: "stack (waiting, as values)", items: [4, 3] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "3 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 5 }, highlight: [5], aux: { label: "stack (waiting, as values)", items: [4, 3, 1] }, vars: { answers: "4 2 4 ? ? ? ?" }, note: "1 isn't bigger than the top of the stack, so nobody is resolved. Push it to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], pointers: { i: 6 }, highlight: [5, 4, 3], aux: { label: "stack (waiting, as values)", items: [5] }, vars: { answers: "4 2 4 5 5 5 ?" }, note: "5 is bigger than 1, 3, 4 on top of the stack — it's their next greater. Pop them, record 5, then push 5 to wait." },
-  { arr: [2, 1, 2, 4, 3, 1, 5], aux: { label: "stack (waiting, as values)", items: [] }, vars: { answers: "4 2 4 5 5 5 -1" }, note: "Anything still waiting has no greater element to its right: −1. Every index was pushed once and popped at most once — O(n)." }
-]} />
+Step through it. Striped bars are still waiting on the stack; when a bigger one arrives, an arrow shows which waiting bars it answers. The temperatures example records the distance instead of the value, and the last one flips the comparison for the next smaller element.
+
+<NextGreaterViz examples={['nge', 'temps', 'nse']} />
 
 ```java
 static int[] nextGreater(int[] a) {
@@ -122,6 +114,10 @@ static int largestRectangleArea(int[] h) {
 
 The **sentinel** (a height-0 bar after the end) saves a second cleanup loop — a trick worth reusing.
 
+Step through it: every pop draws the rectangle that bar can make, and the best one stays outlined.
+
+<HistogramViz examples={['classic', 'rising', 'mixed']} />
+
 ### Sum of subarray minimums — counting contributions
 
 > Sum the minimum of every subarray.
@@ -195,6 +191,10 @@ static int[] maxSlidingWindow(int[] a, int k) {
     return out;
 }
 ```
+
+Step through it: watch values leave from the back when a bigger one arrives, and from the front when they slide out of the window.
+
+<SlidingMaxViz examples={['mixed', 'falling', 'rising']} />
 
 <Callout type="warning" title="Common mistakes">
 

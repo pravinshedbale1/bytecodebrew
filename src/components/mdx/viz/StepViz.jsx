@@ -18,7 +18,7 @@ import styles from './StepViz.module.css';
  *   rule(input) → string                  one line under the input
  *   stats(step, input) → [[label, value]]
  *   legend(step, input) → [[<Key/>, text]]
- *   fields(input) → [{ name, label, placeholder, short? }]   the "try your own" inputs
+ *   fields(input) → [{ name, label, placeholder, short? }]   the "try your own" inputs (omit for scripted walkthroughs)
  *   values(input) → { name: text }        prefills them
  *   parse(values, input) → { input } | { error }
  *   random(input) → input
@@ -124,7 +124,7 @@ function Run({ spec, steps, input }) {
       </div>
 
       {/* sticks to the bottom of the screen while any part of the visual is in view */}
-      <div className={styles.dock}>
+      <div className={styles.dock} data-sticky-dock>
         <VizControls s={s} count={steps.length} />
       </div>
     </div>
@@ -135,7 +135,7 @@ export function StepViz({ spec, examples, title }) {
   const keys = examples?.length ? examples : Object.keys(spec.examples).slice(0, 1);
   const first = spec.examples[keys[0]];
   const [run, setRun] = useState({ id: 0, example: keys[0], input: first.input, own: false });
-  const [values, setValues] = useState(() => spec.values(first.input));
+  const [values, setValues] = useState(() => spec.values?.(first.input) ?? {});
   const [error, setError] = useState('');
   const steps = useMemo(() => spec.simulate(run.input), [spec, run]);
 
@@ -143,7 +143,7 @@ export function StepViz({ spec, examples, title }) {
   const pick = (key) => {
     const input = spec.examples[key].input;
     setError('');
-    setValues(spec.values(input));
+    setValues(spec.values?.(input) ?? {});
     start({ example: key, input, own: false });
   };
   const submit = (e) => {
@@ -185,6 +185,7 @@ export function StepViz({ spec, examples, title }) {
 
       <Run key={run.id} spec={spec} steps={steps} input={run.input} />
 
+      {spec.fields && (
       <details className={styles.own}>
         <summary>Try your own input</summary>
         <form className={styles.form} onSubmit={submit}>
@@ -205,6 +206,7 @@ export function StepViz({ spec, examples, title }) {
         </form>
         <p className={error ? styles.error : styles.formHint}>{error || spec.hint(run.input)}</p>
       </details>
+      )}
     </figure>
   );
 }

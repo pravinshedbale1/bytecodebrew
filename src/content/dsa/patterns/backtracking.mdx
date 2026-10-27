@@ -26,31 +26,9 @@ flowchart TD
 
 Every node is a subset — eight nodes, eight subsets. Backtracking is a DFS over this tree, building the current node in one shared `path` list.
 
-<ArrayViz title="Choose, explore, un-choose" frames={[
-  { arr: [1, 2, 3], highlight: [], aux: { label: "path", items: [] }, vars: { found: 1 }, note: "Record [] — every node of the decision tree is a subset. (1 so far)", pointers: { start: 0 } },
-  { arr: [1, 2, 3], highlight: [0], aux: { label: "path", items: [1] }, vars: { found: 1 }, note: "Choose 1 → path [1]. Explore only elements AFTER index 0, so [2,1] can never appear after [1,2].", pointers: { i: 0 } },
-  { arr: [1, 2, 3], highlight: [0], aux: { label: "path", items: [1] }, vars: { found: 2 }, note: "Record [1] — every node of the decision tree is a subset. (2 so far)", pointers: { start: 1 } },
-  { arr: [1, 2, 3], highlight: [0, 1], aux: { label: "path", items: [1, 2] }, vars: { found: 2 }, note: "Choose 2 → path [1,2]. Explore only elements AFTER index 1, so [2,1] can never appear after [1,2].", pointers: { i: 1 } },
-  { arr: [1, 2, 3], highlight: [0, 1], aux: { label: "path", items: [1, 2] }, vars: { found: 3 }, note: "Record [1,2] — every node of the decision tree is a subset. (3 so far)", pointers: { start: 2 } },
-  { arr: [1, 2, 3], highlight: [0, 1, 2], aux: { label: "path", items: [1, 2, 3] }, vars: { found: 3 }, note: "Choose 3 → path [1,2,3]. Explore only elements AFTER index 2, so [2,1] can never appear after [1,2].", pointers: { i: 2 } },
-  { arr: [1, 2, 3], highlight: [0, 1, 2], aux: { label: "path", items: [1, 2, 3] }, vars: { found: 4 }, note: "Record [1,2,3] — every node of the decision tree is a subset. (4 so far)" },
-  { arr: [1, 2, 3], highlight: [0, 1], aux: { label: "path", items: [1, 2] }, vars: { found: 4 }, note: "Un-choose 3 → path back to [1,2], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [0], aux: { label: "path", items: [1] }, vars: { found: 4 }, note: "Un-choose 2 → path back to [1], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [0, 2], aux: { label: "path", items: [1, 3] }, vars: { found: 4 }, note: "Choose 3 → path [1,3]. Explore only elements AFTER index 2, so [2,1] can never appear after [1,2].", pointers: { i: 2 } },
-  { arr: [1, 2, 3], highlight: [0, 2], aux: { label: "path", items: [1, 3] }, vars: { found: 5 }, note: "Record [1,3] — every node of the decision tree is a subset. (5 so far)" },
-  { arr: [1, 2, 3], highlight: [0], aux: { label: "path", items: [1] }, vars: { found: 5 }, note: "Un-choose 3 → path back to [1], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [], aux: { label: "path", items: [] }, vars: { found: 5 }, note: "Un-choose 1 → path back to [], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [1], aux: { label: "path", items: [2] }, vars: { found: 5 }, note: "Choose 2 → path [2]. Explore only elements AFTER index 1, so [2,1] can never appear after [1,2].", pointers: { i: 1 } },
-  { arr: [1, 2, 3], highlight: [1], aux: { label: "path", items: [2] }, vars: { found: 6 }, note: "Record [2] — every node of the decision tree is a subset. (6 so far)", pointers: { start: 2 } },
-  { arr: [1, 2, 3], highlight: [1, 2], aux: { label: "path", items: [2, 3] }, vars: { found: 6 }, note: "Choose 3 → path [2,3]. Explore only elements AFTER index 2, so [2,1] can never appear after [1,2].", pointers: { i: 2 } },
-  { arr: [1, 2, 3], highlight: [1, 2], aux: { label: "path", items: [2, 3] }, vars: { found: 7 }, note: "Record [2,3] — every node of the decision tree is a subset. (7 so far)" },
-  { arr: [1, 2, 3], highlight: [1], aux: { label: "path", items: [2] }, vars: { found: 7 }, note: "Un-choose 3 → path back to [2], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [], aux: { label: "path", items: [] }, vars: { found: 7 }, note: "Un-choose 2 → path back to [], ready to try the next option." },
-  { arr: [1, 2, 3], highlight: [2], aux: { label: "path", items: [3] }, vars: { found: 7 }, note: "Choose 3 → path [3]. Explore only elements AFTER index 2, so [2,1] can never appear after [1,2].", pointers: { i: 2 } },
-  { arr: [1, 2, 3], highlight: [2], aux: { label: "path", items: [3] }, vars: { found: 8 }, note: "Record [3] — every node of the decision tree is a subset. (8 so far)" },
-  { arr: [1, 2, 3], highlight: [], aux: { label: "path", items: [] }, vars: { found: 8 }, note: "Un-choose 3 → path back to [], ready to try the next option." },
-  { arr: [1, 2, 3], aux: { label: "all subsets", items: ["[]", "[1]", "[1,2]", "[1,2,3]", "[1,3]", "[2]", "[2,3]", "[3]"] }, vars: { found: 8 }, note: "Done: 2³ = 8 subsets. Choose → explore → un-choose, with one shared path list." }
-]} />
+Step through the decision tree as it grows: choose (go down), record, un-choose (come back up). Compare subsets, permutations and combination sum with pruning.
+
+<BacktrackViz examples={['subsets', 'perms', 'combsum']} />
 
 ## The template
 
@@ -227,6 +205,10 @@ static void placeQueens(int n, int row, int[] colOf, boolean[] cols, boolean[] d
 ```
 
 O(1) attack checks are what make it fast; scanning the board for every placement would multiply the work by n². The reference solution checks the known solution counts for n = 1 to 8 (1, 0, 0, 2, 10, 4, 40, 92).
+
+Step through it on a 4 × 4 board (both solutions) and a 5 × 5 board (the first one). Shaded squares are attacked.
+
+<QueensViz examples={['four', 'five']} />
 
 ## How expensive is backtracking?
 

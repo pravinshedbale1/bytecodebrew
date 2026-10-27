@@ -30,17 +30,9 @@ This lesson assumes you know weighted graphs and BFS. If not, read [Graphs](/dsa
 
 Keep a tentative distance for every node. Repeatedly take the node with the **smallest** tentative distance from a min-heap; since all weights are non-negative, nothing found later can make it cheaper — its distance is **final**. Then **relax** its edges: if going through it improves a neighbour's distance, update and push.
 
-<ArrayViz title="Dijkstra from A" frames={[
-  { arr: ["A:0", "B:∞", "C:∞", "D:∞", "E:∞"], highlight: [0], aux: { label: "heap", items: ["A(0)"] }, note: "Edges: A→B 4, A→C 1, C→B 2, B→D 1, C→D 5, D→E 3. Distances start at ∞ except the source A = 0. The heap always gives the closest node not yet finalised." },
-  { arr: ["A:0", "B:4", "C:1", "D:∞", "E:∞"], pointers: { settle: 0 }, highlight: [1, 2], done: [0], aux: { label: "heap", items: ["C(1)", "B(4)"] }, note: "Pop A (distance 0) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: B → 4, C → 1." },
-  { arr: ["A:0", "B:3", "C:1", "D:6", "E:∞"], pointers: { settle: 2 }, highlight: [1, 3], done: [0, 2], aux: { label: "heap", items: ["B(3)", "B(4)", "D(6)"] }, note: "Pop C (distance 1) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: B → 3, D → 6." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:∞"], pointers: { settle: 1 }, highlight: [3], done: [0, 2, 1], aux: { label: "heap", items: ["B(4)", "D(4)", "D(6)"] }, note: "Pop B (distance 3) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: D → 4." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:∞"], done: [0, 2, 1], aux: { label: "heap", items: ["D(4)", "D(6)"] }, note: "Pop B(4) — stale: we already found B at distance 3. Skip it." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], pointers: { settle: 3 }, highlight: [4], done: [0, 2, 1, 3], aux: { label: "heap", items: ["D(6)", "E(7)"] }, note: "Pop D (distance 4) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: E → 7." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], done: [0, 2, 1, 3], aux: { label: "heap", items: ["E(7)"] }, note: "Pop D(6) — stale: we already found D at distance 4. Skip it." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], pointers: { settle: 4 }, highlight: [], done: [0, 2, 1, 3, 4], aux: { label: "heap", items: [] }, note: "Pop E (distance 7) — final: nothing cheaper can come later, because all weights are ≥ 0. Relax its edges: no improvements." },
-  { arr: ["A:0", "B:3", "C:1", "D:4", "E:7"], done: [0, 2, 1, 3, 4], note: "Done. B was first offered at 4 (A→B) but improved to 3 via C — that is why a node is only final when it is POPPED, not when it is first reached." }
-]} />
+Step through it: the number under each node is its best distance so far. Green nodes are final; the queue below shows stale entries being skipped. The second example shows a longer route winning.
+
+<DijkstraViz examples={['lesson', 'detour']} />
 
 ```java
 /** times[i] = {from, to, weight}, nodes 1..n. Time for a signal from k to reach every node, or −1. */

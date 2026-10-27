@@ -20,21 +20,9 @@ This lesson assumes you know tree vocabulary and level-order traversal. If not, 
 
 A queue naturally gives level order: children are added to the back while the current level is processed from the front. The one trick is to **record the queue's size at the start of each round** — that's exactly how many nodes belong to the current level.
 
-<ArrayViz title="Level-order traversal with a queue" frames={[
-  { arr: [1, 2, 3, 4, 5, 6, 7], aux: { label: "queue", items: [1] }, note: "Tree: 1 has children 2 and 3; 2 has 4 and 5; 3 has 6; 5 has 7. (Cells list the nodes in level order.) Start with the root in the queue." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [0], done: [], aux: { label: "queue", items: [1] }, vars: { level: 0, size: 1 }, note: "The queue holds exactly level 0: 1 node. Freeze size = 1 and process that many — children added now belong to the NEXT level." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 0 }, highlight: [0], done: [], aux: { label: "queue", items: [2, 3] }, vars: { level: 0, "this level": "[1]" }, note: "Poll 1, add its children 2 and 3 to the back." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [1, 2], done: [0], aux: { label: "queue", items: [2, 3] }, vars: { level: 1, size: 2 }, note: "The queue holds exactly level 1: 2 nodes. Freeze size = 2 and process that many — children added now belong to the NEXT level." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 1 }, highlight: [1], done: [0], aux: { label: "queue", items: [3, 4, 5] }, vars: { level: 1, "this level": "[2]" }, note: "Poll 2, add its children 4 and 5 to the back." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 2 }, highlight: [2], done: [0, 1], aux: { label: "queue", items: [4, 5, 6] }, vars: { level: 1, "this level": "[2, 3]" }, note: "Poll 3, add its children 6 to the back." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [3, 4, 5], done: [0, 1, 2], aux: { label: "queue", items: [4, 5, 6] }, vars: { level: 2, size: 3 }, note: "The queue holds exactly level 2: 3 nodes. Freeze size = 3 and process that many — children added now belong to the NEXT level." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 3 }, highlight: [3], done: [0, 1, 2], aux: { label: "queue", items: [5, 6] }, vars: { level: 2, "this level": "[4]" }, note: "Poll 4 — a leaf, nothing to add." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 4 }, highlight: [4], done: [0, 1, 2, 3], aux: { label: "queue", items: [6, 7] }, vars: { level: 2, "this level": "[4, 5]" }, note: "Poll 5, add its children 7 to the back." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], aux: { label: "queue", items: [7] }, vars: { level: 2, "this level": "[4, 5, 6]" }, note: "Poll 6 — a leaf, nothing to add." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "queue", items: [7] }, vars: { level: 3, size: 1 }, note: "The queue holds exactly level 3: 1 node. Freeze size = 1 and process that many — children added now belong to the NEXT level." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], pointers: { poll: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "queue", items: [] }, vars: { level: 3, "this level": "[7]" }, note: "Poll 7 — a leaf, nothing to add." },
-  { arr: [1, 2, 3, 4, 5, 6, 7], done: [0, 1, 2, 3, 4, 5, 6], aux: { label: "queue", items: [] }, vars: { result: "[1] [2,3] [4,5,6] [7]" }, note: "Queue empty. Each level was collected separately because we processed exactly `size` nodes per round. O(n) time, O(width) memory." }
-]} />
+Step through it. The queue is shown under the tree, split into this level and the next; each round starts by freezing its size. The other examples change only the one line inside the loop.
+
+<TreeBfsViz examples={['level', 'right', 'min', 'zigzag']} />
 
 ```java
 static List<List<Integer>> levelOrder(TreeNode root) {

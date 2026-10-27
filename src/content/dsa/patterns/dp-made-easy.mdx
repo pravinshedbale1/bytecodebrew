@@ -32,6 +32,10 @@ flowchart TD
 
 `fib(3)` is computed twice, `fib(2)` three times; for `fib(50)` the same values are recomputed **billions** of times. That's the signal: **overlapping subproblems**. Exponential time comes from solving the same thing again.
 
+Step through the call tree: in plain recursion the same calls light up again and again; with a memo the repeats are answered at once and their branches disappear.
+
+<FibTreeViz examples={['plain', 'memo']} />
+
 ## The four steps (always the same)
 
 ### Step 1 — Write the brute-force recursion
@@ -104,15 +108,7 @@ static int minCostAt(int[] cost, int i, int[] memo) {          // memo filled wi
 
 **Step 3 — table:**
 
-<ArrayViz title="Filling dp for min cost climbing stairs" frames={[
-  { arr: ["0:?", "1:?", "2:?", "3:?", "4:?", "top:?"], vars: { cost: "[10, 15, 20, 5, 10]" }, note: "dp[i] = cheapest total cost to STAND on step i. You may start on step 0 or 1 for free, and each step costs cost[i] to leave. The answer is dp[top]." },
-  { arr: ["0:0", "1:0", "2:?", "3:?", "4:?", "top:?"], highlight: [0, 1], vars: { cost: "[10, 15, 20, 5, 10]" }, note: "Base cases: dp[0] = dp[1] = 0 (starting is free). Everything else is built from these." },
-  { arr: ["0:0", "1:0", "2:10", "3:?", "4:?", "top:?"], pointers: { i: 2 }, highlight: [1, 0], window: [2, 2], done: [], vars: { "from i−1": "0+15=15", "from i−2": "0+10=10" }, note: "To stand on step 2, come from step 1 (paying 15) or step 0 (paying 10). Take the cheaper: 10." },
-  { arr: ["0:0", "1:0", "2:10", "3:15", "4:?", "top:?"], pointers: { i: 3 }, highlight: [2, 1], window: [3, 3], done: [0], vars: { "from i−1": "10+20=30", "from i−2": "0+15=15" }, note: "To stand on step 3, come from step 2 (paying 20) or step 1 (paying 15). Take the cheaper: 15." },
-  { arr: ["0:0", "1:0", "2:10", "3:15", "4:20", "top:?"], pointers: { i: 4 }, highlight: [3, 2], window: [4, 4], done: [0, 1], vars: { "from i−1": "15+5=20", "from i−2": "10+20=30" }, note: "To stand on step 4, come from step 3 (paying 5) or step 2 (paying 20). Take the cheaper: 20." },
-  { arr: ["0:0", "1:0", "2:10", "3:15", "4:20", "top:20"], pointers: { i: 5 }, highlight: [4, 3], window: [5, 5], done: [0, 1, 2], vars: { "from i−1": "20+10=30", "from i−2": "15+5=20" }, note: "To stand on the top, come from step 4 (paying 10) or step 3 (paying 5). Take the cheaper: 20." },
-  { arr: ["0:0", "1:0", "2:10", "3:15", "4:20", "top:20"], highlight: [5], vars: { answer: 20 }, note: "Answer: 20. Each cell used only the two before it — so two variables would do instead of an array (O(1) space)." }
-]} />
+<Dp1dViz examples={['stairs']} />
 
 ```java
 static int minCostClimbingStairs(int[] cost) {

@@ -1,0 +1,85 @@
+/* The tree drawing shared by the DFS, BFS and BST step-throughs. */
+
+.wrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+.tree { position: relative; margin: 0 auto; }
+.edges { position: absolute; inset: 0; pointer-events: none; }
+
+.edge_plain { stroke: var(--color-border-strong); stroke-width: 1.5; }
+.edge_seen { stroke: var(--color-text-subtle); stroke-width: 1.5; }
+.edge_on { stroke: var(--color-accent); stroke-width: 3; }
+.edge_skip { stroke: var(--color-border); stroke-width: 1.5; stroke-dasharray: 3 4; }
+
+.node {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 3px 8px -5px rgb(0 0 0 / 0.45);
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s, opacity 0.3s;
+}
+
+.val { font-family: var(--font-mono); font-size: 13px; font-weight: 750; }
+
+.active { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.queued { border-color: var(--color-accent); border-style: dashed; }
+.done { border-color: var(--color-success); background: var(--color-success-soft); }
+.skip { opacity: 0.35; border-style: dashed; }
+.cur { border-color: var(--color-warn); background: var(--color-warn-soft); box-shadow: 0 0 0 5px var(--color-warn-soft); animation: pulse 0.6s ease-out; }
+.hit { border-color: var(--color-success); background: var(--color-success); box-shadow: 0 0 0 5px var(--color-success-soft); animation: pulse 0.6s ease-out; }
+.hit .val { color: var(--color-surface); }
+.bad { border-color: var(--color-danger); background: var(--color-danger-soft); box-shadow: 0 0 0 5px var(--color-danger-soft); animation: shake 0.45s ease-in-out; }
+.bend { box-shadow: 0 0 0 5px var(--color-success-soft), 0 0 0 8px var(--color-success); }
+.fresh { animation: grow 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.target { outline: 2px dashed var(--color-interview); outline-offset: 4px; }
+
+@keyframes pulse {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.12); }
+  100% { transform: none; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes grow {
+  0% { transform: scale(0.2); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+.badge, .tag {
+  position: absolute;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.badge { top: -15px; left: 22px; animation: rise 0.5s ease-out; }
+.tag { top: 36px; left: 50%; transform: translateX(-50%); }
+
+@keyframes rise {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+.b_success { background: var(--color-success); color: var(--color-surface); }
+.b_muted { background: var(--color-surface-muted); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.b_note { background: var(--color-note-soft); color: var(--color-note); border: 1px solid var(--color-note); }
+.b_danger { background: var(--color-danger-soft); color: var(--color-danger); border: 1px solid var(--color-danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cur, .hit, .bad, .fresh, .badge { animation: none; }
+}

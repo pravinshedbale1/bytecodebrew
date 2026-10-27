@@ -18,20 +18,9 @@ This lesson assumes you know what a node and a next pointer are, and how inserti
 
 ## Reversal: save, flip, advance
 
-<ArrayViz title="Reversing a linked list in place" frames={[
-  { arr: ["1→2", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0 }, note: "Each cell shows a node and where its next pointer goes. To reverse, flip every arrow. Three pointers: prev (already reversed part), cur (node being flipped), next (saved before we lose it)." },
-  { arr: ["1→2", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0, next: 1 }, highlight: [0], note: "Save next = 2, so the rest of the list isn't lost when we change cur.next." },
-  { arr: ["1→∅", "2→3", "3→4", "4→5", "5→∅"], pointers: { cur: 0, next: 1 }, highlight: [0], note: "Flip: 1.next = ∅. Then move prev = cur, cur = next." },
-  { arr: ["1→∅", "2→3", "3→4", "4→5", "5→∅"], pointers: { prev: 0, cur: 1, next: 2 }, highlight: [1], note: "Save next = 3, so the rest of the list isn't lost when we change cur.next." },
-  { arr: ["1→∅", "2→1", "3→4", "4→5", "5→∅"], pointers: { prev: 0, cur: 1, next: 2 }, highlight: [1], note: "Flip: 2.next = 1. Then move prev = cur, cur = next." },
-  { arr: ["1→∅", "2→1", "3→4", "4→5", "5→∅"], pointers: { prev: 1, cur: 2, next: 3 }, highlight: [2], note: "Save next = 4, so the rest of the list isn't lost when we change cur.next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→5", "5→∅"], pointers: { prev: 1, cur: 2, next: 3 }, highlight: [2], note: "Flip: 3.next = 2. Then move prev = cur, cur = next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→5", "5→∅"], pointers: { prev: 2, cur: 3, next: 4 }, highlight: [3], note: "Save next = 5, so the rest of the list isn't lost when we change cur.next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→∅"], pointers: { prev: 2, cur: 3, next: 4 }, highlight: [3], note: "Flip: 4.next = 3. Then move prev = cur, cur = next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→∅"], pointers: { prev: 3, cur: 4 }, highlight: [4], note: "Save next = ∅, so the rest of the list isn't lost when we change cur.next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→4"], pointers: { prev: 3, cur: 4 }, highlight: [4], note: "Flip: 5.next = 4. Then move prev = cur, cur = next." },
-  { arr: ["1→∅", "2→1", "3→2", "4→3", "5→4"], pointers: { "new head": 4 }, highlight: [4], note: "cur ran off the end. prev (5) is the new head: 5→4→3→2→1→∅. O(n) time, O(1) space." }
-]} />
+Step through it. Each node takes three steps, matching the three lines of code. **Save** marks the arrow about to be lost (dashed). **Flip** draws the new arrow pointing back. **Advance** moves prev and cur on. The ∅ circles are null: prev starts on the left one, and the old tail points to the right one.
+
+<ReverseListViz examples={['whole']} />
 
 ```java
 static ListNode reverseList(ListNode head) {
@@ -85,6 +74,10 @@ static ListNode removeElements(ListNode head, int val) {
 
 Without the dummy, you'd need a separate loop to strip matching nodes off the front.
 
+Step through it on a list that starts with the value to remove. cur always looks at cur.next. Each removed node drops out as the arrow bypasses it, and cur stays put after a removal.
+
+<DummyNodeViz examples={['remove']} />
+
 ### Merge two sorted lists
 
 ```java
@@ -101,6 +94,10 @@ static ListNode mergeTwoLists(ListNode a, ListNode b) {
 ```
 
 The dummy is the "start of the answer"; `tail` is where the next node goes. This is also the merge step of merge sort on lists and the building block of [merging k sorted lists](/dsa/patterns/heap-patterns).
+
+Step through it: each chosen node moves down into the answer row behind `tail`. No new nodes are created. A dashed arrow is a stale `next` that the following step overwrites.
+
+<DummyNodeViz examples={['merge']} title="Merge two sorted lists, step by step" />
 
 ## Worked problems
 
@@ -124,6 +121,10 @@ static ListNode reverseBetween(ListNode head, int left, int right) {
 ```
 
 The dummy handles `left = 1` (reversing from the head) with no extra code.
+
+Step through it: the nodes are drawn in list order, so you can watch each `move` node slide to the front of the segment while `cur` drifts to its end.
+
+<ReverseListViz examples={['between']} title="Reverse a sub-list, step by step" />
 
 ### Reverse nodes in k-groups (hard)
 

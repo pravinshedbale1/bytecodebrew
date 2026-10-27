@@ -76,6 +76,10 @@ A transaction's query matches a *set* of rows defined by a condition; another tr
 The SQL standard's names don't map cleanly onto real implementations. PostgreSQL's Repeatable Read is snapshot isolation and **detects** lost updates (it aborts one transaction with a serialization error). MySQL InnoDB's Repeatable Read does **not** detect lost updates for plain read-then-write — you need `SELECT … FOR UPDATE`. Oracle's "Serializable" is actually snapshot isolation and allows write skew. Always ask *which anomalies* a level prevents in *this* database.
 </Callout>
 
+Step through the three anomalies that matter most in interviews, each followed by its fix. The top panel shows every version of each row, which version each transaction sees, and who holds a lock.
+
+<IsolationViz examples={['readskew', 'snapshot', 'lost', 'atomic', 'writeskew', 'serializable']} />
+
 ## How databases implement isolation
 
 ### MVCC — multi-version concurrency control

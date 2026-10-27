@@ -22,18 +22,9 @@ When the brute force has matched `j` characters and then hits a mismatch, it shi
 
 `lps[i]` = length of the longest proper prefix of `p[0..i]` that is also a suffix of it. For `"aabaaab"` it's `[0, 1, 0, 1, 2, 2, 3]`: the whole string ends with `"aab"`, which is also how it starts.
 
-<ArrayViz title="Building the failure table for aabaaab" frames={[
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], note: "Build lps for \"aabaaab\". lps[i] = length of the longest proper prefix of p[0..i] that is also a suffix of it. len = the length of the border we are currently extending; it is also the index of the next prefix character to compare.", aux: { label: "lps", items: ["0", "·", "·", "·", "·", "·", "·"] } },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 1, len: 1 }, aux: { label: "lps", items: [0, 1, "·", "·", "·", "·", "·"] }, note: "p[1] = 'a' = p[0]: the border grows. lps[1] = 1.", highlight: [1, 0], window: [0, 0] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 2, len: 0 }, aux: { label: "lps", items: [0, 1, "·", "·", "·", "·", "·"] }, note: "p[2] = 'b' ≠ p[1] = 'a': the border of length 1 can't grow. Fall back to the next shorter border: len = lps[0] = 0. No characters of p are re-read from the start.", highlight: [2, 1] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 2, len: 0 }, aux: { label: "lps", items: [0, 1, 0, "·", "·", "·", "·"] }, note: "p[2] = 'b' ≠ p[0]: no border. lps[2] = 0.", highlight: [2] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 3, len: 1 }, aux: { label: "lps", items: [0, 1, 0, 1, "·", "·", "·"] }, note: "p[3] = 'a' = p[0]: the border grows. lps[3] = 1.", highlight: [3, 0], window: [0, 0] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 4, len: 2 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, "·", "·"] }, note: "p[4] = 'a' = p[1]: the border grows. lps[4] = 2.", highlight: [4, 1], window: [0, 1] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 5, len: 1 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, "·", "·"] }, note: "p[5] = 'a' ≠ p[2] = 'b': the border of length 2 can't grow. Fall back to the next shorter border: len = lps[1] = 1. No characters of p are re-read from the start.", highlight: [5, 2] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 5, len: 2 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, "·"] }, note: "p[5] = 'a' = p[1]: the border grows. lps[5] = 2.", highlight: [5, 1], window: [0, 1] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], pointers: { i: 6, len: 3 }, aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, 3] }, note: "p[6] = 'b' = p[2]: the border grows. lps[6] = 3.", highlight: [6, 2], window: [0, 2] },
-  { arr: ["a", "a", "b", "a", "a", "a", "b"], aux: { label: "lps", items: [0, 1, 0, 1, 2, 2, 3] }, note: "Done in O(m): i only moves forward, and each fallback shrinks len, which only grew by one per step. The search uses the same loop over the text: on a mismatch, j = lps[j − 1] instead of restarting." }
-]} />
+Step through it: the green band is the border as a prefix, the blue one the same border as a suffix.
+
+<KmpViz examples={['table']} />
 
 ```java
 static int[] prefixFunction(String p) {
@@ -70,6 +61,10 @@ static List<Integer> kmpSearch(String text, String pat) {
 ```
 
 **Why it's O(n + m):** `j` goes up by at most one per text character, and every fallback makes it smaller. So the total number of fallbacks can't exceed the total number of increases, which is n.
+
+Step through it: on a mismatch the pattern slides forward by just enough to keep the part that still matches, and the text pointer never moves back.
+
+<KmpViz examples={['search']} />
 
 ### The failure table on its own solves more problems
 

@@ -163,7 +163,13 @@ export function Chips({ label, chips, seq = 0, empty = 'empty' }) {
   );
 }
 
-/** A small label centred on x (a pointer's question, a running total). */
-export function Float({ x, y, tone = 'accent', children }) {
-  return <span className={`${styles.float} ${styles[`float_${tone}`]}`} style={{ left: x, top: y }}>{children}</span>;
+/** A small label centred on x (a pointer's question, a running total); anchor="right" pins it to the stage's right edge. */
+export function Float({ x, y, tone = 'accent', anchor = 'center', children }) {
+  const pos = anchor === 'right' ? { right: 0, top: y, transform: 'none' } : { left: x, top: y };
+  return <span className={`${styles.float} ${styles[`float_${tone}`]}`} style={pos}>{children}</span>;
+}
+
+/** A small caption for a row of cells ("p (on the boundaries)", "count[v]"). */
+export function RowLabel({ x = 0, y, children }) {
+  return <span className={styles.rowLabel} style={{ left: x, top: y }}>{children}</span>;
 }

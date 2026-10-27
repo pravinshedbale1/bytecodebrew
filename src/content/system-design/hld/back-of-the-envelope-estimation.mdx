@@ -201,6 +201,10 @@ egress = 250,000 views/s × ~200 KB (mostly thumbnails/feed-size) = 50 GB/s = 40
 This is roughly why Instagram's architecture separates **metadata** (sharded PostgreSQL in its early years, later Cassandra for some workloads) from **media bytes** (object storage behind a CDN). The estimate alone pushes you toward that split.
 </Callout>
 
+Step through the same chain below, card by card, then run it on your own assumptions. Each step shows the exact arithmetic, the rounded version you would do in your head, and what the number means for the design.
+
+<EstimationViz examples={['photos', 'chat']} />
+
 ## Worked example: what does video egress cost?
 
 **Assumptions:** 5M DAU, each watches 5 videos/day, average video delivered ≈ 300 MB, CDN price ≈ $0.02/GB.

@@ -119,6 +119,10 @@ flowchart LR
   C --> DB
 ```
 
+Step through both versions with the same two users: Alice and Bob log in, Bob fills his cart, and then server B crashes. Switch between the examples to compare what Bob sees.
+
+<SessionsViz examples={['memory', 'shared']} />
+
 Once the application tier is stateless:
 
 - Any instance can serve any request → the load balancer can use simple algorithms.

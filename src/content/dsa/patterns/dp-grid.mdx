@@ -11,21 +11,7 @@ Grid DP is the friendliest DP family because you can **see** the table: it's the
 
 ## Unique paths — the template
 
-<ArrayViz title="Counting paths: each cell = above + left" frames={[
-  { grid: [["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], note: "Unique paths from the top-left to the bottom-right, moving only right or down. dp[r][c] = number of ways to reach cell (r, c)." },
-  { grid: [[1, "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[0, 0]], note: "Start: 1 way to be where you start." },
-  { grid: [[1, 1, 1, 1, 1], ["", "", "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], window: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], note: "Top row: only one way to reach each cell (keep moving right)." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, "", "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 1]], window: [[0, 1], [1, 0]], note: "(1,1): arrive from above (1 ways) or from the left (1): 2." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, "", ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 2]], window: [[0, 2], [1, 1]], note: "(1,2): arrive from above (1 ways) or from the left (2): 3." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, ""], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 3]], window: [[0, 3], [1, 2]], note: "(1,3): arrive from above (1 ways) or from the left (3): 4." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], ["", "", "", "", ""], ["", "", "", "", ""]], highlight: [[1, 4]], window: [[0, 4], [1, 3]], note: "(1,4): arrive from above (1 ways) or from the left (4): 5." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, "", "", ""], ["", "", "", "", ""]], highlight: [[2, 1]], window: [[1, 1], [2, 0]], note: "(2,1): arrive from above (2 ways) or from the left (1): 3." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, "", ""], ["", "", "", "", ""]], highlight: [[2, 2]], window: [[1, 2], [2, 1]], note: "(2,2): arrive from above (3 ways) or from the left (3): 6." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, ""], ["", "", "", "", ""]], highlight: [[2, 3]], window: [[1, 3], [2, 2]], note: "(2,3): arrive from above (4 ways) or from the left (6): 10." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], ["", "", "", "", ""]], highlight: [[2, 4]], window: [[1, 4], [2, 3]], note: "(2,4): arrive from above (5 ways) or from the left (10): 15." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], [1, "", "", "", ""]], window: [[0, 0], [1, 0], [2, 0], [3, 0]], note: "Left column: only one way too (keep moving down)." },
-  { grid: [[1, 1, 1, 1, 1], [1, 2, 3, 4, 5], [1, 3, 6, 10, 15], [1, 4, 10, 20, 35]], highlight: [[3, 4]], note: "Answer 35. Each cell needs only the cell above and the cell to the left — one row of memory is enough." }
-]} />
+<DpGridViz examples={['paths']} />
 
 **State:** `dp[r][c]` = number of ways to reach `(r, c)`. **Transition:** `dp[r][c] = dp[r − 1][c] + dp[r][c − 1]`. **Base:** the first row and first column are all 1.
 
@@ -64,6 +50,10 @@ static int uniquePathsWithObstacles(int[][] g) {
 
 Note that the first row and column are no longer "all 1": an obstacle blocks everything after it in that row or column, which this loop handles naturally.
 
+Step through it: watch a blocked cell's zero flow into everything after it.
+
+<DpGridViz examples={['obstacles']} />
+
 ## Minimum path sum — min instead of +
 
 ```java
@@ -82,6 +72,10 @@ static int minPathSum(int[][] g) {
 ```
 
 Counting uses `+`; optimising uses `min`/`max`. The edges are the only place you need care: cells in the top row have no "above", and cells in the left column have no "left".
+
+Step through it; at the end the cheapest path is traced back.
+
+<DpGridViz examples={['minsum']} />
 
 ## Maximal square — a three-neighbour recurrence
 
@@ -104,6 +98,10 @@ static int maximalSquare(char[][] m) {
 ```
 
 **Padding** the table with an extra row and column of zeros removes all the edge special cases — a trick worth reusing.
+
+Step through it: each cell looks at its top, left and top-left neighbours.
+
+<DpGridViz examples={['square']} />
 
 ## Dungeon game — fill backwards
 

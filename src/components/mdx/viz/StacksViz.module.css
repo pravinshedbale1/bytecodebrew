@@ -1,0 +1,231 @@
+/* Stage parts for the stack step-throughs: a pile of plates, asteroids, bars and rectangles. */
+
+/* ---- brackets: a pile of plates */
+
+.tower {
+  position: absolute;
+  border-bottom: 3px solid var(--color-border-strong);
+}
+
+.plate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 8px;
+  background: var(--color-accent-soft);
+  box-shadow: 0 3px 6px -4px rgb(0 0 0 / 0.4);
+  transition: bottom 0.4s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+.plate b { font-family: var(--font-mono); font-size: 16px; color: var(--color-accent); }
+.plate small { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-text-muted); white-space: nowrap; }
+.plateTop { box-shadow: 0 0 0 3px var(--color-accent-soft), 0 3px 6px -4px rgb(0 0 0 / 0.4); }
+.plateNew { animation: drop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.plateGood { border-color: var(--color-success); background: var(--color-success-soft); }
+.plateGood b { color: var(--color-success); }
+.plateBad { border-color: var(--color-danger); background: var(--color-danger-soft); }
+.plateBad b { color: var(--color-danger); }
+.plateLeave { animation: leave 1s ease-out forwards; }
+
+@keyframes drop {
+  0% { transform: translateY(-40px); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+@keyframes leave {
+  0% { transform: none; opacity: 1; }
+  60% { transform: translateY(-14px); opacity: 1; }
+  100% { transform: translateY(-22px); opacity: 0.35; }
+}
+
+.emptyPile, .morePlates {
+  position: absolute;
+  left: 0;
+  right: 0;
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  color: var(--color-text-subtle);
+}
+
+.emptyPile { bottom: 6px; }
+.morePlates { bottom: -22px; font-style: normal; font-family: var(--font-mono); }
+
+/* ---- asteroids */
+
+.space {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 12% 30%, var(--color-border-strong) 1px, transparent 1.5px) 0 0 / 46px 38px,
+    radial-gradient(circle at 70% 70%, var(--color-border) 1px, transparent 1.5px) 0 0 / 31px 29px,
+    var(--color-surface-muted);
+}
+
+.survivors {
+  position: absolute;
+  padding-top: 4px;
+  border-top: 2px solid var(--color-accent);
+  font-size: 10.5px;
+  font-weight: 650;
+  text-align: center;
+  color: var(--color-accent);
+  white-space: nowrap;
+  min-width: 120px;
+  transition: width 0.4s ease;
+}
+
+.rock {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: left 0.5s cubic-bezier(0.45, 0, 0.25, 1), opacity 0.3s;
+}
+
+.rockBody {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 46% 54% 50% 50% / 52% 44% 56% 48%;
+  background: var(--tone);
+  color: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: inset -4px -4px 0 rgb(0 0 0 / 0.18);
+}
+
+.right { --tone: var(--color-accent); }
+.left { --tone: var(--color-interview); }
+.rockUp { opacity: 0.45; }
+.rockUp .rockBody { background: transparent; color: var(--tone); border: 1.5px dashed var(--tone); box-shadow: none; }
+.rockCur .rockBody { box-shadow: 0 0 0 3px var(--color-warn), inset -4px -4px 0 rgb(0 0 0 / 0.18); }
+
+.trail {
+  position: absolute;
+  top: 50%;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--tone);
+  transform: translateY(-50%);
+}
+
+.right .trail { right: -15px; }
+.left .trail { left: -15px; }
+
+.explode { animation: explode 0.9s ease-in forwards; }
+
+@keyframes explode {
+  0% { transform: scale(1); opacity: 1; }
+  40% { transform: scale(1.15) rotate(8deg); opacity: 1; }
+  100% { transform: scale(0.2) rotate(40deg); opacity: 0; }
+}
+
+.burst {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-warn) 0 22%, color-mix(in srgb, var(--color-danger) 70%, transparent) 23% 45%, transparent 46%);
+  animation: burst 0.9s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes burst {
+  0% { transform: scale(0.2); opacity: 0; }
+  35% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ---- bars (monotonic stack, histogram) */
+
+.bar {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 6px 6px 2px 2px;
+  background: var(--color-surface-muted);
+  transition: top 0.4s ease, height 0.4s ease, background 0.3s, border-color 0.3s, opacity 0.3s;
+}
+
+.barVal {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.barUnder {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-success);
+  white-space: nowrap;
+}
+
+.barWait { border-color: var(--color-accent); background: repeating-linear-gradient(-45deg, var(--color-accent-soft) 0 6px, transparent 6px 12px), var(--color-surface); }
+.barWait .barUnder { color: var(--color-accent); }
+.barCur { border-color: var(--color-warn); border-width: 2px; background: var(--color-warn-soft); box-shadow: 0 0 0 3px var(--color-warn-soft); }
+.barAnswered { border-color: var(--color-success); background: var(--color-success-soft); animation: settle 0.5s ease-out; }
+.barDone { border-color: var(--color-success); background: var(--color-success-soft); opacity: 0.7; }
+.barNone .barUnder { color: var(--color-text-muted); }
+.barLater { opacity: 0.35; }
+.barSentinel { border-style: dashed; background: transparent; }
+.hbar .barUnder { color: var(--color-text-subtle); font-weight: 600; }
+
+@keyframes settle {
+  0% { transform: translateY(-6px); }
+  100% { transform: none; }
+}
+
+.rect {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.rect span {
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rectTry { border: 2px solid var(--color-warn); background: color-mix(in srgb, var(--color-warn) 18%, transparent); animation: grow 0.5s ease-out; }
+.rectNew { border: 2px solid var(--color-success); background: color-mix(in srgb, var(--color-success) 22%, transparent); animation: grow 0.5s ease-out; }
+.rectBest { border: 2px dashed var(--color-success); background: color-mix(in srgb, var(--color-success) 8%, transparent); }
+.rectBest span, .rectNew span { color: var(--color-success); }
+.rectTry span { color: var(--color-warn); }
+
+@keyframes grow {
+  0% { transform: scaleX(0.3); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plateNew, .plateLeave, .explode, .burst, .barAnswered, .rectTry, .rectNew { animation: none; }
+  .plate, .rock, .bar { transition: none; }
+}

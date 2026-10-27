@@ -20,6 +20,7 @@ export const PREMIUM_CONTENT = {
   diagramSteps: true,        // "Step through it" on architecture and sequence diagrams
   advancedLessons: true,     // lessons whose level is Advanced: free users see the outline only
   dsaVisualisers: false,     // the array/tree/graph step-throughs in DSA lessons stay free
+  hldVisuals: true,          // the purpose-built step-throughs in HLD lessons (requests, replication, B-trees…)
 };
 
 export const FREE_FEATURES = [

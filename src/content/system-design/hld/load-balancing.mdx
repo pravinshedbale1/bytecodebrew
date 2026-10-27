@@ -98,6 +98,11 @@ These algorithms use live server state.
 If asked "which algorithm would you use?", tie it to the workload: "For a stateless REST API with uniform requests, round robin is fine. For our WebSocket chat servers, connections live for hours and vary in activity, so least-connections gives a more even spread."
 </Callout>
 
+Watch four of them hand out the same nine requests. Some requests are quick and some are slow; each server card shows what that server is working on, and turns orange, then red, as it gets overloaded.
+
+<BalancerViz examples={['rr', 'least', 'weighted', 'iphash']} />
+
+Now race them on thousands of requests. A few slow requests are enough to make a line build up behind them, and only the strategies that look at the lines avoid it.
 
 <LoadBalancerSim />
 
@@ -107,6 +112,10 @@ A load balancer must know which backends can serve traffic.
 
 - **Active health checks** — the LB periodically calls an endpoint (e.g., `GET /health` every 5 s). After N consecutive failures the server is removed from rotation; after M successes it's added back.
 - **Passive health checks** — the LB watches real traffic. If a server returns errors or times out repeatedly, it's ejected for a period (*outlier detection*).
+
+Here is the active kind at work. The load balancer takes turns and checks every server once a second; server B crashes, and comes back a little later. Watch the one request that reaches B before the load balancer notices.
+
+<BalancerViz examples={['health']} />
 
 ### Designing a good health endpoint
 

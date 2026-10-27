@@ -15,16 +15,7 @@ The simplest DP family walks along a sequence once. At each position you make a 
 
 **State:** `best[i]` = most money from houses `0..i`. **Choice at house i:** skip it (`best[i − 1]`) or take it (`a[i] + best[i − 2]`).
 
-<ArrayViz title="House robber: skip or take at each house" frames={[
-  { arr: [2, 7, 9, 3, 1, 4], aux: { label: "best[i]", items: [] }, note: "House robber: you can't take two adjacent houses. best[i] = most money from houses 0..i. At each house: SKIP it (keep best[i−1]) or TAKE it (a[i] + best[i−2])." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 0 }, highlight: [0], window: [0, 0], aux: { label: "best[i]", items: [2] }, vars: { skip: 0, take: 2 }, note: "House 0 (2): skip → 0, take → 2 + 0 = 2. Keep 2." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 1 }, highlight: [1], window: [0, 1], aux: { label: "best[i]", items: [2, 7] }, vars: { skip: 2, take: 7 }, note: "House 1 (7): skip → 2, take → 7 + 0 = 7. Keep 7." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 2 }, highlight: [2], window: [0, 2], aux: { label: "best[i]", items: [2, 7, 11] }, vars: { skip: 7, take: 11 }, note: "House 2 (9): skip → 7, take → 9 + 2 = 11. Keep 11." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 3 }, highlight: [3], window: [0, 3], aux: { label: "best[i]", items: [2, 7, 11, 11] }, vars: { skip: 11, take: 10 }, note: "House 3 (3): skip → 11, take → 3 + 7 = 10. Keep 11." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 4 }, highlight: [4], window: [0, 4], aux: { label: "best[i]", items: [2, 7, 11, 11, 12] }, vars: { skip: 11, take: 12 }, note: "House 4 (1): skip → 11, take → 1 + 11 = 12. Keep 12." },
-  { arr: [2, 7, 9, 3, 1, 4], pointers: { i: 5 }, highlight: [5], window: [0, 5], aux: { label: "best[i]", items: [2, 7, 11, 11, 12, 15] }, vars: { skip: 12, take: 15 }, note: "House 5 (4): skip → 12, take → 4 + 11 = 15. Keep 15." },
-  { arr: [2, 7, 9, 3, 1, 4], aux: { label: "best[i]", items: [2, 7, 11, 11, 12, 15] }, vars: { answer: 15 }, note: "Answer 15. \"Take or skip\" + \"the last decision only depends on the previous two\" is the whole pattern." }
-]} />
+<Dp1dViz examples={['robber']} />
 
 ```java
 static int rob(int[] a) {
@@ -71,6 +62,10 @@ static int maxSubArray(int[] a) {
 
 "Ending here" is a powerful state definition: it turns "best subarray anywhere" (O(n²) choices) into one decision per position. Start `best` at `a[0]`, not 0 — an all-negative array must return its largest element.
 
+Step through it: watch "ending here" start over whenever the run so far turns negative.
+
+<Dp1dViz examples={['kadane']} />
+
 ### Variation: maximum product subarray
 
 A negative number turns the **smallest** product into the largest. So track both the max and the min ending here:
@@ -107,6 +102,10 @@ static int lengthOfLIS(int[] a) {                      // O(n²)
     return best;
 }
 ```
+
+Step through it: arrows point back at every earlier, smaller value; the green one is extended.
+
+<Dp1dViz examples={['lis']} />
 
 ### The O(n log n) version (patience sorting)
 

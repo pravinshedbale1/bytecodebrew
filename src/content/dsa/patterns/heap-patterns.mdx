@@ -34,18 +34,9 @@ A heap is **not sorted** — only the top is guaranteed. Iterating a `PriorityQu
 
 To find the k **largest**, keep a **min**-heap of size k. That sounds backwards, but the top of the min-heap is the *weakest* of your current top k — exactly the one to evict when a better element arrives.
 
-<ArrayViz title="The 3 largest with a size-3 min-heap" frames={[
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [] }, note: "Find the 3 largest. Keep a MIN-heap of at most 3. Its top is the weakest member of the current top 3 — the one to kick out when something better arrives." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 0 }, highlight: [0], done: [], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [5] }, note: "Heap not full yet: add 5." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 1 }, highlight: [1], done: [0], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [5, 12] }, note: "Heap not full yet: add 12." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 2 }, highlight: [2], done: [0, 1], vars: { k: 3 }, aux: { label: "min-heap (smallest first)", items: [3, 5, 12] }, note: "Heap not full yet: add 3." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 3 }, highlight: [3], done: [0, 1, 2], vars: { k: 3, top: 5 }, aux: { label: "min-heap (smallest first)", items: [5, 8, 12] }, note: "8 joins, the heap has 4, so pop the smallest (3). It can never be in the top 3 now." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 4 }, highlight: [4], done: [0, 1, 2, 3], vars: { k: 3, top: 8 }, aux: { label: "min-heap (smallest first)", items: [8, 12, 20] }, note: "20 joins, the heap has 4, so pop the smallest (5). It can never be in the top 3 now." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], vars: { k: 3, top: 8 }, aux: { label: "min-heap (smallest first)", items: [8, 12, 20] }, note: "7 joins, the heap has 4, so pop the smallest — 7 itself. It was never in the top 3." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], vars: { k: 3, top: 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "15 joins, the heap has 4, so pop the smallest (8). It can never be in the top 3 now." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], pointers: { i: 7 }, highlight: [7], done: [0, 1, 2, 3, 4, 5, 6], vars: { k: 3, top: 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "1 joins, the heap has 4, so pop the smallest — 1 itself. It was never in the top 3." },
-  { arr: [5, 12, 3, 8, 20, 7, 15, 1], vars: { k: 3, "3rd largest": 12 }, aux: { label: "min-heap (smallest first)", items: [12, 15, 20] }, note: "Done: the heap holds the 3 largest, and its top (12) is the 3rd largest. O(n log k) time, O(k) memory — works on a stream too." }
-]} />
+Step through it. The heap is drawn as a tree (and, underneath, as the array it really is): watch new values bubble up, and the smallest get evicted from the top.
+
+<TopKViz examples={['two', 'three']} />
 
 ```java
 static int findKthLargest(int[] nums, int k) {
@@ -110,6 +101,10 @@ static List<Integer> mergeKSorted(List<int[]> lists) {
 
 **O(N log k)** for N total elements: the heap never holds more than k items. For linked lists, the heap stores nodes and you push `node.next`.
 
+Step through it: each list keeps one candidate in the heap, and whichever list loses its candidate sends the next one.
+
+<KWayMergeViz examples={['three', 'uneven']} />
+
 ### K-th smallest in a sorted matrix
 
 Each row is a sorted list — so it's k-way merge, stopped after k pops:
@@ -152,6 +147,10 @@ static class MedianFinder {
 The three-step `addNum` avoids every special case: step 2 guarantees ordering between the halves, step 3 guarantees the sizes differ by at most one. Adding the two tops as `long` avoids overflow before dividing.
 
 Two heaps also solve "maximise capital" (IPO) — one heap of projects you can't afford yet sorted by cost, one of affordable projects sorted by profit — and sliding-window medians (with lazy deletion).
+
+Step through it: the two halves face each other with their tops in the middle, and the median sits between them.
+
+<MedianViz examples={['stream', 'sorted']} />
 
 ## Pattern 4: Repeatedly take the best
 

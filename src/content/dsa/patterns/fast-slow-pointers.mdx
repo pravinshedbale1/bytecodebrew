@@ -32,19 +32,13 @@ static ListNode middleNode(ListNode head) {
 
 For lists `1 2 3 4`, this returns `3` (the second middle). If you need the **first** middle (useful for splitting a list into two halves for merge sort), use `while (fast.next != null && fast.next.next != null)` instead.
 
+<FastSlowViz examples={['middle']} title="The middle, step by step" />
+
 ## Cycles: Floyd's tortoise and hare
 
-<ArrayViz title="Detect the cycle, then find where it starts" frames={[
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 0, fast: 0 }, note: "A list whose last node (7) points back to 3 — a cycle. slow moves 1 step, fast moves 2. If there is no cycle, fast falls off the end. If there is one, fast must eventually land on slow." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 1, fast: 2 }, highlight: [], vars: { step: 1 }, note: "slow → 2, fast → 3." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 2, fast: 4 }, highlight: [], vars: { step: 2 }, note: "slow → 3, fast → 5." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 3, fast: 6 }, highlight: [], vars: { step: 3 }, note: "slow → 4, fast → 7." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { slow: 4, fast: 3 }, highlight: [], vars: { step: 4 }, note: "slow → 5, fast → 4." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { "slow=fast": 5 }, highlight: [5], vars: { step: 5 }, note: "They meet at node 6 after 5 steps: there is a cycle. (Inside the cycle, fast gains 1 node per step, so it can't jump over slow.)" },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { p: 0, slow: 5 }, vars: {  }, note: "Phase 2 — where does the cycle start? Put a new pointer p at the head; move p and slow ONE step at a time." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { p: 1, slow: 6 }, highlight: [], note: "p → 2, slow → 7." },
-  { arr: ["1", "2", "3", "4", "5", "6", "7↩3"], pointers: { "p=slow": 2 }, highlight: [2], note: "They meet at node 3 — the cycle's entrance. (Why: head-to-entrance distance = meeting-point-to-entrance distance, plus whole laps of the cycle — proof below.)" }
-]} />
+Step through it on a list drawn in its real shape, a ρ: a straight tail leading into a loop. The highlighted arrows are the moves just made (one for slow, two for fast). Once both are on the loop, the step tells you how far fast is behind slow, and that gap shrinks by one each step. Phase 2 then uses the numbers from this exact run (a, b and C) to show why both pointers reach the entrance together.
+
+<FastSlowViz examples={['cycle', 'nocycle']} />
 
 ```java
 static boolean hasCycle(ListNode head) {
@@ -98,6 +92,8 @@ static ListNode removeNthFromEnd(ListNode head, int n) {
     return dummy.next;
 }
 ```
+
+<FastSlowViz examples={['nth']} title="Remove the n-th node from the end, step by step" />
 
 ## Worked problems beyond lists
 

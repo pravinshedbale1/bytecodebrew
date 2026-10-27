@@ -27,15 +27,9 @@ So there's always an optimal solution that agrees with the greedy choice — and
 
 Trying every jump sequence is exponential, and a DP over positions is O(n²). But you only need **one number**: the furthest index reachable so far.
 
-<ArrayViz title="Jump game: one variable instead of a search" frames={[
-  { arr: [2, 3, 1, 0, 4, 0, 1], note: "Jump game: a[i] = the longest jump from i. Can you reach the last index? Instead of exploring every jump, track just one number: the furthest index reachable so far." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 0 }, highlight: [0], window: [0, 2], vars: { furthest: 2 }, note: "From 0 we can reach 2: furthest grows to 2." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 1 }, highlight: [1], window: [0, 4], vars: { furthest: 4 }, note: "From 1 we can reach 4: furthest grows to 4." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 2 }, highlight: [2], window: [0, 4], vars: { furthest: 4 }, note: "From 2 we reach at most 3 — no improvement; furthest stays 4." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 3 }, highlight: [3], window: [0, 4], vars: { furthest: 4 }, note: "From 3 we reach at most 3 — no improvement; furthest stays 4." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], pointers: { i: 4 }, highlight: [4], window: [0, 6], vars: { furthest: 8 }, note: "From 4 we can reach 8: furthest grows to 8." },
-  { arr: [2, 3, 1, 0, 4, 0, 1], window: [0, 6], vars: { furthest: 8 }, note: "Furthest ≥ last index (6): reachable. One pass, O(1) memory — no need to try jump combinations." }
-]} />
+Step through it: the shaded band is everything reachable so far. The second example gets stuck on a 0.
+
+<GreedyViz examples={['jump', 'stuck']} />
 
 ```java
 static boolean canJump(int[] a) {
@@ -67,6 +61,10 @@ static int jump(int[] a) {
 ```
 
 The reference solution checks this against an O(n²) DP of minimum jumps.
+
+Step through it: each coloured band is a ring of indexes reachable with that many jumps.
+
+<GreedyViz examples={['jump2']} />
 
 ## Shape 2: sort, then match
 
@@ -132,6 +130,10 @@ static int canCompleteCircuit(int[] gas, int[] cost) {
 }
 ```
 
+Step through it: watch the start jump forward each time the tank goes negative.
+
+<GreedyViz examples={['gas']} />
+
 ### Partition labels
 
 > Split a string into as many parts as possible so each letter appears in at most one part.
@@ -151,6 +153,10 @@ static List<Integer> partitionLabels(String s) {
     return out;
 }
 ```
+
+Step through it: the current part stretches to the last occurrence of every letter inside it.
+
+<GreedyViz examples={['labels']} />
 
 ## Shape 4: two passes for two-sided rules
 

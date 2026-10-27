@@ -1,6 +1,5 @@
 import { StepViz, Key } from './StepViz';
-import { ArrayStrip, Arcs, Brackets, Chips, Float, Stage, pitchFor } from './prims';
-import styles from './PrefixSumsViz.module.css';
+import { ArrayStrip, Arcs, Brackets, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
 import {
   DIFFERENCE, PREFIX_QUERY, SUBARRAY_K, difference, differenceCode, parseDifference, parsePrefixQuery, parseSubarrayK,
   prefixQuery, prefixQueryCode, randomDifference, randomPrefixQuery, randomSubarrayK, subarrayK, subarrayKCode,
@@ -15,10 +14,6 @@ import {
  */
 
 const list = (a) => `[${a.join(', ')}]`;
-
-function RowLabel({ y, children }) {
-  return <span className={styles.rowLabel} style={{ top: y }}>{children}</span>;
-}
 
 // ---------------------------------------------------------------- build + range query
 

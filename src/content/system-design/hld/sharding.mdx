@@ -61,6 +61,10 @@ shard = hash(user_id) mod number_of_shards
 - ❌ Naive `mod N` remaps almost every key when N changes — solved by consistent hashing or fixed partition counts (below).
 - Used by: Cassandra, DynamoDB, Redis Cluster (hash slots), MongoDB (hashed sharding).
 
+Step through both strategies with the same new orders and the same range query.
+
+<ShardingViz examples={['range', 'hash']} />
+
 ### Compound keys: getting both
 
 Cassandra-style keys combine both: hash the **partition key** to choose a node, and sort rows within the partition by a **clustering key**.
@@ -133,6 +137,10 @@ Better approaches:
 <Callout type="tip">
 Automatic rebalancing is convenient but risky: combined with automatic failure detection, a slow node can be declared dead, triggering a massive data movement that overloads the cluster further. Many operators prefer the system to *propose* a rebalance and a human to approve it.
 </Callout>
+
+Step through adding a fifth shard both ways, with the same 20 users, and count how many have to move.
+
+<ShardingViz examples={['modn', 'fixed']} />
 
 ## Request routing
 

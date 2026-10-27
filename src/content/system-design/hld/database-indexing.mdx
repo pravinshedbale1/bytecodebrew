@@ -44,6 +44,10 @@ How it works:
 **Strengths:** fast, predictable reads; excellent for range queries; mature.
 **Weakness:** writes are random I/O (modifying pages scattered across the disk), and each write may touch several pages (data + indexes + WAL) — called **write amplification**.
 
+Step through a small B+tree below: a lookup, a lookup for a missing key, a range scan along the leaves, and inserts that split pages all the way up to a new root.
+
+<BTreeViz examples={['lookup', 'miss', 'range', 'insert']} />
+
 ## LSM-Tree storage
 
 The **Log-Structured Merge-Tree** is designed for write-heavy workloads. It powers Cassandra, ScyllaDB, RocksDB, LevelDB, HBase and Bigtable.
@@ -66,6 +70,10 @@ How it works:
 
 **Strengths:** very high write throughput (all disk writes are sequential); good compression; efficient on SSDs.
 **Weaknesses:** reads may check several files (**read amplification**); compaction consumes background I/O and CPU and can cause latency spikes; tombstones can slow reads if they pile up.
+
+Step through the write path (log, memtable, flush, tombstone, compaction) and then the read path, where the Bloom filters decide which files are worth opening.
+
+<LsmViz examples={['life', 'reads']} />
 
 ## B-Tree vs LSM-Tree
 

@@ -18,18 +18,9 @@ This lesson assumes you know what push, pop and peek do. If not, read [Stacks & 
 
 ## The idea: the newest open thing must close first
 
-<ArrayViz title="Valid brackets with a stack" frames={[
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], aux: { label: "stack (expected closers)", items: [] }, note: "Valid brackets? The most recently opened bracket must close first — last in, first out. On each opener, push the closer we now expect." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 0 }, highlight: [0], done: [], aux: { label: "stack (expected closers)", items: ["}"] }, note: "'{' opens: push the closer we expect, '}'." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 1 }, highlight: [1], done: [0], aux: { label: "stack (expected closers)", items: ["}", "]"] }, note: "'[' opens: push the closer we expect, ']'." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 2 }, highlight: [2], done: [0, 1], aux: { label: "stack (expected closers)", items: ["}", "]", ")"] }, note: "'(' opens: push the closer we expect, ')'." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 3 }, highlight: [3], done: [0, 1, 2], aux: { label: "stack (expected closers)", items: ["}", "]"] }, note: "')' matches the top of the stack: pop." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 4 }, highlight: [4], done: [0, 1, 2, 3], aux: { label: "stack (expected closers)", items: ["}"] }, note: "']' matches the top of the stack: pop." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 5 }, highlight: [5], done: [0, 1, 2, 3, 4], aux: { label: "stack (expected closers)", items: ["}", ")"] }, note: "'(' opens: push the closer we expect, ')'." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 6 }, highlight: [6], done: [0, 1, 2, 3, 4, 5], aux: { label: "stack (expected closers)", items: ["}"] }, note: "')' matches the top of the stack: pop." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], pointers: { i: 7 }, highlight: [7], done: [0, 1, 2, 3, 4, 5, 6], aux: { label: "stack (expected closers)", items: [] }, note: "'}' matches the top of the stack: pop." },
-  { arr: ["{", "[", "(", ")", "]", "(", ")", "}"], done: [0, 1, 2, 3, 4, 5, 6, 7], aux: { label: "stack (expected closers)", items: [] }, note: "End of string and the stack is empty: every bracket was closed in the right order. Valid." }
-]} />
+Step through it. Each opener puts the closer it needs on top of a pile of plates; a closer must match the top plate. Try the broken examples to see the three ways it can fail.
+
+<BracketsViz examples={['valid', 'crossed', 'unclosed', 'stray']} />
 
 ```java
 static boolean isValid(String s) {
@@ -90,6 +81,10 @@ static int[] asteroidCollision(int[] asteroids) {
     return out;
 }
 ```
+
+Watch it happen: rocks fly, the newest right-mover takes each hit first, and the stack keeps the survivors.
+
+<AsteroidViz examples={['basic', 'equal', 'chain', 'apart', 'big']} />
 
 ### Min stack — every operation in O(1)
 

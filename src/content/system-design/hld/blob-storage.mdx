@@ -83,6 +83,10 @@ For large files (S3 recommends multipart above ~100 MB; required above 5 GB per 
 
 Benefits: parallelism (much faster), **retry a single failed part** instead of the whole file, and the ability to start uploading before the whole file is available (streaming).
 
+Compare the three ways to upload the same 400 MB file. Watch the stopwatch, and how many bytes pass through your API.
+
+<UploadViz examples={['proxy', 'presigned', 'multipart']} />
+
 ### Resumable uploads
 
 On flaky mobile networks, an upload should survive disconnects. The client tracks which parts (or byte offsets) succeeded and, after reconnecting, asks the server which parts are already stored and uploads only the rest. Implementations: S3 multipart with `ListParts`, Google Cloud Storage resumable uploads, or the open **tus** protocol. Remember to abort abandoned multipart uploads (lifecycle rules), since stored parts cost money.

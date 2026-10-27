@@ -1,0 +1,142 @@
+/* Stage parts for the graph step-throughs: grids, directed graphs and a union-find forest. */
+
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.caption { margin: 2px 0 0; font-size: 11px; color: var(--color-text-muted); text-align: center; }
+
+.pop { animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* ---- grids */
+
+.grid { display: grid; gap: 3px; margin: 4px auto; }
+
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 750;
+  transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+
+.water { background: var(--color-note-soft); border: 1px solid transparent; }
+.land { background: var(--color-warn-soft); border: 1.5px solid var(--color-warn); }
+.isle_accent { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-surface); }
+.isle_note { background: var(--color-note); border-color: var(--color-note); color: var(--color-surface); }
+.isle_interview { background: var(--color-interview); border-color: var(--color-interview); color: var(--color-surface); }
+.isle_warn { background: var(--color-warn); border-color: var(--color-warn); color: var(--color-surface); }
+.isle_success { background: var(--color-success); border-color: var(--color-success); color: var(--color-surface); }
+.cellCur { box-shadow: 0 0 0 3px var(--color-text); z-index: 1; }
+.cellDone { animation: glow 0.8s ease-out; }
+
+@keyframes glow {
+  0% { box-shadow: 0 0 0 0 var(--color-success); }
+  50% { box-shadow: 0 0 0 4px var(--color-success-soft); }
+  100% { box-shadow: none; }
+}
+
+.cellBadge {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: 8.5px;
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.open { background: var(--color-surface); border: 1px solid var(--color-border-strong); }
+.wall { background: var(--color-text-subtle); border: 1px solid var(--color-text-subtle); }
+.ring_a { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
+.ring_b { background: var(--color-note-soft); border-color: var(--color-note); color: var(--color-note); }
+.cellNew { box-shadow: 0 0 0 3px var(--color-warn-soft); border-color: var(--color-warn); }
+.cellEnd { outline: 2px dashed var(--color-interview); outline-offset: -5px; }
+
+.empty { background: transparent; border: 1px dashed var(--color-border); }
+.fresh { background: radial-gradient(circle at 50% 55%, var(--color-warn) 0 34%, transparent 36%), var(--color-surface); border: 1px solid var(--color-border); }
+.rotten { background: radial-gradient(circle at 50% 55%, var(--color-danger-soft) 0 38%, transparent 40%), var(--color-surface); border: 1px solid var(--color-danger); color: var(--color-danger); }
+
+/* ---- directed graphs */
+
+.graph { position: relative; margin: 0 auto; }
+.svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+
+.edge path { fill: none; stroke-width: 1.6; }
+.edge text { font-family: var(--font-mono); font-size: 11px; font-weight: 700; paint-order: stroke; stroke: var(--color-surface); stroke-width: 4px; }
+.edge_plain path { stroke: var(--color-border-strong); }
+.edge_plain text { fill: var(--color-text-muted); }
+.edge_on path { stroke: var(--color-accent); stroke-width: 2.6; }
+.edge_on text { fill: var(--color-accent); }
+.edge_good path { stroke: var(--color-success); stroke-width: 2.6; }
+.edge_good text { fill: var(--color-success); }
+.edge_faded path { stroke: var(--color-border); stroke-dasharray: 4 4; }
+.edge_faded text { fill: var(--color-text-subtle); }
+.edge_bad path { stroke: var(--color-danger); stroke-dasharray: 5 3; }
+.draw path { stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 0.7s ease-out forwards; }
+
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.head_plain { fill: var(--color-border-strong); }
+.head_on { fill: var(--color-accent); }
+.head_good { fill: var(--color-success); }
+.head_faded { fill: var(--color-border); }
+.head_bad { fill: var(--color-danger); }
+
+.node {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 3px 8px -5px rgb(0 0 0 / 0.45);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 750;
+  transition: left 0.5s cubic-bezier(0.45, 0, 0.25, 1), top 0.5s cubic-bezier(0.45, 0, 0.25, 1), border-color 0.3s, background 0.3s, box-shadow 0.3s;
+}
+
+.nodeReady { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.nodeDone { border-color: var(--color-success); background: var(--color-success-soft); }
+.nodeCur { border-color: var(--color-warn); background: var(--color-warn-soft); box-shadow: 0 0 0 5px var(--color-warn-soft); }
+.nodeBad { border-color: var(--color-danger); background: var(--color-danger-soft); }
+.nodeRoot { border-color: var(--color-accent); border-width: 3px; }
+.nodeStale { border-style: dashed; }
+
+.deg, .dist {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+.degZero { background: var(--color-accent); }
+.nodeDone .deg { background: var(--color-success); }
+.dist { top: auto; bottom: -14px; right: auto; left: 50%; transform: translateX(-50%); background: var(--color-surface-muted); color: var(--color-text); border: 1px solid var(--color-border-strong); }
+.nodeDone .dist { background: var(--color-success); color: var(--color-surface); border-color: var(--color-success); }
+.distNew { background: var(--color-warn-soft) !important; border-color: var(--color-warn) !important; animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop, .cellDone, .draw path, .distNew { animation: none; }
+  .draw path { stroke-dasharray: none; stroke-dashoffset: 0; }
+  .node { transition: none; }
+}

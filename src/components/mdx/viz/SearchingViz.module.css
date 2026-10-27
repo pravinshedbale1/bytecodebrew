@@ -1,0 +1,129 @@
+/* ---- rotated array: the two ascending runs */
+
+.spark { position: absolute; left: 0; top: 0; overflow: visible; }
+.sparkLine { stroke: var(--color-border-strong); stroke-width: 2; }
+.sparkDot { fill: var(--color-surface); stroke: var(--color-text-muted); stroke-width: 1.5; transition: opacity 0.3s; }
+.sparkMid { fill: var(--color-accent); stroke: var(--color-accent); }
+.sparkOut { opacity: 0.3; }
+
+/* ---- binary search on the answer: the axis of possible answers */
+
+.axisLine {
+  position: absolute;
+  height: 0;
+  border-top: 2px solid var(--color-border-strong);
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-subtle);
+}
+
+.range {
+  position: absolute;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  opacity: 0.85;
+  transition: left 0.45s ease, width 0.45s ease;
+}
+
+.rangeLabel {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.probe {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--color-surface);
+}
+
+.probeYes { background: var(--color-success); }
+.probeNo { background: var(--color-danger); }
+
+.midMark {
+  position: absolute;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: left 0.45s ease;
+}
+
+.midMark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  height: 34px;
+  border-left: 2px solid var(--color-accent);
+}
+
+.midDone { background: var(--color-success); }
+.midDone::after { border-color: var(--color-success); }
+
+/* ---- maximise the minimum: baskets on a line */
+
+.basket {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.ball { background: var(--color-accent); border-color: var(--color-accent); }
+
+.basketLabel {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.gap {
+  position: absolute;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
