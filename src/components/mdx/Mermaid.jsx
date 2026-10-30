@@ -17,6 +17,8 @@ function themeConfig() {
   return {
     startOnLoad: false,
     securityLevel: 'strict',
+    // Mermaid 12 defaults to the ELK layout, a 1.4 MB download per diagram page; dagre is 48 KB
+    layout: 'dagre',
     theme: 'base',
     fontFamily: cssVar('--font-sans'),
     themeVariables: {

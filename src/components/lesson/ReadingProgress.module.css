@@ -1,0 +1,23 @@
+.track {
+  position: fixed;
+  top: var(--topbar-height);
+  left: var(--sidebar-width);   /* the main column only, beside the sidebar */
+  right: 0;
+  z-index: 21;
+  height: 2px;
+  pointer-events: none;
+}
+
+.bar {
+  height: 100%;
+  background: var(--color-accent);
+  opacity: 0.7;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+@media (max-width: 1023px) {
+  .track {
+    left: 0;
+  }
+}

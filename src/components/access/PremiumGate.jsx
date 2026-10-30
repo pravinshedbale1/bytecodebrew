@@ -1,12 +1,10 @@
 import { Link } from 'react-router';
-import { Lock, LogIn, Sparkles, Check } from 'lucide-react';
+import { Lock, LogIn, Check } from 'lucide-react';
 import { useAccess } from '../../hooks/useAccess';
 import { signIn } from '../../hooks/useAuth';
 import { CONTACT_EMAIL, FREE_FEATURES, PREMIUM_FEATURES } from '../../config/access';
 import ui from '../common/ui.module.css';
 import styles from './PremiumGate.module.css';
-
-const PREMIUM_SHORT = PREMIUM_FEATURES.map(([name]) => name.toLowerCase());
 
 /**
  * The message shown in place of premium content: what it is, what Premium includes, what stays free,
@@ -20,7 +18,7 @@ export function PremiumNotice({ feature, blurb, compact = false }) {
 
   const actions = (
     <div className={ui.row}>
-      <Link to="/premium" className={`${ui.btn} ${ui.primary} ${compact ? ui.small : ''}`}><Sparkles size={14} /> See Premium plans</Link>
+      <Link to="/premium" className={`${ui.btn} ${ui.primary} ${compact ? ui.small : ''}`}>See Premium</Link>
       {signedOut && (
         <button type="button" className={`${ui.btn} ${compact ? ui.small : ''}`} onClick={signIn}><LogIn size={14} /> Sign in</button>
       )}
@@ -31,32 +29,31 @@ export function PremiumNotice({ feature, blurb, compact = false }) {
   if (compact) {
     return (
       <section className={`${styles.notice} ${styles.compact}`} aria-label="Premium content">
-        <p className={styles.head}><Lock size={15} aria-hidden="true" /> {feature ? `${feature} — Premium` : 'Premium content'}</p>
+        <p className={styles.head}><Lock size={14} aria-hidden="true" /> {feature ? `${feature} is part of Premium` : 'Part of Premium'}</p>
         {blurb && <p className={styles.text}>{blurb}</p>}
-        <p className={styles.text}>Premium also unlocks {PREMIUM_SHORT.filter((n) => !feature || !n.startsWith(feature.toLowerCase().slice(0, 10))).slice(0, 5).join(', ')} and more. Lessons, quizzes and notes stay free.</p>
+        <p className={styles.text}>The lesson itself, its diagrams, quiz and notes stay free.</p>
         {actions}
       </section>
     );
   }
 
+  // A short, calm note: what this is and what stays free. The full list is one click away rather
+  // than a sales sheet in the middle of a study page.
   return (
     <section className={styles.notice} aria-label="Premium feature">
-      <p className={styles.head}><Lock size={15} aria-hidden="true" /> {feature ? `${feature} is part of Premium` : 'This is part of Premium'}</p>
+      <p className={styles.head}><Lock size={14} aria-hidden="true" /> {feature ? `${feature} is part of Premium` : 'This is part of Premium'}</p>
       {blurb && <p className={styles.text}>{blurb}</p>}
-      <div className={styles.cols}>
-        <div>
-          <p className={styles.colHead}><Sparkles size={14} aria-hidden="true" /> Premium includes</p>
-          <ul className={styles.list}>
-            {PREMIUM_FEATURES.map(([name, d]) => <li key={name}><Check size={13} aria-hidden="true" /><span><strong>{name}</strong>{d ? ` — ${d}` : ''}</span></li>)}
-          </ul>
-        </div>
-        <div>
-          <p className={styles.colHead}>Free for everyone</p>
-          <ul className={styles.list}>
-            {FREE_FEATURES.map((x) => <li key={x}><Check size={13} aria-hidden="true" /><span>{x}</span></li>)}
-          </ul>
-        </div>
-      </div>
+      <p className={styles.text}>Every Beginner and Intermediate lesson, with its diagrams, quizzes and notes, stays free.</p>
+      <details className={styles.more}>
+        <summary>What Premium includes</summary>
+        <ul className={styles.list}>
+          {PREMIUM_FEATURES.map(([name, d]) => <li key={name}><Check size={13} aria-hidden="true" /><span><strong>{name}</strong>{d ? ` — ${d}` : ''}</span></li>)}
+        </ul>
+        <p className={styles.colHead}>Free for everyone</p>
+        <ul className={styles.list}>
+          {FREE_FEATURES.map((x) => <li key={x}><Check size={13} aria-hidden="true" /><span>{x}</span></li>)}
+        </ul>
+      </details>
       {actions}
     </section>
   );

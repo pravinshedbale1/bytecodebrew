@@ -12,6 +12,7 @@ import { mdxComponents } from '../components/mdx/components';
 import { PageLayout, RailCard } from '../components/layout/PageLayout';
 import { TableOfContents } from '../components/lesson/TableOfContents';
 import { LessonFooter } from '../components/lesson/LessonFooter';
+import { ReadingProgress } from '../components/lesson/ReadingProgress';
 import { ProgressCard, UpNextCard } from '../components/rail/RailWidgets';
 import { LevelBadge } from '../components/common/Badge';
 import { ComingSoon } from '../components/common/ComingSoon';
@@ -129,12 +130,20 @@ export function LessonPage() {
           </div>
         </header>
 
+        {Content && !lock && headings.length > 2 && (
+          <details className={styles.contents}>
+            <summary>On this page <span>{headings.filter((h) => h.level === 2).length} sections</span></summary>
+            <TableOfContents headings={headings.filter((h) => h.level === 2)} />
+          </details>
+        )}
+
         {lock === 'loading' ? (
           <div className={styles.loading}>Checking your access…</div>
         ) : lock ? (
           <LockedLesson lessonKey={key} />
         ) : Content ? (
           <LessonKeyContext.Provider value={key}>
+            <ReadingProgress targetRef={articleRef} />
             <div className="prose" ref={articleRef}>
               <MDXProvider components={mdxComponents}>
                 <Suspense fallback={<div className={styles.loading}>Loading lesson…</div>}>

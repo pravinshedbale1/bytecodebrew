@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Lock, Sparkles, Mountain } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Mountain } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
@@ -50,7 +50,6 @@ export function AppSidebar({ open, onClose }) {
 
 function GlobalNav({ activeTrackId }) {
   const premium = usePremium();
-  const lock = premium ? null : <Lock size={13} className={styles.lock} aria-label="Premium" />;
   const [expanded, setExpanded] = useState(() => new Set([activeTrackId ?? 'system-design']));
   const toggle = (id) =>
     setExpanded((prev) => {
@@ -58,43 +57,18 @@ function GlobalNav({ activeTrackId }) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  const link = ({ to, label, icon: I }) => (
+    <NavLink key={to} to={to} className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
+      <I size={18} strokeWidth={1.75} aria-hidden="true" />
+      {label}
+    </NavLink>
+  );
 
+  // Study first: the courses, then practice, then the planning tools. Premium pages explain
+  // themselves when opened, so the menu carries no locks or badges.
   return (
     <nav className={styles.nav}>
-      <NavLink to="/" end className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <Home size={18} strokeWidth={1.75} aria-hidden="true" />
-        Home
-      </NavLink>
-
-      <NavLink to="/today" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <Sunrise size={18} strokeWidth={1.75} aria-hidden="true" />
-        Today
-        {premium ? <span className={styles.newBadge}>New</span> : lock}
-      </NavLink>
-
-      <NavLink to="/dashboard" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <LayoutDashboard size={18} strokeWidth={1.75} aria-hidden="true" />
-        Dashboard
-        {lock}
-      </NavLink>
-
-      <NavLink to="/runway" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <PlaneTakeoff size={18} strokeWidth={1.75} aria-hidden="true" />
-        Runway
-        {premium ? <span className={styles.newBadge}>New</span> : lock}
-      </NavLink>
-
-      <NavLink to="/climb" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <Mountain size={18} strokeWidth={1.75} aria-hidden="true" />
-        Climb
-        {premium ? <span className={styles.newBadge}>New</span> : lock}
-      </NavLink>
-
-      <NavLink to="/companies" className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-        <Building2 size={18} strokeWidth={1.75} aria-hidden="true" />
-        Companies
-        {premium ? <span className={styles.newBadge}>New</span> : lock}
-      </NavLink>
+      {link({ to: '/', label: 'Home', icon: Home })}
 
       <p className={styles.section}>Learn</p>
 
@@ -153,18 +127,15 @@ function GlobalNav({ activeTrackId }) {
       })}
 
       <p className={styles.section}>Practise</p>
-      {PRACTICE_LINKS.map(({ to, label, icon: I }) => (
-        <NavLink key={to} to={to} className={({ isActive }) => `${styles.top} ${isActive ? styles.active : ''}`}>
-          <I size={18} strokeWidth={1.75} aria-hidden="true" />
-          {label}
-          {lock}
-        </NavLink>
-      ))}
+      {PRACTICE_LINKS.map(link)}
+
+      <p className={styles.section}>Plan</p>
+      {PLAN_LINKS.map(link)}
+
       {!premium && (
-        <NavLink to="/premium" className={({ isActive }) => `${styles.top} ${styles.getPremium} ${isActive ? styles.active : ''}`}>
-          <Sparkles size={18} strokeWidth={1.75} aria-hidden="true" />
-          Get Premium
-        </NavLink>
+        <p className={styles.premiumNote}>
+          Lessons are free. Practice and planning tools are part of <Link to="/premium">Premium</Link>.
+        </p>
       )}
     </nav>
   );
@@ -175,6 +146,14 @@ const PRACTICE_LINKS = [
   { to: '/review', label: 'Review', icon: Layers },
   { to: '/mock', label: 'Mock interview', icon: Timer },
   { to: '/playground', label: 'Code playground', icon: Code2 },
+];
+
+const PLAN_LINKS = [
+  { to: '/today', label: 'Today', icon: Sunrise },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/runway', label: 'Runway', icon: PlaneTakeoff },
+  { to: '/climb', label: 'Climb', icon: Mountain },
+  { to: '/companies', label: 'Companies', icon: Building2 },
 ];
 
 function CourseNav({ trackId, courseId, course }) {

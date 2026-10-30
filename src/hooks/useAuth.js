@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { firebaseEnabled, useEmulator } from '../config/firebase';
-import { loadFirebase } from '../lib/firebase';
+import { loadAuth } from '../lib/firebase';
 
 /**
  * Google sign-in state, shared by the whole app.
@@ -18,7 +18,7 @@ function set(next) {
 function start() {
   if (started || !firebaseEnabled) return;
   started = true;
-  loadFirebase().then((fb) => {
+  loadAuth().then((fb) => {
     fb.authMod.onAuthStateChanged(fb.auth, (u) => {
       set(u
         ? { status: 'signed-in', user: { uid: u.uid, name: u.displayName, email: u.email, emailVerified: u.emailVerified, photo: u.photoURL }, error: null }
@@ -37,7 +37,7 @@ export function onAuth(listener) {
 }
 
 export async function signIn() {
-  const fb = await loadFirebase();
+  const fb = await loadAuth();
   if (!fb) return;
   set({ error: null });
   try {
@@ -51,7 +51,7 @@ export async function signIn() {
 }
 
 export async function signOutUser() {
-  const fb = await loadFirebase();
+  const fb = await loadAuth();
   if (fb) await fb.authMod.signOut(fb.auth);
   // the Claude API key belongs to the account (src/lib/claude.js): don't leave a copy in this browser
   try { localStorage.removeItem('bcb:anthropic-key'); } catch { /* ignore */ }
@@ -60,7 +60,7 @@ export async function signOutUser() {
 if (useEmulator && typeof window !== 'undefined') {
   // Test hook for the local emulator only: sign in as a fake Google user without a popup.
   window.__bcbEmulatorSignIn = async (email = 'learner@example.com') => {
-    const fb = await loadFirebase();
+    const fb = await loadAuth();
     const cred = fb.authMod.GoogleAuthProvider.credential(JSON.stringify({ sub: email, email, name: 'Test Learner', email_verified: true }));
     return fb.authMod.signInWithCredential(fb.auth, cred);
   };

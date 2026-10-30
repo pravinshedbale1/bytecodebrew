@@ -13,7 +13,6 @@ import { TodayCard } from '../components/dashboard/TodayCard';
 import { Welcome } from '../components/navigation/Welcome';
 import { usePremium } from '../hooks/useAccess';
 import { useActivity, streakOf } from '../hooks/useActivity';
-import { site } from '../config/site';
 import styles from './Page.module.css';
 
 function trackMeta(track) {
@@ -62,7 +61,6 @@ export function HomePage() {
   return (
     <PageLayout rail={rail}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>{site.name}</p>
         <h1 className={styles.title}>Interview preparation, in depth.</h1>
         <p className={styles.lead}>
           Structured tracks that take you from fundamentals to full case studies. Every lesson
