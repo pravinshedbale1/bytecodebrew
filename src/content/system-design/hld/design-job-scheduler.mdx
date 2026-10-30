@@ -164,6 +164,29 @@ For multi-step jobs (extract → transform → load), use a workflow engine (Air
 - **Senior**: partitioned scheduling with leases, unique execution records, worker leases and heartbeats, at-least-once with idempotency, round-time spikes.
 - **Staff**: concurrency/misfire policies, time zones and DST, multi-tenant fairness, fencing, workflow composition, observability of lateness (scheduled vs actual start).
 
+## 11. Variations interviewers ask
+
+### Online judge (LeetCode)
+
+Users submit code; the system runs it against hidden tests and returns a verdict. Structurally it is a job system: submissions are jobs, and runners are workers. What is new is that **every job is untrusted code**.
+
+```mermaid
+flowchart LR
+  U[User] -->|"POST /submissions"| API[Submission API]
+  API --> DB[("Submissions<br/>status, verdict")]
+  API --> Q[["Queue<br/>contest / practice"]]
+  Q --> R["Runner fleet<br/>sandboxed, per language"]
+  R --> DB
+  U -. "poll or SSE for the verdict" .-> API
+```
+
+- **Sandboxing is the core of the design.** Run each submission in an isolated container or microVM (gVisor, Firecracker) with **no network**, a read-only file system, a syscall filter (seccomp), and hard CPU, memory, process-count and wall-clock limits. Kill it when time is up. Never run user code in the same process or container as your service.
+- **Warm pools** of ready sandboxes per language avoid paying container start-up time on every submission.
+- **Bursts:** a contest's first minutes bring thousands of submissions at once. The queue absorbs them, and runners autoscale on queue depth. Give contests their own queue so practice traffic can't delay them.
+- **Judging:** compare output with the expected output; use a custom checker for problems that accept several correct answers, and set time limits per language, since Python is slower than C++.
+- **Results:** the client polls `GET /submissions/{id}` or listens on SSE. A submission that sits in the queue too long is retried with a new lease, as in the worker deep dive above.
+- **Contest ranking** is a leaderboard ordered by problems solved, then penalty time. See [Design a Real-Time Leaderboard](/system-design/hld/design-leaderboard).
+
 ## Interview questions
 
 <QA q="How do you ensure a job scheduled for 9:00 doesn't run twice if two scheduler instances both pick it up?">

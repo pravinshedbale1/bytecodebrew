@@ -226,6 +226,28 @@ Like counts on viral posts are a write hot spot. Increment sharded counters or b
 - **Senior**: clear push vs pull trade-off with numbers, hybrid for celebrities, inactive users, hydration of IDs, read-your-writes, failure handling.
 - **Staff**: ranking architecture, cache sizing and cost, multi-region feeds, backfill strategies, product-level trade-offs (freshness vs cost).
 
+## 12. Variations interviewers ask
+
+### Photo sharing (Instagram)
+
+The feed is this design. What Instagram adds is **media**:
+
+- Clients upload photos and videos straight to object storage with **pre-signed URLs**, never through the API servers. See [Blob Storage](/system-design/hld/blob-storage).
+- A processing pipeline creates several sizes (thumbnail, feed, full screen) and, for video, several bitrates. The post becomes visible once processing finishes.
+- Feed entries hold media URLs served by a **CDN**. The feed service only hydrates small metadata, and the bytes never pass through it.
+
+### Post search (Facebook search)
+
+"Find posts containing these words, sorted by recency or by likes."
+
+- **Inverted index:** keyword → list of post IDs. New posts reach the indexer through Kafka (or CDC from the posts database) and are tokenised into the index. See [Search Systems](/system-design/hld/search-systems).
+- **Sorting by recency is cheap:** post IDs are appended in time order, so the newest results are at the end of each list.
+- **Sorting by likes is the hard part.** Like counts change constantly, and updating the index on every like would mean billions of index writes. Two common answers:
+  - Update a post's position in the "by likes" index only when its count **crosses a threshold** (1, 2, 4, 8, 16 …), so a post with 1,000 likes changes position only about 10 times.
+  - Take the top few thousand matches by recency, fetch their current like counts from a counter store, and re-rank at query time.
+- **Partitioning:** by post ID (each shard indexes some posts; a query asks every shard and merges), or by keyword (a query touches one shard, but popular words create hot shards). Large systems usually partition by document and **cache popular queries** for a few seconds.
+- **Privacy** is checked at query time, since who may see a post can change after it was indexed.
+
 ## Interview questions
 
 <QA q="A celebrity with 100 million followers posts. Walk through what happens in your design.">

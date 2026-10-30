@@ -49,7 +49,7 @@ const hld = {
       title: 'Storing Data',
       description: 'The database is usually the hardest part to scale. Choosing, indexing, protecting, copying and splitting data.',
       lessons: [
-        L('sql-vs-nosql', 'Choosing a Database: SQL vs NoSQL', 'Relational, key-value, document, wide-column and graph stores — and how to choose.', 18, 'Intermediate'),
+        L('sql-vs-nosql', 'Choosing a Database: SQL vs NoSQL', 'Relational, key-value, document, wide-column and graph stores — and how to choose.', 20, 'Intermediate'),
         L('database-indexing', 'Indexing & Storage Engines', 'B-Trees vs LSM-Trees, secondary indexes, and why writes and reads pull in opposite directions.', 17, 'Intermediate'),
         L('transactions-and-isolation', 'Transactions, Isolation & MVCC', 'ACID in practice, isolation anomalies, MVCC, locking and optimistic concurrency.', 20, 'Intermediate'),
         L('replication', 'Replication', 'Leader-follower, multi-leader and leaderless replication, replication lag and failover.', 19, 'Intermediate'),
@@ -76,7 +76,7 @@ const hld = {
       title: 'Caching & Content Delivery',
       description: 'Serving data faster by keeping copies closer to where they are needed.',
       lessons: [
-        L('caching', 'Caching', 'Cache layers, read/write strategies, eviction, invalidation, and stampedes.', 20, 'Intermediate'),
+        L('caching', 'Caching', 'Cache layers, read/write strategies, eviction, invalidation, and stampedes.', 24, 'Intermediate'),
         L('cdn', 'Content Delivery Networks', 'Edge caching, push vs pull CDNs, cache keys and invalidation for static and dynamic content.', 12, 'Beginner'),
       ],
     },
@@ -85,11 +85,11 @@ const hld = {
       title: 'Services & Communication',
       description: 'How clients talk to servers, how services talk to each other, and how to split a system into services.',
       lessons: [
-        L('api-design', 'API Design: REST, gRPC, GraphQL', 'Resource modelling, pagination, versioning, idempotency and choosing a protocol.', 20, 'Intermediate'),
-        L('real-time-communication', 'Real-Time Communication', 'Short polling, long polling, Server-Sent Events and WebSockets — and scaling persistent connections.', 14, 'Intermediate'),
-        L('message-queues', 'Message Queues & Event Streaming', 'Queues vs logs, delivery guarantees, ordering, consumer groups and back-pressure.', 20, 'Intermediate'),
-        L('microservices-architecture', 'Monoliths, Microservices & Service Discovery', 'When to split, service boundaries, discovery, API gateways and service meshes.', 18, 'Intermediate'),
-        L('event-driven-architecture', 'Event-Driven Architecture, CQRS & Event Sourcing', 'Events vs commands, choreography vs orchestration, CQRS and event sourcing.', 17, 'Advanced'),
+        L('api-design', 'API Design: REST, gRPC, GraphQL', 'Resource modelling, pagination, versioning, idempotency and choosing a protocol.', 35, 'Intermediate'),
+        L('real-time-communication', 'Real-Time Communication', 'Short polling, long polling, Server-Sent Events, WebSockets and webhooks — and scaling persistent connections.', 18, 'Intermediate'),
+        L('message-queues', 'Message Queues & Event Streaming', 'Queues vs logs, delivery guarantees, ordering, consumer groups and back-pressure.', 24, 'Intermediate'),
+        L('microservices-architecture', 'Monoliths, Microservices & Service Discovery', 'When to split, service boundaries, discovery, API gateways and service meshes.', 22, 'Intermediate'),
+        L('event-driven-architecture', 'Event-Driven Architecture, CQRS & Event Sourcing', 'Events vs commands, choreography vs orchestration, CQRS and event sourcing.', 21, 'Advanced'),
       ],
     },
     {
@@ -112,7 +112,7 @@ const hld = {
         L('availability-and-fault-tolerance', 'Availability & Fault Tolerance', 'SLAs and nines, redundancy, timeouts, retries with backoff, circuit breakers and idempotency.', 19, 'Intermediate'),
         L('observability', 'Observability', 'Metrics, logs, traces, SLO-based alerting and debugging distributed systems.', 15, 'Intermediate'),
         L('multi-region-architecture', 'Multi-Region Architecture', 'Active-passive vs active-active, data placement, global routing and disaster recovery.', 17, 'Advanced'),
-        L('security-fundamentals', 'Security Fundamentals', 'Authentication, authorization, OAuth 2.0/OIDC, JWTs, encryption and secrets.', 18, 'Intermediate'),
+        L('security-fundamentals', 'Security Fundamentals', 'Authentication, authorization, OAuth 2.0/OIDC, JWTs, encryption and secrets.', 22, 'Intermediate'),
       ],
     },
     {

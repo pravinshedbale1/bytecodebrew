@@ -37,6 +37,33 @@ The standard compromise: **short-lived access tokens** (5–15 minutes) plus **l
 JWT payloads are only **encoded**, not encrypted, by default — anyone can read them. Never put secrets or sensitive personal data in a JWT. Always verify the signature and the `exp`, `iss` and `aud` claims, and pin the expected algorithm.
 </Callout>
 
+### Choosing between them
+
+| | Server-side session | Self-contained token (JWT) |
+| --- | --- | --- |
+| What the client holds | A random ID, meaningless on its own | Signed claims: user, roles, expiry |
+| Checking a request | Look up the session store | Verify the signature; no lookup |
+| Logout and revocation | Delete the session; takes effect immediately | Wait for expiry, or check a deny-list (a lookup again) |
+| Permission changes | Apply on the next request | Apply when a new token is issued |
+| Size on every request | About 32 bytes | Often 500 bytes to over 1 KB |
+| Many services | Each needs the store, or the gateway translates | Any service verifies with the issuer's public key |
+| Typical home | Your own website | APIs, mobile apps, microservices, third-party access |
+
+**Pick sessions when** people log in to your own web app in a browser, and you need instant logout, "sign out of all devices", or the ability to ban an account immediately. A Redis lookup takes well under a millisecond, so the "stateless" saving is usually not worth losing revocation.
+
+**Pick JWTs when** many services or edge locations must verify identity without calling a central store, for APIs used by mobile apps and partners, and for OAuth access tokens issued by an identity provider.
+
+**Avoid JWTs as** a long-lived browser session token with no refresh flow. You lose revocation, and a stolen token stays valid for days. Also avoid packing large or sensitive data into the token, since it travels with every request and anyone can decode it.
+
+A common hybrid gives you both: the browser holds an ordinary **session cookie**, and the **API gateway** swaps it for a short-lived internal JWT that it passes to backend services. Users get instant logout; services get lookup-free verification.
+
+### Where a browser should keep credentials
+
+- **An `HttpOnly`, `Secure`, `SameSite` cookie** is the safest place. JavaScript can't read it, so an XSS bug can't steal it (though injected script can still send requests while the page is open). Pair it with CSRF protection.
+- **`localStorage` is risky** for long-lived tokens: any script on the page, including a compromised third-party analytics script, can read the token and send it elsewhere.
+- **In memory** (a JavaScript variable) suits short-lived access tokens. They are lost on refresh and renewed using a refresh token held in an `HttpOnly` cookie.
+- For single-page apps handling sensitive data, the current recommendation is a **backend-for-frontend**: a small server holds the OAuth tokens, and the browser only ever gets a session cookie.
+
 ## OAuth 2.0 and OpenID Connect
 
 - **OAuth 2.0** is a framework for **delegated authorization**: letting an app access a user's resources on another service without sharing the password ("Allow Canva to read your Google Drive files"). It issues **access tokens** with limited **scopes**.
@@ -66,6 +93,19 @@ PKCE (Proof Key for Code Exchange) prevents an intercepted authorization code fr
 
 For **service-to-service** calls with no user involved, OAuth's **client credentials** flow issues tokens to the service itself; inside a mesh, **mutual TLS** authenticates services to each other.
 
+### Authenticating machines
+
+When no human is involved, a partner's server or one of your own services, pick from these:
+
+| Method | How it works | Pick it for | Watch out for |
+| --- | --- | --- | --- |
+| **API key** | A long random secret sent in a header | Simple partner and public APIs | Long-lived and easily leaked in logs or repos; store only a hash, support scopes and rotation |
+| **Signed requests (HMAC)** | The client signs the method, path, body and a timestamp with a shared secret, as AWS Signature V4 does | Partner APIs where tampering and replay matter; webhooks | Clock skew; both sides must build the signed string identically |
+| **OAuth client credentials** | The service trades its credentials for a short-lived access token with scopes | Calls across organisation or trust boundaries with fine-grained permissions | The token server is on the critical path, so cache tokens until shortly before expiry |
+| **Mutual TLS** | Both sides present certificates during the TLS handshake | Traffic inside your own infrastructure, usually automated by a service mesh | Certificate issuance and rotation must be automated (a mesh CA or SPIFFE) |
+
+API keys answer "which customer is this?" but not "has this request been tampered with or replayed?". Choose signed requests or mTLS when that matters.
+
 ## Authorization models
 
 | Model | How it decides | Good for |
@@ -73,6 +113,8 @@ For **service-to-service** calls with no user involved, OAuth's **client credent
 | **RBAC** (role-based) | User has roles; roles have permissions | Admin consoles, internal tools, most SaaS |
 | **ABAC** (attribute-based) | Policies over attributes of user, resource and context ("managers can approve expenses under ₹50,000 in their own department") | Fine-grained enterprise rules |
 | **ReBAC** (relationship-based) | Permissions follow relationships in a graph ("viewers of a folder can view its documents") | Sharing models like Google Drive; Google's **Zanzibar** system |
+
+**How to choose.** Start with **RBAC**: it is easy to explain, review and audit. It breaks down into **role explosion** when permissions depend on the specific object ("editor of project 7, viewer of project 9") and you find yourself creating a role per project. At that point add per-resource grants, or move to **ReBAC** if users share things with each other the way they do in Google Drive. Use **ABAC** policies for rules over attributes such as amount limits, region, time of day or device, but keep them in one policy engine; attribute checks scattered across services are impossible to audit. Many real systems combine all three: roles for staff, relationships for sharing, attributes for limits.
 
 Whatever the model: **check authorization on the server for every request, at the object level** ("does this user own invoice 1001?"), not just "is the user logged in?". Centralise policy logic (a library or policy engine such as OPA) so it's applied consistently.
 

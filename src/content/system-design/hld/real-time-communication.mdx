@@ -20,6 +20,8 @@ sequenceDiagram
 
 **Use when:** updates are infrequent and a delay is acceptable — e.g., checking an export job's status every 10 seconds.
 
+**Avoid when:** updates must arrive within a second, or when many clients poll at once. A million open apps polling every 5 seconds is 200,000 requests per second, almost all of them answered with "nothing new".
+
 ## Long polling
 
 The client sends a request; the server **holds it open** until there's new data (or a timeout, e.g., 30 s), then responds. The client immediately sends another request.
@@ -44,6 +46,8 @@ sequenceDiagram
 - ❌ Ordering and missed messages between requests must be handled (use a `since` cursor).
 
 **Use when:** you need moderate real-time behaviour and must work in restrictive network environments, or as a fallback for WebSockets.
+
+**Avoid when:** messages arrive in bursts or at high rates, because every message costs a full reconnect. Where SSE or WebSockets are available, long polling is mainly a fallback today.
 
 ## Server-Sent Events (SSE)
 
@@ -72,6 +76,10 @@ data: {"type":"comment","postId":"p_9"}
 
 **Use when:** the server pushes and the client mostly listens — live feeds, notifications, dashboards, progress updates, and streaming LLM responses (token-by-token output is commonly delivered via SSE).
 
+**Avoid when:** the client also sends frequent messages (chat typing, game input), you need binary frames, or a proxy in the path buffers responses. A buffering reverse proxy holds the events back until the response ends, so streaming must be switched off for that route (for example `proxy_buffering off` in nginx).
+
+**Where SSE beats WebSockets:** it is plain HTTP, so existing auth cookies, load balancers, HTTP/2 multiplexing and monitoring just work; reconnection and resume-from-last-event come free; and there is no custom protocol to design.
+
 ## WebSockets
 
 A **full-duplex, persistent** connection. It starts as an HTTP request with an `Upgrade` header, then switches to a lightweight framed protocol where either side can send messages at any time.
@@ -96,6 +104,10 @@ sequenceDiagram
 
 **Use when:** both sides send frequent messages with low latency — chat, multiplayer games, collaborative editing, live trading.
 
+**Avoid when:** only the server pushes (SSE is simpler), updates are rare (polling is cheaper to run), or your infrastructure can't handle long-lived stateful connections through every proxy and load balancer. Remember that you design the message protocol yourself: message types, acknowledgements, resume after reconnect and heartbeats.
+
+**Where WebSockets beat SSE:** one connection carries traffic both ways with tiny framing, binary is native, and the per-message cost is lower, which matters at dozens of messages per second per user.
+
 ## Comparison
 
 | | Short polling | Long polling | SSE | WebSocket |
@@ -107,6 +119,23 @@ sequenceDiagram
 | Reconnection | N/A | Client loop | Built in (`Last-Event-ID`) | Manual |
 | Infrastructure friendliness | Excellent | Good | Good | Requires LB/proxy support |
 | Typical uses | Job status | Fallback, legacy | Notifications, feeds, LLM streaming | Chat, games, collaboration |
+
+### Choosing
+
+Start from who receives the updates and whether they talk back:
+
+```mermaid
+flowchart TD
+  A{"Who receives the updates?"} -->|"Another company's server"| WH[Webhooks]
+  A -->|"A phone app in the background"| PN["Push notifications<br/>(APNs / FCM)"]
+  A -->|"An open browser tab or app"| B{"Does the client also send<br/>frequent messages?"}
+  B -->|"Yes: chat, games, co-editing"| WS[WebSockets]
+  B -->|"No, it mostly listens"| C{"How fresh must updates be?"}
+  C -->|"Within a second"| SSE["SSE<br/>(long polling as fallback)"]
+  C -->|"Seconds to minutes is fine"| SP[Short polling]
+```
+
+Real products mix them. A chat app uses WebSockets while the app is open, push notifications when it is in the background, and an HTTP sync endpoint to catch up after reconnecting.
 
 <Callout type="interview">
 Don't default to WebSockets. Ask: does the client need to send frequent messages too? If not, **SSE is simpler**. For a notification system or live scores, SSE (or even long polling) is often the better answer. Choose WebSockets for chat, games and collaborative editing — and then talk about how you'll scale the connections.
@@ -149,7 +178,46 @@ Large systems like WhatsApp, Slack and Discord use variations of these patterns.
 
 ## Webhooks: server-to-server push
 
-For pushing events to **other systems** (not browsers), the standard is a **webhook** — your system makes an HTTP POST to a URL the consumer registered (e.g., Stripe notifying a merchant that a payment succeeded). Key concerns: sign payloads (HMAC) so receivers can verify them, retry with backoff on failures, make deliveries idempotent with event IDs, and let consumers replay missed events.
+When the receiver is **another company's server**, not a browser, there is no open connection to push over. Instead the receiver registers a URL, and your system sends it an HTTP POST whenever something happens: Stripe telling a merchant a payment succeeded, GitHub telling a CI system that code was pushed.
+
+```text
+POST https://shop.example/hooks/payments
+Content-Type: application/json
+Webhook-Id: evt_7Hq2
+Webhook-Timestamp: 1767225600
+Webhook-Signature: v1,K5oZfzN95Z9UVu1EsfQmfVNQhnkZ2pj9o9NDN/H/pI4=
+
+{ "id": "evt_7Hq2", "type": "payment.succeeded", "data": { "paymentId": "pay_88", "amount": 4999 } }
+```
+
+Without webhooks, every merchant would poll `GET /payments?updated_since=…` every few seconds, which is slow for them and wasteful for you.
+
+**Sending webhooks reliably**
+
+```mermaid
+flowchart LR
+  APP[Payment service] -->|"event via outbox"| Q[["Delivery queue"]]
+  Q --> W[Webhook workers]
+  W -->|"POST + signature"| M[Merchant endpoint]
+  W -.->|"failed"| RQ[["Retry queue<br/>backoff: 1 min, 5 min, 30 min, 2 h …"]]
+  RQ -.->|"when due"| Q
+  W --> LOG[("Delivery log<br/>every attempt")]
+```
+
+- **Never send from the request path.** Record the event (with the outbox pattern), and let a pool of delivery workers send it. A slow or broken merchant endpoint must never slow down payments.
+- **Retry with exponential backoff over hours or days.** After the last attempt, mark the event failed, alert the endpoint's owner, and eventually disable endpoints that keep failing.
+- **Use short timeouts** (5–10 s) so slow receivers don't tie up workers, and isolate noisy endpoints so one merchant's outage doesn't delay everyone else's deliveries.
+- **Sign every payload** with HMAC-SHA256 and a per-endpoint secret, and include a timestamp in what you sign. Receivers verify the signature and reject old timestamps (say, more than 5 minutes), which blocks forged and replayed requests.
+- **Guard against SSRF.** Customers choose the URL, so an attacker could register `http://169.254.169.254/…` or an internal hostname. Allow only HTTPS to public addresses, resolve DNS before connecting and check the IP, and don't follow redirects blindly.
+- **Offer recovery:** an events API (`GET /events?since=…`), a delivery log in the dashboard and a "resend" button.
+
+**Receiving webhooks correctly**
+
+- **Respond 2xx quickly** and do the real work asynchronously. A receiver that takes 30 s to respond gets retried as if the delivery failed.
+- **Expect duplicates.** Delivery is at-least-once, so deduplicate by event ID.
+- **Don't rely on order.** A retried `payment.pending` can arrive after `payment.succeeded`. Treat the event as a prompt and fetch the current state (`GET /payments/pay_88`) when order matters, or compare version numbers or timestamps.
+
+**Pick webhooks when** you need to notify other organisations' systems about events at a moderate rate. **Avoid them when** the receiver is a browser or phone (use SSE, WebSockets or push notifications), when receivers sit behind firewalls with no public endpoint (offer an events API to poll), or at very high event rates, where a stream the receiver reads at its own pace, or batched deliveries, work better.
 
 ## Interview questions
 

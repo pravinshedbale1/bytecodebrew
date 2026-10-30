@@ -168,6 +168,26 @@ Replicate to N replicas per DC (e.g., 3 per DC across 2–3 DCs); use LOCAL_QUOR
 - **Senior**: consistent hashing with vnodes, quorum math, conflict resolution, hinted handoff, read repair, gossip membership, LSM storage.
 - **Staff**: Merkle-tree anti-entropy, tombstones and resurrection, multi-DC quorums, rebalancing mechanics, comparing leaderless vs leader-based (CP) designs and when to choose each.
 
+## 9. Variations interviewers ask
+
+### Distributed cache (Memcached, Redis Cluster)
+
+A cache looks like a key-value store, but it has a different goal. The database behind it holds the truth, so **losing data is acceptable** and **latency and memory efficiency** come first. That removes most of the machinery above:
+
+| | Durable key-value store | Distributed cache |
+| --- | --- | --- |
+| Data loss | Never acceptable | Acceptable; reload from the database |
+| Replication | Quorum writes to N replicas | Optional, for hot data or faster recovery |
+| Storage | Disk (LSM tree) with a memory cache | Memory only |
+| When full | Add nodes | **Evict** (LRU / LFU) and set TTLs |
+| Conflict handling | Versions, vector clocks, repair | Last write wins; TTLs bound staleness |
+
+- **Partitioning:** consistent hashing, usually in the client library, so any app server can compute which node holds a key without a lookup hop.
+- **Eviction:** exact LRU needs a linked list update on every read. Redis approximates it by sampling a few keys and evicting the oldest of the sample, which is nearly as good and much cheaper. Memcached uses slab classes of fixed-size chunks to avoid memory fragmentation.
+- **When a node dies,** its keys become misses and that traffic hits the database all at once. Protect the database with request coalescing (one load per key), and warm a replacement node gradually. Consistent hashing keeps the damage to that node's keys only.
+- **Hot keys:** the same remedies as above, a short-lived local cache in each app server or copies of the key on several nodes.
+- **Keeping it consistent with the database:** delete on write plus TTLs, or invalidate from CDC. See [Caching](/system-design/hld/caching).
+
 ## Interview questions
 
 <QA q="Why does W + R > N give you read-your-latest-write in the common case?">

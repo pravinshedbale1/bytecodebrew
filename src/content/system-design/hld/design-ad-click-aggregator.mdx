@@ -47,7 +47,23 @@ Query API:
 
 Click URLs are **signed** (HMAC over ad ID and impression ID) so they can't be forged, and the impression ID ties a click to a served ad (used for dedup and fraud detection).
 
-## 5. High-level design
+## 5. Data model
+
+```text
+Raw click event (Kafka → object storage; kept for reprocessing and audits)
+  click_id, impression_id, ad_id, campaign_id, event_ts, device_id, ip, country, user_agent
+
+Minute aggregates (OLAP store such as Pinot, Druid or ClickHouse)
+  ad_id, minute_bucket, country, platform → clicks, valid_clicks
+  sort key: (ad_id, minute_bucket)
+
+Rollups: hourly and daily rows computed from minute rows; minute rows expire after 30–90 days
+Dedup state (inside the stream processor): impression IDs seen in the last few minutes
+```
+
+Every query filters by an ad or campaign and a time range, so ordering the aggregates by `(ad_id, minute_bucket)` turns each query into one contiguous scan. Raw events are kept separately because aggregates can't be corrected after the fact: when a bug or a new fraud rule changes what counts as a valid click, the totals are recomputed from the raw events.
+
+## 6. High-level design
 
 <FlowSteps title='A click, from redirect to bill' steps={[
   { path: ['U', 'CS', 'LP'], text: 'The click service checks the signed click URL and redirects the user (302) straight away.' },
@@ -75,7 +91,7 @@ flowchart LR
 
 </FlowSteps>
 
-## 6. Deep dives
+## 7. Deep dives
 
 ### Ingestion and the click path
 
@@ -115,7 +131,7 @@ Streaming numbers are fast but can be slightly off (late data beyond the waterma
 - Reconciliation compares batch vs streaming totals per ad; differences beyond a threshold trigger alerts, and the batch numbers become the billing source of truth.
 - Because raw events are retained, any bug in aggregation logic can be fixed and **replayed** (Kappa-style).
 
-## 7. Failure modes
+## 8. Failure modes
 
 | Failure | Mitigation |
 | --- | --- |
@@ -125,7 +141,7 @@ Streaming numbers are fast but can be slightly off (late data beyond the waterma
 | Hot ad partition | Salted keys + two-stage aggregation |
 | OLAP store unavailable | Aggregates buffered in Kafka; dashboards degrade, billing unaffected |
 
-## 8. Trade-offs summary
+## 9. Trade-offs summary
 
 | Decision | Choice | Why |
 | --- | --- | --- |
@@ -135,11 +151,36 @@ Streaming numbers are fast but can be slightly off (late data beyond the waterma
 | Serving | OLAP store with rollups | Fast filtered time-range queries |
 | Billing correctness | Batch recount + reconciliation | Streaming for freshness, batch for truth |
 
-## 9. What interviewers look for
+## 10. What interviewers look for
 
 - **Mid-level**: queue + aggregation workers + database for counts, query API.
 - **Senior**: event-time windows and watermarks, dedup for exactly-once, partitioning and hot keys, OLAP store choice, raw event retention for replay.
 - **Staff**: Lambda vs Kappa trade-offs, reconciliation for billing, fraud pipelines, storage rollups and cost, data correctness SLAs with advertisers.
+
+## 11. Variations interviewers ask
+
+### Top-K most viewed videos (YouTube trending)
+
+"Show the 1,000 most viewed videos of the last hour, the last day and all time." The pipeline is the same (events → Kafka → stream aggregation → serving store). Two things are new: **ranking** among billions of keys, and **sliding windows**.
+
+```mermaid
+flowchart LR
+  V[View events] --> K[["Kafka<br/>partitioned by video_id"]]
+  K --> A1["Aggregator 1<br/>counts + local top K"]
+  K --> A2["Aggregator 2<br/>counts + local top K"]
+  K --> A3["Aggregator 3<br/>counts + local top K"]
+  A1 & A2 & A3 --> M["Merger<br/>global top K"]
+  M --> C[("Cache: top K per window")]
+  C --> API[Top-K API]
+```
+
+- **Partition by video ID.** Every view of a video lands on the same aggregator, so each aggregator holds the *complete* count for its videos. Each keeps a min-heap of its local top K. Because no video is split across partitions, merging the local top-K lists gives the **exact** global top K. If you partition randomly instead, a video's count is spread out, and merging local top lists is wrong.
+- **Sliding windows.** Keep per-minute counts per video in a ring of buckets. "Last hour" is the sum of the last 60 buckets: add the new minute, subtract the one that fell out. Rebuild the top K from these sums every minute rather than maintaining one heap forever, because videos also drop out of the top as their views fade. A fixed window ("today") is simpler: one counter that resets.
+- **Too many keys for exact counts?** With billions of long-tail videos, a **Count-Min Sketch** per window plus a small heap of heavy hitters gives an approximate top K in fixed memory. Its error only ever over-counts, which is fine for a trending page. Exact numbers for creator dashboards come from the batch path.
+- **One viral video** makes its partition hot. Pre-aggregate on the producers (send "video 7: +250 views" every few seconds instead of 250 events) or split the key (`video7#0` … `video7#7`) and add the parts back together.
+- **Serving** is easy: the answer is 1,000 IDs per window. The merger writes it to a cache every minute, and reads never touch the aggregators.
+
+Interview hook: *"Exact top K needs one owner per key so local top-K lists merge correctly. When the key space is too big for that, Count-Min Sketch gives an approximate top K in fixed memory."*
 
 ## Interview questions
 

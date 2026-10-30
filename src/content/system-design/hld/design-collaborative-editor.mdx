@@ -81,7 +81,30 @@ Bob:   "AB"   → insert X@1 → "AXB" ✓   converged
 Either approach is acceptable — what matters is explaining **why concurrent edits need special handling**, then choosing one with trade-offs: "I'll use a server-authoritative design with one session owner per document. With OT, the server orders and transforms ops; with a CRDT, the server just relays and persists, and offline merge comes for free. Given the offline requirement, I'll use a CRDT (e.g., Yjs) and keep a single owner per document for efficient broadcasting and persistence."
 </Callout>
 
-## 7. High-level design
+## 7. API and data model
+
+```text
+GET /v1/docs/{id}                   → latest snapshot + its version number
+WS  /v1/docs/{id}/session           → joins the session on the server that owns this document
+    client → server: { op, baseVersion, clientId, clientSeq }
+    server → clients: { op, version, author }   ops in the server's single order
+    both ways:        { presence: { userId, cursor, selection } }
+GET /v1/docs/{id}/history?before=v  → versions for the history view
+```
+
+```text
+documents: doc_id, title, owner_id, latest_snapshot_version, created_at
+acl: doc_id, principal (user or group), role (viewer / commenter / editor)
+
+operation_log (append-only, source of truth)
+  (doc_id, version) PK → op, author_id, client_id, client_seq, ts
+snapshots
+  (doc_id, version) PK → full document state, written every N operations
+```
+
+`clientId` plus `clientSeq` lets the server drop an operation a client resent after reconnecting. A snapshot every few hundred operations means opening a document loads one snapshot and replays only the operations after it.
+
+## 8. High-level design
 
 <FlowSteps title='One edit, end to end' steps={[
   { path: ['C1', 'GW', 'RT'], text: 'Editor A\'s operation arrives over a WebSocket, and the gateway routes it by document ID.' },
@@ -116,7 +139,7 @@ flowchart LR
 4. Clients apply remote ops (transforming against their own pending ops in OT, or merging in CRDT).
 5. Periodically the server writes a **snapshot** and compacts the log.
 
-## 8. Deep dives
+## 9. Deep dives
 
 ### One owner per document
 
@@ -144,7 +167,7 @@ Named versions and the timeline are reconstructed from snapshots + ops; restorin
 
 Checked on connect and on each op (a viewer's ops are rejected); permission changes push a reconnect/downgrade to affected sessions. Comments and suggestions are separate entities anchored to document positions.
 
-## 9. Failure modes
+## 10. Failure modes
 
 | Failure | Mitigation |
 | --- | --- |
@@ -153,7 +176,7 @@ Checked on connect and on each op (a viewer's ops are rejected); permission chan
 | Op log write fails | Don't ack the op; client retries |
 | Divergence bug | Periodic checksums of document state between client and server; resync from snapshot |
 
-## 10. Trade-offs summary
+## 11. Trade-offs summary
 
 | Decision | Choice | Why |
 | --- | --- | --- |
@@ -163,7 +186,7 @@ Checked on connect and on each op (a viewer's ops are rejected); permission chan
 | Editing model | Local-first, optimistic | Instant feedback |
 | Presence | Ephemeral, throttled | Not worth persisting |
 
-## 11. What interviewers look for
+## 12. What interviewers look for
 
 - **Mid-level**: WebSockets, sending edits to a server, broadcasting to others, storing documents.
 - **Senior**: why concurrent edits conflict; OT or CRDT explained with trade-offs; single owner per document; op log + snapshots; presence; offline.

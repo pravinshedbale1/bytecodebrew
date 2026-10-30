@@ -185,6 +185,27 @@ Seat map availability is read far more than it changes. Serve it from a cache up
 - **Senior**: atomic seat holds (and why naive check-then-write fails), hold expiry, idempotent checkout, caching seat maps, waiting room for spikes.
 - **Staff**: fairness and bot defences, capacity planning for on-sales, in-memory hold layer vs DB trade-offs, failure handling between payment and inventory.
 
+## 11. Variations interviewers ask
+
+### Online auction (eBay)
+
+Users bid on items; the highest bid when the auction closes wins; everyone watching sees the current highest bid live. It shares this case study's core problem: **many people competing for one thing**, where the system must accept exactly the right request.
+
+- **Accept a bid only if it beats the current highest bid, atomically.** Two bids of ₹5,000 and ₹5,100 arriving together must not both "win". Either use a conditional update:
+
+  ```sql
+  UPDATE auctions SET max_bid = :amount, leader = :user
+  WHERE id = :id AND max_bid < :amount AND ends_at > now();
+  -- 0 rows updated → the bid was too low or too late
+  ```
+
+  or send all bids for an auction through **one Kafka partition** (keyed by auction ID) with one consumer, so bids for an auction are processed strictly one at a time.
+- **Keep every bid**, in an append-only `bids` table. The auction row only caches the current maximum; the bid history settles disputes and lets you rebuild.
+- **Never lose an accepted bid:** acknowledge to the user only after the bid is durably stored.
+- **Live updates** go to watchers over SSE through a pub/sub channel per auction, as in live comments.
+- **Closing time** is decided by the server's clock, never the client's. Many auctions use a **soft close**: a bid in the last two minutes extends the end by two minutes, which stops last-second sniping. A scheduled job closes the auction, records the winner and starts payment.
+- **A hot auction** in its final minute might get thousands of bids per second. Processing one auction's bids serially still copes with that, and the service can reject bids below the cached maximum before they reach the database.
+
 ## Interview questions
 
 <QA q="Why is 'SELECT seat status, then UPDATE if available' wrong?">

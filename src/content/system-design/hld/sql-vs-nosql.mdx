@@ -53,6 +53,7 @@ The simplest model: `get(key)`, `put(key, value)`, `delete(key)`. The value is o
 - **Strengths:** extremely fast, trivially partitionable by key, predictable latency.
 - **Weaknesses:** no queries by value; no relationships.
 - **Use for:** caching, sessions, feature flags, rate-limit counters, shopping carts, leaderboards (Redis sorted sets).
+- **Avoid for:** anything you need to search or filter by a value ("all carts containing SKU 101"), data with relationships, or, for in-memory stores, a system of record that must survive a crash without loss.
 
 ### Document stores
 
@@ -75,6 +76,7 @@ Store semi-structured documents (JSON/BSON), queryable by fields inside them.
 - **Strengths:** flexible schema; data that's read together is stored together (no joins for the common case); maps naturally to objects in code.
 - **Weaknesses:** many-to-many relationships are awkward; duplicating data across documents means updates must touch many places.
 - **Use for:** product catalogues, content management, user profiles, any entity that's mostly read and written as a whole.
+- **Avoid for:** highly connected data queried from many directions (orders by user, by product, by warehouse, by coupon). You end up either duplicating data into every document or doing joins in application code. Also avoid it for multi-entity transactions that are central to the domain, such as transfers between accounts.
 
 ### Wide-column stores
 
@@ -92,6 +94,7 @@ channel_id=42 → [msg_9001, msg_9000, msg_8999, ...]   ← one partition, sorte
 - **Strengths:** linear horizontal scalability, very high write throughput (LSM-tree storage), tunable consistency, multi-datacenter replication.
 - **Weaknesses:** you must **design tables around queries** — queries that don't use the partition key are expensive or impossible; no joins; limited transactions.
 - **Use for:** time-series data, messaging, activity feeds, IoT telemetry, event logs.
+- **Avoid for:** ad-hoc queries and reporting, data that needs transactions across rows, and small datasets. Below a few terabytes or tens of thousands of writes per second, a relational database is simpler. Every new query pattern means a new table, so a product whose questions keep changing will fight the model.
 
 <Callout type="example">
 Discord stores trillions of messages in a wide-column store (moving from Cassandra to ScyllaDB), partitioned by channel and time bucket, because the dominant query is "the most recent messages in this channel".
@@ -105,6 +108,7 @@ Store **nodes** and **edges** as first-class entities, optimised for traversing 
 - **Strengths:** queries like "friends of friends who like X" or "shortest path" are efficient regardless of graph size.
 - **Weaknesses:** harder to shard; niche operational expertise.
 - **Use for:** social graphs, recommendation engines, fraud detection rings, knowledge graphs.
+- **Avoid for:** simple one-hop lookups at very large scale ("who does user 42 follow?" is a key-value or wide-column query), high-volume writes, and data that is mostly aggregated or scanned rather than traversed.
 
 Note: many large social networks (e.g., Facebook's TAO) store graph data in sharded MySQL with a caching layer rather than in a graph database — because the hot queries are simple one-hop lookups at enormous scale.
 
@@ -177,6 +181,11 @@ The cost: data must be kept in sync between stores — typically via **change da
 ## NewSQL: the middle ground
 
 **Distributed SQL** databases — Google Spanner, CockroachDB, YugabyteDB, TiDB — offer SQL, ACID transactions, *and* horizontal scaling, by combining sharding with consensus replication (Raft/Paxos). The trade-offs: higher write latency (each write needs a quorum, possibly across regions), operational complexity, and cost. They're a good answer when an interviewer pushes on "you need transactions *and* global scale".
+
+How they do it, in brief: the data is split into ranges of keys, each range is replicated to three or more nodes with Raft or Paxos, and a write commits once a majority of a range's replicas have it. Transactions that touch several ranges use a distributed commit protocol on top, and timestamps (Spanner's TrueTime clocks, or hybrid logical clocks in CockroachDB) order them.
+
+- **Pick it when** you need relational queries and multi-row transactions on more data or writes than one primary can take, or strongly consistent data across regions: global inventory, ledgers, multi-region SaaS.
+- **Avoid it when** a single PostgreSQL primary with replicas can carry the load, which covers most systems. You pay a quorum round trip on every write, more across regions. Also avoid it for workloads that are pure key-value or pure analytics, where specialised stores are cheaper and faster.
 
 ## Interview questions
 

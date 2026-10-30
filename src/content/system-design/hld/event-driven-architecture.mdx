@@ -40,9 +40,36 @@ flowchart LR
 - **Event notification** — thin event (`OrderPlaced {orderId}`); consumers call back for details. Small, but creates load and coupling back to the source.
 - **Event-carried state transfer** — the event carries the data consumers need (`OrderPlaced {orderId, items, total, userId}`). Consumers can keep local copies and work even if the source is down. Larger events; consumers hold replicated data.
 
+| | Event notification (thin) | Event-carried state transfer (fat) |
+| --- | --- | --- |
+| Event size | Tiny: an ID and a type | Everything consumers need |
+| Consumers need the source? | Yes, they call back for details | No, they work from the event |
+| Load on the source | Grows with every new consumer | None after publishing |
+| Data freshness | Consumers read the current state | Consumers see the state at publish time |
+| Contract to maintain | Small | Every field is a promise to unknown consumers |
+
+**Pick thin events when** consumers need the very latest state anyway, the data is sensitive (don't copy card or health details into every consumer), or there are only a couple of consumers. **Pick fat events when** many consumers react to the same change, the source must not become a bottleneck or a single point of failure, or consumers keep their own read models. Many teams settle in between: include the fields most consumers need, plus a version number so a consumer can tell when it should re-fetch.
+
 ### Choreography vs orchestration
 
 When a business process spans services, either each service reacts to events (choreography) or a coordinator directs the steps (orchestration). Covered in detail in [Distributed Transactions](/system-design/hld/distributed-transactions).
+
+| | Choreography | Orchestration |
+| --- | --- | --- |
+| Who decides the next step | Each service, by reacting to events | A central orchestrator or workflow engine |
+| Where the flow is visible | Nowhere in one place; spread across services | In the orchestrator's definition |
+| Coupling | Services know event types, not each other | The orchestrator knows every participant |
+| Timeouts and compensation | Each service handles its own | Handled centrally |
+| Fits | Short flows of 2–3 steps, loosely related reactions | Long flows, deadlines, complex rollback |
+
+Choreography is the natural fit for **reactions** ("when an order is placed, send an email and update analytics"). Orchestration fits **processes** with a defined order and an outcome someone is waiting for ("reserve stock, then charge, then ship, and undo if any step fails").
+
+### When events are the wrong tool
+
+- **The caller needs an answer now.** Validating a coupon or checking stock during checkout is a query. Use a synchronous call.
+- **Strong consistency is required** between two pieces of data. If they must always agree, keep them in one service and one database transaction rather than syncing them with events.
+- **There is one consumer and it will stay that way.** A direct call or a simple job queue is easier to follow and debug than a topic.
+- **The team can't yet support it.** Event-driven systems need schema management, idempotent consumers, dead-letter handling, consumer-lag monitoring and tracing across async hops. Without those, failures become silent: an event that nobody processed raises no error anywhere.
 
 ## CQRS — Command Query Responsibility Segregation
 
@@ -123,6 +150,24 @@ Don't event-source an entire system by default. Apply it to the specific aggrega
 ## Change data capture as the bridge
 
 **Change data capture (CDC)** reads the database's replication log (PostgreSQL WAL, MySQL binlog) and emits every committed change as an event — e.g., with Debezium into Kafka. It gives you event-driven integration and CQRS read models **without** changing the writing application and without the dual-write problem, because the database log is the single source of truth.
+
+```mermaid
+flowchart LR
+  APP[Order service] -->|"INSERT / UPDATE"| DB[("PostgreSQL")]
+  DB -->|"WAL (replication log)"| DBZ["CDC connector<br/>(Debezium)"]
+  DBZ --> K[["Kafka: orders.changes"]]
+  K --> ES[Search indexer]
+  K --> WH[Warehouse loader]
+  K --> CACHE[Cache invalidator]
+```
+
+**Strengths:** no changes to application code, nothing is missed (every committed change is in the log, in commit order), and it works for legacy systems you can't modify.
+
+**Watch out for:**
+
+- **Leaking the internal schema.** Raw CDC events are table rows. If consumers depend on them, renaming a column breaks other teams. Either publish CDC events only to internal consumers you control, or combine CDC with an **outbox table**: the application writes deliberate, versioned events to the outbox, and CDC ships only that table.
+- **Low-level events.** "Row 81 in `order_items` changed" is not the same as `OrderShipped`. Business meaning has to be reconstructed downstream unless you use the outbox.
+- **Operational details.** Replication slots must be monitored: in PostgreSQL, a stalled connector makes the database keep WAL files until the disk fills. Initial snapshots of large tables also need planning.
 
 ## Interview questions
 

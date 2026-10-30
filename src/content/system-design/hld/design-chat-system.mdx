@@ -196,6 +196,40 @@ With E2EE (Signal protocol, used by WhatsApp), the server stores and routes only
 - **Senior**: session registry and cross-gateway routing, sequence numbers for ordering, persist-before-ack, idempotent retries, sync on reconnect, group fan-out, presence cost.
 - **Staff**: multi-region conversation placement, very large channels, E2EE implications, capacity of connection fleets and reconnection storms.
 
+## 11. Variations interviewers ask
+
+### Live comments (Facebook Live, YouTube live chat)
+
+It looks like group chat, but the numbers turn it into a different problem. One "room" can have **millions of viewers**, almost all of them only reading. Late joiners only need the recent comments, and losing an occasional comment is acceptable.
+
+| | Chat system | Live comments |
+| --- | --- | --- |
+| Audience per conversation | Up to ~500 | Up to millions |
+| Direction | Everyone writes and reads | Few write, nearly all read |
+| Guarantee | Never lose a message | Best effort is fine |
+| History | Full, synced across devices | The last few dozen comments |
+| Transport | WebSockets | **SSE** (server → viewer), POST to comment |
+
+```mermaid
+flowchart LR
+  W[Commenter] -->|"POST comment"| CS[Comment service]
+  CS --> DB[("Comments<br/>partition: video_id")]
+  CS --> PS[["Pub/sub<br/>channel per video"]]
+  PS --> G1["SSE gateway 1"]
+  PS --> G2["SSE gateway 2"]
+  G1 --> V1[Viewers]
+  G2 --> V2[Viewers]
+```
+
+- **Write path:** `POST /videos/{id}/comments` stores the comment (partitioned by video, ordered by time) and publishes it on that video's channel.
+- **Read path:** viewers hold an SSE connection to a gateway. Each gateway subscribes to the channels of the videos its viewers are watching, and copies each comment to its local viewers.
+- **Group viewers of the same video on the same gateways.** Route by video ID at the load balancer (consistent hashing). Then a comment is sent once per gateway, not once per viewer through the pub/sub system, and each gateway subscribes to only a few channels. Without this, every gateway subscribes to every popular video.
+- **The fan-out math:** 1M viewers × 50 comments/s = 50M deliveries per second. That needs hundreds of gateways, and **batching** helps a lot: send the comments of the last 250 ms in one frame.
+- **More comments than anyone can read:** at 5,000 comments/s the screen is a blur. Show each viewer a sample: friends' comments first, then a ranked or random subset. This also cuts the delivery cost.
+- **Late joiners** fetch the last 50 comments with a normal GET, then open the stream.
+
+Interview hook: *"Read-heavy one-way fan-out, so SSE instead of WebSockets; viewers of one video are grouped on the same gateways; comments are batched and sampled at high rates."*
+
 ## Interview questions
 
 <QA q="How do you guarantee that all participants see messages in the same order?">

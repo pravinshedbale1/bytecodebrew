@@ -172,6 +172,21 @@ Pre-trade checks (sufficient funds, position limits, maximum order size, price f
 - **Senior:** determinism and event sourcing, the sequencer, single-threaded engine and why, hot standby, O(1) cancels, symbol sharding.
 - **Staff:** latency engineering (hops, garbage collection, kernel bypass), fairness of market data, replication protocol for the log, risk controls and circuit breakers, regulatory audit and replay.
 
+## 11. Variations interviewers ask
+
+### Brokerage app (Robinhood)
+
+A brokerage is **not** an exchange. It doesn't match orders; it sends customers' orders to exchanges or market makers and tracks each customer's orders, cash and positions.
+
+- **Placing an order:**
+  1. Check and **reserve buying power** atomically (as in ticket booking, so two orders can't spend the same cash).
+  2. Store the order as `PENDING` with a client order ID.
+  3. Send it to the exchange over FIX through an exchange gateway.
+  4. Executions come back **asynchronously**, possibly as several partial fills. Each one updates the order's state and the customer's positions.
+- **Unknown outcomes:** if the gateway crashes after sending but before recording the acknowledgement, don't blindly resend. Exchanges deduplicate by client order ID, so resend with the **same** ID, or ask the exchange for the order's status. Reconcile every order with the exchange's records at the end of the day, as in the payment system's reconciliation.
+- **Live prices for millions of users:** subscribe to the market data feed **once**, then fan out per symbol through pub/sub to SSE or WebSocket gateways. Clients don't need every tick, so throttle to a few updates per second per symbol. A phone can't show more anyway, and the throttling cuts fan-out by orders of magnitude.
+- **Correctness of balances:** cash and positions live in a ledger (double-entry, as in the payment system), not in mutable balance columns that a bug can silently corrupt.
+
 ## Interview questions
 
 <QA q="Why not run the matching engine on many threads to use all CPU cores?">

@@ -31,6 +31,17 @@ In the synchronous version, the order API's latency is the sum of all downstream
 
 The cost: **eventual consistency** (work happens "soon", not "now"), more infrastructure, and harder debugging and ordering.
 
+### When to stay synchronous
+
+A queue is the wrong tool when the caller **needs the result to continue**:
+
+- **The user is waiting for the answer.** "Is this username free?", "what is the price?", "did the payment go through?" A queue adds latency and an extra hop, and the caller still has to wait for, or poll for, the reply.
+- **The operation must succeed or fail as one unit with the caller's own work.** Reserving the last seat at checkout needs an immediate yes or no, not "we'll let you know".
+- **The system is small.** One service calling another a few times a second doesn't need a broker to run, monitor, upgrade and pay for.
+- **You would be faking request/response.** Sending a message and blocking on a reply queue is RPC with extra steps. Use gRPC or HTTP.
+
+A good rule: **synchronous for questions, asynchronous for side effects**. Place the order synchronously ("is it valid, is it paid?"); send the email, update search and record analytics asynchronously.
+
 ## Two models: queues and logs
 
 ### Message queue (point-to-point)
@@ -98,6 +109,30 @@ If you need events for one entity processed in order (e.g., "order created" befo
 
 
 <PartitionSim />
+
+## Choosing a broker
+
+The first decision is the model; the product follows from it.
+
+**Pick a queue when** each message is a **job** that one worker should do once: send this email, resize this image, generate this invoice. Queues give per-message acknowledgement, retries, delays, priorities and dead-letter queues, and a slow job only holds up one worker.
+
+**Pick a log when** a message is a **fact** that several systems care about, now or later: order placed, page viewed, row changed. Logs keep history, so a new consumer can start from the beginning, a buggy consumer can rewind and replay, and per-key ordering is guaranteed.
+
+**Avoid a log for task queues with uneven job times.** Kafka hands a whole partition to one consumer and moves through it in order. One 5-minute job stalls every message behind it in that partition, and there are no per-message delays or priorities. **Avoid a queue for event streams.** Once a message is acknowledged it is gone, so a second consumer means a second queue (fan-out), and you can't replay last week's events to fix a bug.
+
+| | RabbitMQ | Amazon SQS | Apache Kafka | Redis Streams |
+| --- | --- | --- | --- | --- |
+| Model | Queue (flexible routing via exchanges) | Queue | Log | Log (lightweight) |
+| Strengths | Rich routing (topic, fan-out, headers), priorities, per-message acks, low latency | Fully managed, scales without capacity planning, simple, cheap at low volume | Very high throughput, retention and replay, per-key ordering, huge ecosystem (Connect, Streams, Debezium) | Already running Redis, very low latency, consumer groups |
+| Weaknesses | You operate the cluster; throughput well below Kafka; replay not native | No replay; standard queues can reorder and duplicate; small message size limit (large payloads go to S3); AWS only | Operationally heavy if self-run; partition count caps parallelism; poor fit for per-message retries or delays | Memory-bound retention; weaker durability than Kafka; smaller ecosystem |
+| Pick it for | Task queues and complex routing in self-hosted systems | Background jobs on AWS with minimal operations | Event backbone, CDC, clickstream, stream processing | Small to medium streams where Redis is already in place |
+| Avoid it for | Long-term event history, very high volume analytics streams | Ordered event streams with many consumers, replay | Simple background jobs for a small team | Large, long-retained or business-critical event history |
+
+Managed versions change the operational picture: Amazon MSK or Confluent Cloud for Kafka, Amazon MQ for RabbitMQ, and Google Pub/Sub, which sits between the two models, with per-message acks plus retention and replay.
+
+<Callout type="interview">
+Name the model before the product: "Thumbnail generation is a **job**, so it goes on a queue (SQS) with a visibility timeout and a dead-letter queue. `PhotoUploaded` is an **event** that the feed, search and moderation services all consume, so it goes on a Kafka topic keyed by user ID." That one sentence shows you know why each tool exists.
+</Callout>
 
 ## Delivery semantics
 

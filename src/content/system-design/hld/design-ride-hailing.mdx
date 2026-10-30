@@ -205,6 +205,32 @@ Partition everything **by city/region**: geo indexes, dispatch ownership, even d
 - **Senior**: in-memory sharded geo index, atomic driver assignment and offer timeouts, trip state machine, idempotent ride creation and payment, surge computation via streaming.
 - **Staff**: batch matching optimisation, city-level partitioning and failover, ETA service cost, multi-region strategy, marketplace dynamics.
 
+## 11. Variations interviewers ask
+
+The same geospatial ideas power several other common questions. What changes is how often the location data changes, and what must be strongly consistent.
+
+### Nearby places (Yelp)
+
+- **Places don't move.** Drivers report their position every few seconds; a restaurant's position changes almost never. So there is no in-memory index churning with updates. A geo index in a database or search engine, built once and updated rarely, is enough: PostGIS, or **Elasticsearch** with a `geo_point` field, which also handles the text query ("pizza"), filters (open now, price) and ranking in one request.
+- **Query:** find the geohash or quadtree cells covering the search circle, fetch the places in those cells, filter by exact distance, then rank by distance, rating and relevance.
+- **Density varies wildly.** A fixed-size cell in central Mumbai holds thousands of places, and one in the countryside holds none. A **quadtree** splits cells until each holds at most N places, or the search keeps widening its radius until it has enough results. See [Geospatial Indexing](/system-design/hld/geospatial-indexing).
+- **Average rating** shouldn't be computed by scanning every review. Store `rating_sum` and `rating_count` on the business row and update them in the same transaction as the review insert. A unique constraint on `(user_id, business_id)` enforces one review per user.
+- Reads dwarf writes, so cache popular searches by (cell, category) for a few minutes.
+
+### Swipe matching (Tinder)
+
+- **Candidates:** select profiles near the user (geo cell) that match their preferences, and precompute a **stack** of about 100 candidates per user, cached and refilled in the background.
+- **Swipes** are a huge write stream, hundreds per user per day. Store them in a wide-column store keyed by the swiper, and keep a **Bloom filter** of already-swiped IDs per user so the stack never shows someone twice.
+- **The match check must be atomic.** When A likes B, the system checks whether B already liked A. If both swipe at the same moment and each checks before the other's write lands, nobody gets a match. Store both directions under **one key** for the pair (the two IDs sorted, so A–B and B–A are the same key) and update it atomically, for example with a Redis Lua script or a conditional write. Whichever swipe arrives second then sees the first and creates the match.
+- On a match, notify both users via push.
+
+### Local delivery (Gopuff, Blinkit)
+
+- The question behind every product page is "**can this item reach this address within 30 minutes?**" That means: which dark stores can deliver here in time, and do they have it in stock?
+- Precompute each store's **delivery area** as a travel-time polygon. For an address, find the stores whose polygons contain it. There are few stores, so cache the result per geohash.
+- **Availability** = stock summed across those stores. Browsing tolerates a few seconds of staleness, so cache it briefly.
+- **Ordering must not oversell:** reserve stock in the chosen store's database atomically (`UPDATE stock SET qty = qty - 2 WHERE store = ? AND sku = ? AND qty >= 2`), exactly like seat holds in the ticket booking case study. Browsing can be eventually consistent; ordering must be strongly consistent.
+
 ## Interview questions
 
 <QA q="How do you prevent two riders from being assigned the same driver?">

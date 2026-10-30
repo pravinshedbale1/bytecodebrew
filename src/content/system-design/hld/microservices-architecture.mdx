@@ -10,6 +10,9 @@ One deployable application containing all features, usually with one database.
 - ✅ Excellent for small teams and early products.
 - ❌ As the codebase and team grow, changes become risky and deploys slow; one bug or memory leak can take everything down.
 - ❌ Scales only as a whole — you can't scale the hot path independently.
+- ❌ One technology stack for everything, and upgrading a framework means upgrading the whole application at once.
+
+**Pick it when** the team is small (roughly one or two teams), the product is still finding its shape, and boundaries between features aren't clear yet. Most successful products started as monoliths. **Avoid it when** many teams keep blocking each other in one codebase and one deploy pipeline, or when one part has a very different scaling or reliability profile from the rest.
 
 ### Modular monolith
 
@@ -17,6 +20,10 @@ A single deployable, but internally divided into modules with **strict boundarie
 
 - ✅ Most of the organisational benefits of services without distributed-systems costs.
 - ✅ A natural stepping stone: well-bounded modules can later be extracted into services.
+- ❌ Boundaries are only as strong as the discipline enforcing them. Without automated checks (dependency rules in the build, schema ownership), modules quietly reach into each other.
+- ❌ Still one deploy and one runtime: a memory leak in one module takes down all of them, and the whole thing scales as one unit.
+
+**Pick it when** you want clear ownership and clean domain boundaries but don't yet need independent deployment or scaling. It is the best default for most new systems with more than one team. **Avoid it when** parts of the system genuinely need separate scaling, runtimes or failure isolation, for example a GPU-heavy video pipeline next to a CRUD admin app.
 
 ### Microservices
 
@@ -26,6 +33,19 @@ Many small services, each **owning its data**, deployed independently, communica
 - ❌ Every call can fail or be slow; you need timeouts, retries, circuit breakers and observability.
 - ❌ No cross-service transactions — you need sagas and eventual consistency.
 - ❌ Operational overhead: CI/CD per service, service discovery, tracing, versioned APIs, on-call per team.
+- ❌ Debugging crosses process boundaries: one slow page can involve ten services, so you need distributed tracing to find which one.
+
+**Pick it when** several teams need to ship independently, parts of the system have very different scaling or reliability needs, and you already have the platform: automated deploys, monitoring, tracing and on-call. **Avoid it when** one small team would own most of the services anyway, the domain boundaries are still moving (wrong boundaries are expensive to fix across services), or the main goal is performance. Network calls are slower than function calls.
+
+| Signal | Monolith | Modular monolith | Microservices |
+| --- | --- | --- | --- |
+| Teams | 1–2 | 2–10 | Many, each owning services |
+| Domain boundaries | Unclear, changing | Clear, enforced in code | Clear and stable |
+| Deploys | One pipeline | One pipeline | One per service |
+| Scaling | All together | All together | Per service |
+| Failure isolation | None | None (shared process) | Per service, if designed for it |
+| Data consistency | ACID everywhere | ACID everywhere | Sagas and eventual consistency between services |
+| Platform investment needed | Low | Low–medium | High |
 
 ```mermaid
 flowchart LR
@@ -121,7 +141,26 @@ A useful rule: **synchronous for queries on the critical path, asynchronous for 
 
 ## Migrating from a monolith: the strangler fig
 
-Don't rewrite from scratch. Put a routing layer in front of the monolith, extract one capability at a time into a service, route its traffic to the new service, and repeat until the monolith shrinks away (or what's left is fine as it is).
+Don't rewrite from scratch. A big-bang rewrite has to reproduce years of edge cases before it can take any traffic, and the old system keeps changing while you write it. The **strangler fig** pattern, named after a vine that grows around a tree until it replaces it, migrates one piece at a time while the system stays live.
+
+```mermaid
+flowchart LR
+  C[Clients] --> R["Routing layer<br/>(gateway / proxy)"]
+  R -->|"/notifications/*"| N[Notification service]
+  R -->|"everything else"| M[Monolith]
+  N --> ND[(Notifications DB)]
+  M --> MD[(Monolith DB)]
+  M -. "events / CDC" .-> N
+```
+
+1. **Put a routing layer in front of the monolith.** At first it sends 100% of traffic to the monolith, so nothing changes for users.
+2. **Pick the first capability to extract.** Choose one with clear boundaries, few dependencies and a real reason to move, such as different scaling or a separate team. Notifications, search or media processing are common first picks. Avoid starting with the core of the domain.
+3. **Build the new service with its own data store.** Copy or sync the data it needs, via CDC or events from the monolith, until the new service owns it.
+4. **Shift traffic gradually.** Route a small share of requests, compare results with the monolith (shadow traffic or dual reads), then move to 100%.
+5. **Delete the old code path** in the monolith. Skipping this step leaves two implementations to maintain.
+6. **Repeat**, and stop when what is left of the monolith is fine as it is.
+
+Common pitfalls: extracting a service that still reads the monolith's tables directly (a distributed monolith), moving code before the data so every call crosses the network back to the old database, and running old and new paths in parallel for too long.
 
 ## Interview questions
 

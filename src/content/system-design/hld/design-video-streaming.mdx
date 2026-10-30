@@ -36,7 +36,33 @@ Average egress ≈ 135 PB / 86,400 s ≈ 1.6 TB/s ≈ 12.5 Tbps (peaks several t
 
 At large-volume CDN prices of a few cents per GB, even a much smaller platform pays heavily: 5M DAU watching 5 videos of ~300 MB each is 7.5 PB/day, ≈ **$150K per day** at $0.02/GB. Delivery cost is the dominant line item, which is why the cost levers below matter as much as the architecture.
 
-## 4. High-level design
+## 4. API and data model
+
+```text
+POST /v1/videos                    → { videoId, uploadUrls[] }   pre-signed, multipart upload URLs
+POST /v1/videos/{id}/complete      → starts processing; status = PROCESSING
+GET  /v1/videos/{id}               → title, owner, duration, status (PROCESSING / READY / FAILED)
+GET  /v1/videos/{id}/play          → { manifestUrl }   signed CDN URL of the HLS/DASH manifest
+POST /v1/videos/{id}/events        → batched playback events: position, quality, rebuffering
+```
+
+```text
+videos (sharded by video_id)
+  video_id, owner_id, title, description, status, duration_s, created_at
+
+renditions
+  video_id, resolution, codec, bitrate, manifest_path
+
+Object storage (not a database)
+  originals/{video_id}/source.mp4
+  videos/{video_id}/{rendition}/seg_00042.m4s   ← the segments the player fetches
+
+View counts: aggregated asynchronously from playback events (see Metadata and views)
+```
+
+The key point: **video bytes never pass through the API servers or the database.** Uploads go straight to object storage with pre-signed URLs, playback comes from the CDN, and the database holds only small metadata rows.
+
+## 5. High-level design
 
 <FlowSteps title='Upload, process, play' steps={[
   { path: ['CR', 'UAPI', 'META'], text: 'The creator starts an upload; the API records metadata and returns upload URLs.' },
@@ -76,7 +102,7 @@ flowchart LR
 
 </FlowSteps>
 
-## 5. Deep dives
+## 6. Deep dives
 
 ### Upload
 
@@ -158,7 +184,7 @@ sequenceDiagram
 - **Distribute regionally**: a video popular in one country needn't be pushed to every edge worldwide.
 - At very large scale, **build or partner for your own CDN** inside ISP networks (Netflix Open Connect).
 
-## 6. Failure modes
+## 7. Failure modes
 
 | Failure | Mitigation |
 | --- | --- |
@@ -170,7 +196,7 @@ sequenceDiagram
 
 **Error-handling playbook.** Separate *recoverable* errors (a chunk failed to encode, a worker died, an upload timed out → retry, reschedule on another worker, use a replica queue) from *non-recoverable* ones (corrupt or unsupported source file → stop the job and return a clear error to the creator). And plan for **takedowns**: copyright fingerprinting and policy classifiers at upload, plus user flagging and review for what slips through.
 
-## 7. Trade-offs summary
+## 8. Trade-offs summary
 
 | Decision | Choice | Why |
 | --- | --- | --- |
@@ -180,7 +206,7 @@ sequenceDiagram
 | Encoding ladder | Per-title / popularity-aware | Cuts bandwidth and storage cost |
 | Views | Streamed and batch-aggregated | Avoid hot-row writes |
 
-## 8. What interviewers look for
+## 9. What interviewers look for
 
 - **Mid-level**: upload to object storage, transcoding to multiple resolutions, CDN for delivery, metadata DB.
 - **Senior**: chunked parallel transcoding with an orchestrator, HLS/DASH and client-side ABR, presigned/resumable uploads, view-count aggregation, signed URLs.

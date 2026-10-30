@@ -188,6 +188,23 @@ Some content only exists after JavaScript runs. Render such pages with a headles
 - **Senior**: politeness with per-host queues, robots.txt, URL normalisation, Bloom filters, content dedup, spider traps, partitioning by host.
 - **Staff**: prioritisation and recrawl scheduling based on change rates, cost of JS rendering, multi-region fetching, storage formats and the indexing handoff.
 
+## 9. Variations interviewers ask
+
+### Price tracker (CamelCamelCamel)
+
+Users watch products on a shopping site and get alerted when the price drops below their target.
+
+- **A targeted crawl, not discovery.** The set of URLs is known: the products someone watches. The frontier becomes a **recrawl scheduler**. Popular products (many watchers) and products whose price changes often are fetched more frequently, while rarely watched, stable products are fetched rarely.
+- **Respect the site.** Prefer official APIs or feeds, keep per-host rate limits, and follow robots.txt and the site's terms. Some trackers also accept price reports from a browser extension. Treat those as hints and verify them, because clients can lie.
+- **Price history** is a time series: `(product_id, ts, price)`, appended on every change.
+- **Alerts:** a price change emits an event. Subscriptions are indexed per product **sorted by target price**, so "everyone whose target ≥ new price" is one range query. Each match goes to the notification system, and a subscription is marked as notified so a price that bounces around doesn't send the same alert ten times.
+
+### News aggregator (Google News)
+
+- **Ingestion:** poll publishers' RSS feeds and news sitemaps, each on its own schedule (a feed that updates every 5 minutes is polled often; a weekly blog rarely), plus a crawler for sites without feeds.
+- **Grouping the same story:** dozens of publishers cover one event. Near-duplicate detection (SimHash or MinHash, from the content dedup deep dive) and text similarity cluster articles into stories.
+- **Serving:** a front page per region and category, ranked mainly by recency and source quality. It is extremely read-heavy and the same for everyone in a region, so precompute it every minute or two and serve it from a cache or CDN. Personalisation re-ranks it per user later.
+
 ## Interview questions
 
 <QA q="Why is a simple BFS queue not enough for a production crawler?">

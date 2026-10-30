@@ -56,7 +56,29 @@ A sorted set keeps members ordered by score, backed by a **skip list** plus a ha
 
 A skip list can answer "how many elements come before this one" in O(log n) because each forward link also stores how many elements it skips (its span). That is what makes ranks cheap.
 
-## 6. High-level design
+## 6. API and data model
+
+```text
+GET /v1/boards/{boardId}/top?n=10                     → [{ rank, playerId, name, avatar, score }]
+GET /v1/boards/{boardId}/players/{playerId}           → { rank, score }
+GET /v1/boards/{boardId}/players/{playerId}/around?n=4 → the 4 players above and below
+    boardId examples: global-2026-10, country-IN-2026-10
+```
+
+There is deliberately **no public "submit score" endpoint**. Scores enter as internal events from the game service, so a modified client can't post its own score.
+
+```text
+match_results (database, source of truth)
+  match_id PK, player_id, points, finished_at, applied_to_board (bool, for idempotency)
+
+Redis sorted set per board and period: lb:global:2026-10
+  member = player_id, score = points encoded with the time reached (see Ties)
+
+player_profiles (cached): player_id → name, avatar, country
+board_archive: board, period, rank, player_id, points   (final standings, written at period end)
+```
+
+## 7. High-level design
 
 <FlowSteps title='A score update and a rank lookup' steps={[
   { path: ['P', 'API', 'GS'], text: 'A player finishes a match. The game server decides the result; the client never reports its own score.' },
@@ -90,7 +112,7 @@ flowchart LR
 
 **Read flow:** the leaderboard service reads ranks and ranges from Redis, then adds names and avatars from the profile store (cached), because the sorted set holds only IDs and scores.
 
-## 7. Deep dives
+## 8. Deep dives
 
 ### Durability and rebuilding
 
@@ -129,7 +151,7 @@ Ranking only among your friends is a different query: fetch the friends' scores 
 
 Never accept a score from the client. The game server computes match results, validates them (impossible scores, too many matches per hour) and only then emits score events. Suspicious players can be hidden from public boards while a review runs, and the board is rebuilt from cleaned match results if needed.
 
-## 8. Failure modes
+## 9. Failure modes
 
 | Failure | Mitigation |
 | --- | --- |
@@ -139,7 +161,7 @@ Never accept a score from the client. The game server computes match results, va
 | Hot top-10 reads during an event | Cache the top 10 for a second or two in the service |
 | Uneven score-range shards | Re-split ranges based on the score distribution |
 
-## 9. Trade-offs summary
+## 10. Trade-offs summary
 
 | Decision | Choice | Why |
 | --- | --- | --- |
@@ -150,11 +172,22 @@ Never accept a score from the client. The game server computes match results, va
 | Monthly reset | New key per month | No mass deletion or downtime |
 | Huge scale | Score-range sharding or approximate ranks | Exact global ranks get expensive |
 
-## 10. What interviewers look for
+## 11. What interviewers look for
 
 - **Mid-level:** recognise that `ORDER BY` plus counting does not scale and propose a sorted set; basic API.
 - **Senior:** O(log n) operations and why; source of truth and rebuild; idempotent updates; tie-breaking; monthly keys.
 - **Staff:** sharding strategies and their effect on rank queries, approximate ranks, anti-cheat, multi-region play, cost.
+
+## 12. Variations interviewers ask
+
+### Fitness leaderboards (Strava segments)
+
+Strava ranks athletes on **segments**, stretches of road or trail, by their best time on each.
+
+- **Uploads are processed asynchronously.** An uploaded GPS file goes to object storage and a processing queue. Workers parse the track, find the segments it crosses (a geo index of segment start and end points), and compute the athlete's time on each one.
+- **One sorted set per segment:** member = athlete, score = best time, ranked ascending. Only an improvement should change the board, and `ZADD … LT` does exactly that: it updates the score only if the new one is lower.
+- **Millions of segments, most rarely viewed.** Keep popular segments in Redis, and keep the rest in a database table indexed by `(segment_id, best_time)`, where the top 10 is a short index scan because each segment has few entries.
+- **Filtered boards** (this year, women 30–39, people I follow): precompute the most common ones as their own sets, and compute rare filters on demand from the database. "People I follow" is the friends-leaderboard approach above.
 
 ## Interview questions
 

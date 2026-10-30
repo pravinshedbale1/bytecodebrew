@@ -67,7 +67,11 @@ async function updateUser(id, changes) {
 ```
 
 - ✅ Only requested data is cached; cache failure degrades to slower DB reads rather than errors.
+- ✅ The cache can hold a different shape from the database: a rendered profile card, a joined result or a computed score.
 - ❌ First request for each key is a miss; stale data is possible between DB write and invalidation.
+- ❌ Caching logic is repeated in every service that reads the data, and each one must invalidate correctly.
+
+**Pick it when** reads far outnumber writes and a few seconds of staleness is acceptable: profiles, product pages, configuration. It is the right default. **Avoid it when** every read must see the latest write (a balance at the moment of debit), or when keys are almost never read twice, because the hit rate will be too low to pay for the memory.
 
 <Callout type="tip" title="Delete, don't update, on writes">
 On a write, **delete** the cache entry rather than setting it to the new value. If two concurrent writers both update the DB and then the cache, the cache updates can land in the opposite order, leaving the cache permanently stale. Deleting forces the next reader to load the fresh value.
@@ -77,6 +81,14 @@ On a write, **delete** the cache entry rather than setting it to the new value. 
 
 The cache itself loads from the database on a miss; the app only talks to the cache. Same behaviour as cache-aside, but the loading logic lives in the cache library or provider. Simplifies application code.
 
+Examples: an in-process loading cache such as Caffeine or Guava (`cache.get(id, loader)`), or DynamoDB Accelerator (DAX) in front of DynamoDB.
+
+- ✅ One place owns loading, so every caller gets the same behaviour. Good libraries also **collapse concurrent misses**: a hundred requests for the same missing key trigger one database read.
+- ❌ The cached value must match what the loader returns, usually one row or object, so you lose cache-aside's freedom to cache composed results.
+- ❌ The cache is now on the read path. If it's a remote service and it goes down, reads fail unless the library falls back to the database.
+
+**Pick it when** many callers read the same entities and you want consistent loading and miss collapsing without repeating code. **Avoid it when** you need to cache computed or aggregated views rather than plain rows.
+
 <Callout type="note" title="Where sources differ">
 Many sources — including Alex Xu's *System Design Interview* — call the pattern "check the cache, on a miss read the database and fill the cache" a **read-through** cache. Strictly, that's **cache-aside**: the *application* does the loading. In a true read-through cache, the *cache layer itself* loads from the database on a miss. Behaviour is the same; the difference is where the loading code lives. If an interviewer says "read-through", clarify which they mean.
 </Callout>
@@ -85,19 +97,34 @@ Many sources — including Alex Xu's *System Design Interview* — call the patt
 
 Every write goes to the cache **and** synchronously to the database before returning.
 
+Example: a user updates their display name. The service writes the row to the database and the new value to the cache before returning, so the next page load is a cache hit with the new name.
+
 - ✅ Cache is always fresh for written keys; reads after writes hit.
 - ❌ Writes are slower (two writes); cache fills with data that may never be read (pair it with a TTL).
+- ❌ The two writes are not atomic. If the database write succeeds and the cache write fails, the cache is stale, so keep a TTL as a safety net.
+
+**Pick it when** data is read soon and often after it is written, and stale reads would be visible to users: settings, profiles, session data. **Avoid it when** writes are frequent and reads are rare (you pay double for nothing), or when write latency is the bottleneck.
 
 ### Write-behind (write-back)
 
 Writes go to the cache and are acknowledged immediately; the cache flushes them to the database asynchronously in batches.
 
+Example: video view counts. Each view runs `INCR views:video_81` in Redis, and a job writes the accumulated counts to the database every 10 seconds. Ten thousand increments become one `UPDATE`.
+
 - ✅ Very fast writes; batching reduces DB load (great for counters, metrics, view counts).
 - ❌ **Data loss risk** if the cache node fails before flushing; harder consistency reasoning.
+- ❌ The database is behind the cache, so anything reading the database directly (reports, other services, backups) sees old values.
+
+**Pick it when** writes are very frequent, each one is small, and losing the last few seconds of them in a crash is acceptable: counters, likes, analytics, game state checkpoints. **Avoid it when** a write must never be lost: orders, payments, anything a user was told succeeded.
 
 ### Write-around
 
 Writes go directly to the database, bypassing the cache; the cache is filled only on reads. Good for data that's written but rarely read soon after (e.g., logs, bulk imports).
+
+- ✅ Writes don't flood the cache with entries nobody reads, which would evict hot keys.
+- ❌ The first read after a write is always a miss, and any old cached copy must be deleted on write or it stays stale until its TTL.
+
+**Pick it when** written data is rarely read back right away: audit logs, chat archives, bulk imports. **Avoid it when** users expect to see what they just wrote, immediately, from a fast path.
 
 | Strategy | Read latency | Write latency | Consistency | Data loss risk | Best for |
 | --- | --- | --- | --- | --- | --- |
@@ -106,6 +133,18 @@ Writes go directly to the database, bypassing the cache; the cache is filled onl
 | Write-through | Fast after writes | Slower | Strong for cached keys | None | Read-after-write heavy data |
 | Write-behind | Fast | Fastest | Eventual | Yes | Counters, high-volume writes |
 | Write-around | Miss after write | Normal | Good | None | Write-once, read-rarely data |
+
+### How they combine
+
+A read strategy and a write strategy are always used together:
+
+- **Cache-aside reads + write-around writes** is the everyday default: check the cache on reads, write to the database, delete the cached key. Simple, safe and good enough for most read-heavy data.
+- **Read-through + write-through** puts the cache library in charge of both directions. Reads after writes always hit, at the cost of slower writes.
+- **Write-behind** is usually reserved for one hot, loss-tolerant dataset such as counters, not applied to a whole system.
+
+<Callout type="interview">
+When the interviewer asks "how do you keep the cache consistent?", name the pairing and its weak spot: "Cache-aside with delete-on-write and a 10-minute TTL. A reader can still put an old value back just after a write; the TTL bounds how long that lasts, and for the profile page a few seconds of staleness is fine." Then say which data you would **not** cache this way, such as balances.
+</Callout>
 
 ## Eviction policies
 
