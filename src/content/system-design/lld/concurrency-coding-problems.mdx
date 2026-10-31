@@ -1,0 +1,384 @@
+Some interview rounds hand you a concurrency problem to solve at the keyboard: "make these three methods print in order no matter which thread runs first", "implement a bounded blocking queue without `java.util.concurrent`'s ready-made one", "five philosophers, five forks, no deadlock". Google, Microsoft, Uber and Bloomberg use them, and they appear in LLD and machine-coding rounds as follow-ups ("now make it thread-safe").
+
+They're short, but they're unforgiving: code that works in every run you try can still be wrong. This lesson works through the problems that come up most, each with **the trap that catches people** and a solution that has been stress-tested, so you learn the reasoning as well as the code.
+
+<Callout type="note" title="Before this lesson">
+
+Read [Concurrency for LLD](/system-design/lld/concurrency-for-lld) first. It covers races, `synchronized`, `ReentrantLock`, `volatile`, atomics, concurrent collections, producer–consumer and deadlock. This lesson applies those tools to specific problems.
+
+</Callout>
+
+## How to answer any concurrency problem
+
+Say these four things before writing code. They structure your thinking, and interviewers listen for them.
+
+1. **What state is shared?** List every variable more than one thread reads or writes.
+2. **What must always be true?** The invariant: "the queue never holds more than capacity items", "bar never prints before foo".
+3. **Which threads wait, and for what?** Every wait needs a condition and someone who will signal it.
+4. **Which tool fits?** Pick the simplest that expresses the waiting:
+
+| Need | Tool |
+| --- | --- |
+| "Wait until something happened once" | `CountDownLatch` |
+| "Take turns" / "at most N at a time" | `Semaphore` |
+| "Wait until a condition on shared state becomes true" | `ReentrantLock` + `Condition` (or `synchronized` + `wait`/`notifyAll`) |
+| "Everyone waits until all arrive" | `CyclicBarrier` / `Phaser` |
+| A counter or flag updated by many threads | `AtomicInteger` / `AtomicLong` |
+| A shared set or map | `ConcurrentHashMap` (and `ConcurrentHashMap.newKeySet()`) |
+
+Two rules that prevent most bugs:
+
+- **Always wait in a `while` loop, never an `if`.** A thread can wake without the condition being true: another thread may have got there first, or the wake-up may be spurious (the JVM is allowed to wake waiting threads for no reason). Re-check after every wake-up.
+- **Never call unknown code while holding a lock**, such as a callback or a task's `run()`. It may block or take other locks, which is how deadlocks start.
+
+## 1. Print in order
+
+> Three threads call `first()`, `second()` and `third()` on the same object, in an unknown order. Output must always be "firstsecondthird".
+
+**The trap:** using a shared `int` flag with a busy loop (`while (step != 2) {}`). Without `volatile` the waiting thread may never see the update, and even with it, spinning burns a CPU core.
+
+**The fix:** each step waits for an event that happens exactly once, which is exactly what a `CountDownLatch(1)` models.
+
+```java
+static final class InOrder {
+    private final CountDownLatch firstDone = new CountDownLatch(1);
+    private final CountDownLatch secondDone = new CountDownLatch(1);
+
+    void first(Runnable printFirst) { printFirst.run(); firstDone.countDown(); }
+    void second(Runnable printSecond) throws InterruptedException { firstDone.await(); printSecond.run(); secondDone.countDown(); }
+    void third(Runnable printThird) throws InterruptedException { secondDone.await(); printThird.run(); }
+}
+```
+
+`countDown()` happens-before `await()` returns, so whatever `first` did is visible to `second`. Semaphores starting at 0 work equally well.
+
+## 2. Take turns (FooBar, odd/even printers)
+
+> One thread prints "foo" n times, another prints "bar" n times. Output must be "foobar" repeated n times.
+
+**The trap:** latches can't be reset, and `wait`/`notify` versions often use `if` instead of `while`, or `notify` on the wrong monitor.
+
+**The fix:** two semaphores passing a single permit back and forth, like a baton:
+
+```java
+static final class FooBar {
+    private final int n;
+    private final Semaphore fooTurn = new Semaphore(1);   // foo may go first
+    private final Semaphore barTurn = new Semaphore(0);
+
+    FooBar(int n) { this.n = n; }
+
+    void foo(Runnable printFoo) throws InterruptedException {
+        for (int i = 0; i < n; i++) { fooTurn.acquire(); printFoo.run(); barTurn.release(); }
+    }
+
+    void bar(Runnable printBar) throws InterruptedException {
+        for (int i = 0; i < n; i++) { barTurn.acquire(); printBar.run(); fooTurn.release(); }
+    }
+}
+```
+
+There's only ever one permit in total between the two semaphores, so exactly one thread can print at a time and the order is forced. The same shape solves "print odd and even numbers from two threads" and "zero, even, odd" (three semaphores).
+
+## 3. Bounded blocking queue
+
+> Implement `put(item)`, which blocks while the queue is full, and `take()`, which blocks while it's empty, for many producer and consumer threads.
+
+This is the most common one, and the one interviewers dig into. It's producer–consumer built from scratch.
+
+```java
+static final class BoundedBlockingQueue<T> {
+    private final Deque<T> items = new ArrayDeque<>();
+    private final int capacity;
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition notFull = lock.newCondition();
+    private final Condition notEmpty = lock.newCondition();
+
+    BoundedBlockingQueue(int capacity) { this.capacity = capacity; }
+
+    void put(T item) throws InterruptedException {
+        lock.lock();
+        try {
+            while (items.size() == capacity) notFull.await();     // while, not if: re-check after waking
+            items.addLast(item);
+            notEmpty.signal();                                    // wake one waiting taker
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    T take() throws InterruptedException {
+        lock.lock();
+        try {
+            while (items.isEmpty()) notEmpty.await();
+            T item = items.removeFirst();
+            notFull.signal();                                     // wake one waiting producer
+            return item;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+What the interviewer will ask, and the answers:
+
+- **Why `while` and not `if`?** Two consumers wait on an empty queue; one item arrives and both wake. The first takes it; with `if`, the second would remove from an empty queue.
+- **Why two conditions?** So a `put` wakes only takers and a `take` wakes only producers. With `synchronized` and a single monitor, `wait` / `notifyAll` works too, but it wakes **everyone** (including threads that can't proceed), which is correct but wasteful. Using a single `notify()` with one monitor can **lose wake-ups**: a producer's notify might wake another producer instead of a consumer.
+- **Why `unlock` in `finally`?** If an exception escapes between `lock` and `unlock`, the lock would be held forever.
+- **What about interrupts?** `await()` throws `InterruptedException`; let it propagate (or restore the flag with `Thread.currentThread().interrupt()`), so the caller can shut threads down.
+
+## 4. Dining philosophers
+
+> Five philosophers sit around a table with one fork between each pair. Each needs both neighbouring forks to eat. Design `wantsToEat` so no one deadlocks.
+
+**The trap:** "pick up left, then right". If all five pick up their left fork at the same moment, each waits forever for the right one, a perfect **circular wait**.
+
+Deadlock needs four conditions at once (mutual exclusion, hold and wait, no pre-emption, circular wait). Break any one. The cleanest break is **global lock ordering**: always take the lower-numbered fork first. Then the last philosopher takes fork 0 before fork 4, so the cycle can't close.
+
+```java
+static final class DiningPhilosophers {
+    private final ReentrantLock[] forks = new ReentrantLock[5];
+
+    DiningPhilosophers() { for (int i = 0; i < 5; i++) forks[i] = new ReentrantLock(); }
+
+    void wantsToEat(int p, Runnable pickLeft, Runnable pickRight, Runnable eat, Runnable putLeft, Runnable putRight) {
+        int left = p, right = (p + 1) % 5;
+        int first = Math.min(left, right), second = Math.max(left, right);
+        forks[first].lock();
+        forks[second].lock();
+        try {
+            pickLeft.run(); pickRight.run();
+            eat.run();
+            putLeft.run(); putRight.run();
+        } finally {
+            forks[second].unlock();
+            forks[first].unlock();
+        }
+    }
+}
+```
+
+Other valid answers, worth mentioning: a `Semaphore(4)` so at most four philosophers try at once (someone can always finish), or `tryLock` with a timeout and back-off (breaks "hold and wait", but risks livelock without randomised back-off). The same lock-ordering idea is how you avoid deadlock when transferring money between two accounts.
+
+## 5. Thread-safe rate limiter
+
+> Make a token bucket safe to call from many threads: `capacity` tokens, refilled at `rate` per second; `tryAcquire()` returns whether a request may proceed.
+
+**The trap:** refill and take as separate steps (check-then-act). Two threads both see one token left, and both take it.
+
+**The fix:** make "refill, check, take" one atomic step. `synchronized` is the clear first answer:
+
+```java
+static final class TokenBucket {
+    private final long capacity;
+    private final double perNano;
+    private double tokens;
+    private long last;
+    private final LongSupplier clock;
+
+    TokenBucket(long capacity, double perSecond, LongSupplier nanoClock) {
+        this.capacity = capacity;
+        this.perNano = perSecond / 1e9;
+        this.clock = nanoClock;
+        this.tokens = capacity;
+        this.last = nanoClock.getAsLong();
+    }
+
+    synchronized boolean tryAcquire() {                          // refill and take as one atomic step
+        long now = clock.getAsLong();
+        tokens = Math.min(capacity, tokens + (now - last) * perNano);
+        last = now;
+        if (tokens < 1) return false;
+        tokens -= 1;
+        return true;
+    }
+}
+```
+
+Follow-ups you should be ready for:
+
+- **Many users:** keep one bucket per key in a `ConcurrentHashMap` and create it with `computeIfAbsent`, which is atomic, so two threads can't both create a bucket for the same user. Each bucket has its own lock, so different users never contend.
+- **Lock-free version:** store the state in an `AtomicReference` to an immutable (tokens, last) pair and update it with a compare-and-set loop. Faster under heavy contention, harder to get right; mention it rather than lead with it.
+- **Testability:** pass the clock in (as above) so tests can control time instead of sleeping.
+
+For the distributed version across many servers, see [Design a Rate Limiter (LLD)](/system-design/lld/lld-rate-limiter) and the HLD [Distributed Rate Limiter](/system-design/hld/design-rate-limiter).
+
+## 6. Delayed task scheduler
+
+> Implement `schedule(task, delayMillis)`: run each task once, after its delay, on a background thread. Tasks scheduled later may be due sooner.
+
+**The trap:** sleeping until the earliest task is due. If a new task arrives that's due **sooner**, the sleeping worker misses it. The worker must wait in a way that can be **interrupted by new work**.
+
+**The fix:** a priority queue ordered by due time, and a condition the worker waits on **with a timeout**. `schedule` signals the condition, so the worker wakes, sees the new earliest task and recalculates how long to wait.
+
+```java
+static final class DelayedScheduler implements AutoCloseable {
+    private record Job(long dueNanos, long seq, Runnable task) {}
+
+    private final PriorityQueue<Job> jobs = new PriorityQueue<>(
+        Comparator.comparingLong(Job::dueNanos).thenComparingLong(Job::seq));
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition changed = lock.newCondition();
+    private final Thread worker;
+    private long seq = 0;
+    private boolean closed = false;
+
+    DelayedScheduler() {
+        worker = new Thread(this::run, "scheduler");
+        worker.start();
+    }
+
+    void schedule(Runnable task, long delayMillis) {
+        lock.lock();
+        try {
+            jobs.add(new Job(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayMillis), seq++, task));
+            changed.signal();                     // the new job may be due sooner than the one being waited for
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void run() {
+        while (true) {
+            Runnable task;
+            lock.lock();
+            try {
+                while (true) {
+                    if (closed && jobs.isEmpty()) return;
+                    if (jobs.isEmpty()) { changed.await(); continue; }
+                    long wait = jobs.peek().dueNanos() - System.nanoTime();
+                    if (wait <= 0) { task = jobs.poll().task(); break; }
+                    changed.awaitNanos(wait);     // wakes early if a sooner job arrives
+                }
+            } catch (InterruptedException e) {
+                return;
+            } finally {
+                lock.unlock();
+            }
+            task.run();                           // run outside the lock so schedule() never waits for a task
+        }
+    }
+
+    @Override public void close() throws InterruptedException {
+        lock.lock();
+        try { closed = true; changed.signal(); } finally { lock.unlock(); }
+        worker.join();
+    }
+}
+```
+
+Points to say:
+
+- Use `System.nanoTime()`, not `currentTimeMillis()`: wall-clock time can jump (clock sync, daylight saving), while `nanoTime` only moves forward.
+- The `seq` number keeps tasks with the same due time in submission order.
+- Tasks run **outside** the lock, so a slow task never blocks `schedule`. For many slow tasks, hand them to a thread pool instead of running them on the worker.
+- In production you'd use `ScheduledThreadPoolExecutor`, which does exactly this (a delay queue plus workers). The interview asks you to build it to see whether you understand timed waiting.
+
+## 7. Multithreaded web crawler
+
+> Given a start URL and a `getUrls(url)` function that is slow (network I/O), visit every page on the same host reachable from the start, using multiple threads.
+
+**The traps:** two threads visiting the same page (check-then-add on a plain `HashSet`), and, the hard part, **knowing when you're finished**. The queue being empty doesn't mean the crawl is done: a thread might be about to add new links.
+
+**The fix:** `ConcurrentHashMap.newKeySet()` whose `add` returns `true` only for the first thread to insert a URL, so it doubles as "claim this page". For termination, count the pages in flight: a `Phaser` registers one party per submitted page and deregisters when its task finishes; the caller waits until no parties remain.
+
+```java
+static Set<String> crawl(String start, Function<String, List<String>> links, int threads) throws InterruptedException {
+    String host = hostOf(start);
+    Set<String> seen = ConcurrentHashMap.newKeySet();
+    ExecutorService pool = Executors.newFixedThreadPool(threads);
+    Phaser pending = new Phaser(1);                    // party 1 = this method; one more per page in flight
+    seen.add(start);
+    submit(pool, pending, start, links, seen, host);
+    pending.arriveAndAwaitAdvance();                   // returns when every page's task has finished
+    pool.shutdown();
+    return seen;
+}
+
+private static void submit(ExecutorService pool, Phaser pending, String url, Function<String, List<String>> links, Set<String> seen, String host) {
+    pending.register();
+    pool.execute(() -> {
+        try {
+            for (String next : links.apply(url))
+                if (hostOf(next).equals(host) && seen.add(next))       // add() is the atomic "first to see it" check
+                    submit(pool, pending, next, links, seen, host);
+        } finally {
+            pending.arriveAndDeregister();
+        }
+    });
+}
+```
+
+A child page is registered **before** its parent deregisters, so the count can't reach zero while work remains. Simpler alternatives: an `AtomicInteger` of tasks in flight with a latch released when it hits zero, or a level-by-level BFS with `invokeAll` per level (easier to reason about, but a slow page delays its whole level). Because the work is I/O-bound, more threads than CPU cores helps; with Java 21+, virtual threads make one thread per page reasonable.
+
+## Testing concurrent code
+
+Concurrency bugs are probabilistic, so a single passing run proves little. The solutions above were tested like this (`lld-java/concurrency-problems/ConcurrencyProblems.java`):
+
+- **Start threads in random orders** many times (Print in Order is run 300 times with shuffled start order).
+- **Check invariants, not outputs:** every produced item consumed exactly once, the queue never above capacity, no fork held by two philosophers.
+- **Use timeouts** (`future.get(30, SECONDS)`): a deadlock shows up as a timeout instead of a hung test.
+- **Control time** with an injected clock where possible (the token bucket test) instead of `sleep`.
+- For the JVM's memory-model edge cases, OpenJDK's `jcstress` harness exists; mention it as the professional tool.
+
+## Interview questions
+
+<QA q="Why must a thread call await() or wait() inside a while loop?">
+Because waking up doesn't guarantee the condition holds. Another thread may have woken first and consumed what changed the condition (two consumers woken for one item), a signal may have been meant for a different condition, and the JVM permits spurious wake-ups with no signal at all. A while loop re-checks the condition after every wake-up and goes back to waiting if it's still false. An if statement would carry on with the condition false and break the invariant.
+</QA>
+
+<QA q="What's wrong with using notify() instead of notifyAll() in a bounded buffer built on one monitor?">
+Producers and consumers wait on the same monitor. notify() wakes one arbitrary waiting thread, which could be a producer when the buffer just became non-empty and only a consumer can make progress. That producer re-checks, finds the buffer still full, and waits again, and the consumer that should have woken never does: a lost wake-up that can stall the system. notifyAll() is safe but wakes everyone. Separate Condition objects for "not full" and "not empty" let you signal exactly the right group.
+</QA>
+
+<QA q="How do you prevent deadlock when a thread needs two locks?">
+Break one of the four necessary conditions, most simply circular wait, by always acquiring locks in one global order (by fork number, account ID, or object identity). If every thread takes the lower-ordered lock first, no cycle of threads each waiting for the next can form. Alternatives are tryLock with a timeout and back-off, holding only one lock at a time by restructuring, or limiting how many threads compete, like allowing only four of five philosophers at the table.
+</QA>
+
+<QA q="In a multithreaded crawler, how do you know the crawl has finished?">
+An empty queue isn't enough, because a running task may be about to add more links. Track how many tasks are outstanding: increment when a page is submitted (before its parent finishes) and decrement when a task completes. The crawl is done when the count reaches zero. A Phaser does this with register and arriveAndDeregister; an AtomicInteger plus a CountDownLatch released at zero works too. The key is that a parent registers its children before it marks itself finished.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Implement H2O: threads call hydrogen() and oxygen(); they must form groups of exactly two hydrogens and one oxygen, and a thread may only pass once its whole molecule is ready. Sketch the solution and name the primitives.">
+
+Two counting gates and a barrier:
+
+- `Semaphore h = new Semaphore(2)` and `Semaphore o = new Semaphore(1)` limit each molecule to two hydrogens and one oxygen.
+- A `CyclicBarrier(3)` makes the three threads of a molecule wait for each other before releasing.
+- `hydrogen()`: `h.acquire()`, `barrier.await()`, release hydrogen (print), `h.release()`. `oxygen()`: `o.acquire()`, `barrier.await()`, release oxygen, `o.release()`.
+
+The semaphores ensure the three threads waiting at the barrier are exactly 2 H + 1 O; the barrier ensures none proceeds until all three are present. Releasing the permits after the barrier lets the next molecule form.
+
+</Practice>
+
+<Practice task="Your bounded blocking queue works in tests but an interviewer says 'what happens if put() is interrupted while waiting?' Walk through it and say what you'd change for shutdown.">
+
+`notFull.await()` throws `InterruptedException`. Because the `put` method declares it and the `finally` block unlocks, the lock is released correctly and the item is simply not added: the caller learns the put failed. That's the right behaviour; don't swallow the exception.
+
+For shutdown, add a `closed` flag: `close()` sets it under the lock and calls `signalAll()` on both conditions. `put` throws (or returns false) when closed; `take` returns remaining items, then signals "closed" (an exception or a sentinel) when the queue is empty and closed. Consumers then exit their loops instead of waiting forever.
+
+</Practice>
+
+<Takeaways>
+
+- Start every problem by naming the shared state, the invariant, and who waits for what.
+- Match the primitive to the waiting: latch for "once", semaphore for turns and limits, lock + condition for "until state changes".
+- Wait in a `while` loop, unlock in `finally`, and never run unknown code while holding a lock.
+- Bounded blocking queue: one lock, two conditions (not full, not empty), signal the other side.
+- Avoid deadlock with a global lock order; dining philosophers is the textbook case.
+- Timed waits that new work can interrupt power schedulers; count tasks in flight to know when a parallel crawl is done.
+- Test with many randomised runs, invariant checks and timeouts.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Writing Interview-Grade Code](/system-design/lld/interview-grade-code).
+- Brian Goetz et al., *Java Concurrency in Practice* (Addison-Wesley, 2006) — chapters 5 (building blocks) and 14 (building custom synchronizers).
+- Allen Downey, *The Little Book of Semaphores* (free online) — dozens of synchronisation puzzles, including H2O and dining philosophers.
+- Code for this lesson, stress-tested: `lld-java/concurrency-problems/ConcurrencyProblems.java`.

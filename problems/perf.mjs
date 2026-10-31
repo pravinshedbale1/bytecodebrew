@@ -165,6 +165,18 @@ export default {
   'minimum-obstacle-removal-to-reach-corner': P('a 300×300 grid', 'int[][] a0 = BCB.grid(300, 300, 0, 1); a0[0][0] = 0; a0[299][299] = 0;'),
   'minimum-cost-to-make-at-least-one-valid-path-in-a-grid': P('a 100×100 grid', 'int[][] a0 = BCB.grid(100, 100, 1, 4);'),
 
+  // ---- divide and conquer
+  'sort-list': P('n = 50,000', 'ListNode a0 = BCBN.of(BCB.ints(50000, -100000, 100000));'),
+  'longest-substring-with-at-least-k-repeating-characters': P('n = 10,000', 'String a0 = BCB.str(10000, "abcdefghijklmnopqrstuvwxyz"); int a1 = 2;'),
+
+  // ---- advanced graphs (answers aren't unique, so compare a normalised form)
+  'critical-connections-in-a-network': P('n = 80,000, 96,000 links',
+    'int a0 = 80000; List<List<Integer>> a1 = new ArrayList<>(); for (int i = 0; i + 1 < a0; i++) a1.add(Arrays.asList(i, i + 1)); for (int i = 0; i + 2 < a0; i += 5) a1.add(Arrays.asList(i, i + 2)); Collections.shuffle(a1, new Random(7));',
+    'List<List<Integer>> got = s.criticalConnections(a0, a1); List<Long> k = new ArrayList<>(); for (List<Integer> e : got) k.add((long) Math.min(e.get(0), e.get(1)) * 200000 + Math.max(e.get(0), e.get(1))); Collections.sort(k); Object r = k;'),
+  'valid-arrangement-of-pairs': P('100,000 pairs',
+    'int N = 50000; int[] lab = BCB.perm(N, 0); int[] ord = BCB.perm(2 * N, 0); int[][] a0 = new int[2 * N][]; for (int k = 0; k < 2 * N; k++) { int i = ord[k] % N, step = ord[k] < N ? 1 : 7; a0[k] = new int[] { lab[i] * 20000, lab[(i + step) % N] * 20000 }; }',
+    'long[] want = new long[a0.length]; for (int i = 0; i < a0.length; i++) want[i] = (long) a0[i][0] * 1000000001L + a0[i][1]; Arrays.sort(want); int[][] got = s.validArrangement(a0); boolean ok = got.length == want.length; for (int i = 0; ok && i + 1 < got.length; i++) ok = got[i][1] == got[i + 1][0]; if (ok) { long[] have = new long[got.length]; for (int i = 0; i < got.length; i++) have[i] = (long) got[i][0] * 1000000001L + got[i][1]; Arrays.sort(have); ok = Arrays.equals(want, have); } Object r = ok;'),
+
   // ---- dynamic programming
   'maximum-sum-circular-subarray': P('n = 30,000', 'int[] a0 = BCB.ints(30000, -30000, 30000);'),
   'longest-turbulent-subarray': P('n = 40,000, fully turbulent', 'int[] a0 = new int[40000]; for (int i = 0; i < a0.length; i++) a0[i] = i % 2 == 0 ? BCB.rnd(0, 499999999) : BCB.rnd(500000000, 1000000000);'),

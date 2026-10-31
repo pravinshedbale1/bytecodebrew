@@ -1,0 +1,300 @@
+Plain BFS and DFS answer "what can I reach?". A handful of interview problems ask something deeper about a graph's **structure**: can it be split into two sides, which single edge or node holds it together, can you walk every edge exactly once, which nodes can all reach each other? Each has a classic algorithm that is a small change to a DFS or BFS you already know. The hard part is recognising which question you're being asked, so this lesson leads with the signals.
+
+<Callout type="note" title="Before this lesson">
+
+You should be comfortable with [Graphs & Grids: BFS and DFS](/dsa/patterns/graph-traversal) and [Topological Sort](/dsa/patterns/topological-sort). Minimum spanning trees are covered in [Union-Find](/dsa/patterns/union-find), and 0-1 BFS in [Shortest Paths](/dsa/patterns/shortest-paths).
+
+</Callout>
+
+<Callout type="tip" title="How to spot each one">
+
+- "Split into **two groups** so every conflict / dislike / edge crosses between them", "two-colour", "no odd cycle" → **bipartite check (two-colouring)**.
+- "Which **link** / connection, if removed, disconnects the network?" → **bridges**. "Which **server / node**…?" → **articulation points**. Both use Tarjan's low-link DFS.
+- "Use **every ticket / pair / edge exactly once**", "reconstruct the route", "domino chain" → **Euler path (Hierholzer)**.
+- "Groups where **everyone can reach everyone** (directed)", "condense cycles", "2-SAT" → **strongly connected components**.
+
+</Callout>
+
+## Quick reference
+
+| Question | Algorithm | Time | Key idea |
+| --- | --- | --- | --- |
+| Can nodes be split into two groups with every edge crossing? | BFS/DFS two-colouring | O(V + E) | Colours are forced; a same-colour edge means an odd cycle |
+| Which edges disconnect the graph? | Tarjan's bridges | O(V + E) | `low[v] > disc[u]` for a tree edge u → v |
+| Which nodes disconnect the graph? | Articulation points | O(V + E) | `low[v] >= disc[u]`; the root needs two DFS children |
+| Walk every edge exactly once | Hierholzer | O(E) | Walk until stuck, back up, output in reverse |
+| Mutually reachable groups in a directed graph | Kosaraju or Tarjan SCC | O(V + E) | Finish order on the graph, then DFS on the reversed graph |
+
+## Two-colouring: is the graph bipartite?
+
+A graph is **bipartite** when its nodes can be split into two groups so that every edge joins the two groups. Equivalently, you can colour each node with one of two colours so that neighbours always differ.
+
+The key observation: once you colour one node, **every node connected to it is forced**. Its neighbours must take the other colour, their neighbours the first colour, and so on. There's no choice to make, so there's nothing to backtrack. Colour as you search, and the moment an edge joins two nodes of the same colour, the answer is no.
+
+```java
+static boolean isBipartite(List<List<Integer>> g) {
+    int n = g.size();
+    int[] colour = new int[n];                       // 0 = unseen, 1 / -1 = the two groups
+    ArrayDeque<Integer> queue = new ArrayDeque<>();
+    for (int s = 0; s < n; s++) {
+        if (colour[s] != 0) continue;
+        colour[s] = 1;
+        queue.add(s);
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            for (int v : g.get(u)) {
+                if (colour[v] == 0) { colour[v] = -colour[u]; queue.add(v); }
+                else if (colour[v] == colour[u]) return false;   // an edge inside one group: odd cycle
+            }
+        }
+    }
+    return true;
+}
+```
+
+- **Restart from every uncoloured node.** The graph may be disconnected, and each component is coloured independently.
+- **Why "odd cycle"?** Walking around a cycle, colours alternate. A cycle of odd length returns to the start needing the opposite of its own colour. A graph is bipartite exactly when it has **no odd cycle**; that's a useful fact to say out loud.
+- **The problem rarely says "bipartite".** "Possible Bipartition" talks about people and dislikes; scheduling problems talk about two shifts or two teams. Nodes are the things, edges are the conflicts.
+
+## Bridges and articulation points
+
+A **bridge** is an edge whose removal disconnects the graph. An **articulation point** (cut vertex) is a node whose removal does. In networks they're single points of failure, which is how interviews phrase them: "critical connections", "critical routers".
+
+The brute force removes each edge and checks connectivity: O(E · (V + E)). Tarjan's insight finds them all in one DFS.
+
+**The idea.** An edge u → v in the DFS tree is a bridge exactly when nothing in v's subtree has another way back up to u or above. So, during the DFS, record two numbers per node:
+
+- `disc[u]`: when u was first visited (a counter).
+- `low[u]`: the smallest discovery time reachable from u's subtree using tree edges downward plus **one back edge** upward.
+
+Then for a tree edge u → v:
+
+- **Bridge:** `low[v] > disc[u]`. Even the best escape from v's subtree can't reach u, so the only path up is the edge u–v.
+- **Articulation point** (u, not the root): `low[v] >= disc[u]`. Escapes from v's subtree reach u at best, never above it, so removing u cuts them off.
+
+```text
+        0
+       / \          DFS from 0: disc 0→0, 1→1, 2→2, 3→3
+      1---2         back edge 2–0 gives low[2] = 0, so low[1] = 0
+      |             3 has no back edge: low[3] = 3
+      3             edge 1–3: low[3] = 3 > disc[1] = 1 → bridge; and node 1 is an articulation point
+```
+
+```java
+static int timer;
+static int[] disc, low;
+
+static List<int[]> bridges(int n, List<List<Integer>> g) {
+    disc = new int[n]; low = new int[n]; timer = 0;
+    Arrays.fill(disc, -1);
+    List<int[]> out = new ArrayList<>();
+    for (int s = 0; s < n; s++) if (disc[s] == -1) bridgeDfs(s, -1, g, out);
+    return out;
+}
+
+static void bridgeDfs(int u, int parent, List<List<Integer>> g, List<int[]> out) {
+    disc[u] = low[u] = timer++;
+    for (int v : g.get(u)) {
+        if (v == parent) continue;
+        if (disc[v] == -1) {                         // tree edge
+            bridgeDfs(v, u, g, out);
+            low[u] = Math.min(low[u], low[v]);
+            if (low[v] > disc[u]) out.add(new int[] { u, v });
+        } else {                                     // back edge
+            low[u] = Math.min(low[u], disc[v]);
+        }
+    }
+}
+```
+
+For articulation points, the same DFS counts the root's tree children and uses `>=`:
+
+```java
+static void cutDfs(int u, int parent, List<List<Integer>> g) {
+    disc[u] = low[u] = timer++;
+    int children = 0;
+    for (int v : g.get(u)) {
+        if (v == parent) continue;
+        if (disc[v] == -1) {
+            children++;
+            cutDfs(v, u, g);
+            low[u] = Math.min(low[u], low[v]);
+            if (parent != -1 && low[v] >= disc[u]) cut[u] = true;
+        } else {
+            low[u] = Math.min(low[u], disc[v]);
+        }
+    }
+    if (parent == -1 && children > 1) cut[u] = true; // the root is a cut vertex only with 2+ DFS children
+}
+```
+
+Pitfalls interviewers probe:
+
+- **Skipping the parent** by node is correct only without parallel edges. With duplicate edges between u and v, neither copy is a bridge; skip the parent **edge** by its index instead.
+- **The root rule:** the root has no ancestors, so `low[v] >= disc[root]` is always true. It is a cut vertex only if it has two or more DFS children.
+- **Recursion depth** equals the longest DFS path, up to 10⁵ on a path graph. Fine on LeetCode-style judges with large stacks; in production code, convert to an explicit stack.
+
+## Euler paths: use every edge exactly once
+
+An **Euler path** traverses every edge exactly once. (A Hamiltonian path visits every *node* once; that problem is NP-hard. Don't mix them up.) Whether one exists is a simple degree check:
+
+| Graph | Euler circuit (start = end) | Euler path |
+| --- | --- | --- |
+| Undirected | Every node has even degree | Exactly 0 or 2 nodes have odd degree; start at an odd one |
+| Directed | Every node has in-degree = out-degree | One node with out − in = 1 (start), one with in − out = 1 (end), others balanced |
+
+In both cases, all edges must also be in one connected piece.
+
+**Hierholzer's algorithm** builds the path without ever undoing a choice. Start at the right node and follow unused edges until you get stuck. You can only get stuck at the path's true end, but you may have skipped loops along the way. So **back up**: each node you back up from is final, and you add it to the answer. Whenever the node you've backed up to still has unused edges, walk again from there; that detour gets spliced into the right place automatically. The answer comes out **reversed**.
+
+```java
+static int[][] eulerPath(int[][] pairs) {
+    Map<Integer, Deque<Integer>> out = new HashMap<>();
+    Map<Integer, Integer> balance = new HashMap<>();  // out-degree minus in-degree
+    for (int[] p : pairs) {
+        out.computeIfAbsent(p[0], k -> new ArrayDeque<>()).push(p[1]);
+        balance.merge(p[0], 1, Integer::sum);
+        balance.merge(p[1], -1, Integer::sum);
+    }
+    int start = pairs[0][0];
+    for (var e : balance.entrySet()) if (e.getValue() == 1) { start = e.getKey(); break; }
+    Deque<Integer> stack = new ArrayDeque<>();
+    List<Integer> path = new ArrayList<>();
+    stack.push(start);
+    while (!stack.isEmpty()) {
+        Deque<Integer> next = out.get(stack.peek());
+        if (next != null && !next.isEmpty()) stack.push(next.pop());   // keep walking
+        else path.add(stack.pop());                                    // stuck: this node is final
+    }
+    Collections.reverse(path);
+    int[][] res = new int[path.size() - 1][];
+    for (int i = 0; i + 1 < path.size(); i++) res[i] = new int[] { path.get(i), path.get(i + 1) };
+    return res;
+}
+```
+
+- **Reconstruct Itinerary** is the same algorithm with one twist: among several routes, return the lexically smallest. Keep each airport's destinations in a min-heap (or sorted, popped from the front) and always take the smallest next airport; Hierholzer's back-up order still produces a valid path, and taking the smallest first makes it the smallest one.
+- Use an **explicit stack** as above, since the path can be as long as the number of edges.
+- Each edge is consumed when pushed, so the whole run is O(E) (plus sorting, if you need lexical order).
+
+## Strongly connected components
+
+In a directed graph, a **strongly connected component** (SCC) is a maximal group of nodes where every node can reach every other. Collapsing each SCC into a single node always leaves a DAG (the **condensation**), which is why SCCs show up as a preprocessing step: "find groups of mutually dependent services, then order the groups", or the classic 2-SAT reduction.
+
+**Kosaraju's algorithm** uses two DFS passes:
+
+1. DFS the graph and record nodes in order of **finish time**.
+2. Reverse every edge. Process nodes from the **latest finish** to the earliest; each DFS on the reversed graph from an unassigned node collects exactly one SCC.
+
+Why it works: the node that finishes last lies in a "source" component of the condensation. In the reversed graph, that component has no edges leaving it, so a DFS from there collects only its own members. Removing it exposes the next source, and so on.
+
+```java
+static int[] stronglyConnectedComponents(int n, List<List<Integer>> g) {
+    boolean[] seen = new boolean[n];
+    Deque<Integer> order = new ArrayDeque<>();
+    for (int s = 0; s < n; s++) if (!seen[s]) finishOrder(s, g, seen, order);
+    List<List<Integer>> rev = new ArrayList<>();
+    for (int i = 0; i < n; i++) rev.add(new ArrayList<>());
+    for (int u = 0; u < n; u++) for (int v : g.get(u)) rev.get(v).add(u);
+    int[] comp = new int[n];
+    Arrays.fill(comp, -1);
+    int c = 0;
+    while (!order.isEmpty()) {                       // latest finish first
+        int s = order.pop();
+        if (comp[s] != -1) continue;
+        Deque<Integer> stack = new ArrayDeque<>();
+        stack.push(s);
+        comp[s] = c;
+        while (!stack.isEmpty()) {
+            int u = stack.pop();
+            for (int v : rev.get(u)) if (comp[v] == -1) { comp[v] = c; stack.push(v); }
+        }
+        c++;
+    }
+    return comp;
+}
+
+static void finishOrder(int u, List<List<Integer>> g, boolean[] seen, Deque<Integer> order) {
+    seen[u] = true;
+    for (int v : g.get(u)) if (!seen[v]) finishOrder(v, g, seen, order);
+    order.push(u);
+}
+```
+
+Tarjan's SCC algorithm finds the same components in one pass using the `disc`/`low` idea from bridges plus a stack. Either is fine in an interview; Kosaraju is easier to explain and to get right under pressure.
+
+SCC problems are rarer on LeetCode than the other three, but they're common in system-design-flavoured coding rounds ("detect circular dependencies between services and group them") and as the reasoning behind "is this directed graph strongly connected?" (one SCC).
+
+<Callout type="interview" title="Say the reduction out loud">
+Most of these problems are disguised. The points come from the sentence "this is a two-colouring problem, because each dislike is an edge that must cross between the groups", or "every ticket must be used once, so this is an Euler path". Name the reduction first, then write the template.
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 785 | [Is Graph Bipartite?](https://leetcode.com/problems/is-graph-bipartite/) | Medium | Two-colouring a disconnected graph |
+| 886 | [Possible Bipartition](https://leetcode.com/problems/possible-bipartition/) | Medium | Spotting two-colouring behind a word problem |
+| 1192 | [Critical Connections in a Network](https://leetcode.com/problems/critical-connections-in-a-network/) | Hard | Tarjan's low-link for bridges |
+| 332 | [Reconstruct Itinerary](https://leetcode.com/problems/reconstruct-itinerary/) | Hard | Hierholzer with lexical order |
+| 2097 | [Valid Arrangement of Pairs](https://leetcode.com/problems/valid-arrangement-of-pairs/) | Hard | Directed Euler path: find the start by degree balance |
+
+## Interview questions
+
+<QA q="Why does two-colouring never need backtracking?">
+Once a node's colour is fixed, every neighbour's colour is forced to the opposite, and so on through the whole component. There is never a choice between two valid options within a component (the only free choice is the very first node's colour, and swapping it just swaps both groups). So a single BFS or DFS either colours everything consistently or hits an edge whose ends are forced to the same colour, which proves an odd cycle exists and no split is possible.
+</QA>
+
+<QA q="In Tarjan's bridge algorithm, why is the test low[v] > disc[u] and not >=?">
+low[v] is the earliest discovery time reachable from v's subtree using one back edge. If low[v] equals disc[u], some node under v has a back edge to u itself, which forms a cycle containing the edge u–v, so removing that edge leaves u and v connected through the cycle: not a bridge. Only when low[v] is strictly greater than disc[u] does every route from v's subtree upward have to use the edge u–v. For articulation points the test is >=, because a back edge to u doesn't help when u itself is removed.
+</QA>
+
+<QA q="How do you know an Euler path exists before searching for one?">
+Check degrees and connectivity. In a directed graph, every node must have equal in- and out-degree for a circuit; for a path, exactly one node may have one extra outgoing edge (the start) and exactly one may have one extra incoming edge (the end). In an undirected graph, either all degrees are even (circuit) or exactly two are odd (path between them). All edges must also belong to one connected component. When the conditions hold, Hierholzer's algorithm always finds the path without backtracking.
+</QA>
+
+<QA q="What's the difference between an Euler path and a Hamiltonian path?">
+An Euler path uses every edge exactly once; a Hamiltonian path visits every node exactly once. Euler paths have a simple degree test and a linear-time algorithm. Finding a Hamiltonian path is NP-complete, so in an interview it means backtracking with pruning or bitmask DP on small inputs. Checking which one a problem asks for, edges or nodes, decides whether a linear solution exists at all.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="A university must schedule exams into two time slots. Some pairs of courses share students and can't be in the same slot. How do you decide whether two slots are enough, and how do you produce the schedule?">
+
+Courses are nodes; each pair sharing students is an edge. Two slots with no clash means every edge crosses between the slots: a **two-colouring**.
+
+BFS from each unscheduled course, assigning slot A, then the opposite slot to its neighbours, and so on. If an edge ever joins two courses in the same slot, there's an odd cycle of clashes and two slots are impossible. Otherwise the colours are the schedule. O(courses + clashes).
+
+(With three or more slots the problem becomes graph colouring, which is NP-hard in general: worth saying.)
+
+</Practice>
+
+<Practice task="A data centre network is a connected graph of routers. List every router whose failure would split the network. What algorithm, and what are the two rules that decide whether a router is critical?">
+
+These are **articulation points**. Run one DFS recording `disc[u]` (visit time) and `low[u]` (earliest discovery time reachable from u's subtree with one back edge).
+
+- A non-root router u is critical if some DFS child v has `low[v] >= disc[u]`: v's subtree can't reach above u without going through u.
+- The root is critical only if it has **two or more** DFS children, since removing it separates them.
+
+O(routers + links) in one pass.
+
+</Practice>
+
+<Takeaways>
+
+- Two-colouring: colours are forced, so BFS/DFS from every uncoloured node; a same-colour edge means an odd cycle.
+- Bridges and articulation points come from one DFS with `disc` and `low`: bridge if `low[v] > disc[u]`, cut vertex if `low[v] >= disc[u]` (root: 2+ children).
+- Euler paths use every edge once: check degrees, then Hierholzer (walk until stuck, back up, reverse) in O(E).
+- SCCs group mutually reachable nodes in a directed graph; Kosaraju is finish order, then DFS on the reversed graph.
+- Name the reduction first ("this is a two-colouring problem"), then apply the template.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Backtracking](/dsa/patterns/backtracking).
+- Robert Tarjan, "Depth-First Search and Linear Graph Algorithms" (SIAM Journal on Computing, 1972).
+- Cormen, Leiserson, Rivest and Stein, *Introduction to Algorithms* — chapters on elementary graph algorithms (strongly connected components) and the Euler tour problems.
+- Code for this lesson, tested against brute force: `dsa-java/advanced-graphs/AdvancedGraphs.java`.

@@ -182,6 +182,13 @@ export const VALIDATORS = {
     const n = (ch) => got.split(ch).length - 1;
     return n('a') <= a && n('b') <= b && n('c') <= c;
   },
+  // valid arrangement of pairs: every pair used exactly once, each end equal to the next start
+  eulerPairs: ([pairs], got) => {
+    if (!Array.isArray(got) || got.length !== pairs.length) return false;
+    if (!got.every((p) => Array.isArray(p) && p.length === 2)) return false;
+    for (let i = 0; i + 1 < got.length; i++) if (got[i][1] !== got[i + 1][0]) return false;
+    return isPermutation(got, pairs);
+  },
   // two lists (critical, pseudo-critical), each in any order
   twoSets: (_, got, expected) =>
     Array.isArray(got) && got.length === 2 && got.every(Array.isArray) && deepEqual(sortTop(got[0]), sortTop(expected[0])) && deepEqual(sortTop(got[1]), sortTop(expected[1])),

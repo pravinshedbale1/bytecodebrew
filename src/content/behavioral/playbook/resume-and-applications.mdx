@@ -1,0 +1,115 @@
+Every interview loop starts with someone deciding, in under a minute, that your resume is worth a phone call. Most engineers spend weeks on LeetCode and an evening on their resume, then wonder why applications go unanswered. This lesson covers the step before the interview: a resume that survives a fast skim, and the channels that actually get you in front of a recruiter.
+
+## How your resume is actually read
+
+- **A human skims it fast.** In an eye-tracking study by the job site Ladders (2018), recruiters spent about **7 seconds** on the first scan of a resume. They look at your name, current title and company, previous titles and companies, dates and education, then decide whether to read further.
+- **The applicant tracking system (ATS) is mostly a database, not a robot judge.** Recruiters search it by keywords ("Java", "Kafka", "distributed systems") and filter by basics such as location or work authorisation. The real risk isn't an algorithm rejecting you; it's your resume **not parsing cleanly** (so your experience doesn't show up in searches), or **not containing the words** the recruiter searches for.
+- **The hiring manager reads more closely**, looking for evidence you've done work like theirs, at the right scope.
+- **Interviewers read it for questions.** Every line is fair game in the [project deep dive](/behavioral/foundations/project-deep-dive). Don't write anything you can't explain for ten minutes.
+
+## Layout that survives parsing and skimming
+
+- **One page** for under about 10 years of experience; two pages at most after that.
+- **Single column**, standard section headings (Experience, Projects, Skills, Education), plain fonts. Avoid tables, text boxes, icons, skill-rating bars and two-column templates: they often scramble when parsed and slow down a skim.
+- **Order:** contact line → experience (newest first) → projects (essential if you have little experience) → skills → education. For new graduates, education and projects can come first.
+- **Contact line:** name, email, phone, city (and "open to relocation" if true), LinkedIn, GitHub if it has real work.
+- **PDF** unless the application asks for another format; name the file `Firstname-Lastname-Resume.pdf`.
+- Leave out the objective statement, photo, date of birth, marital status and full address. They take space and can invite bias. (For campus hiring in India, CGPA is usually expected; include it if it helps.)
+
+## Bullets that show impact
+
+Each bullet should answer "what changed because you were there?", not "what was your job description?". A reliable shape is the one Laszlo Bock popularised from Google's hiring:
+
+> **Accomplished [X], as measured by [Y], by doing [Z].**
+
+| Weak (responsibility) | Strong (result, measure, method) |
+| --- | --- |
+| Worked on the payments service using Spring Boot. | Cut payment API p99 latency from 900 ms to 180 ms by replacing per-request database lookups with a Redis cache and batching ledger writes. |
+| Responsible for CI/CD pipelines. | Reduced build time from 25 to 7 minutes for 40 engineers by parallelising test suites and caching Gradle dependencies. |
+| Developed features for the mobile app. | Shipped offline mode for the Android app (2M monthly users), raising 7-day retention in low-connectivity regions by 4%. |
+| Mentored junior developers. | Onboarded and mentored 3 new engineers; wrote the service runbook that cut on-call escalations by half. |
+
+- **Lead with a verb** that says what you did: built, designed, cut, migrated, led, automated.
+- **Quantify** with what you have: latency, throughput, cost, error rate, users, revenue, time saved, incidents. No exact number? Use scope ("used by 30 internal services"), scale ("8K events/s") or before/after ("from manual weekly to automated daily").
+- **Name the technology inside the bullet**, not only in a skills list. "Kafka" in a bullet that shows what you built with it is far stronger than "Kafka" in a list, and it's still a keyword match.
+- **Three to five bullets per recent role**, fewer for older roles. Put the most impressive bullet first.
+- **Show your level.** For senior roles, bullets should show design decisions, ownership across teams, mentoring and measurable business impact, not just tickets completed.
+
+## Projects, skills and gaps
+
+- **Projects:** two or three that show depth: what it does, the hard part, and something measurable (users, stars, performance). A deployed system you can talk about for 20 minutes beats five tutorial clones.
+- **Skills:** group them (Languages, Backend, Data, Cloud & tools). List only what you'd be comfortable being questioned on. No proficiency bars or percentages.
+- **Competitive programming and open source:** a strong rating or merged contributions to known projects are worth a line each.
+- **Gaps** (study, health, family, layoffs): a one-line honest note is fine and common. Don't hide them with vague dates.
+
+## Tailor it, lightly
+
+You don't need a new resume for every application, but for each role you really want:
+
+1. Read the job description and list its key terms (languages, systems, domain).
+2. Make sure the terms you genuinely have appear in your bullets, using their wording ("distributed systems", "event-driven", "Kubernetes").
+3. Reorder bullets so the most relevant experience comes first.
+
+Keep a master version with everything, and trim from it.
+
+## Getting interviews: channels that work
+
+| Channel | Why it works | How to do it well |
+| --- | --- | --- |
+| **Referral** | A person vouches for you; referred candidates usually get a recruiter's attention | Ask people who know your work first. For others, make it easy: one paragraph about you, the job link or ID, your resume |
+| **Recruiter outreach** | Recruiters have targets and welcome good candidates | A short LinkedIn message to the recruiter for that team (below) |
+| **Applying early** | Roles get most attention in the first days after posting | Set job alerts; apply within a few days |
+| **Hiring events, hackathons, campus drives** | Interviews arranged on the spot | Prepare a 30-second pitch and bring your best project |
+| **A visible profile** | Recruiters search LinkedIn constantly | Clear headline ("Backend Engineer, Java, Kafka, Payments"), recent roles with 2–3 results each, "open to work" visible to recruiters only |
+
+A message that gets replies is short and specific:
+
+> Hi Priya, I'm a backend engineer with 4 years on payment systems (Java, Kafka, PostgreSQL). At Acme I cut p99 latency on our payments API from 900 ms to 180 ms. I'm interested in the SDE II role on the Payments Platform team (job 12345). My resume is attached; could we have a quick chat, or could you point me to the right recruiter?
+
+What makes it work: who you are in one line, one concrete result, the exact role, and an easy next step.
+
+## Run your search like a project
+
+- **Apply to several companies in parallel**, so offers arrive close together. That's what gives you choice and negotiating power (see [Offers & Negotiation](/behavioral/playbook/offers-and-negotiation)).
+- **Schedule practice interviews first:** put a couple of lower-priority companies before your top choices.
+- **Track everything** in a spreadsheet: company, role, referral, date applied, stage, next step, contact.
+- **Account for notice periods** if you're in India; companies plan around them (see [Notice Periods, Counter-offers & Resigning](/behavioral/playbook/notice-periods-and-counteroffers)).
+
+## Interview questions
+
+<QA q="My resume lists everything I worked on, but I'm getting no responses. What's the most likely fix?">
+It probably describes responsibilities instead of results, so a seven-second skim finds nothing that stands out. Rewrite the top bullets of your current role as result, measure and method, naming the technology inside the bullet: what improved, by how much, and how you did it. Make sure the key terms from the roles you want appear in those bullets, keep it to one clean single-column page, and add referrals or recruiter messages rather than relying only on online applications.
+</QA>
+
+<QA q="I don't have numbers for my work. How do I quantify it?">
+Use whatever measure of size or change is honest: the number of users or services affected, the volume handled (requests or events per second, records per day), time saved for a team, frequency changes (manual weekly to automated daily), or before-and-after comparisons such as failures per month. If you can't measure the outcome, describe the scope and the decision you made. Then, at your current job, start capturing numbers for what you ship; future you will need them.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Rewrite this bullet using the X-Y-Z shape: 'Worked on migrating the order service from a monolith to microservices.' Invent plausible details where needed, and say what you'd verify before using it.">
+
+Example: "Led the extraction of order management from the monolith into a Spring Boot service with its own PostgreSQL database, cutting order-flow deploys from weekly to daily and isolating the incidents that previously took down checkout."
+
+What to verify before using it: whether you **led** it or contributed (say "co-led" or "built the … part" if that's the truth), the real deploy frequencies, and the incident numbers. Every claim will be questioned in the project deep dive, so it must be accurate and you must be able to explain each decision.
+
+</Practice>
+
+<Takeaways>
+
+- Recruiters skim in seconds: put titles, companies and your strongest result where the eye lands first.
+- Use a single-column, one-page layout with standard headings so it parses and skims well.
+- Write bullets as result, measure and method, with the technology named inside the bullet.
+- Tailor lightly: the role's key terms in your bullets, the most relevant work first.
+- Referrals and direct recruiter messages beat cold applications; keep messages short and specific.
+- Apply in parallel, practise on lower-priority companies first, and track every application.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Interview Loops, Levels & Hiring Decisions](/behavioral/playbook/hiring-process-and-levels).
+- Gayle Laakmann McDowell, *Cracking the Coding Interview* (6th ed.), Chapter IV "Before the Interview" ("Writing a Great Resume"), and *The Google Resume* (Wiley, 2011).
+- Laszlo Bock, *Work Rules!* (Twelve, 2015) — how Google evaluates candidates.

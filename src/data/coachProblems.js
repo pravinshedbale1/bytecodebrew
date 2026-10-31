@@ -88,6 +88,9 @@ export default {
   'array-nesting': ['n', 'O(n), each cycle walked once'],
   'minimum-number-of-operations-to-sort-a-binary-tree-by-level': ['nlogn', 'O(n log n), sorting each level'],
   'couples-holding-hands': ['n', 'O(n) with a seat index'],
+  'sort-list': ['nlogn', 'O(n log n), merge sort'],
+  'different-ways-to-add-parentheses': [null, 'O(Cₙ · n), Catalan many results'],
+  'longest-substring-with-at-least-k-repeating-characters': ['n', 'O(26 · n)'],
 
   // ---- designing data structures (per operation)
   'implement-queue-using-stacks': ['1', 'O(1) amortised per operation'],
@@ -350,6 +353,10 @@ export default {
 
   // ---- shortest paths
   'network-delay-time': ['nlogn', 'O(E log V), Dijkstra'],
+  'is-graph-bipartite': ['n', 'O(V + E), BFS two-colouring'],
+  'possible-bipartition': ['n', 'O(n + D), two-colouring'],
+  'critical-connections-in-a-network': ['n', 'O(V + E), Tarjan low-link'],
+  'valid-arrangement-of-pairs': ['n', 'O(E), Hierholzer'],
   'path-with-minimum-effort': ['n2logn', 'O(m·n·log(m·n)), Dijkstra on the grid'],
   'cheapest-flights-within-k-stops': ['n2', 'O(k·E), Bellman–Ford rounds'],
   'path-with-maximum-probability': ['nlogn', 'O(E log V)'],

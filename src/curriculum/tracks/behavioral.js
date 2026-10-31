@@ -153,6 +153,8 @@ const playbook = {
       title: 'Behavioral Playbook',
       description: 'From preparation to the offer.',
       lessons: [
+        L('resume-and-applications', 'Resume & Getting the Interview', 'A resume that survives a seven-second skim, bullets that show impact, and the channels that get recruiters to call.', 14, 'Beginner'),
+        L('hiring-process-and-levels', 'Interview Loops, Levels & Hiring Decisions', 'How loops are structured, how decisions and levels are made, and what to do when you\'re down-levelled.', 14, 'Beginner'),
         L('signals-by-level', 'Signals by Level', 'What changes from junior to senior to staff to manager — scope, ambiguity and influence.', 12, 'Intermediate'),
         L('mock-behavioral-interviews', 'Mock Interviews, Annotated', 'Two full behavioral rounds — mid-level and senior — with the interviewer\'s follow-ups, notes and scores.', 22, 'Intermediate'),
         L('manager-interviews', 'Engineering Manager Interviews', 'Hiring, performance, team health and delivery — with sample answers for each.', 18, 'Advanced'),

@@ -31,8 +31,10 @@ const hld = {
       description: 'The method and the vocabulary. Read these first — every later lesson assumes them.',
       lessons: [
         L('hld-interview-framework', 'The HLD Interview Framework', 'A step-by-step method for running a design interview, from requirements to deep dives.', 14, 'Beginner'),
+        L('product-architecture-interview', 'The Product Architecture Round', 'Meta\'s product-focused design interview: APIs, data models and client–server flows, with a worked example.', 20, 'Intermediate'),
         L('back-of-the-envelope-estimation', 'Back-of-the-Envelope Estimation', 'Numbers every engineer should know and how to turn them into QPS, storage and bandwidth.', 16, 'Beginner'),
         L('networking-essentials', 'Networking Essentials', 'DNS, TCP vs UDP, HTTP versions and TLS — what actually happens between client and server.', 18, 'Beginner'),
+        L('operating-systems-essentials', 'Operating Systems Essentials', 'Processes and threads, scheduling, synchronisation, deadlock, virtual memory, I/O models and fsync, with the classic numerical questions.', 22, 'Beginner'),
       ],
     },
     {
@@ -147,6 +149,21 @@ const hld = {
         L('design-message-queue', 'Design a Distributed Message Queue (Kafka)', 'Partitioned logs, replication and ISR, consumer groups and delivery semantics.', 24, 'Advanced'),
         L('design-metrics-monitoring', 'Design Metrics Monitoring & Alerting', 'Time-series storage and compression, cardinality, rollups and reliable alerting.', 22, 'Advanced'),
         L('design-stock-exchange', 'Design a Stock Exchange', 'Order books, price-time matching, sequencing, determinism and low latency.', 24, 'Advanced'),
+        L('design-maps-navigation', 'Design Maps & Navigation (Google Maps)', 'Vector tiles, routing on continental graphs, live traffic from GPS probes and ETAs.', 26, 'Advanced'),
+        L('design-distributed-file-system', 'Design a Distributed File System (GFS/HDFS)', 'Chunks, a single metadata master, leases, replication, repair and erasure coding.', 24, 'Advanced'),
+      ],
+    },
+    {
+      id: 'ml-systems',
+      title: 'ML & AI Systems',
+      description: 'The ML system design round: framing, data, metrics and serving, then the most-asked recommendation, ranking and GenAI designs.',
+      lessons: [
+        L('ml-system-design-framework', 'The ML System Design Interview', 'Turn a product goal into a learning problem: framing, metrics, labels, features, models, serving and monitoring.', 24, 'Intermediate'),
+        L('design-recommendation-system', 'Design a Recommendation & Feed Ranking System', 'Candidate generation, two-tower retrieval, multi-task ranking, re-ranking, training data and cold start.', 28, 'Advanced'),
+        L('design-search-ranking', 'Design Search Ranking', 'Query understanding, hybrid retrieval, learning to rank, relevance labels and interleaving.', 22, 'Advanced'),
+        L('design-ad-click-prediction', 'Design Ad Click Prediction', 'Calibrated click prediction for ad auctions: sparse features, sampling correction, delayed conversions.', 24, 'Advanced'),
+        L('design-rag-assistant', 'Design a RAG Assistant', 'Answering from company documents: chunking, hybrid retrieval, permissions, grounding, injection and evaluation.', 26, 'Intermediate'),
+        L('design-llm-serving', 'Design an LLM Serving Platform', 'Prefill and decode, KV cache arithmetic, continuous batching, paged memory and GPU capacity.', 26, 'Advanced'),
       ],
     },
     {
@@ -242,6 +259,7 @@ const lld = {
       description: 'What separates working code from interview-grade code: thread safety, errors, testability.',
       lessons: [
         L('concurrency-for-lld', 'Concurrency for LLD', 'Race conditions, locks, atomics, concurrent collections and producer–consumer in Java.', 24, 'Advanced'),
+        L('concurrency-coding-problems', 'Concurrency Coding Problems', 'Print in order, bounded blocking queue, dining philosophers, thread-safe rate limiter, delayed scheduler and a parallel crawler: stress-tested solutions.', 26, 'Advanced'),
         L('interview-grade-code', 'Writing Interview-Grade Code', 'Modelling, validation, exceptions, immutability, testability and common anti-patterns.', 16, 'Intermediate'),
         L('code-smells-refactoring', 'Code Smells & Refactoring', 'Recognising smells and removing them with small, safe, named refactorings — with a verified worked example.', 16, 'Intermediate'),
         L('lld-schema-design', 'Schema Design for LLD', 'Mapping classes to tables, invariants as constraints, indexes from queries, and concurrency in SQL.', 22, 'Intermediate'),

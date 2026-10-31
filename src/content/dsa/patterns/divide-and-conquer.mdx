@@ -1,0 +1,237 @@
+**Divide and conquer** solves a problem by splitting it into smaller independent pieces, solving each piece recursively, and combining the answers. You've already used it without the name: merge sort, quickselect, building a tree from its traversals, and every "solve the left subtree, solve the right subtree" recursion. This lesson makes the pattern explicit, because a few interview favourites are only easy once you see them as divide and conquer, and because interviewers often ask for the complexity of a recursive split, which needs one formula.
+
+<Callout type="note" title="Before this lesson">
+
+You should be comfortable with recursion ([Recursion Without Fear](/dsa/start-here/recursion-made-easy)) and with [Sorting as a Tool](/dsa/patterns/sorting-and-selection). One ladder problem sorts a linked list using the slow and fast pointer split from [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers); the step is explained again below.
+
+</Callout>
+
+<Callout type="tip" title="How to spot it">
+
+- The answer for a range is built from answers for its **halves** plus something that **crosses the middle** (count pairs across halves, best subarray crossing the middle).
+- "Count pairs i < j with some condition" on an array (inversions, "smaller after self", reverse pairs) → **count during the merge** of merge sort.
+- Something in the input **can never be part of the answer** and splits it into independent pieces (a letter that appears too rarely).
+- "All ways to group / parenthesise / split" → choose the **last** operation, recurse on both sides; memoise when sides repeat.
+- Linked list or other sequential data that must be sorted in O(n log n) → **merge sort**.
+
+</Callout>
+
+## The three steps
+
+1. **Divide** the input into smaller pieces of the same kind (usually halves).
+2. **Conquer** each piece recursively; tiny pieces are solved directly (the base case).
+3. **Combine** the pieces' answers into the answer for the whole.
+
+All the thinking goes into step 3. If combining is cheap, the algorithm is fast. If you can't say how to combine, divide and conquer is the wrong tool.
+
+How it relates to its neighbours:
+
+| | Divide and conquer | Dynamic programming | Decrease and conquer |
+| --- | --- | --- | --- |
+| Subproblems | Independent, usually disjoint halves | **Overlap**: the same subproblem is reused | One smaller subproblem |
+| Example | Merge sort | Longest common subsequence | Binary search |
+| When D&C subproblems start repeating… | add memoisation, and it becomes DP | | |
+
+## Complexity: the master theorem, practically
+
+A divide-and-conquer algorithm that splits into `a` pieces of size `n / b` and spends `O(nᵈ)` dividing and combining has
+
+```text
+T(n) = a · T(n / b) + O(nᵈ)
+```
+
+Compare `a` with `bᵈ` (equivalently, log_b a with d):
+
+| Case | Result | Intuition | Example |
+| --- | --- | --- | --- |
+| a < bᵈ | O(nᵈ) | The top-level combine dominates | Quickselect, average case: T(n) = T(n/2) + O(n) → O(n) |
+| a = bᵈ | O(nᵈ log n) | Every level costs the same; there are log n levels | Merge sort: 2T(n/2) + O(n) → O(n log n) |
+| a > bᵈ | O(n^(log_b a)) | The leaves dominate | Karatsuba multiplication: 3T(n/2) + O(n) → O(n^1.585) |
+
+Two more worth knowing: binary search is T(n/2) + O(1) → O(log n), and a tree traversal is 2T(n/2) + O(1) → O(n).
+
+The interview version: **"How many levels, and how much work per level?"** Merge sort has log n levels and O(n) merging per level, so O(n log n). That sentence is usually enough.
+
+## Pattern 1: count while you merge
+
+Many "count the pairs" problems look like they need O(n²) comparisons. Merge sort fixes that because, at the moment two sorted halves are merged, every element of the left half has a known relationship to every element of the right half.
+
+**Counting inversions** (pairs i < j with a[i] > a[j]): while merging, whenever the next smallest element comes from the **right** half, it is smaller than **every element still waiting in the left half**, and those are all earlier in the original array. Add that many inversions at once.
+
+```java
+static long countInversions(int[] a, int lo, int hi) {           // sorts a[lo, hi)
+    if (hi - lo < 2) return 0;
+    int mid = (lo + hi) >>> 1;
+    long count = countInversions(a, lo, mid) + countInversions(a, mid, hi);
+    int[] merged = new int[hi - lo];
+    int i = lo, j = mid, k = 0;
+    while (i < mid && j < hi) {
+        if (a[i] <= a[j]) merged[k++] = a[i++];
+        else {
+            count += mid - i;                                       // a[j] is smaller than every left element still waiting
+            merged[k++] = a[j++];
+        }
+    }
+    while (i < mid) merged[k++] = a[i++];
+    while (j < hi) merged[k++] = a[j++];
+    System.arraycopy(merged, 0, a, lo, merged.length);
+    return count;
+}
+```
+
+O(n log n) instead of O(n²). The same idea solves:
+
+- **Count of Smaller Numbers After Self:** count inversions **per element**. Sort indices rather than values, so that when a right-half element is placed you can credit the left-half elements still waiting.
+- **Reverse Pairs** (i < j with a[i] > 2·a[j]): before merging two sorted halves, count pairs with a separate two-pointer pass, because the merge order and the counting condition differ.
+- **Count of Range Sum:** the same counting on prefix sums.
+
+These also have Fenwick-tree solutions (see [Range Queries](/dsa/patterns/range-queries)); merge sort is often easier to derive in an interview.
+
+## Pattern 2: the crossing case
+
+Some problems ask for the best **contiguous** piece. Split at the middle: the best piece is entirely on the left, entirely on the right, or it **crosses the middle**. The first two are recursive calls; the crossing case is the best suffix of the left half plus the best prefix of the right half, computed in O(n).
+
+```java
+static long maxSubarray(int[] a, int lo, int hi) {
+    if (lo == hi) return a[lo];
+    int mid = (lo + hi) >>> 1;
+    long leftBest = Long.MIN_VALUE, sum = 0;
+    for (int i = mid; i >= lo; i--) { sum += a[i]; leftBest = Math.max(leftBest, sum); }
+    long rightBest = Long.MIN_VALUE; sum = 0;
+    for (int i = mid + 1; i <= hi; i++) { sum += a[i]; rightBest = Math.max(rightBest, sum); }
+    long crossing = leftBest + rightBest;
+    return Math.max(crossing, Math.max(maxSubarray(a, lo, mid), maxSubarray(a, mid + 1, hi)));
+}
+```
+
+This is O(n log n), slower than Kadane's O(n) algorithm, but interviewers ask for it as a follow-up to [Maximum Subarray](https://leetcode.com/problems/maximum-subarray/) precisely to test whether you can reason about the crossing case. (Returning four values per range, namely total, best prefix, best suffix and best overall, brings it to O(n), and that version is what a segment tree stores to answer range queries.)
+
+## Pattern 3: split at what can't belong
+
+Sometimes the input contains elements that **no valid answer can include**. They cut the problem into independent pieces, and you recurse on each.
+
+**Longest Substring with At Least K Repeating Characters:** a letter that appears fewer than k times in the whole range can't be in any valid substring. Split the range at every such letter and solve each piece. A range with no such letter is valid as a whole.
+
+```java
+static int longestSubstring(char[] s, int lo, int hi, int k) {   // the answer inside s[lo, hi)
+    if (hi - lo < k) return 0;
+    int[] count = new int[26];
+    for (int i = lo; i < hi; i++) count[s[i] - 'a']++;
+    boolean allGood = true;
+    for (int i = lo; i < hi; i++) if (count[s[i] - 'a'] < k) { allGood = false; break; }
+    if (allGood) return hi - lo;                                    // the whole range is valid
+    int best = 0, start = lo;
+    for (int j = lo; j <= hi; j++) {
+        if (j == hi || count[s[j] - 'a'] < k) {                     // a "bad" letter (or the end): close a piece
+            best = Math.max(best, longestSubstring(s, start, j, k));
+            start = j + 1;
+        }
+    }
+    return best;
+}
+```
+
+Why it's fast: a letter that's bad in a range is absent from every piece below it, so each level of recursion removes at least one of the 26 letters. The depth is at most 26, and each level does O(n) work in total: O(26 · n).
+
+This problem is a known trap for sliding windows: adding a character can make a window invalid **or** valid again, so the usual "shrink while invalid" logic fails. (A sliding window does work if you fix the number of distinct letters, 1 to 26, and run one window per value. Both solutions are on the problem's Solution tab.)
+
+## Pattern 4: choose the last operation
+
+"Return every result of every way to parenthesise `2*3-4*5`". Every grouping applies some operator **last**. Choose it, and the expression splits into a left part and a right part whose results can be computed independently:
+
+```java
+static List<Integer> diffWays(String e, Map<String, List<Integer>> memo) {
+    if (memo.containsKey(e)) return memo.get(e);
+    List<Integer> res = new ArrayList<>();
+    for (int i = 0; i < e.length(); i++) {
+        char c = e.charAt(i);
+        if (c != '+' && c != '-' && c != '*') continue;
+        for (int x : diffWays(e.substring(0, i), memo))
+            for (int y : diffWays(e.substring(i + 1), memo))
+                res.add(c == '+' ? x + y : c == '-' ? x - y : x * y);
+    }
+    if (res.isEmpty()) res.add(Integer.parseInt(e));                // a plain number
+    memo.put(e, res);
+    return res;
+}
+```
+
+The pieces **overlap** (the middle sub-expression appears under several splits), so memoisation helps. That's the moment divide and conquer turns into dynamic programming: this "split on the last operation" structure is exactly **interval DP**, as in Burst Balloons and Matrix Chain Multiplication (see [Tree & Interval DP](/dsa/patterns/dp-trees-intervals)).
+
+## Pattern 5: sort what you can't index
+
+Merge sort needs only sequential access, which makes it the natural O(n log n) sort for **linked lists**:
+
+1. **Divide:** find the middle with slow and fast pointers. Start `fast` one node ahead (`fast = head.next`) so that `slow` stops at the end of the first half even for two nodes, then cut the list after `slow`.
+2. **Conquer:** sort both halves.
+3. **Combine:** merge two sorted lists by relinking nodes behind a dummy head.
+
+That's O(n log n) time and O(log n) recursion stack. For a strict O(1) extra space follow-up, do it **bottom-up**: merge adjacent runs of length 1, then 2, 4, 8, … iteratively, with no recursion.
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 912 | [Sort an Array](https://leetcode.com/problems/sort-an-array/) | Medium | Write merge sort from scratch |
+| 148 | [Sort List](https://leetcode.com/problems/sort-list/) | Medium | Merge sort on a linked list |
+| 53 | [Maximum Subarray](https://leetcode.com/problems/maximum-subarray/) | Medium | The crossing case (follow-up to Kadane) |
+| 215 | [Kth Largest Element in an Array](https://leetcode.com/problems/kth-largest-element-in-an-array/) | Medium | Quickselect: recurse into one side only |
+| 105 | [Construct Binary Tree from Preorder and Inorder Traversal](https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) | Medium | The root splits the inorder range |
+| 395 | [Longest Substring with At Least K Repeating Characters](https://leetcode.com/problems/longest-substring-with-at-least-k-repeating-characters/) | Medium | Split at what can't belong |
+| 241 | [Different Ways to Add Parentheses](https://leetcode.com/problems/different-ways-to-add-parentheses/) | Medium | Choose the last operation; memoise |
+| 23 | [Merge k Sorted Lists](https://leetcode.com/problems/merge-k-sorted-lists/) | Hard | Merge pairs of lists in rounds: O(N log k) |
+| 315 | [Count of Smaller Numbers After Self](https://leetcode.com/problems/count-of-smaller-numbers-after-self/) | Hard | Count during the merge, per element |
+| 493 | [Reverse Pairs](https://leetcode.com/problems/reverse-pairs/) | Hard | Count in a separate pass before merging |
+
+## Interview questions
+
+<QA q="What is the time complexity of T(n) = 2T(n/2) + O(n), and why?">
+O(n log n). The recursion has log₂ n levels because the size halves each time. At each level the pieces together cover all n elements, and combining costs O(n) in total for that level. Same work on every level times log n levels gives O(n log n). This is merge sort's recurrence; in master-theorem terms, a = 2 equals b^d = 2¹.
+</QA>
+
+<QA q="How does merge sort count inversions in O(n log n)?">
+Inversions are split into three kinds: both elements in the left half, both in the right half, and one in each. The first two are counted recursively. The cross ones are counted during the merge: when the next element taken comes from the right half, it is smaller than every element still remaining in the left half, all of which came earlier in the original array, so it forms an inversion with each of them. Add the number remaining on the left in one step. The merge is still linear, so the total is O(n log n).
+</QA>
+
+<QA q="When does divide and conquer become dynamic programming?">
+When the subproblems overlap. Merge sort's halves are disjoint, so no subproblem is solved twice. In problems like splitting an expression at its last operator, the same sub-range shows up under many different splits, and plain recursion recomputes it exponentially many times. Caching each subproblem's result (memoisation) or filling a table over ranges (interval DP) solves each one once. Independent subproblems mean divide and conquer; repeated subproblems mean add memoisation.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Count the pairs (i, j) with i < j and a[i] > 2 · a[j] (Reverse Pairs), for n up to 5 × 10⁴. Why can't you count inside the merge loop the way you count inversions, and what do you do instead?">
+
+The merge decides order by comparing `a[i]` with `a[j]`, but the condition here compares `a[i]` with `2 · a[j]`. An element can be placed before another by the merge while still satisfying the condition (or not), so the merge's progress doesn't tell you the count.
+
+Instead, after sorting both halves recursively and **before merging**, run a separate two-pointer pass: for each `j` in the right half, advance a pointer `i` through the left half while `a[i] ≤ 2 · a[j]`. Because both halves are sorted, `i` only moves forward, and the number of left elements past it, `mid − i`, are exactly the pairs for this `j`. Then merge as usual. Still O(n log n). Use `long` for `2 · a[j]` to avoid overflow.
+
+</Practice>
+
+<Practice task="Explain why quickselect averages O(n) but merge sort is O(n log n), even though both split the array roughly in half.">
+
+Merge sort recurses into **both** halves: T(n) = 2T(n/2) + O(n). Every level of recursion touches all n elements, and there are log n levels, so O(n log n).
+
+Quickselect partitions around a pivot and recurses into **only the side that contains the k-th element**: on average T(n) = T(n/2) + O(n). The work shrinks geometrically, n + n/2 + n/4 + … ≈ 2n, so O(n) on average. With consistently bad pivots it degrades to O(n²), which is why implementations choose the pivot randomly.
+
+</Practice>
+
+<Takeaways>
+
+- Divide, conquer, combine. The combine step decides whether the approach works and how fast it is.
+- Complexity: count the levels and the work per level; the master theorem formalises T(n) = aT(n/b) + O(nᵈ).
+- Merge sort turns O(n²) pair counting into O(n log n): count across halves while (or just before) merging.
+- For contiguous answers, the crossing case is the best suffix of the left plus the best prefix of the right.
+- Elements that can't be in any answer split the input into independent pieces.
+- "All ways to group" means choose the last operation; when pieces repeat, memoise, and you have interval DP.
+- Merge sort is the natural O(n log n) sort for linked lists; bottom-up merge sort uses O(1) extra space.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Fast & Slow Pointers](/dsa/patterns/fast-slow-pointers).
+- Cormen, Leiserson, Rivest and Stein, *Introduction to Algorithms*, chapter "Divide-and-Conquer" (the maximum-subarray example and the master theorem).
+- Jon Bentley, *Programming Pearls*, column 8, "Algorithm Design Techniques" (the maximum subarray story).
+- Code for this lesson, tested against brute force: `dsa-java/divide-and-conquer/DivideAndConquer.java`.

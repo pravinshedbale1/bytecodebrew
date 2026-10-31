@@ -127,6 +127,7 @@ const patterns = {
         L('binary-search-on-answer', 'Binary Search on the Answer', 'When the answer is a number and "can I do it with X?" is monotonic.', 18, 'Intermediate'),
         L('sorting-and-selection', 'Sorting as a Tool', 'Custom comparators, counting sort and quickselect for the k-th element.', 16, 'Intermediate'),
         L('cyclic-sort', 'Cyclic Sort', 'Values 1 to n each have a home index: find missing and duplicate numbers in O(n) time and O(1) space, and count minimum swaps.', 18, 'Intermediate'),
+        L('divide-and-conquer', 'Divide and Conquer', 'Split, solve, combine: counting during merge sort, the crossing case, splitting at what can\'t belong, and the master theorem.', 22, 'Intermediate'),
       ],
     },
     {
@@ -174,6 +175,7 @@ const patterns = {
         L('topological-sort', 'Topological Sort', 'Order tasks with dependencies and detect cycles (Kahn\'s algorithm).', 18, 'Intermediate'),
         L('union-find', 'Union-Find', 'Group things that are connected, fast — with path compression.', 16, 'Intermediate'),
         L('shortest-paths', 'Shortest Paths', 'BFS for unweighted, Dijkstra for weighted, 0-1 BFS for in between.', 20, 'Advanced'),
+        L('advanced-graphs', 'Advanced Graphs', 'Two-colouring, bridges and articulation points, Euler paths and strongly connected components.', 26, 'Advanced'),
       ],
     },
     {
@@ -243,6 +245,7 @@ const playbook = {
         L('pattern-picker', 'The Pattern Picker', 'Signals in the wording and constraints that point to each pattern — a decision guide.', 16, 'Intermediate'),
         L('study-plan', 'A 10-Week Study Plan', 'What to study each week, which problems to solve and how to revise.', 14, 'Beginner'),
         L('interview-communication', 'Solving Out Loud', 'How DSA interviews are scored and what to say at each step.', 14, 'Beginner'),
+        L('online-assessments', 'Online Assessments', 'Timed tests on HackerRank and CodeSignal: scoring, partial credit, input handling, hidden-test traps and time management.', 16, 'Beginner'),
         L('pattern-drills', 'Spot-the-Pattern Drills', 'Sixty unseen problem statements: name the pattern in under a minute, then check.', 30, 'Intermediate'),
         L('mock-interviews', 'Mock Interviews, Annotated', 'Two full transcripts of the same problem — a weak and a strong candidate — and a recovery from being stuck, scored.', 20, 'Intermediate'),
         L('dsa-cheat-sheet', 'DSA Cheat Sheet', 'Every pattern, template and complexity on one page for revision.', 12, 'Intermediate'),

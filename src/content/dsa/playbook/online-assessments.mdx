@@ -1,0 +1,155 @@
+Before most coding interviews there's an **online assessment (OA)**: a timed test on a platform such as HackerRank, CodeSignal or Codility, taken alone, with an automatic score. For many companies, including Amazon, Microsoft, Goldman Sachs, Uber and most large Indian product companies and banks, it's the gate that decides whether a human ever sees your application. Strong candidates fail OAs for reasons that have nothing to do with algorithms: they misread input formats, spend 50 minutes perfecting one problem and leave another blank, or lose half the hidden tests to an integer overflow.
+
+This lesson is about the parts of an OA that differ from a live interview: format, scoring, input handling, time management and the tests you can't see.
+
+<Callout type="note" title="Formats change">
+Companies change their assessments often and differ by role, level and country. What follows is the common shape reported by many candidates in 2025–26, not an official specification. Read the invitation email carefully: it usually states the duration, the number of sections and the allowed languages, and recruiters will answer questions about format.
+</Callout>
+
+## What an OA usually looks like
+
+| Part | Typical shape | What it measures |
+| --- | --- | --- |
+| Coding | 2–4 problems in 60–120 minutes, auto-graded on hidden tests | Correctness, efficiency, speed |
+| Debugging (some companies) | Fix small bugs in existing code | Reading code, attention to detail |
+| Work simulation (e.g. Amazon) | Scenario questions: prioritise tasks, respond to a teammate or customer | Judgement against the company's principles |
+| Work-style survey (e.g. Amazon) | Agree/disagree statements about how you work | Fit with the company's values |
+| Multiple choice (some, especially in India) | Output of code, complexity, CS fundamentals, aptitude | Fundamentals |
+
+Some platforms, notably CodeSignal, produce a **standardised score** that several companies accept, so one good attempt can be reused for months. Others are one-off tests per company.
+
+## How you are scored
+
+- **Hidden test cases decide the score.** Usually 10–20 per problem, including large inputs near the constraint limits. You see a few sample tests; the rest stay hidden.
+- **Partial credit is common:** each passed test earns points. A brute force that passes the small tests can earn 30–60% of a problem's score, which is often the difference between passing and failing.
+- **Time matters on some platforms:** a few give extra credit for finishing early, or record how long each problem took.
+- **Code is reviewed for integrity:** plagiarism detection compares submissions; many OAs record your screen or webcam and flag tab switches or pasted code. Using AI assistants or outside help is prohibited unless the instructions explicitly allow it, and getting caught usually means a long ban from that company.
+
+So the goal is **maximum total tests passed**, which changes the strategy compared with a live interview.
+
+## Strategy: the first five minutes
+
+1. **Read every problem first** (2–3 minutes in total). Note each one's constraints and a first guess at the approach.
+2. **Order them by expected value:** the one you're most confident about first, not the first one listed. Problems are not always sorted by difficulty.
+3. **Budget time per problem** and write the budget down. With 3 problems in 90 minutes: about 20, 30 and 30 minutes, plus 10 to spare.
+
+## Strategy: each problem
+
+1. **Use the constraints to pick the complexity.** n ≤ 10⁵ means O(n log n) or better; n ≤ 20 allows exponential search over subsets. See [Reading Constraints](/dsa/data-structures/reading-constraints).
+2. **If the optimal approach isn't clear in 5 minutes, write the brute force first.** Submit it to bank partial credit, then optimise. A working O(n²) beats an unfinished O(n).
+3. **Write your own tests** before submitting: the samples plus the edge cases below. Most platforms let you run custom input.
+4. **Submit, read the result, move on.** If a problem is stuck at 80% after your time budget, take the points and go to the next one. Come back at the end if time remains.
+
+## The tests you can't see
+
+When a solution passes the samples but fails hidden tests, it's almost always one of these:
+
+| Cause | Example | Fix |
+| --- | --- | --- |
+| **Integer overflow** | Sum of 10⁵ values up to 10⁹; product of two ints; `mid = (lo + hi) / 2` | Use `long`; compute `lo + (hi − lo) / 2`; read the constraints for value ranges |
+| **Time limit on large inputs** | O(n²) when n = 10⁵ | Match complexity to constraints; avoid hidden O(n) inside loops (`list.remove(0)`, string `+=`) |
+| **Smallest inputs** | n = 0 or 1, empty string, single node | Test them explicitly |
+| **Duplicates and negatives** | Two equal values; all negative numbers | Don't assume distinct or positive unless stated |
+| **Recursion depth** | DFS on a 10⁵-node path | Use an explicit stack if the platform has a small stack |
+| **Output format** | Extra spaces, wrong separator, missing newline, wrong rounding | Match the sample output exactly |
+| **Slow input/output** | Reading 10⁶ numbers with `Scanner` | Use buffered input (below) |
+
+## Input and output: read the format yourself
+
+Many OAs, especially on HackerRank, give you **stdin and stdout**, not a function signature. You parse the input yourself. Fumbling this costs more time than most algorithms. Practise this template until it's automatic:
+
+```java
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        StringTokenizer st = new StringTokenizer(in.readLine());
+        int n = Integer.parseInt(st.nextToken());
+        int[] a = new int[n];
+        st = new StringTokenizer(in.readLine());
+        for (int i = 0; i < n; i++) a[i] = Integer.parseInt(st.nextToken());
+
+        long answer = solve(a);
+
+        PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out)));
+        out.println(answer);
+        out.flush();                                   // forgetting this prints nothing
+    }
+
+    static long solve(int[] a) {
+        long sum = 0;
+        for (int x : a) sum += x;
+        return sum;
+    }
+}
+```
+
+- `Scanner` is convenient but slow for very large inputs; `BufferedReader` with `StringTokenizer` is the safe default.
+- If values may be spread over several lines, read tokens in a loop that fetches a new line whenever the current tokenizer is empty.
+- Use `PrintWriter` (or `StringBuilder`) for large outputs, and **flush** at the end.
+- In Python, read everything at once: `data = sys.stdin.buffer.read().split()`.
+
+For debugging, print to **stderr** (`System.err.println`), which usually isn't graded, and remove it before final submission anyway.
+
+## Work simulations and work-style surveys
+
+Some OAs, Amazon's in particular, include scenario and survey sections. They're scored, and people do fail them.
+
+- **Answer consistently with the company's published values.** For Amazon, read the Leadership Principles; they're the rubric. Typical good choices: put the customer first, take ownership of problems even outside your area, prefer data over opinion, escalate early with a proposed solution, and disagree openly but commit once decided.
+- **Be consistent and honest.** Survey sections ask similar things in different words and notice contradictions. Extreme answers everywhere ("always", "never") look careless.
+- **Read every option** in scenarios. The best answer is usually the one that solves the customer's problem *and* communicates with the people affected, not the one that's merely fastest.
+
+See [Amazon: Leadership Principles](/behavioral/companies/amazon) for the principles with examples.
+
+## Before the day
+
+- **Practise on the platform:** HackerRank and CodeSignal both have practice areas. Know where the run button, custom input and language selector are.
+- **Pick your language and check its version:** some platforms default to an older Java or Python.
+- **Timed practice:** do two or three full mock OAs (2–3 random medium problems in 90 minutes) and practise *stopping* when a problem's time budget runs out.
+- **Set up the room:** a stable connection, a charger, no interruptions, and nothing on screen that proctoring could flag.
+
+## Interview questions
+
+<QA q="You have 25 minutes left, one problem fully solved and two untouched. What do you do?">
+Read both remaining problems quickly and pick the one where you can get a correct brute force working fastest. Write and submit it for partial credit, then spend the remaining minutes either optimising it or getting a brute force on the last problem, whichever looks like more tests. Two brute forces passing half the tests each usually score more than one perfect solution and one blank. Don't spend the time polishing the solved problem.
+</QA>
+
+<QA q="Your solution passes all sample tests but only 7 of 15 hidden tests. What do you check first?">
+Check, in this order: integer overflow (use long for sums, products and counts, given the value limits), time limits on large inputs (compare your complexity with n's limit and look for hidden linear work inside loops), edge cases such as n = 1, empty input, duplicates and negative numbers, and exact output format. Write a few custom inputs that target each, especially one at the maximum size and one with extreme values. Platforms often report the failure type (wrong answer or timeout), which tells you which of these to look at first.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="An OA gives 90 minutes for three problems: (A) a medium string problem you recognise, (B) a hard graph problem, (C) a medium array problem whose optimal approach isn't obvious, with n ≤ 10⁵. Write your plan for the 90 minutes.">
+
+1. **Minutes 0–3:** read all three; note constraints and first ideas.
+2. **Minutes 3–23:** solve A fully, including custom edge-case tests. Submit.
+3. **Minutes 23–50:** C. If the O(n log n) idea isn't clear within ~5 minutes, write the O(n²) brute force first and submit it for partial credit (it passes the smaller hidden tests), then work on the optimisation.
+4. **Minutes 50–80:** B. Aim for something that passes small cases (a BFS/DFS or brute force) before attempting the full solution.
+5. **Minutes 80–90:** return to whichever problem is closest to more passed tests; re-check overflow and output format.
+
+The principle: bank points early, never leave a problem blank, and time-box everything.
+
+</Practice>
+
+<Takeaways>
+
+- OAs are scored by hidden tests, usually with partial credit: maximise total tests passed.
+- Read all problems first, order by confidence, and time-box each one.
+- Submit a brute force early when the optimal idea isn't clear, then improve it.
+- Most hidden-test failures are overflow, time limits, edge cases or output format.
+- Practise reading stdin with buffered input and printing with a flushed writer.
+- Work simulations and surveys are scored too: answer consistently with the company's values.
+- Never use outside help unless allowed; proctoring and plagiarism checks are standard.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Spot-the-Pattern Drills](/dsa/playbook/pattern-drills).
+- HackerRank and CodeSignal candidate help centres: environment, languages and practice tests.
+- [Reading Constraints](/dsa/data-structures/reading-constraints): choosing the complexity from the limits.

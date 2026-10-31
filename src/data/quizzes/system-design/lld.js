@@ -595,4 +595,15 @@ export default {
       ['Long god classes', 'Injected dependencies (including Clock), value objects and specific exceptions', 'Static globals', 'Magic numbers'],
       1, 'These make the code testable and clear.'),
   ],
+  'concurrency-coding-problems': [
+    Q('Why must await() be called inside a while loop?',
+      ['It is faster', 'A woken thread must re-check the condition: others may have changed it, and spurious wake-ups happen', 'Java requires a loop syntactically', 'To avoid holding the lock'],
+      1, 'An if would continue even when the condition is false.'),
+    Q('How does lock ordering prevent the dining philosophers deadlock?',
+      ['It makes locks faster', 'Taking the lower-numbered fork first means no cycle of waiting threads can form', 'It lets two philosophers share a fork', 'It removes the need for locks'],
+      1, 'It breaks the circular-wait condition.'),
+    Q('In a delayed task scheduler, why does the worker wait with a timeout on a condition rather than sleep?',
+      ['Sleep is deprecated', 'A newly scheduled task may be due sooner, and schedule() must be able to wake the worker', 'Conditions use less memory', 'Sleep cannot be interrupted'],
+      1, 'awaitNanos wakes early when signalled, then recomputes the wait.'),
+  ],
 };

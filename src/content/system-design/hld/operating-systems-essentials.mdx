@@ -1,0 +1,209 @@
+Operating-system questions are a standard part of many interview loops in India, including Amazon, Microsoft, Goldman Sachs, Adobe and campus hiring at most product companies, and they come up indirectly everywhere else. "Why does Nginx handle 10,000 connections with a few threads?", "why is Kafka fast on disk?" and "what happens if the database server loses power before `fsync`?" are operating-system questions wearing a system-design costume.
+
+This lesson is a focused refresher: the concepts interviewers actually ask about, explained through what they mean for real systems, and the classic numerical questions worked through.
+
+## Processes and threads
+
+A **process** is a running program with its own **address space** (code, data, heap, stack), open files and resources. A **thread** is a unit of execution inside a process: threads share the process's memory and files, and each has its own stack, registers and program counter.
+
+| | Process | Thread |
+| --- | --- | --- |
+| Memory | Own address space | Shared with other threads of the process |
+| Creation cost | Higher (new address space, page tables) | Lower |
+| Communication | Inter-process communication (pipes, sockets, shared memory) | Directly through shared memory, which needs synchronisation |
+| Isolation | A crash usually affects only that process | A crash in one thread can bring down the whole process |
+| Context switch | Costlier: switches address space, flushes or tags the TLB | Cheaper within the same process |
+
+**Why it matters in design:** Chrome runs each tab as a process for isolation, and web servers choose between process-per-request (isolated, heavy), thread-per-request (lighter, shared memory) and event loops (lightest, below).
+
+### Memory layout of a process
+
+```text
+high addresses  ┌──────────────┐
+                │ stack        │  function frames, local variables; grows down; one per thread
+                │      ↓       │
+                │      ↑       │
+                │ heap         │  dynamic allocation (new / malloc); grows up
+                │ data / bss   │  global and static variables
+low addresses   │ text         │  machine code (read-only)
+                └──────────────┘
+```
+
+Deep recursion overflows the **stack** (StackOverflowError); leaks and huge collections exhaust the **heap** (OutOfMemoryError).
+
+### Process lifecycle terms interviewers like
+
+- **fork / exec** (Unix): `fork()` creates a copy of the current process (made cheap by **copy-on-write**: pages are shared until one side writes); `exec()` replaces the copy's program with a new one. A shell runs a command with fork then exec.
+- **Zombie:** a finished child whose parent hasn't collected its exit status yet. It holds only a process-table entry.
+- **Orphan:** a child whose parent died first; it's adopted by the init process.
+- **User mode vs kernel mode:** applications run with restricted privileges; a **system call** (read, write, open, socket) switches into the kernel to do privileged work. System calls cost far more than ordinary function calls, which is why buffering and batching I/O matter.
+
+## CPU scheduling
+
+The scheduler picks which ready thread runs next on each core.
+
+| Algorithm | Rule | Strength | Weakness |
+| --- | --- | --- | --- |
+| First-come, first-served | In arrival order | Simple | One long job delays everyone (convoy effect) |
+| Shortest job first | Shortest burst next | Minimum average waiting time | Needs burst lengths in advance; long jobs can starve |
+| Round robin | Each gets a fixed time slice in turn | Fair, responsive | Too small a slice wastes time on switching |
+| Priority | Highest priority first | Expresses importance | Starvation; fixed with **aging** (raise priority while waiting) |
+| Multilevel feedback queue | Jobs move between priority queues based on behaviour | Favours interactive jobs automatically | Complex to tune |
+
+Linux's default scheduler (CFS) gives each task a share of CPU in proportion to its weight, tracking how much CPU time each has had. You don't need its internals; knowing it aims for fairness rather than strict priority is enough.
+
+**Worked example (round robin, slice = 2):** jobs A (5 units), B (3), C (1), all arriving at time 0, in that order.
+
+```text
+time: 0-2 A | 2-4 B | 4-5 C | 5-7 A | 7-8 B | 8-9 A
+finish: C at 5, B at 8, A at 9   → turnaround (finish − arrival): A 9, B 8, C 5 → average 22/3 ≈ 7.33
+waiting (turnaround − burst):    A 4, B 5, C 4 → average 13/3 ≈ 4.33
+```
+
+## Synchronisation
+
+When threads share data, a **race condition** occurs if the result depends on the timing of their operations. The code that touches shared data is the **critical section**, and a correct solution needs **mutual exclusion** (one thread inside at a time), **progress** (if nobody's inside, someone waiting can enter) and **bounded waiting** (nobody waits forever).
+
+| Tool | What it is | Typical use |
+| --- | --- | --- |
+| **Mutex** | A lock with an owner; only the thread that locked it unlocks it | Protecting a critical section |
+| **Semaphore** | A counter; `wait` decrements (blocking at 0), `signal` increments; no owner | Limiting concurrency to N; signalling between threads |
+| **Binary semaphore** | A semaphore limited to 0 and 1 | Signalling; looks like a mutex but has no ownership |
+| **Monitor / condition variable** | A lock plus "wait until condition" and "signal" | Waiting for state changes (`synchronized` + `wait`/`notify` in Java) |
+| **Spinlock** | Busy-waits instead of sleeping | Very short critical sections on multi-core, in kernels |
+
+"Mutex vs semaphore" is a classic question. The essential difference is **ownership and purpose**: a mutex is for mutual exclusion and must be released by the thread that acquired it; a semaphore counts permits and can be signalled by any thread, which makes it a signalling tool as well.
+
+The classic problems (producer–consumer, readers–writers, dining philosophers) are solved in code, with stress tests, in [Concurrency Coding Problems](/system-design/lld/concurrency-coding-problems).
+
+## Deadlock
+
+A set of threads is deadlocked when each waits for a resource held by another. All four **Coffman conditions** must hold at once:
+
+1. **Mutual exclusion:** a resource can be held by only one thread.
+2. **Hold and wait:** a thread holds one resource while waiting for another.
+3. **No pre-emption:** resources can't be taken away forcibly.
+4. **Circular wait:** a cycle of threads, each waiting for the next.
+
+Ways to handle it:
+
+| Strategy | How | Trade-off |
+| --- | --- | --- |
+| **Prevention** | Break a condition, usually circular wait by acquiring locks in a global order | Simple and common in practice |
+| **Avoidance** | Grant a request only if the system stays in a **safe state** (Banker's algorithm) | Needs maximum demands in advance; rare outside textbooks |
+| **Detection and recovery** | Find cycles in the wait-for graph, then abort or roll back a victim | Databases do this: one transaction is aborted and retried |
+| **Ignore it** | Assume it's rare; restart if it happens | What general-purpose operating systems largely do for applications |
+
+## Memory management
+
+### Virtual memory and paging
+
+Each process sees its own **virtual address space**, as if it had all memory to itself. The hardware (MMU) translates virtual addresses to physical ones using **page tables**, in fixed-size **pages** (commonly 4 KB) mapped to physical **frames**.
+
+Why it exists:
+
+- **Isolation:** one process can't read another's memory.
+- **More virtual than physical memory:** pages not in use can live on disk.
+- **Sharing:** the same physical page (a shared library, copy-on-write after fork) can appear in several processes.
+
+The **TLB** (translation lookaside buffer) caches recent translations, because walking page tables on every memory access would be far too slow. Context switches between processes make TLB entries useless for the new process, part of why process switches cost more than thread switches.
+
+A **page fault** happens when a program touches a page that isn't in physical memory: the OS loads it from disk (a major fault, very slow) or maps it without disk I/O (a minor fault). **Thrashing** is when the working sets of running processes don't fit in memory, so the system spends its time paging instead of working. The fix is to run fewer processes or add memory.
+
+**Fragmentation:** *external* fragmentation is free memory split into pieces too small to use (a problem for variable-size allocation); *internal* fragmentation is wasted space inside an allocated block (a 4 KB page holding 100 bytes). Paging eliminates external fragmentation at the cost of some internal fragmentation.
+
+### Page replacement, worked
+
+When memory is full, which page should be evicted? For the reference string **7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2** with **3 frames**:
+
+| Algorithm | Rule | Page faults |
+| --- | --- | --- |
+| FIFO | Evict the page loaded earliest | 10 |
+| LRU | Evict the page used least recently | 9 |
+| Optimal (Belady's) | Evict the page used furthest in the future | 7 |
+
+Optimal needs the future, so it's a benchmark, not an algorithm you can run. LRU approximates it well; real systems approximate LRU itself with a reference bit and a **clock** algorithm, because exact LRU needs work on every memory access.
+
+**Belady's anomaly:** with FIFO, more frames can cause **more** faults. For the string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5, FIFO gives 9 faults with 3 frames but 10 with 4. LRU and Optimal never show this anomaly.
+
+The same idea appears in caches: the [LRU cache](/system-design/lld/lld-lru-cache) and cache eviction policies in [Caching](/system-design/hld/caching).
+
+## I/O models: why event loops scale
+
+| Model | How it works | Used by |
+| --- | --- | --- |
+| **Blocking I/O, thread per connection** | Each connection gets a thread that blocks on read | Classic servlet containers; simple, but thousands of threads cost memory and context switches |
+| **Non-blocking I/O** | Calls return immediately if no data; the app must poll | Rarely used alone |
+| **I/O multiplexing** (`select`, `poll`, **`epoll`**, `kqueue`) | One thread asks the kernel "which of these 10,000 sockets are ready?" and handles only those | Nginx, Redis, Node.js, Netty |
+| **Asynchronous I/O** (`io_uring`, IOCP) | Submit operations; the kernel notifies on completion | High-performance servers, databases |
+
+`epoll` is why one Redis or Nginx thread can serve tens of thousands of connections: work is done only for sockets that are ready, and idle connections cost almost nothing. That's the answer to the classic **C10K problem**, and the reason [real-time systems](/system-design/hld/real-time-communication) can hold many open connections per server. Java's virtual threads give the simple blocking style with similar scalability by mapping many lightweight threads onto few OS threads.
+
+## Files, the page cache and durability
+
+- An **inode** stores a file's metadata (size, permissions, block locations); a directory maps names to inodes. A **hard link** is another name for the same inode; a **soft link** is a small file containing a path.
+- **The page cache:** the OS keeps recently read and written file data in RAM. A `write()` usually returns once data is in the page cache, **not on disk**.
+- **`fsync()`** forces the data to stable storage. Until it's called, a power failure can lose writes the application thought were done. This is why databases `fsync` their write-ahead log before acknowledging a commit, and why "acknowledged" means different things in different systems (see [Replication](/system-design/hld/replication)).
+- **Sequential beats random:** disks and SSDs are far faster for sequential access, and the page cache plus read-ahead amplify that. Kafka's speed comes from append-only logs, the page cache, and **zero-copy** (`sendfile`) from the page cache straight to the network socket without copying through the application.
+
+## Interview questions
+
+<QA q="What's the difference between a process and a thread, and when would you choose processes?">
+A process has its own address space and resources; threads within a process share memory and open files but each has its own stack and registers. Threads are cheaper to create and switch, and communicate through shared memory, which needs synchronisation. Choose processes when isolation matters: a crash or memory corruption in one shouldn't take down others (browser tabs, worker pools running untrusted or unstable code), or when security boundaries are needed. Choose threads for cheap concurrency within one trusted program.
+</QA>
+
+<QA q="How can one Redis or Nginx thread handle thousands of connections?">
+They use I/O multiplexing such as epoll. Instead of a blocked thread per connection, a single thread registers all sockets with the kernel and asks which are ready to read or write, then handles just those, never blocking on any one socket. Idle connections cost only a small amount of kernel memory, there are no thread context switches, and the work per event is short. The design breaks down only if handling an event is slow (CPU-heavy work blocks the loop), which is why such work is moved to separate threads.
+</QA>
+
+<QA q="A write() call returned successfully. Is the data safe if the machine loses power?">
+Not necessarily. write() usually copies data into the operating system's page cache and returns; the OS writes it to disk later. A power failure before then loses it. To guarantee durability, the application must call fsync() (or open the file with synchronous-write flags) and wait for it to complete, and even then it depends on the disk honouring cache flushes. Databases fsync their write-ahead log before acknowledging a commit for exactly this reason, often batching several commits into one fsync to keep throughput up.
+</QA>
+
+<QA q="What is thrashing, and how do you fix it?">
+Thrashing happens when the memory that running processes actively need (their working sets) exceeds physical memory. The system constantly evicts pages that are needed again almost immediately, so it spends most of its time handling page faults and waiting for disk instead of doing work; CPU utilisation drops even though the machine is busy. Fixes: reduce the number of processes running at once, add memory, reduce each process's memory footprint, or, in a service, cap concurrency or cache sizes so the working set fits.
+</QA>
+
+## Practice
+
+Write your answer before opening the suggested one. Anything you mark "Partly" or "Missed it" comes back in your review deck.
+
+<Practice task="Using 3 frames, count page faults for the reference string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5 under FIFO and LRU. Then repeat FIFO with 4 frames. What do you notice?">
+
+**FIFO, 3 frames: 9 faults.** Frames go [1], [1,2], [1,2,3], then 4 evicts 1, 1 evicts 2, 2 evicts 3, 5 evicts 4; 1 and 2 hit; 3 evicts 1, 4 evicts 2; 5 hits.
+
+**LRU, 3 frames: 10 faults.** On this string LRU does worse than FIFO, which is allowed: no practical policy wins on every input.
+
+**FIFO, 4 frames: 10 faults**, one more than with 3 frames. This is **Belady's anomaly**: FIFO can fault more with more memory. LRU and Optimal are stack algorithms and never behave this way.
+
+</Practice>
+
+<Practice task="A Java service runs 2,000 threads, one per client connection, and under load its latency climbs while CPU usage is moderate. Explain what the operating system is doing and propose two fixes.">
+
+Each platform thread has its own stack (often around 1 MB of reserved address space) and is scheduled by the OS. With 2,000 threads, most are blocked on I/O, but the runnable ones compete for a few cores: the scheduler performs many context switches, each costing CPU time and cache and TLB efficiency, and memory pressure grows. Latency rises because requests wait in run queues, not because CPU is saturated by real work.
+
+Fixes:
+- Move to **event-driven, non-blocking I/O** (Netty or a reactive framework on epoll): a few threads serve all connections.
+- Or use **virtual threads** (Java 21+): keep the simple blocking style while the JVM multiplexes them onto a few OS threads.
+- Bound concurrency with a thread pool and a queue, so overload turns into back-pressure instead of thousands of runnable threads.
+
+</Practice>
+
+<Takeaways>
+
+- Processes isolate; threads share memory. Context switches between processes cost more (address space, TLB).
+- Know the scheduling algorithms and their trade-offs; be able to compute waiting and turnaround times.
+- Mutex: ownership and mutual exclusion. Semaphore: a counter for limits and signalling.
+- Deadlock needs all four Coffman conditions; global lock ordering prevents it in practice.
+- Virtual memory gives isolation and lets memory exceed RAM; the TLB caches translations; thrashing means the working set doesn't fit.
+- FIFO, LRU and Optimal page replacement, and Belady's anomaly for FIFO.
+- epoll-style multiplexing lets one thread serve thousands of connections; `write()` isn't durable until `fsync()`.
+
+</Takeaways>
+
+## Further reading
+
+- Next: [Scalability: Vertical vs Horizontal](/system-design/hld/scalability).
+- Remzi and Andrea Arpaci-Dusseau, *Operating Systems: Three Easy Pieces* (free online at ostep.org).
+- Abraham Silberschatz, Peter Galvin and Greg Gagne, *Operating System Concepts* — scheduling, synchronisation, deadlocks and memory.
+- Dan Kegel, "The C10K problem" (2006).

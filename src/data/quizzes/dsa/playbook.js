@@ -67,4 +67,15 @@ export default {
       ['A performance benchmark', 'The edge-case table', 'A code formatter', 'A second solution'],
       1, 'Empty input, one element, duplicates, negatives, overflow and so on.'),
   ],
+  'online-assessments': [
+    Q('The optimal approach to an OA problem isn\'t clear after five minutes. What usually scores best?',
+      ['Keep thinking until it is clear', 'Submit a correct brute force for partial credit, then optimise', 'Skip the problem entirely', 'Submit the sample outputs hard-coded'],
+      1, 'Hidden tests usually give partial credit; a brute force banks points.'),
+    Q('Your code passes the samples but fails large hidden tests with wrong answers. What is the most likely cause?',
+      ['The platform is broken', 'Integer overflow on large values', 'Too many comments', 'Using Java'],
+      1, 'Sums and products of large values overflow int; check the value limits and use long.'),
+    Q('Why use BufferedReader instead of Scanner for large inputs in Java?',
+      ['Scanner cannot read numbers', 'Scanner is much slower on very large inputs', 'BufferedReader parses JSON', 'It is required by HackerRank'],
+      1, 'Slow input can push an otherwise fast solution over the time limit.'),
+  ],
 };

@@ -114,12 +114,51 @@ Some lines look like O(1) but aren't:
 
 - Big-O in interviews usually means **worst case**.
 - **Average** case matters for hashing: a `HashMap` lookup is O(1) on average (with a good hash function); you can say "O(1) average".
-- **Amortised** means "averaged over a sequence of operations". `ArrayList.add` is occasionally O(n) when it grows its internal array, but O(1) amortised, because growth doubles the capacity and is rare.
+- **Amortised** means "averaged over a sequence of operations": some operations are expensive, but they're rare enough that the **total** for any sequence of n operations is bounded. Unlike average case, there's no luck involved: the bound holds for the worst possible sequence.
+
+### Amortised analysis, properly
+
+The standard example is a dynamic array (`ArrayList`, `vector`, Python's `list`). When it's full, `add` allocates a bigger block and copies every element: O(n) for that one call. Why is `add` still called O(1)?
+
+Count the total work for n adds, assuming the capacity **doubles** when full:
+
+```text
+copies when growing: 1 + 2 + 4 + 8 + … + n/2 + n  <  2n
+plus one write per add:                              n
+total for n adds:                                  < 3n   →  O(1) per add, amortised
+```
+
+The copies form a geometric series, and a geometric series is at most twice its largest term. Java's `ArrayList` grows by 1.5× instead of 2×; the series is still geometric, so the bound is still O(1), just with a different constant.
+
+**The growth must be multiplicative.** If the array grew by a fixed 100 slots each time, n adds would copy 100 + 200 + 300 + … ≈ n²/200 elements: O(n) per add. This is a favourite follow-up question.
+
+A second way to see it, the **accounting** view: charge every `add` a few extra units of work and "save" them. By the time the array is full and must be copied, the elements added since the last resize have saved enough to pay for the copy. No single add is charged more than a constant.
+
+Amortised arguments you'll use constantly:
+
+| Code | Why it's amortised O(1) per step |
+| --- | --- |
+| `ArrayList.add`, `StringBuilder.append` | Multiplicative growth: total copying is a geometric series |
+| `HashMap.put` | Resizing rehashes everything, but capacity doubles |
+| Monotonic stack | Each element is pushed once and popped at most once: 2n operations in total |
+| Sliding window / two pointers | Each pointer only moves forward: at most n moves each |
+| Union-Find with path compression and union by size | O(α(n)) amortised per operation, effectively constant |
+| Queue built from two stacks | Each element moves from the in-stack to the out-stack at most once |
+
+The general recipe: **find something that only ever increases (or decreases) and bounds the total work**: elements pushed, pointer positions, total capacity.
+
+<Callout type="note" title="Amortised is not 'every call is fast'">
+An amortised O(1) operation can still take O(n) on one particular call. For a batch job that doesn't matter. For a latency-sensitive system it can: one request that triggers a resize of a huge hash table stalls noticeably. That's why systems like Redis resize their hash tables **incrementally**, moving a few buckets on each operation instead of all at once.
+</Callout>
 
 ## Interview questions
 
 <QA q="What is the time complexity of a loop with a while loop inside it that moves a left pointer forward?">
 If the inner pointer only ever moves forward and never resets, the total number of inner-loop steps across the whole run is at most n, so the whole thing is O(n) — not O(n²). Each element is added once (by the outer loop) and removed at most once (by the inner loop). This amortised argument is why sliding-window solutions are linear.
+</QA>
+
+<QA q="ArrayList.add sometimes copies the whole array. Why is it still O(1)?">
+Because the copies are rare and get rarer. Capacity grows by a constant factor (2× in many libraries, 1.5× in Java), so for n adds the total number of elements copied is a geometric series, 1 + 2 + 4 + … + n, which is less than 2n. Adding the n writes themselves, the whole sequence costs O(n), so each add is O(1) amortised. If capacity grew by a fixed amount instead of a factor, the copies would sum to O(n²), and each add would be O(n) amortised.
 </QA>
 
 <QA q="Why is recursive Fibonacci slow, and what is its complexity?">
@@ -140,6 +179,7 @@ O(n log n) or better. O(n²) would be about 10¹⁰ operations, far beyond the r
 
 - Big-O = how work grows with input size: count loops, multiply nested ones, halving gives log n.
 - A pointer that only moves forward makes nested-looking code O(n) (amortised).
+- Amortised O(1) means the total over any sequence is O(n): dynamic arrays grow by a factor, so copies form a geometric series.
 - Read the constraints: n ≤ 10⁵ → aim for O(n log n) or O(n); n ≤ 20 → subsets are fine; budget about 10⁸ operations.
 - Space includes the recursion stack.
 - Beware hidden costs: string concatenation in loops, `list.contains`, `list.remove(0)`.

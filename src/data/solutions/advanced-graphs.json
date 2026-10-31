@@ -1,0 +1,204 @@
+{
+ "is-graph-bipartite": {
+  "pattern": "Two-colouring with BFS or DFS: a graph is bipartite exactly when it has no odd cycle",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every split",
+    "idea": "Each of the n nodes goes into group 0 or group 1. Try all 2ⁿ assignments and check whether any of them puts the two ends of every edge in different groups.",
+    "steps": [
+     "For every mask from 0 to 2ⁿ − 1, node u is in group `(mask >> u) & 1`.",
+     "Check every edge u–v: the assignment fails if both ends are in the same group.",
+     "Return true as soon as one assignment passes every edge."
+    ],
+    "time": "O(2ⁿ · E)",
+    "space": "O(1)",
+    "why": "Correct but exponential. With n = 100 it is hopeless, which is why the generated tests time out. It shows what the efficient algorithm avoids: once one node is placed, every node connected to it is forced.",
+    "timesOut": [
+     "generated"
+    ],
+    "code": {
+     "java": "class Solution {\n    public boolean isBipartite(int[][] graph) {\n        int n = graph.length;\n        for (long mask = 0; mask < (1L << n); mask++) {\n            boolean ok = true;\n            for (int u = 0; u < n && ok; u++)\n                for (int v : graph[u])\n                    if (((mask >> u) & 1) == ((mask >> v) & 1)) { ok = false; break; }\n            if (ok) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isBipartite(vector<vector<int>>& graph) {\n        int n = graph.size();\n        for (long long mask = 0; mask < (1LL << n); mask++) {\n            bool ok = true;\n            for (int u = 0; u < n && ok; u++)\n                for (int v : graph[u])\n                    if (((mask >> u) & 1) == ((mask >> v) & 1)) { ok = false; break; }\n            if (ok) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def isBipartite(self, graph: List[List[int]]) -> bool:\n        n = len(graph)\n        for mask in range(1 << n):\n            if all((mask >> u) & 1 != (mask >> v) & 1 for u in range(n) for v in graph[u]):\n                return True\n        return False",
+     "javascript": "var isBipartite = function(graph) {\n    const n = graph.length;\n    for (let mask = 0n; mask < (1n << BigInt(n)); mask++) {\n        let ok = true;\n        for (let u = 0; u < n && ok; u++)\n            for (const v of graph[u])\n                if (((mask >> BigInt(u)) & 1n) === ((mask >> BigInt(v)) & 1n)) { ok = false; break; }\n        if (ok) return true;\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS two-colouring",
+    "idea": "Colour a start node 1; every neighbour must get the other colour, every neighbour of those the first colour, and so on. If an edge ever joins two nodes of the same colour, an odd cycle exists and the answer is false. Repeat from every uncoloured node, because the graph may be disconnected.",
+    "steps": [
+     "`colour[u]` is 0 (unseen), 1 or −1.",
+     "For each unseen node s: colour it 1 and BFS from it.",
+     "For each edge u–v met in the BFS: if v is unseen, give it `−colour[u]` and queue it; if it already has `colour[u]`, return false.",
+     "If every component is coloured without conflict, return true."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V)",
+    "why": "Every node and edge is processed once. DFS works equally well; BFS avoids deep recursion. The colouring is forced, so there is never a choice to undo: that is why no backtracking is needed.",
+    "code": {
+     "java": "class Solution {\n    public boolean isBipartite(int[][] graph) {\n        int n = graph.length;\n        int[] colour = new int[n];\n        ArrayDeque<Integer> queue = new ArrayDeque<>();\n        for (int s = 0; s < n; s++) {\n            if (colour[s] != 0) continue;\n            colour[s] = 1;\n            queue.add(s);\n            while (!queue.isEmpty()) {\n                int u = queue.poll();\n                for (int v : graph[u]) {\n                    if (colour[v] == 0) { colour[v] = -colour[u]; queue.add(v); }\n                    else if (colour[v] == colour[u]) return false;\n                }\n            }\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool isBipartite(vector<vector<int>>& graph) {\n        int n = graph.size();\n        vector<int> colour(n, 0);\n        queue<int> q;\n        for (int s = 0; s < n; s++) {\n            if (colour[s] != 0) continue;\n            colour[s] = 1;\n            q.push(s);\n            while (!q.empty()) {\n                int u = q.front(); q.pop();\n                for (int v : graph[u]) {\n                    if (colour[v] == 0) { colour[v] = -colour[u]; q.push(v); }\n                    else if (colour[v] == colour[u]) return false;\n                }\n            }\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def isBipartite(self, graph: List[List[int]]) -> bool:\n        colour = [0] * len(graph)\n        for s in range(len(graph)):\n            if colour[s]:\n                continue\n            colour[s] = 1\n            queue = deque([s])\n            while queue:\n                u = queue.popleft()\n                for v in graph[u]:\n                    if colour[v] == 0:\n                        colour[v] = -colour[u]\n                        queue.append(v)\n                    elif colour[v] == colour[u]:\n                        return False\n        return True",
+     "javascript": "var isBipartite = function(graph) {\n    const n = graph.length, colour = new Array(n).fill(0);\n    for (let s = 0; s < n; s++) {\n        if (colour[s] !== 0) continue;\n        colour[s] = 1;\n        const queue = [s];\n        for (let head = 0; head < queue.length; head++) {\n            const u = queue[head];\n            for (const v of graph[u]) {\n                if (colour[v] === 0) { colour[v] = -colour[u]; queue.push(v); }\n                else if (colour[v] === colour[u]) return false;\n            }\n        }\n    }\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "possible-bipartition": {
+  "pattern": "Model dislikes as edges and two-colour the graph (BFS/DFS or Union-Find)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Try every split",
+    "idea": "Put each person in group 0 or 1 in all 2ⁿ ways and check every dislike.",
+    "steps": [
+     "For every mask, person p is in group `(mask >> (p − 1)) & 1`.",
+     "The split works if every dislike [a, b] puts a and b in different groups."
+    ],
+    "time": "O(2ⁿ · D)",
+    "space": "O(1)",
+    "why": "D is the number of dislikes. Exponential in n, so only tiny inputs finish. The insight that removes the search: after one person is placed, everyone connected to them by dislikes has a forced group.",
+    "timesOut": [
+     "generated"
+    ],
+    "code": {
+     "java": "class Solution {\n    public boolean possibleBipartition(int n, int[][] dislikes) {\n        for (long mask = 0; mask < (1L << n); mask++) {\n            boolean ok = true;\n            for (int[] d : dislikes)\n                if (((mask >> (d[0] - 1)) & 1) == ((mask >> (d[1] - 1)) & 1)) { ok = false; break; }\n            if (ok) return true;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool possibleBipartition(int n, vector<vector<int>>& dislikes) {\n        for (long long mask = 0; mask < (1LL << n); mask++) {\n            bool ok = true;\n            for (auto& d : dislikes)\n                if (((mask >> (d[0] - 1)) & 1) == ((mask >> (d[1] - 1)) & 1)) { ok = false; break; }\n            if (ok) return true;\n        }\n        return false;\n    }\n};",
+     "python": "class Solution:\n    def possibleBipartition(self, n: int, dislikes: List[List[int]]) -> bool:\n        for mask in range(1 << n):\n            if all((mask >> (a - 1)) & 1 != (mask >> (b - 1)) & 1 for a, b in dislikes):\n                return True\n        return False",
+     "javascript": "var possibleBipartition = function(n, dislikes) {\n    for (let mask = 0n; mask < (1n << BigInt(n)); mask++) {\n        let ok = true;\n        for (const [a, b] of dislikes)\n            if (((mask >> BigInt(a - 1)) & 1n) === ((mask >> BigInt(b - 1)) & 1n)) { ok = false; break; }\n        if (ok) return true;\n    }\n    return false;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "BFS two-colouring",
+    "idea": "People are nodes and dislikes are edges. Two groups with every dislike split between them is a two-colouring, so colour each component with BFS and fail on a conflict.",
+    "steps": [
+     "Build an adjacency list for people 1..n.",
+     "For each uncoloured person, colour them 1 and BFS; each neighbour gets the opposite colour.",
+     "If a neighbour already has the same colour, return false. Otherwise return true at the end."
+    ],
+    "time": "O(n + D)",
+    "space": "O(n + D)",
+    "why": "Each person and dislike is handled once. People with no dislikes can go in either group, so they never cause a conflict.",
+    "code": {
+     "java": "class Solution {\n    public boolean possibleBipartition(int n, int[][] dislikes) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());\n        for (int[] d : dislikes) { adj.get(d[0]).add(d[1]); adj.get(d[1]).add(d[0]); }\n        int[] colour = new int[n + 1];\n        ArrayDeque<Integer> queue = new ArrayDeque<>();\n        for (int s = 1; s <= n; s++) {\n            if (colour[s] != 0) continue;\n            colour[s] = 1;\n            queue.add(s);\n            while (!queue.isEmpty()) {\n                int u = queue.poll();\n                for (int v : adj.get(u)) {\n                    if (colour[v] == 0) { colour[v] = -colour[u]; queue.add(v); }\n                    else if (colour[v] == colour[u]) return false;\n                }\n            }\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    bool possibleBipartition(int n, vector<vector<int>>& dislikes) {\n        vector<vector<int>> adj(n + 1);\n        for (auto& d : dislikes) { adj[d[0]].push_back(d[1]); adj[d[1]].push_back(d[0]); }\n        vector<int> colour(n + 1, 0);\n        queue<int> q;\n        for (int s = 1; s <= n; s++) {\n            if (colour[s] != 0) continue;\n            colour[s] = 1;\n            q.push(s);\n            while (!q.empty()) {\n                int u = q.front(); q.pop();\n                for (int v : adj[u]) {\n                    if (colour[v] == 0) { colour[v] = -colour[u]; q.push(v); }\n                    else if (colour[v] == colour[u]) return false;\n                }\n            }\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def possibleBipartition(self, n: int, dislikes: List[List[int]]) -> bool:\n        adj = [[] for _ in range(n + 1)]\n        for a, b in dislikes:\n            adj[a].append(b)\n            adj[b].append(a)\n        colour = [0] * (n + 1)\n        for s in range(1, n + 1):\n            if colour[s]:\n                continue\n            colour[s] = 1\n            queue = deque([s])\n            while queue:\n                u = queue.popleft()\n                for v in adj[u]:\n                    if colour[v] == 0:\n                        colour[v] = -colour[u]\n                        queue.append(v)\n                    elif colour[v] == colour[u]:\n                        return False\n        return True",
+     "javascript": "var possibleBipartition = function(n, dislikes) {\n    const adj = Array.from({ length: n + 1 }, () => []);\n    for (const [a, b] of dislikes) { adj[a].push(b); adj[b].push(a); }\n    const colour = new Array(n + 1).fill(0);\n    for (let s = 1; s <= n; s++) {\n        if (colour[s] !== 0) continue;\n        colour[s] = 1;\n        const queue = [s];\n        for (let head = 0; head < queue.length; head++) {\n            const u = queue[head];\n            for (const v of adj[u]) {\n                if (colour[v] === 0) { colour[v] = -colour[u]; queue.push(v); }\n                else if (colour[v] === colour[u]) return false;\n            }\n        }\n    }\n    return true;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Union-Find on \"same group\" sets",
+    "idea": "Everyone a person dislikes must be in the group opposite that person, so they are all in the same group as each other. Union them together; if a person ever lands in the same set as someone they dislike, it is impossible.",
+    "steps": [
+     "Build adjacency lists. For each person u with dislikes [v1, v2, …]:",
+     "If u is already in the same set as some vi, return false.",
+     "Union every vi with v1 (they must share a group).",
+     "Return true when every person has been processed."
+    ],
+    "time": "O((n + D) · α(n))",
+    "space": "O(n + D)",
+    "why": "α is the inverse Ackermann function, effectively a small constant, so this matches BFS. It is a good alternative to know when the problem arrives as a stream of constraints rather than a graph you can traverse.",
+    "code": {
+     "java": "class Solution {\n    private int[] parent;\n    private int find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }\n    public boolean possibleBipartition(int n, int[][] dislikes) {\n        parent = new int[n + 1];\n        for (int i = 0; i <= n; i++) parent[i] = i;\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());\n        for (int[] d : dislikes) { adj.get(d[0]).add(d[1]); adj.get(d[1]).add(d[0]); }\n        for (int u = 1; u <= n; u++) {\n            List<Integer> nb = adj.get(u);\n            for (int v : nb) {\n                if (find(u) == find(v)) return false;\n                parent[find(v)] = find(nb.get(0));\n            }\n        }\n        return true;\n    }\n}",
+     "cpp": "class Solution {\n    vector<int> parent;\n    int find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }\npublic:\n    bool possibleBipartition(int n, vector<vector<int>>& dislikes) {\n        parent.resize(n + 1);\n        iota(parent.begin(), parent.end(), 0);\n        vector<vector<int>> adj(n + 1);\n        for (auto& d : dislikes) { adj[d[0]].push_back(d[1]); adj[d[1]].push_back(d[0]); }\n        for (int u = 1; u <= n; u++) {\n            for (int v : adj[u]) {\n                if (find(u) == find(v)) return false;\n                parent[find(v)] = find(adj[u][0]);\n            }\n        }\n        return true;\n    }\n};",
+     "python": "class Solution:\n    def possibleBipartition(self, n: int, dislikes: List[List[int]]) -> bool:\n        parent = list(range(n + 1))\n\n        def find(x):\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n\n        adj = [[] for _ in range(n + 1)]\n        for a, b in dislikes:\n            adj[a].append(b)\n            adj[b].append(a)\n        for u in range(1, n + 1):\n            for v in adj[u]:\n                if find(u) == find(v):\n                    return False\n                parent[find(v)] = find(adj[u][0])\n        return True",
+     "javascript": "var possibleBipartition = function(n, dislikes) {\n    const parent = Array.from({ length: n + 1 }, (_, i) => i);\n    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };\n    const adj = Array.from({ length: n + 1 }, () => []);\n    for (const [a, b] of dislikes) { adj[a].push(b); adj[b].push(a); }\n    for (let u = 1; u <= n; u++) {\n        for (const v of adj[u]) {\n            if (find(u) === find(v)) return false;\n            parent[find(v)] = find(adj[u][0]);\n        }\n    }\n    return true;\n};"
+    }
+   }
+  ]
+ },
+ "critical-connections-in-a-network": {
+  "pattern": "Bridges with Tarjan's low-link DFS: an edge is critical exactly when it lies on no cycle",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Remove each edge and test connectivity",
+    "idea": "Take out one connection at a time and BFS from server 0. If some server becomes unreachable, that connection is critical.",
+    "steps": [
+     "For each connection e: build the graph without e.",
+     "BFS from node 0 and count reachable nodes.",
+     "If fewer than n are reachable, add e to the answer."
+    ],
+    "time": "O(E · (V + E))",
+    "space": "O(V + E)",
+    "why": "E separate traversals. With 10⁵ connections that is around 10¹⁰ steps, far beyond the limit. The fix is to learn, in a single DFS, which edges lie on a cycle.",
+    "code": {
+     "java": "class Solution {\n    public List<List<Integer>> criticalConnections(int n, List<List<Integer>> connections) {\n        List<List<Integer>> res = new ArrayList<>();\n        int m = connections.size();\n        for (int skip = 0; skip < m; skip++) {\n            List<List<Integer>> adj = new ArrayList<>();\n            for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n            for (int e = 0; e < m; e++) {\n                if (e == skip) continue;\n                int a = connections.get(e).get(0), b = connections.get(e).get(1);\n                adj.get(a).add(b); adj.get(b).add(a);\n            }\n            boolean[] seen = new boolean[n];\n            ArrayDeque<Integer> q = new ArrayDeque<>();\n            q.add(0); seen[0] = true;\n            int count = 1;\n            while (!q.isEmpty()) {\n                int u = q.poll();\n                for (int v : adj.get(u)) if (!seen[v]) { seen[v] = true; count++; q.add(v); }\n            }\n            if (count < n) res.add(connections.get(skip));\n        }\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> criticalConnections(int n, vector<vector<int>>& connections) {\n        vector<vector<int>> res;\n        int m = connections.size();\n        for (int skip = 0; skip < m; skip++) {\n            vector<vector<int>> adj(n);\n            for (int e = 0; e < m; e++) {\n                if (e == skip) continue;\n                adj[connections[e][0]].push_back(connections[e][1]);\n                adj[connections[e][1]].push_back(connections[e][0]);\n            }\n            vector<bool> seen(n, false);\n            queue<int> q;\n            q.push(0); seen[0] = true;\n            int count = 1;\n            while (!q.empty()) {\n                int u = q.front(); q.pop();\n                for (int v : adj[u]) if (!seen[v]) { seen[v] = true; count++; q.push(v); }\n            }\n            if (count < n) res.push_back(connections[skip]);\n        }\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def criticalConnections(self, n: int, connections: List[List[int]]) -> List[List[int]]:\n        res = []\n        for skip in range(len(connections)):\n            adj = [[] for _ in range(n)]\n            for e, (a, b) in enumerate(connections):\n                if e != skip:\n                    adj[a].append(b)\n                    adj[b].append(a)\n            seen = [False] * n\n            seen[0] = True\n            queue = deque([0])\n            count = 1\n            while queue:\n                u = queue.popleft()\n                for v in adj[u]:\n                    if not seen[v]:\n                        seen[v] = True\n                        count += 1\n                        queue.append(v)\n            if count < n:\n                res.append(connections[skip])\n        return res",
+     "javascript": "var criticalConnections = function(n, connections) {\n    const res = [];\n    for (let skip = 0; skip < connections.length; skip++) {\n        const adj = Array.from({ length: n }, () => []);\n        connections.forEach(([a, b], e) => { if (e !== skip) { adj[a].push(b); adj[b].push(a); } });\n        const seen = new Array(n).fill(false);\n        seen[0] = true;\n        const queue = [0];\n        for (let head = 0; head < queue.length; head++)\n            for (const v of adj[queue[head]]) if (!seen[v]) { seen[v] = true; queue.push(v); }\n        if (queue.length < n) res.push(connections[skip]);\n    }\n    return res;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Tarjan's bridge-finding (discovery time and low-link)",
+    "idea": "Run one DFS. disc[u] is when u was first visited; low[u] is the earliest discovery time reachable from u's subtree using tree edges plus at most one back edge. For a tree edge u → v, if low[v] > disc[u], nothing below v can climb back to u or above without that edge: it is a bridge.",
+    "steps": [
+     "Build the adjacency list. Set every disc to −1 and DFS from node 0.",
+     "On entering u: disc[u] = low[u] = time++.",
+     "For each neighbour v other than the parent: if unvisited, DFS(v), then low[u] = min(low[u], low[v]) and, if low[v] > disc[u], record [u, v]. If visited, it is a back edge: low[u] = min(low[u], disc[v]).",
+     "Return the recorded edges."
+    ],
+    "time": "O(V + E)",
+    "space": "O(V + E)",
+    "why": "One traversal touches every node and edge once. Skipping the parent is safe here because there are no parallel connections; with duplicate edges you would skip the parent edge by its index instead.",
+    "code": {
+     "java": "class Solution {\n    private List<Integer>[] adj;\n    private int[] disc, low;\n    private int time = 0;\n    private final List<List<Integer>> res = new ArrayList<>();\n    public List<List<Integer>> criticalConnections(int n, List<List<Integer>> connections) {\n        adj = new List[n];\n        for (int i = 0; i < n; i++) adj[i] = new ArrayList<>();\n        for (List<Integer> c : connections) { adj[c.get(0)].add(c.get(1)); adj[c.get(1)].add(c.get(0)); }\n        disc = new int[n];\n        low = new int[n];\n        Arrays.fill(disc, -1);\n        dfs(0, -1);\n        return res;\n    }\n    private void dfs(int u, int parent) {\n        disc[u] = low[u] = time++;\n        for (int v : adj[u]) {\n            if (v == parent) continue;\n            if (disc[v] == -1) {\n                dfs(v, u);\n                low[u] = Math.min(low[u], low[v]);\n                if (low[v] > disc[u]) res.add(Arrays.asList(u, v));\n            } else {\n                low[u] = Math.min(low[u], disc[v]);\n            }\n        }\n    }\n}",
+     "cpp": "class Solution {\n    vector<vector<int>> adj, res;\n    vector<int> disc, low;\n    int timer = 0;\n    void dfs(int u, int parent) {\n        disc[u] = low[u] = timer++;\n        for (int v : adj[u]) {\n            if (v == parent) continue;\n            if (disc[v] == -1) {\n                dfs(v, u);\n                low[u] = min(low[u], low[v]);\n                if (low[v] > disc[u]) res.push_back({u, v});\n            } else {\n                low[u] = min(low[u], disc[v]);\n            }\n        }\n    }\npublic:\n    vector<vector<int>> criticalConnections(int n, vector<vector<int>>& connections) {\n        adj.assign(n, {});\n        for (auto& c : connections) { adj[c[0]].push_back(c[1]); adj[c[1]].push_back(c[0]); }\n        disc.assign(n, -1);\n        low.assign(n, 0);\n        dfs(0, -1);\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def criticalConnections(self, n: int, connections: List[List[int]]) -> List[List[int]]:\n        adj = [[] for _ in range(n)]\n        for a, b in connections:\n            adj[a].append(b)\n            adj[b].append(a)\n        disc = [-1] * n\n        low = [0] * n\n        res = []\n        timer = 0\n\n        def dfs(u, parent):\n            nonlocal timer\n            disc[u] = low[u] = timer\n            timer += 1\n            for v in adj[u]:\n                if v == parent:\n                    continue\n                if disc[v] == -1:\n                    dfs(v, u)\n                    low[u] = min(low[u], low[v])\n                    if low[v] > disc[u]:\n                        res.append([u, v])\n                else:\n                    low[u] = min(low[u], disc[v])\n\n        dfs(0, -1)\n        return res",
+     "javascript": "var criticalConnections = function(n, connections) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of connections) { adj[a].push(b); adj[b].push(a); }\n    const disc = new Array(n).fill(-1), low = new Array(n).fill(0), res = [];\n    let time = 0;\n    const dfs = (u, parent) => {\n        disc[u] = low[u] = time++;\n        for (const v of adj[u]) {\n            if (v === parent) continue;\n            if (disc[v] === -1) {\n                dfs(v, u);\n                low[u] = Math.min(low[u], low[v]);\n                if (low[v] > disc[u]) res.push([u, v]);\n            } else {\n                low[u] = Math.min(low[u], disc[v]);\n            }\n        }\n    };\n    dfs(0, -1);\n    return res;\n};"
+    }
+   }
+  ]
+ },
+ "valid-arrangement-of-pairs": {
+  "pattern": "Euler path in a directed graph with Hierholzer's algorithm",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Backtracking over the next pair",
+    "idea": "Pick a start, then repeatedly try each unused pair that starts where the chain currently ends. If the chain gets stuck before using every pair, undo the last choice and try another.",
+    "steps": [
+     "Group pair indices by their start value.",
+     "Start from the value whose out-degree exceeds its in-degree (or any start).",
+     "DFS: if all pairs are used, succeed; otherwise try each unused pair from the current end, recurse, and undo on failure."
+    ],
+    "time": "O(Eᵈ)",
+    "space": "O(E)",
+    "why": "d is the largest number of pairs sharing a start. It explores dead ends, which can blow up exponentially on branchy inputs, so the generated tests time out. Hierholzer never needs to undo a choice.",
+    "timesOut": [
+     "generated"
+    ],
+    "code": {
+     "java": "class Solution {\n    private Map<Integer, List<Integer>> from = new HashMap<>();\n    private boolean[] used;\n    private int[][] pairs, res;\n    public int[][] validArrangement(int[][] pairs) {\n        this.pairs = pairs;\n        int n = pairs.length;\n        used = new boolean[n];\n        res = new int[n][];\n        Map<Integer, Integer> bal = new HashMap<>();\n        for (int i = 0; i < n; i++) {\n            from.computeIfAbsent(pairs[i][0], k -> new ArrayList<>()).add(i);\n            bal.merge(pairs[i][0], 1, Integer::sum);\n            bal.merge(pairs[i][1], -1, Integer::sum);\n        }\n        int start = pairs[0][0];\n        for (Map.Entry<Integer, Integer> e : bal.entrySet()) if (e.getValue() == 1) start = e.getKey();\n        dfs(start, 0);\n        return res;\n    }\n    private boolean dfs(int at, int k) {\n        if (k == pairs.length) return true;\n        for (int i : from.getOrDefault(at, List.of())) {\n            if (used[i]) continue;\n            used[i] = true;\n            res[k] = pairs[i];\n            if (dfs(pairs[i][1], k + 1)) return true;\n            used[i] = false;\n        }\n        return false;\n    }\n}",
+     "cpp": "class Solution {\n    unordered_map<int, vector<int>> from;\n    vector<bool> used;\n    vector<vector<int>> res;\n    vector<vector<int>>* P;\n    bool dfs(int at, int k) {\n        if (k == (int)P->size()) return true;\n        auto it = from.find(at);\n        if (it == from.end()) return false;\n        for (int i : it->second) {\n            if (used[i]) continue;\n            used[i] = true;\n            res[k] = (*P)[i];\n            if (dfs((*P)[i][1], k + 1)) return true;\n            used[i] = false;\n        }\n        return false;\n    }\npublic:\n    vector<vector<int>> validArrangement(vector<vector<int>>& pairs) {\n        P = &pairs;\n        int n = pairs.size();\n        used.assign(n, false);\n        res.assign(n, {});\n        unordered_map<int, int> bal;\n        for (int i = 0; i < n; i++) { from[pairs[i][0]].push_back(i); bal[pairs[i][0]]++; bal[pairs[i][1]]--; }\n        int start = pairs[0][0];\n        for (auto& [v, b] : bal) if (b == 1) start = v;\n        dfs(start, 0);\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def validArrangement(self, pairs: List[List[int]]) -> List[List[int]]:\n        frm = defaultdict(list)\n        bal = defaultdict(int)\n        for i, (a, b) in enumerate(pairs):\n            frm[a].append(i)\n            bal[a] += 1\n            bal[b] -= 1\n        start = next((v for v, d in bal.items() if d == 1), pairs[0][0])\n        used = [False] * len(pairs)\n        res = []\n\n        def dfs(at):\n            if len(res) == len(pairs):\n                return True\n            for i in frm[at]:\n                if not used[i]:\n                    used[i] = True\n                    res.append(pairs[i])\n                    if dfs(pairs[i][1]):\n                        return True\n                    res.pop()\n                    used[i] = False\n            return False\n\n        dfs(start)\n        return res",
+     "javascript": "var validArrangement = function(pairs) {\n    const from = new Map(), bal = new Map();\n    pairs.forEach(([a, b], i) => {\n        if (!from.has(a)) from.set(a, []);\n        from.get(a).push(i);\n        bal.set(a, (bal.get(a) || 0) + 1);\n        bal.set(b, (bal.get(b) || 0) - 1);\n    });\n    let start = pairs[0][0];\n    for (const [v, d] of bal) if (d === 1) start = v;\n    const used = new Array(pairs.length).fill(false), res = [];\n    const dfs = (at) => {\n        if (res.length === pairs.length) return true;\n        for (const i of from.get(at) || []) {\n            if (used[i]) continue;\n            used[i] = true;\n            res.push(pairs[i]);\n            if (dfs(pairs[i][1])) return true;\n            res.pop();\n            used[i] = false;\n        }\n        return false;\n    };\n    dfs(start);\n    return res;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Hierholzer's algorithm",
+    "idea": "Numbers are nodes and pairs are directed edges; the answer is an Euler path. Start at the node with one more outgoing than incoming edge (or anywhere if all balance). Follow unused edges until stuck, then back up; each node you back up from is appended to the path, so the path comes out reversed. Detours found later are spliced in automatically.",
+    "steps": [
+     "Build out-edge lists and the balance (out − in) of every node; start at the node with balance +1, if any.",
+     "Push the start on a stack. While the stack is non-empty: if the top has an unused out-edge, push its target (consuming the edge); otherwise pop it onto `path`.",
+     "Reverse `path`; consecutive nodes in it are the arranged pairs."
+    ],
+    "time": "O(E)",
+    "space": "O(E)",
+    "why": "Each edge is pushed and popped once. Use an explicit stack: the path can be 10⁵ edges long, which is too deep for recursion in some languages.",
+    "code": {
+     "java": "class Solution {\n    public int[][] validArrangement(int[][] pairs) {\n        Map<Integer, Deque<Integer>> out = new HashMap<>();\n        Map<Integer, Integer> bal = new HashMap<>();\n        for (int[] p : pairs) {\n            out.computeIfAbsent(p[0], k -> new ArrayDeque<>()).push(p[1]);\n            bal.merge(p[0], 1, Integer::sum);\n            bal.merge(p[1], -1, Integer::sum);\n        }\n        int start = pairs[0][0];\n        for (Map.Entry<Integer, Integer> e : bal.entrySet()) if (e.getValue() == 1) { start = e.getKey(); break; }\n        Deque<Integer> stack = new ArrayDeque<>();\n        List<Integer> path = new ArrayList<>();\n        stack.push(start);\n        while (!stack.isEmpty()) {\n            Deque<Integer> next = out.get(stack.peek());\n            if (next != null && !next.isEmpty()) stack.push(next.pop());\n            else path.add(stack.pop());\n        }\n        Collections.reverse(path);\n        int[][] res = new int[path.size() - 1][];\n        for (int i = 0; i + 1 < path.size(); i++) res[i] = new int[] { path.get(i), path.get(i + 1) };\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<vector<int>> validArrangement(vector<vector<int>>& pairs) {\n        unordered_map<int, vector<int>> out;\n        unordered_map<int, int> bal;\n        for (auto& p : pairs) { out[p[0]].push_back(p[1]); bal[p[0]]++; bal[p[1]]--; }\n        int start = pairs[0][0];\n        for (auto& [v, b] : bal) if (b == 1) { start = v; break; }\n        vector<int> stack = {start}, path;\n        while (!stack.empty()) {\n            auto it = out.find(stack.back());\n            if (it != out.end() && !it->second.empty()) {\n                int nxt = it->second.back();\n                it->second.pop_back();\n                stack.push_back(nxt);\n            } else {\n                path.push_back(stack.back());\n                stack.pop_back();\n            }\n        }\n        reverse(path.begin(), path.end());\n        vector<vector<int>> res;\n        for (size_t i = 0; i + 1 < path.size(); i++) res.push_back({path[i], path[i + 1]});\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def validArrangement(self, pairs: List[List[int]]) -> List[List[int]]:\n        out = defaultdict(list)\n        bal = defaultdict(int)\n        for a, b in pairs:\n            out[a].append(b)\n            bal[a] += 1\n            bal[b] -= 1\n        start = next((v for v, d in bal.items() if d == 1), pairs[0][0])\n        stack, path = [start], []\n        while stack:\n            if out[stack[-1]]:\n                stack.append(out[stack[-1]].pop())\n            else:\n                path.append(stack.pop())\n        path.reverse()\n        return [[path[i], path[i + 1]] for i in range(len(path) - 1)]",
+     "javascript": "var validArrangement = function(pairs) {\n    const out = new Map(), bal = new Map();\n    for (const [a, b] of pairs) {\n        if (!out.has(a)) out.set(a, []);\n        out.get(a).push(b);\n        bal.set(a, (bal.get(a) || 0) + 1);\n        bal.set(b, (bal.get(b) || 0) - 1);\n    }\n    let start = pairs[0][0];\n    for (const [v, d] of bal) if (d === 1) { start = v; break; }\n    const stack = [start], path = [];\n    while (stack.length) {\n        const next = out.get(stack[stack.length - 1]);\n        if (next && next.length) stack.push(next.pop());\n        else path.push(stack.pop());\n    }\n    path.reverse();\n    const res = [];\n    for (let i = 0; i + 1 < path.length; i++) res.push([path[i], path[i + 1]]);\n    return res;\n};"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,168 @@
+{
+ "sort-list": {
+  "pattern": "Divide and conquer: merge sort on a linked list (split at the middle, sort halves, merge)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Insertion sort by relinking",
+    "idea": "Build a sorted list one node at a time: take each node from the input and walk the sorted list to find where it belongs.",
+    "steps": [
+     "Start with an empty sorted list behind a dummy head.",
+     "For each node in the input, walk from the dummy until the next node is larger, and splice the node in there."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Each insertion may walk the whole sorted list, so 5 × 10⁴ nodes means about 10⁹ steps in the worst case. Correct, but too slow for the performance test.",
+    "code": {
+     "java": "class Solution {\n    public ListNode sortList(ListNode head) {\n        ListNode dummy = new ListNode(Integer.MIN_VALUE);\n        while (head != null) {\n            ListNode next = head.next, at = dummy;\n            while (at.next != null && at.next.val < head.val) at = at.next;\n            head.next = at.next;\n            at.next = head;\n            head = next;\n        }\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* sortList(ListNode* head) {\n        ListNode dummy(INT_MIN);\n        while (head) {\n            ListNode* next = head->next;\n            ListNode* at = &dummy;\n            while (at->next && at->next->val < head->val) at = at->next;\n            head->next = at->next;\n            at->next = head;\n            head = next;\n        }\n        return dummy.next;\n    }\n};",
+     "python": "class Solution:\n    def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = ListNode(float('-inf'))\n        while head:\n            nxt, at = head.next, dummy\n            while at.next and at.next.val < head.val:\n                at = at.next\n            head.next = at.next\n            at.next = head\n            head = nxt\n        return dummy.next",
+     "javascript": "var sortList = function(head) {\n    const dummy = new ListNode(-Infinity);\n    while (head) {\n        const next = head.next;\n        let at = dummy;\n        while (at.next && at.next.val < head.val) at = at.next;\n        head.next = at.next;\n        at.next = head;\n        head = next;\n    }\n    return dummy.next;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Copy values to an array and sort",
+    "idea": "Read the values into an array, sort it with the library sort, and write the sorted values back into the nodes in order.",
+    "steps": [
+     "Walk the list and collect every value.",
+     "Sort the array.",
+     "Walk the list again, overwriting each node's value with the next sorted value."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Fast and simple, and often acceptable in practice. It misses the follow-up (O(1) extra memory), and it changes node values instead of relinking nodes, which an interviewer may disallow.",
+    "code": {
+     "java": "class Solution {\n    public ListNode sortList(ListNode head) {\n        List<Integer> vals = new ArrayList<>();\n        for (ListNode p = head; p != null; p = p.next) vals.add(p.val);\n        Collections.sort(vals);\n        int i = 0;\n        for (ListNode p = head; p != null; p = p.next) p.val = vals.get(i++);\n        return head;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    ListNode* sortList(ListNode* head) {\n        vector<int> vals;\n        for (ListNode* p = head; p; p = p->next) vals.push_back(p->val);\n        sort(vals.begin(), vals.end());\n        int i = 0;\n        for (ListNode* p = head; p; p = p->next) p->val = vals[i++];\n        return head;\n    }\n};",
+     "python": "class Solution:\n    def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        vals = []\n        p = head\n        while p:\n            vals.append(p.val)\n            p = p.next\n        vals.sort()\n        p = head\n        for v in vals:\n            p.val = v\n            p = p.next\n        return head",
+     "javascript": "var sortList = function(head) {\n    const vals = [];\n    for (let p = head; p; p = p.next) vals.push(p.val);\n    vals.sort((a, b) => a - b);\n    let i = 0;\n    for (let p = head; p; p = p.next) p.val = vals[i++];\n    return head;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Merge sort: split with slow/fast pointers, merge by relinking",
+    "idea": "Divide: find the middle with slow and fast pointers and cut the list in two. Conquer: sort each half recursively. Combine: merge two sorted lists by relinking nodes behind a dummy head.",
+    "steps": [
+     "A list of 0 or 1 nodes is sorted.",
+     "Move `slow` one step and `fast` two steps (starting `fast` at `head.next`) so `slow` stops at the end of the first half; cut after it.",
+     "Sort both halves recursively.",
+     "Merge: repeatedly attach the smaller head to the tail of the result, then append whatever remains."
+    ],
+    "time": "O(n log n)",
+    "space": "O(log n)",
+    "why": "log n levels of splitting, O(n) merging per level. The only extra memory is the recursion stack. For strictly O(1) space, run merge sort bottom-up: merge adjacent runs of length 1, then 2, 4, … iteratively.",
+    "code": {
+     "java": "class Solution {\n    public ListNode sortList(ListNode head) {\n        if (head == null || head.next == null) return head;\n        ListNode slow = head, fast = head.next;\n        while (fast != null && fast.next != null) { slow = slow.next; fast = fast.next.next; }\n        ListNode second = slow.next;\n        slow.next = null;\n        return merge(sortList(head), sortList(second));\n    }\n    private ListNode merge(ListNode a, ListNode b) {\n        ListNode dummy = new ListNode(0), tail = dummy;\n        while (a != null && b != null) {\n            if (a.val <= b.val) { tail.next = a; a = a.next; } else { tail.next = b; b = b.next; }\n            tail = tail.next;\n        }\n        tail.next = a != null ? a : b;\n        return dummy.next;\n    }\n}",
+     "cpp": "class Solution {\n    ListNode* merge(ListNode* a, ListNode* b) {\n        ListNode dummy(0);\n        ListNode* tail = &dummy;\n        while (a && b) {\n            if (a->val <= b->val) { tail->next = a; a = a->next; } else { tail->next = b; b = b->next; }\n            tail = tail->next;\n        }\n        tail->next = a ? a : b;\n        return dummy.next;\n    }\npublic:\n    ListNode* sortList(ListNode* head) {\n        if (!head || !head->next) return head;\n        ListNode *slow = head, *fast = head->next;\n        while (fast && fast->next) { slow = slow->next; fast = fast->next->next; }\n        ListNode* second = slow->next;\n        slow->next = nullptr;\n        return merge(sortList(head), sortList(second));\n    }\n};",
+     "python": "class Solution:\n    def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        if not head or not head.next:\n            return head\n        slow, fast = head, head.next\n        while fast and fast.next:\n            slow, fast = slow.next, fast.next.next\n        second = slow.next\n        slow.next = None\n        a, b = self.sortList(head), self.sortList(second)\n        dummy = tail = ListNode(0)\n        while a and b:\n            if a.val <= b.val:\n                tail.next, a = a, a.next\n            else:\n                tail.next, b = b, b.next\n            tail = tail.next\n        tail.next = a or b\n        return dummy.next",
+     "javascript": "var sortList = function(head) {\n    if (!head || !head.next) return head;\n    let slow = head, fast = head.next;\n    while (fast && fast.next) { slow = slow.next; fast = fast.next.next; }\n    const second = slow.next;\n    slow.next = null;\n    let a = sortList(head), b = sortList(second);\n    const dummy = new ListNode(0);\n    let tail = dummy;\n    while (a && b) {\n        if (a.val <= b.val) { tail.next = a; a = a.next; } else { tail.next = b; b = b.next; }\n        tail = tail.next;\n    }\n    tail.next = a || b;\n    return dummy.next;\n};"
+    }
+   }
+  ]
+ },
+ "different-ways-to-add-parentheses": {
+  "pattern": "Divide and conquer on the last operator applied, with memoisation",
+  "approaches": [
+   {
+    "level": "Better",
+    "name": "Split at every operator, recursively",
+    "idea": "Any full parenthesisation applies some operator last. For each operator, compute every result of the left side and every result of the right side, then combine each pair. A string with no operator is a number.",
+    "steps": [
+     "For each operator at index i: left = all results of expression[0..i), right = all results of expression(i..].",
+     "Add `a op b` for every a in left and b in right.",
+     "If no operator was found, return the number itself."
+    ],
+    "time": "O(Cₙ · n)",
+    "space": "O(Cₙ · n)",
+    "why": "Cₙ is the n-th Catalan number, the count of groupings for n operators; the answer itself has that many values, so no algorithm can beat its size. Without memoisation, the same sub-expressions are recomputed under many different splits.",
+    "code": {
+     "java": "class Solution {\n    public List<Integer> diffWaysToCompute(String expression) {\n        List<Integer> res = new ArrayList<>();\n        for (int i = 0; i < expression.length(); i++) {\n            char c = expression.charAt(i);\n            if (c != '+' && c != '-' && c != '*') continue;\n            for (int a : diffWaysToCompute(expression.substring(0, i)))\n                for (int b : diffWaysToCompute(expression.substring(i + 1)))\n                    res.add(c == '+' ? a + b : c == '-' ? a - b : a * b);\n        }\n        if (res.isEmpty()) res.add(Integer.parseInt(expression));\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> diffWaysToCompute(string expression) {\n        vector<int> res;\n        for (int i = 0; i < (int)expression.size(); i++) {\n            char c = expression[i];\n            if (c != '+' && c != '-' && c != '*') continue;\n            vector<int> left = diffWaysToCompute(expression.substr(0, i));\n            vector<int> right = diffWaysToCompute(expression.substr(i + 1));\n            for (int a : left)\n                for (int b : right)\n                    res.push_back(c == '+' ? a + b : c == '-' ? a - b : a * b);\n        }\n        if (res.empty()) res.push_back(stoi(expression));\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def diffWaysToCompute(self, expression: str) -> List[int]:\n        res = []\n        for i, c in enumerate(expression):\n            if c in '+-*':\n                for a in self.diffWaysToCompute(expression[:i]):\n                    for b in self.diffWaysToCompute(expression[i + 1:]):\n                        res.append(a + b if c == '+' else a - b if c == '-' else a * b)\n        return res or [int(expression)]",
+     "javascript": "var diffWaysToCompute = function(expression) {\n    const res = [];\n    for (let i = 0; i < expression.length; i++) {\n        const c = expression[i];\n        if (c !== '+' && c !== '-' && c !== '*') continue;\n        for (const a of diffWaysToCompute(expression.slice(0, i)))\n            for (const b of diffWaysToCompute(expression.slice(i + 1)))\n                res.push(c === '+' ? a + b : c === '-' ? a - b : a * b);\n    }\n    if (!res.length) res.push(Number(expression));\n    return res;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Same split, memoised by substring",
+    "idea": "The recursion asks for the same sub-expressions over and over (for example the middle part of a long expression). Cache each substring's list of results so each is computed once.",
+    "steps": [
+     "Before computing a substring, return its cached list if present.",
+     "Otherwise split at each operator as before, combine the results, and cache the list."
+    ],
+    "time": "O(Cₙ · n)",
+    "space": "O(Cₙ · n)",
+    "why": "There are only O(n²) distinct substrings, so repeated work disappears; the remaining cost is producing the answer itself, which has Catalan-many values. Memoising on (start, end) indices instead of substrings avoids building strings.",
+    "code": {
+     "java": "class Solution {\n    private final Map<String, List<Integer>> memo = new HashMap<>();\n    public List<Integer> diffWaysToCompute(String expression) {\n        List<Integer> cached = memo.get(expression);\n        if (cached != null) return cached;\n        List<Integer> res = new ArrayList<>();\n        for (int i = 0; i < expression.length(); i++) {\n            char c = expression.charAt(i);\n            if (c != '+' && c != '-' && c != '*') continue;\n            for (int a : diffWaysToCompute(expression.substring(0, i)))\n                for (int b : diffWaysToCompute(expression.substring(i + 1)))\n                    res.add(c == '+' ? a + b : c == '-' ? a - b : a * b);\n        }\n        if (res.isEmpty()) res.add(Integer.parseInt(expression));\n        memo.put(expression, res);\n        return res;\n    }\n}",
+     "cpp": "class Solution {\n    unordered_map<string, vector<int>> memo;\npublic:\n    vector<int> diffWaysToCompute(string expression) {\n        auto it = memo.find(expression);\n        if (it != memo.end()) return it->second;\n        vector<int> res;\n        for (int i = 0; i < (int)expression.size(); i++) {\n            char c = expression[i];\n            if (c != '+' && c != '-' && c != '*') continue;\n            vector<int> left = diffWaysToCompute(expression.substr(0, i));\n            vector<int> right = diffWaysToCompute(expression.substr(i + 1));\n            for (int a : left)\n                for (int b : right)\n                    res.push_back(c == '+' ? a + b : c == '-' ? a - b : a * b);\n        }\n        if (res.empty()) res.push_back(stoi(expression));\n        return memo[expression] = res;\n    }\n};",
+     "python": "class Solution:\n    def diffWaysToCompute(self, expression: str) -> List[int]:\n        @cache\n        def solve(expr):\n            res = []\n            for i, c in enumerate(expr):\n                if c in '+-*':\n                    for a in solve(expr[:i]):\n                        for b in solve(expr[i + 1:]):\n                            res.append(a + b if c == '+' else a - b if c == '-' else a * b)\n            return res or [int(expr)]\n        return solve(expression)",
+     "javascript": "var diffWaysToCompute = function(expression) {\n    const memo = new Map();\n    const solve = (expr) => {\n        if (memo.has(expr)) return memo.get(expr);\n        const res = [];\n        for (let i = 0; i < expr.length; i++) {\n            const c = expr[i];\n            if (c !== '+' && c !== '-' && c !== '*') continue;\n            for (const a of solve(expr.slice(0, i)))\n                for (const b of solve(expr.slice(i + 1)))\n                    res.push(c === '+' ? a + b : c === '-' ? a - b : a * b);\n        }\n        if (!res.length) res.push(Number(expr));\n        memo.set(expr, res);\n        return res;\n    };\n    return solve(expression);\n};"
+    }
+   }
+  ]
+ },
+ "longest-substring-with-at-least-k-repeating-characters": {
+  "pattern": "Divide and conquer: split the string at characters that can never be in a valid substring",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Check every substring with running counts",
+    "idea": "Fix each start, extend the end one character at a time keeping counts, and after each step check whether every present character has count at least k.",
+    "steps": [
+     "For each start i, reset a 26-entry count array.",
+     "For each end j ≥ i: add s[j], then check the counts; if valid, update the best length."
+    ],
+    "time": "O(26 · n²)",
+    "space": "O(1)",
+    "why": "n² substrings with a 26-step check each: about 2.6 × 10⁹ operations at n = 10⁴, too slow for the performance test.",
+    "code": {
+     "java": "class Solution {\n    public int longestSubstring(String s, int k) {\n        int n = s.length(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int[] count = new int[26];\n            for (int j = i; j < n; j++) {\n                count[s.charAt(j) - 'a']++;\n                boolean ok = true;\n                for (int c : count) if (c > 0 && c < k) { ok = false; break; }\n                if (ok) best = Math.max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestSubstring(string s, int k) {\n        int n = s.size(), best = 0;\n        for (int i = 0; i < n; i++) {\n            int count[26] = {0};\n            for (int j = i; j < n; j++) {\n                count[s[j] - 'a']++;\n                bool ok = true;\n                for (int c : count) if (c > 0 && c < k) { ok = false; break; }\n                if (ok) best = max(best, j - i + 1);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestSubstring(self, s: str, k: int) -> int:\n        best = 0\n        for i in range(len(s)):\n            count = [0] * 26\n            for j in range(i, len(s)):\n                count[ord(s[j]) - 97] += 1\n                if all(c == 0 or c >= k for c in count):\n                    best = max(best, j - i + 1)\n        return best",
+     "javascript": "var longestSubstring = function(s, k) {\n    let best = 0;\n    for (let i = 0; i < s.length; i++) {\n        const count = new Array(26).fill(0);\n        for (let j = i; j < s.length; j++) {\n            count[s.charCodeAt(j) - 97]++;\n            if (count.every((c) => c === 0 || c >= k)) best = Math.max(best, j - i + 1);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window per number of distinct letters",
+    "idea": "A plain sliding window fails because adding characters can both break and restore validity. Fix the number of distinct letters u (1 to 26): for each u, a window with at most u distinct letters is monotone, and it is valid when exactly u letters each reach k.",
+    "steps": [
+     "For u = 1 … 26: slide a window keeping counts, the number of distinct letters, and how many letters have count ≥ k.",
+     "Grow the right end; shrink from the left while distinct > u.",
+     "If distinct == u and all u letters have count ≥ k, record the window length."
+    ],
+    "time": "O(26 · n)",
+    "space": "O(1)",
+    "why": "Each of the 26 passes moves both pointers at most n times. A good alternative when the interviewer wants an iterative solution; the divide-and-conquer version below is easier to come up with.",
+    "code": {
+     "java": "class Solution {\n    public int longestSubstring(String s, int k) {\n        int best = 0, n = s.length();\n        for (int u = 1; u <= 26; u++) {\n            int[] count = new int[26];\n            int distinct = 0, atLeastK = 0, left = 0;\n            for (int right = 0; right < n; right++) {\n                int c = s.charAt(right) - 'a';\n                if (count[c]++ == 0) distinct++;\n                if (count[c] == k) atLeastK++;\n                while (distinct > u) {\n                    int d = s.charAt(left++) - 'a';\n                    if (count[d]-- == k) atLeastK--;\n                    if (count[d] == 0) distinct--;\n                }\n                if (distinct == u && atLeastK == u) best = Math.max(best, right - left + 1);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestSubstring(string s, int k) {\n        int best = 0, n = s.size();\n        for (int u = 1; u <= 26; u++) {\n            int count[26] = {0};\n            int distinct = 0, atLeastK = 0, left = 0;\n            for (int right = 0; right < n; right++) {\n                int c = s[right] - 'a';\n                if (count[c]++ == 0) distinct++;\n                if (count[c] == k) atLeastK++;\n                while (distinct > u) {\n                    int d = s[left++] - 'a';\n                    if (count[d]-- == k) atLeastK--;\n                    if (count[d] == 0) distinct--;\n                }\n                if (distinct == u && atLeastK == u) best = max(best, right - left + 1);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestSubstring(self, s: str, k: int) -> int:\n        best = 0\n        for u in range(1, 27):\n            count = [0] * 26\n            distinct = at_least_k = left = 0\n            for right, ch in enumerate(s):\n                c = ord(ch) - 97\n                if count[c] == 0:\n                    distinct += 1\n                count[c] += 1\n                if count[c] == k:\n                    at_least_k += 1\n                while distinct > u:\n                    d = ord(s[left]) - 97\n                    left += 1\n                    if count[d] == k:\n                        at_least_k -= 1\n                    count[d] -= 1\n                    if count[d] == 0:\n                        distinct -= 1\n                if distinct == u and at_least_k == u:\n                    best = max(best, right - left + 1)\n        return best",
+     "javascript": "var longestSubstring = function(s, k) {\n    let best = 0;\n    for (let u = 1; u <= 26; u++) {\n        const count = new Array(26).fill(0);\n        let distinct = 0, atLeastK = 0, left = 0;\n        for (let right = 0; right < s.length; right++) {\n            const c = s.charCodeAt(right) - 97;\n            if (count[c]++ === 0) distinct++;\n            if (count[c] === k) atLeastK++;\n            while (distinct > u) {\n                const d = s.charCodeAt(left++) - 97;\n                if (count[d]-- === k) atLeastK--;\n                if (count[d] === 0) distinct--;\n            }\n            if (distinct === u && atLeastK === u) best = Math.max(best, right - left + 1);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Divide and conquer on the \"bad\" characters",
+    "idea": "Count letters in the current range. A letter appearing fewer than k times can't be in any valid substring, so split the range at every such letter and solve each piece; a range with no such letter is valid as a whole.",
+    "steps": [
+     "If the range is shorter than k, return 0.",
+     "Count each letter in the range.",
+     "If every present letter has count ≥ k, return the range length.",
+     "Otherwise split at each letter with count < k and return the best answer among the pieces."
+    ],
+    "time": "O(26 · n)",
+    "space": "O(26)",
+    "why": "Each recursion level does O(n) total counting across its pieces, and every level removes at least one of the 26 letters from consideration, so the depth is at most 26. Splitting at every bad letter at once (not just the first) keeps the recursion shallow.",
+    "code": {
+     "java": "class Solution {\n    public int longestSubstring(String s, int k) {\n        return solve(s.toCharArray(), 0, s.length(), k);\n    }\n    private int solve(char[] s, int lo, int hi, int k) {\n        if (hi - lo < k) return 0;\n        int[] count = new int[26];\n        for (int i = lo; i < hi; i++) count[s[i] - 'a']++;\n        boolean allGood = true;\n        for (int i = lo; i < hi; i++) if (count[s[i] - 'a'] < k) { allGood = false; break; }\n        if (allGood) return hi - lo;\n        int best = 0, start = lo;\n        for (int j = lo; j <= hi; j++) {\n            if (j == hi || count[s[j] - 'a'] < k) {\n                best = Math.max(best, solve(s, start, j, k));\n                start = j + 1;\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\n    int solve(const string& s, int lo, int hi, int k) {\n        if (hi - lo < k) return 0;\n        int count[26] = {0};\n        for (int i = lo; i < hi; i++) count[s[i] - 'a']++;\n        bool allGood = true;\n        for (int i = lo; i < hi; i++) if (count[s[i] - 'a'] < k) { allGood = false; break; }\n        if (allGood) return hi - lo;\n        int best = 0, start = lo;\n        for (int j = lo; j <= hi; j++) {\n            if (j == hi || count[s[j] - 'a'] < k) {\n                best = max(best, solve(s, start, j, k));\n                start = j + 1;\n            }\n        }\n        return best;\n    }\npublic:\n    int longestSubstring(string s, int k) { return solve(s, 0, s.size(), k); }\n};",
+     "python": "class Solution:\n    def longestSubstring(self, s: str, k: int) -> int:\n        if len(s) < k:\n            return 0\n        counts = Counter(s)\n        for ch, c in counts.items():\n            if c < k:\n                return max(self.longestSubstring(part, k) for part in s.split(ch))\n        return len(s)",
+     "javascript": "var longestSubstring = function(s, k) {\n    const solve = (lo, hi) => {\n        if (hi - lo < k) return 0;\n        const count = new Array(26).fill(0);\n        for (let i = lo; i < hi; i++) count[s.charCodeAt(i) - 97]++;\n        let allGood = true;\n        for (let i = lo; i < hi; i++) if (count[s.charCodeAt(i) - 97] < k) { allGood = false; break; }\n        if (allGood) return hi - lo;\n        let best = 0, start = lo;\n        for (let j = lo; j <= hi; j++) {\n            if (j === hi || count[s.charCodeAt(j) - 97] < k) {\n                best = Math.max(best, solve(start, j));\n                start = j + 1;\n            }\n        }\n        return best;\n    };\n    return solve(0, s.length);\n};"
+    }
+   }
+  ]
+ }
+}
