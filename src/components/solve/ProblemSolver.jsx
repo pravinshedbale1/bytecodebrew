@@ -8,6 +8,7 @@ import { getLessonContext } from '../../curriculum';
 import { CodeEditor } from './CodeEditor';
 import { Inline } from './Inline';
 import { SolutionTab } from './SolutionTab';
+import { AddToList } from './AddToList';
 import { useSplit } from './useSplit';
 import { loadProblem, exampleCount } from '../../lib/judge/problems';
 import { runTests } from '../../lib/judge/runner';
@@ -402,6 +403,7 @@ function Description({ spec, slug, examples, names, solved, compact, lang, hideH
         <a className={styles.chip} href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noopener noreferrer">
           LeetCode <ExternalLink size={11} aria-hidden="true" />
         </a>
+        {!compact && <AddToList slug={slug} title={spec.title} variant="chip" align="left" />}
       </div>
       {spec.statement ? <Statement text={spec.statement} /> : <p className={styles.summary}>{spec.summary}</p>}
 

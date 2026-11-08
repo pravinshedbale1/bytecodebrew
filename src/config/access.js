@@ -10,7 +10,7 @@ export const ADMIN_EMAILS = ['bytecodebrew@gmail.com'];
 export const CONTACT_EMAIL = 'bytecodebrew@gmail.com';
 
 /** Synced stores that only premium accounts may write to (see firestore.rules → premiumNames). */
-export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach', 'climb'];
+export const PREMIUM_STORES = ['reviews', 'mocks', 'profile', 'drills', 'stories', 'runway', 'coach', 'climb', 'lists'];
 
 export const isAdminEmail = (email) => Boolean(email) && ADMIN_EMAILS.includes(email.toLowerCase());
 
