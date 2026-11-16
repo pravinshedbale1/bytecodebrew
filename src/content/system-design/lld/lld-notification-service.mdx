@@ -1,72 +1,109 @@
 <Related ids={['adapter-pattern', 'chain-of-responsibility-pattern', 'strategy-pattern', 'observer-pattern', 'concurrency-for-lld']} />
 
-"Design a notification service" is asked as LLD at most product companies because every one of them has built one. The object design is simple — request, channels, templates — but the interviewer listens for the **policies**: user preferences, quiet hours, rate limits, deduplication, priority (an OTP must not wait behind a marketing blast), provider failover, retries and dead letters. The distributed version is the HLD case [Design a Notification System](/system-design/hld/design-notification-system); this is the in-process design.
+Every product company has a notification service: the thing that sends your OTP by SMS, "your order has shipped" by push, and the weekend sale email. The classes are simple (a request, some channels, some templates). What the interviewer is really listening for are the **rules around sending**:
 
-## What the interviewer expects
+- Don't send the same message twice.
+- Respect users who've opted out.
+- Don't send marketing at 2 am.
+- An OTP must never wait behind a million marketing emails.
+- When an SMS provider is down, try another one, then retry later.
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+(The version spread across many servers is the HLD case [Design a Notification System](/system-design/hld/design-notification-system). This is the in-process design.)
 
-<InterviewScope minutes="45–60" lines="30" write={["A `Sender` per channel (email, SMS, push)", "Idempotency: the same request id is sent once", "Opt-outs and a few retries"]} say={["Priority queues so an OTP never waits behind marketing", "Templates, quiet hours and daily caps", "Falling back to a second provider"]} skip={["Provider SDK details", "Delivery receipts and analytics"]} />
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
 
-### The interview-sized version
+## Step 1: Pin down the requirements
 
-Channels behind one interface, sent once per request id, with opt-outs and retries. It's about **30 lines**, and it compiles and runs.
+<Dialogue>
+<Turn who="you">Which channels?</Turn>
+<Turn who="them">Email, SMS and push. More later.</Turn>
+<Turn who="you">What does a caller send us?</Turn>
+<Turn who="them">The user, a template name with values to fill in, which channels, and what kind of message it is.</Turn>
+<Turn who="you">What kinds?</Turn>
+<Turn who="them">Critical, like OTPs; transactional, like "order shipped"; and marketing.</Turn>
+<Turn who="you">Can users opt out?</Turn>
+<Turn who="them">Of marketing and transactional, per channel. Never of critical messages.</Turn>
+<Turn who="you">Any rules about timing or volume?</Turn>
+<Turn who="them">No marketing between 10 pm and 8 am, and at most a few marketing messages per user per day.</Turn>
+<Turn who="you">If the caller's request times out and they retry, should the user get it twice?</Turn>
+<Turn who="them">Definitely not.</Turn>
+<Turn who="you">And when a provider like the SMS gateway is down?</Turn>
+<Turn who="them">Try a backup provider. Retry later. Don't lose messages silently.</Turn>
+</Dialogue>
 
-```java
-enum Channel { EMAIL, SMS, PUSH }
-enum Status { SENT, DUPLICATE, SKIPPED, FAILED }
+**The service must:**
 
-record Notification(String id, String userId, Channel channel, String message) { }
+1. Send a message to a user on one or more channels (email, SMS, push).
+2. Send each request **once**, even if the caller retries.
+3. Respect opt-outs, except for critical messages.
+4. **Defer** (not drop) marketing during quiet hours, and cap marketing per user per day.
+5. Send critical messages first, ahead of everything else.
+6. Fail over to a backup provider, retry with growing delays, and set aside messages that can't be delivered.
+7. Record what happened to every message, and why.
 
-interface Sender { void send(String userId, String message); }    // one per channel; wraps a provider (Adapter)
+**Out of scope for now:** delivery receipts, analytics, provider SDK details.
 
-class NotificationService {
-    private final Map<Channel, Sender> senders;
-    private final int maxAttempts;
-    private final Set<String> seenIds = ConcurrentHashMap.newKeySet();           // idempotency
-    private final Map<String, Set<Channel>> optedOut = new ConcurrentHashMap<>();
+## Step 2: Find the core entities
 
-    NotificationService(Map<Channel, Sender> senders, int maxAttempts) { this.senders = senders; this.maxAttempts = maxAttempts; }
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Notification request | a record | User, template, values, category, channels and an **idempotency key**. |
+| Channel | an enum | `EMAIL`, `SMS`, `PUSH`. |
+| Category | an enum, in priority order | `CRITICAL`, `TRANSACTIONAL`, `MARKETING`. The order doubles as the priority. |
+| Delivery | a class | **One per channel** per request: its own status, retry count and "not before" time. |
+| Sender for a channel | an interface `ChannelSender` | How to send on that channel. |
+| Provider (SES, Twilio, FCM) | an interface `Provider`, one **adapter** per vendor | Each vendor's SDK looks different; the adapter makes them look the same. |
+| Preferences | an interface | Who opted out of what. |
+| Retry rule | an interface `RetryPolicy` | How long to wait before trying again, and when to give up. |
+| Notification service | a class | Takes requests, queues them, and has workers that process them. |
 
-    void optOut(String userId, Channel channel) {
-        optedOut.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet()).add(channel);
-    }
+One modelling choice matters a lot:
 
-    Status send(Notification n) {
-        if (!seenIds.add(n.id())) return Status.DUPLICATE;                       // a retried request is sent once
-        if (optedOut.getOrDefault(n.userId(), Set.of()).contains(n.channel())) return Status.SKIPPED;
-        Sender sender = senders.get(n.channel());
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                sender.send(n.userId(), n.message());
-                return Status.SENT;
-            } catch (RuntimeException e) {
-                // try again; a real system waits longer each time (back-off)
-            }
-        }
-        return Status.FAILED;                                                    // the full design keeps it in a dead-letter list
-    }
-}
-```
+<Approach verdict="bad" title="One status per request">
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
-</Callout>
+A request for email and SMS gets one status. Email succeeds, SMS fails. Is the request "sent" or "failed"? And if you retry the request, the user gets the email twice.
 
-## 1. Requirements
+</Approach>
 
-| Question | Assumption |
-| --- | --- |
-| Channels | Email, SMS, push; more later |
-| Request | User, template name, parameters, category, channels, **idempotency key** |
-| Categories | `CRITICAL` (OTP), `TRANSACTIONAL` (order shipped), `MARKETING` — also the priority order |
-| Preferences | Users can opt out per category and channel; can't opt out of critical messages |
-| Quiet hours | No marketing between 22:00 and 08:00 user-local time — **defer**, don't drop |
-| Rate limit | At most N marketing messages per user per day |
-| Delivery | Asynchronous; providers fail — fail over to a backup provider, retry with backoff, then dead-letter |
-| Visibility | Status per (request, channel): sent, skipped (and why), deferred, retrying, failed |
+<Approach verdict="great" title="One delivery per channel">
 
-## 2. Design
+The request **fans out** into one `Delivery` per channel. Each has its own status and retries: email can be `SENT` while SMS is `RETRY_SCHEDULED`. Retrying SMS never resends the email.
+
+</Approach>
+
+## Step 3: Design each class
+
+The service has two halves:
+
+**Accepting a request** (`send`) does as little as possible: check the idempotency key, create a delivery per channel, put them on a queue, return. The caller isn't kept waiting for providers.
+
+**Processing a delivery** happens on worker threads, which take deliveries off the queue and run them through the rules:
+
+1. Has the user opted out of this category on this channel? → skip, recording why.
+2. Is it marketing during quiet hours? → put it back with "not before 8 am".
+3. Is it marketing and over today's cap? → skip, recording why.
+4. Fill in the template and send through the channel.
+5. If sending fails: a **permanent** problem (bad template, invalid number) fails at once; a **temporary** one (provider timeout) is retried later with a growing delay, and after too many attempts goes to a **dead-letter** list.
+
+How do critical messages jump the line?
+
+<Approach verdict="bad" title="One first-in, first-out queue">
+
+A marketing campaign adds 5 million emails. An OTP added a second later waits behind all of them. The user has given up long before it arrives.
+
+</Approach>
+
+<Approach verdict="good" title="One priority queue">
+
+Order the queue by category, then by arrival time. The OTP goes straight to the front. Simple and correct.
+
+</Approach>
+
+<Approach verdict="great" title="Separate queues and workers per priority">
+
+Even with a priority queue, a flood of marketing can keep **every worker busy** with slow sends. Give critical messages their own queue and a small reserved pool of workers, so they're never stuck waiting for a free worker.
+
+</Approach>
 
 ```mermaid
 classDiagram
@@ -114,12 +151,66 @@ classDiagram
   Provider <|.. FcmPush
 ```
 
-Two important modelling choices:
+## Step 4: Write the code
 
-- **A request fans out into one `Delivery` per channel.** Each delivery has its own status, retry count and schedule — email can succeed while SMS retries.
-- **`send()` only validates and enqueues.** All policy checks happen when a worker processes the delivery, so a quiet-hours message can be deferred and re-checked later.
+<InterviewScope minutes="45–60" lines="30" write={["A `Sender` per channel (email, SMS, push)", "Idempotency: the same request id is sent once", "Opt-outs and a few retries"]} say={["Priority queues so an OTP never waits behind marketing", "Templates, quiet hours and daily caps", "Falling back to a second provider"]} skip={["Provider SDK details", "Delivery receipts and analytics"]} />
 
-## 3. Accepting requests: idempotency first
+### The interview-sized version
+
+Channels behind one interface, sent once per request id, with opt-outs and retries. It's about **30 lines**, and it compiles and runs.
+
+```java
+enum Channel { EMAIL, SMS, PUSH }
+enum Status { SENT, DUPLICATE, SKIPPED, FAILED }
+
+record Notification(String id, String userId, Channel channel, String message) { }
+
+interface Sender { void send(String userId, String message); }    // one per channel; wraps a provider (Adapter)
+
+class NotificationService {
+    private final Map<Channel, Sender> senders;
+    private final int maxAttempts;
+    private final Set<String> seenIds = ConcurrentHashMap.newKeySet();           // idempotency
+    private final Map<String, Set<Channel>> optedOut = new ConcurrentHashMap<>();
+
+    NotificationService(Map<Channel, Sender> senders, int maxAttempts) { this.senders = senders; this.maxAttempts = maxAttempts; }
+
+    void optOut(String userId, Channel channel) {
+        optedOut.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet()).add(channel);
+    }
+
+    Status send(Notification n) {
+        if (!seenIds.add(n.id())) return Status.DUPLICATE;                       // a retried request is sent once
+        if (optedOut.getOrDefault(n.userId(), Set.of()).contains(n.channel())) return Status.SKIPPED;
+        Sender sender = senders.get(n.channel());
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                sender.send(n.userId(), n.message());
+                return Status.SENT;
+            } catch (RuntimeException e) {
+                // try again; a real system waits longer each time (back-off)
+            }
+        }
+        return Status.FAILED;                                                    // the full design keeps it in a dead-letter list
+    }
+}
+```
+
+**Reading it top to bottom:**
+
+1. **`Sender`** is one interface for every channel. Each implementation would wrap a vendor's SDK.
+2. **`seenIds.add(n.id())`** returns `false` if the id was already there. It's a concurrent set, so "check and record" is one atomic step: two threads with the same id can't both get through.
+3. Opted-out users are **skipped**, not failed, and the status says so.
+4. The sender is tried up to `maxAttempts` times. A real system would wait longer between each try (back-off).
+5. Every path returns a clear `Status`. "Why didn't I get my OTP?" is the most common support question, so the answer must exist.
+
+<Callout type="tip" title="How to practise this">
+List the rules out loud in the order you'd check them (duplicate, opt-out, quiet hours, cap, send, retry) before writing anything. The order is half the answer.
+</Callout>
+
+### Growing it into the full design
+
+#### Accepting a request: idempotency first
 
 ```java
 public void send(NotificationRequest r) {
@@ -132,11 +223,11 @@ public void send(NotificationRequest r) {
 }
 ```
 
-`Set.add` on a concurrent set is atomic, so two threads submitting the same key can't both enqueue. In production the seen-keys set needs a TTL (a day is typical) or it grows forever.
+In production, the set of seen keys needs an expiry (a day is typical), or it grows forever.
 
-## 4. Priority: an OTP never waits behind marketing
+#### Priority: an OTP never waits behind marketing
 
-The queue is a `PriorityBlockingQueue` ordered by category, then arrival:
+The queue is a `PriorityBlockingQueue`. Deliveries compare first by category (the enum order: critical, transactional, marketing), then by arrival number, so it's first-come, first-served within a category:
 
 ```java
 public int compareTo(Delivery o) {
@@ -145,9 +236,7 @@ public int compareTo(Delivery o) {
 }
 ```
 
-A single priority queue is the simplest correct answer. The usual refinement is **separate queues (and worker pools) per priority**, so a flood of marketing can't even occupy all the workers — with a small reserved pool for critical traffic.
-
-## 5. Processing a delivery: the policy pipeline
+#### Processing a delivery: the rules, in order
 
 ```java
 private void process(Delivery d) {
@@ -184,17 +273,17 @@ private void process(Delivery d) {
 }
 ```
 
-Points worth saying out loud:
+Points to say out loud:
 
-- **Order of checks matters**: preferences, then quiet hours, then the rate limit — so a message that is deferred or opted out doesn't consume the user's daily marketing budget. A retry doesn't consume it again either (`attempts == 0`).
-- **Permanent vs transient failures**: a missing template or an invalid phone number won't succeed on retry, so fail fast; a provider timeout will, so back off. Mixing them up either spams retries or drops recoverable messages.
-- **Every outcome is recorded** with a reason — "why didn't I get my OTP?" is the most common support question for this system.
+- **The order of checks matters.** Preferences, then quiet hours, then the daily cap. A message that's deferred or opted out shouldn't use up the user's marketing allowance. A retry doesn't use it again either (`attempts == 0`).
+- **Permanent and temporary failures are handled differently.** A missing template will never succeed, so retrying just wastes time. A provider timeout probably will, so wait and retry. Mixing them up either spams retries or drops messages that could have been delivered.
+- **Every outcome is recorded with a reason.**
 
-This chain of checks could equally be modelled as a list of `DeliveryFilter` objects (Chain of Responsibility) when the number of policies grows.
+When there are many rules, this chain of checks can become a list of `DeliveryFilter` objects, each passing the delivery to the next (Chain of Responsibility).
 
-## 6. Channels and providers: Adapter + failover chain
+#### Providers: adapters and failover
 
-Each vendor SDK (SES, Twilio, FCM) gets an **adapter** implementing one small `Provider` interface. A channel tries its providers in order:
+Each vendor's SDK gets an **adapter** that implements one small `Provider` interface (`deliver(to, body)`). A channel holds its providers in order, primary first, and tries the next one when one fails:
 
 ```java
 public final class ProviderChannel implements ChannelSender {
@@ -212,73 +301,98 @@ public final class ProviderChannel implements ChannelSender {
 }
 ```
 
-A refinement: a **circuit breaker** per provider, so after repeated failures the channel skips the dead provider for a while instead of paying its timeout on every message.
+A good refinement is a **circuit breaker** per provider: after several failures in a row, skip that provider for a while instead of waiting for its timeout on every message.
 
-## 7. Concurrency
+#### Concurrency
 
 | Shared state | Protection |
 | --- | --- |
-| Queue | `PriorityBlockingQueue` (thread-safe; workers `poll` with a timeout) |
-| Idempotency keys | Concurrent set; `add` is the atomic check-and-insert |
-| Status map | `ConcurrentHashMap` |
-| Daily caps | `ConcurrentHashMap.computeIfAbsent` + `AtomicInteger` per user-day |
-| Providers | Must be thread-safe or pooled — usually HTTP clients that are |
+| The queue | `PriorityBlockingQueue` (thread-safe; workers `poll` with a timeout) |
+| Idempotency keys | A concurrent set; `add` is the atomic check-and-record |
+| The status map | `ConcurrentHashMap` |
+| Daily caps | `ConcurrentHashMap.computeIfAbsent` + an `AtomicInteger` per user per day |
+| Providers | Must be thread-safe; usually HTTP clients, which are |
 
-The reference solution submits 2,000 requests from 8 threads (every idempotency key twice) to 4 workers and checks exactly 1,000 unique deliveries.
+The reference solution submits 2,000 requests from 8 threads (every key twice) to 4 workers, and checks that exactly 1,000 unique deliveries go out.
 
-## 8. Patterns used
+## Step 5: Trace a busy evening
+
+It's 11 pm. A marketing campaign has just queued 50,000 emails.
+
+1. Asha logs in and needs an OTP. Her request (`CRITICAL`, SMS, key `otp-123`) is accepted and goes to the **front** of the queue.
+2. Her app times out and retries with the same key `otp-123`. `seenKeys.add` returns false: nothing new is queued.
+3. A worker picks up the OTP. Critical messages ignore opt-outs and quiet hours. It's sent through the primary SMS provider, which times out, so the channel fails over to the backup, which succeeds. Status: `SENT`.
+4. A worker picks up a marketing email for Ben. It's 11 pm, quiet hours, so it's **deferred** to 8 am and put back in the queue. Ben's daily cap isn't touched.
+5. At 8 am the email is processed again: Ben hasn't opted out, he's under his cap, it's sent.
+6. A marketing push for Chen uses a template that doesn't exist for push. That's permanent: no retries, straight to the dead-letter list with the reason.
+
+## Step 6: Handle follow-up questions
+
+**"Route SMS through the cheapest provider for the destination country."** Replace the fixed provider order with a `ProviderSelector` strategy that returns providers sorted by cost among those supporting that country.
+
+**"Five order updates in 2 minutes is annoying. Only send the latest."** Give such requests a collapse key (`order:O-9`). When a new one arrives, replace the pending delivery's content instead of adding another, and delay the first by 60 seconds. Use `ConcurrentHashMap.compute` for the atomic replace-or-insert.
+
+**"Send one daily digest instead of many low-priority emails."** Buffer them per user and let a scheduled job send one combined email.
+
+**"Different languages."** Key templates by (name, channel, language), with a default language as fallback.
+
+**"Survive a crash."** Replace the in-memory queue with a message broker so accepted requests aren't lost. That's the HLD version.
+
+## Common mistakes
+
+- **One status per request** instead of one per channel.
+- **No idempotency**, so retried API calls send duplicate OTPs.
+- **A plain first-in, first-out queue**, so OTPs wait behind campaigns.
+- **Dropping marketing during quiet hours** instead of deferring it.
+- **Retrying permanent failures**, or not retrying temporary ones.
+- **Not recording why a message wasn't sent.**
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
 | **Adapter** | One `Provider` per vendor SDK |
-| **Chain of Responsibility** | Provider failover; optionally the policy filters |
+| **Chain of Responsibility** | Provider failover; optionally the rule checks |
 | **Strategy** | `RetryPolicy`, `Preferences` and rate-limit implementations |
-| **Producer–consumer** | `send()` enqueues; workers deliver |
-| **Observer** (upstream) | Domain events (order shipped) trigger notification requests |
-
-## 9. Extensions
-
-- **Digesting**: batch low-priority messages per user into one daily email (a scheduled job reading a per-user buffer).
-- **Delivery receipts**: providers call back with delivered/opened; update status by provider message id.
-- **Localisation**: templates keyed by (name, channel, locale); fall back to a default locale.
-- **Durability**: replace the in-memory queue with a broker so accepted requests survive a crash (the HLD version).
+| **Producer–consumer** | `send()` queues; workers deliver |
+| **Observer** (upstream) | Events like "order shipped" trigger notification requests |
 
 ## Interview questions
 
 <QA q="How do you make sure a user doesn't receive the same notification twice?">
-Require an idempotency key on every request and record keys you've accepted in a set with a TTL; a repeated key is acknowledged but not enqueued again. The check-and-insert must be atomic — a concurrent set's add, or a conditional write in a shared store when there are several servers. Deliveries are also tracked per (key, channel), so a retry of one failed channel never resends the others.
+Require an idempotency key on every request and record the keys you've accepted in a set with an expiry; a repeated key is acknowledged but not queued again. The check-and-record must be atomic: a concurrent set's add, or a conditional write in a shared store when there are several servers. Deliveries are also tracked per (key, channel), so retrying one failed channel never resends the others.
 </QA>
 
 <QA q="A marketing campaign enqueues 5 million messages. How do OTPs still go out in seconds?">
-Prioritise by category: either one priority queue ordered by category then arrival, or — better at scale — separate queues and worker pools per priority, with capacity reserved for critical traffic. Marketing can also be rate-limited at enqueue time so it trickles out instead of flooding.
+Prioritise by category: either one priority queue ordered by category then arrival, or, better at scale, separate queues and worker pools per priority with workers reserved for critical traffic. Marketing can also be rate-limited when it's queued so it trickles out instead of flooding.
 </QA>
 
 <QA q="What happens when the SMS provider is down?">
-The SMS channel fails over to the next configured provider. If all providers fail, the delivery is retried with exponential backoff; after the maximum attempts it goes to a dead-letter queue with its error, and its status is visible. Permanent errors such as an invalid number skip retries. A circuit breaker avoids hammering a provider that is clearly down.
+The SMS channel fails over to the next provider. If all providers fail, the delivery is retried with growing delays; after the maximum attempts it goes to a dead-letter list with its error, and its status is visible. Permanent errors such as an invalid number skip retries. A circuit breaker stops the service hammering a provider that is clearly down.
 </QA>
 
 <Practice task="Add per-channel provider cost routing: send SMS via the cheapest provider that supports the destination country, falling back to others. What changes?">
 
-Replace the fixed provider order with a `ProviderSelector` strategy: given the destination (country code from the phone number) it returns providers sorted by cost among those that support it. `ProviderChannel` iterates the selector's list instead of a fixed list. Costs and coverage come from configuration, so pricing changes need no code change. Keep the circuit-breaker state per provider so an unhealthy cheap provider is skipped.
+Replace the fixed provider order with a `ProviderSelector` strategy: given the destination (the country code from the phone number) it returns providers sorted by cost among those that support it. `ProviderChannel` goes through the selector's list instead of a fixed list. Costs and coverage come from configuration, so price changes need no code change. Keep the circuit-breaker state per provider so an unhealthy cheap provider is skipped.
 
 </Practice>
 
 <Practice task="Users complain about getting 5 order-update pushes in 2 minutes. Design 'collapse within a window': only the latest update per order is sent if several arrive within 60 seconds.">
 
-Give such requests a collapse key (for example `order:O-9`). On enqueue, instead of adding a new delivery, look up a pending delivery with the same collapse key (a map from key to delivery) and replace its parameters, keeping its original send time; schedule the first one with `notBefore = now + 60s`. When the delivery is processed, remove the collapse-key entry. This needs an atomic replace-or-insert (`ConcurrentHashMap.compute`). Push providers offer a similar feature natively (FCM collapse keys).
+Give such requests a collapse key (for example `order:O-9`). When one is queued, instead of adding a new delivery, look up a pending delivery with the same collapse key (a map from key to delivery) and replace its values, keeping its original send time; schedule the first one with `notBefore = now + 60s`. When the delivery is processed, remove the collapse-key entry. This needs an atomic replace-or-insert (`ConcurrentHashMap.compute`). Push providers offer a similar feature (FCM collapse keys).
 
 </Practice>
 
 <Takeaways>
 
 - One request fans out into one delivery per channel, each with its own status and retries.
-- Enforce idempotency at intake; order work by priority so critical messages never wait behind bulk traffic.
-- Apply policies in order — preferences, quiet hours (defer), rate limits — and record every outcome with a reason.
-- Adapters per vendor with a failover chain; transient failures retry with backoff, permanent ones fail fast; dead-letter what can't be delivered.
+- Check the idempotency key on the way in, and order work by priority so critical messages never wait.
+- Apply rules in order (preferences, quiet hours with deferral, daily caps) and record every outcome with a reason.
+- One adapter per vendor, with failover; retry temporary failures with back-off, fail permanent ones fast, and set aside what can't be delivered.
 
 </Takeaways>
 
 ## Further reading
 
 - HLD view: [Design a Notification System](/system-design/hld/design-notification-system).
-- Michael T. Nygard, *Release It!* (2nd ed., 2018) — circuit breakers, timeouts and bulkheads.
+- Michael T. Nygard, *Release It!* (2nd ed., 2018): circuit breakers, timeouts and bulkheads.

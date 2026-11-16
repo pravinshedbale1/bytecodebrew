@@ -34,7 +34,21 @@ Say out loud which features you are **not** building yet ("extra turn on a six, 
 
 ## Minutes 10–20: entities and variation points
 
-Nouns from the prompt: board, cell, snake, ladder, player, die, turn, game. Then trim:
+Nouns from the prompt: board, cell, snake, ladder, player, die, turn, game. The first real decision is how to model snakes and ladders:
+
+<Approach verdict="bad" title="A class for every noun">
+
+`Cell`, `Snake`, `Ladder`, each with `start` and `end`, plus a `Cell[]` board where each cell may point to a snake or a ladder. Snake and Ladder end up as two identical classes, and the code that moves a token has to check both.
+
+</Approach>
+
+<Approach verdict="great" title="One map of jumps">
+
+A snake and a ladder are the same thing: "if you land on A, move to B". One `Map<Integer, Integer>` holds both. If B is higher it's a ladder; if lower, a snake. Moving a token is one lookup, and there's nothing to keep in sync.
+
+</Approach>
+
+With that settled, trim the rest:
 
 - **Cell** doesn't need a class — a cell is an `int`. Snakes and ladders are both "jump from A to B", so one `Map<Integer, Integer>` covers them; the direction tells you which is which.
 - **Board** owns the jumps and validates them.

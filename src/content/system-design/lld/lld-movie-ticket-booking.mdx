@@ -1,10 +1,174 @@
 <Related ids={['concurrency-for-lld', 'state-pattern', 'strategy-pattern', 'observer-pattern', 'interview-grade-code']} />
 
-BookMyShow-style booking is the LLD problem where **concurrency is the whole point**: many users select the same seats for a popular show at the same moment, and the design must guarantee no double booking while letting users hold seats during payment. (The large-scale version is the HLD case study [Design a Ticket Booking System](/system-design/hld/design-ticket-booking); this is the in-process object design.)
+Think of booking a movie ticket on an app like BookMyShow. You pick two seats, and the app gives you a few minutes to pay. During those minutes nobody else can take your seats. Now picture a blockbuster's first show, with thousands of people tapping on the same seats at the same moment. The whole interview is about one promise: **no seat is ever sold twice**, while still letting people hold seats while they pay.
 
-## What the interviewer expects
+(This is the in-process object design. The large-scale version, with many servers and a database, is the HLD case study [Design a Ticket Booking System](/system-design/hld/design-ticket-booking).)
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
+
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">Should I cover browsing cities, cinemas and movies, or focus on booking?</Turn>
+<Turn who="them">Mention the model, but focus on booking.</Turn>
+<Turn who="you">When a user picks seats, are they reserved while they pay?</Turn>
+<Turn who="them">Yes, for a few minutes. If they don't pay in time, the seats go back.</Turn>
+<Turn who="you">Can a user pick several seats at once? What if one of them is already taken?</Turn>
+<Turn who="them">Up to 10 seats. If any seat is taken, the whole selection fails.</Turn>
+<Turn who="you">Are there different seat types with different prices?</Turn>
+<Turn who="them">Yes: regular, premium, recliner.</Turn>
+<Turn who="you">What if payment succeeds but the user took too long and lost the seats?</Turn>
+<Turn who="them">Good question. You tell me.</Turn>
+</Dialogue>
+
+That last answer is a hint: the interviewer **will** come back to it. Note it down.
+
+**The system must:**
+
+1. Model cinemas, screens, seats, movies and shows (a movie on a screen at a time).
+2. Show which seats are free for a show.
+3. Let a user **hold** 1–10 seats for a few minutes, all or nothing.
+4. Confirm the booking when payment succeeds, if the hold is still theirs.
+5. Release held seats if payment fails or time runs out.
+6. **Never** let two users book the same seat for the same show.
+
+**Out of scope for now:** search, coupons, refunds on cancellation, cinema admin.
+
+## Step 2: Find the core entities
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Movie | a record | Title and running time. |
+| Theatre, Screen | classes | A theatre has screens; a screen has seats. |
+| Seat | a record | Row, number, type. **It never changes.** |
+| Show | a class | A movie on a screen at a time, with prices. |
+| Booking | a class | Who booked which seats for which show, the amount and the status. |
+| Seat availability | a class `SeatInventory` behind an interface | Free, held or booked, **per show**. This is where the concurrency lives. |
+| Payment | an interface | A black box we call. |
+| Booking service | a class | The front door: hold seats, confirm, release. |
+
+The modelling decision that trips people up:
+
+<Approach verdict="bad" title="Put a status on Seat">
+
+```java
+class Seat { String row; int number; SeatStatus status; }
+```
+
+Seat F7 is a physical chair in Screen 2. It's free for the 6 pm show and booked for the 9 pm show **at the same time**. A single `status` field can't say both.
+
+</Approach>
+
+<Approach verdict="great" title="Availability belongs to a (show, seat) pair">
+
+The `Seat` describes the chair and never changes. Whether it's free, held or booked is stored per show, in the seat inventory. Each show gets its own set of holds and bookings.
+
+</Approach>
+
+## Step 3: Design each class
+
+**`SeatInventory`**: for each show, knows every seat, the current **holds** (who holds a seat, until when) and the **booked** seats. It can:
+
+- `hold(show, seats, user, duration)`: hold **all** the seats or none.
+- `confirm(show, seats, user)`: turn the user's holds into bookings, but only if they still hold every seat.
+- `release(show, seats, user)`: give the seats back (only the holder can).
+- `available(show)`: list the free seats.
+
+**`BookingService`**: `holdSeats` validates the request, asks the inventory to hold, and creates a `PENDING` booking. `confirm` charges the payment and confirms the seats.
+
+**`Booking`** moves through a small life cycle:
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING: seats locked
+  PENDING --> CONFIRMED: payment succeeded (locks still valid)
+  PENDING --> EXPIRED: lock timeout
+  PENDING --> FAILED: payment failed
+  CONFIRMED --> CANCELLED: user cancels
+```
+
+Now the central question: **how do we stop two users holding the same seat?**
+
+<Approach verdict="bad" title="Check, then hold, with no lock">
+
+```java
+if (seat.isFree()) seat.hold(user);   // users A and B both see "free"…
+```
+
+Both users run the check before either holds the seat, so both think they've got it. This **check-then-act race** is the bug the interviewer is waiting for.
+
+</Approach>
+
+<Approach verdict="good" title="One lock for the whole system">
+
+Wrap `hold` and `confirm` in one global lock. Correct, but a user booking *Movie A* in Mumbai now waits for someone booking *Movie B* in Delhi.
+
+</Approach>
+
+<Approach verdict="great" title="One lock per show">
+
+Seats in different shows never interfere, so give each show its own lock. Inside it, check **every** requested seat, then hold **every** seat. Users of different shows never wait for each other, and within a show, two users can't both get F7.
+
+Crucially, holds **and** bookings for a show sit under the **same** lock. If they had separate locks, a hold could be granted on a seat at the very moment another thread is booking it.
+
+</Approach>
+
+```mermaid
+classDiagram
+  class Movie {
+    -MovieId id
+    -String title
+    -Duration runtime
+  }
+  class Theatre {
+    -TheatreId id
+    -String city
+    -List~Screen~ screens
+  }
+  class Screen {
+    -ScreenId id
+    -List~Seat~ seats
+  }
+  class Seat {
+    -SeatId id
+    -String row
+    -int number
+    -SeatType type
+  }
+  class Show {
+    -ShowId id
+    -Movie movie
+    -Screen screen
+    -Instant startsAt
+    -Map~SeatType,Money~ prices
+  }
+  class Booking {
+    -BookingId id
+    -ShowId show
+    -UserId user
+    -Set~SeatId~ seats
+    -Money amount
+    -BookingStatus status
+  }
+  class SeatInventory {
+    <<interface>>
+    +hold(ShowId, Set~SeatId~, UserId, Duration)
+    +isHeldBy(ShowId, Set~SeatId~, UserId) boolean
+    +confirm(ShowId, Set~SeatId~, UserId) boolean
+    +release(ShowId, Set~SeatId~, UserId)
+    +available(ShowId) Set~SeatId~
+  }
+  Theatre *-- Screen
+  Screen *-- Seat
+  Show --> Movie
+  Show --> Screen
+  Booking --> Show
+  BookingService --> SeatInventory
+  BookingService --> PaymentGateway
+  SeatInventory <|.. InMemorySeatInventory
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="45–60" lines="50" write={["Seats with FREE, HELD and BOOKED states", "Hold seats all-or-nothing, with an expiry", "Confirm only if the hold is still yours"]} say={["Taking payment between hold and confirm, outside the lock", "A lock per show instead of one global lock", "Pricing by seat type or time as a strategy"]} skip={["Cinema and movie admin", "Coupons and refunds", "Search and listings"]} />
 
@@ -62,92 +226,23 @@ class Show {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. Each **`Seat`** in a `Show` has a state, who holds it and until when. (In this short version, the show owns its seats' states, which is the "per show" idea in its simplest form.)
+2. **`availableAt(now)`**: a seat is free if it's `FREE`, **or** if it's `HELD` but the hold has run out. That's **lazy expiry**: no timer is needed to free seats; an expired hold simply counts as free the next time anyone looks.
+3. **`hold`** is `synchronized`, so only one user at a time can be inside it for this show. It checks **all** the seats first and only then marks them all `HELD`. If any is taken, it returns `false` and changes nothing.
+4. **`confirm`** runs after payment. It checks each seat is still held by **this** user and the hold hasn't expired, then marks them all `BOOKED`.
+5. Time is passed in as `now`, so tests can jump ahead 11 minutes and check the hold has expired.
+
+<Callout type="tip" title="How to practise this">
+Write `Seat` and `hold` first, and say out loud why `hold` must be synchronized. Then add `confirm`. Finally, explain what happens between `hold` and `confirm` (payment), which is the next section.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-- Browse cities → theatres → screens → shows (movie, start time, screen).
-- View a show's seat map with seat types (REGULAR, PREMIUM, RECLINER) and availability.
-- Select seats and **lock** them for a limited time (e.g., 5 minutes) while paying.
-- Pay; on success, the booking is confirmed and seats are booked; on failure or timeout, locks are released.
-- Cancel a confirmed booking (refund rules as an extension).
-- **No two users can book the same seat**; locked seats appear unavailable to others.
+#### The seat inventory
 
-## 2. Domain model
-
-```mermaid
-classDiagram
-  class Movie {
-    -MovieId id
-    -String title
-    -Duration runtime
-  }
-  class Theatre {
-    -TheatreId id
-    -String city
-    -List~Screen~ screens
-  }
-  class Screen {
-    -ScreenId id
-    -List~Seat~ seats
-  }
-  class Seat {
-    -SeatId id
-    -String row
-    -int number
-    -SeatType type
-  }
-  class Show {
-    -ShowId id
-    -Movie movie
-    -Screen screen
-    -Instant startsAt
-    -Map~SeatType,Money~ prices
-  }
-  class Booking {
-    -BookingId id
-    -ShowId show
-    -UserId user
-    -Set~SeatId~ seats
-    -Money amount
-    -BookingStatus status
-  }
-  class SeatInventory {
-    <<interface>>
-    +hold(ShowId, Set~SeatId~, UserId, Duration)
-    +isHeldBy(ShowId, Set~SeatId~, UserId) boolean
-    +confirm(ShowId, Set~SeatId~, UserId) boolean
-    +release(ShowId, Set~SeatId~, UserId)
-    +available(ShowId) Set~SeatId~
-  }
-  Theatre *-- Screen
-  Screen *-- Seat
-  Show --> Movie
-  Show --> Screen
-  Booking --> Show
-  BookingService --> SeatInventory
-  BookingService --> PaymentGateway
-  SeatInventory <|.. InMemorySeatInventory
-```
-
-Important distinction: a **Seat** belongs to a screen and never changes; **seat availability is per show**. The same physical seat is free for the 6 PM show and booked for the 9 PM show. So booking state lives in `(show, seat)` pairs, not on `Seat`.
-
-## 3. Booking lifecycle
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING: seats locked
-  PENDING --> CONFIRMED: payment succeeded (locks still valid)
-  PENDING --> EXPIRED: lock timeout
-  PENDING --> FAILED: payment failed
-  CONFIRMED --> CANCELLED: user cancels
-```
-
-## 4. Seat inventory — the core
-
-One object owns **all** seat state for a show — temporary holds *and* confirmed bookings — behind **one lock per show**. Keeping both under the same lock is the point: if holds lived in one structure and bookings in another, each with its own lock, a hold could be granted for a seat that another thread is confirming at that very moment.
+The full inventory works the same way with real types: a `ShowSeats` object per show holds all seats, the holds (with owner and expiry) and the booked set, and `synchronized (s)` locks that one show.
 
 <FullCode title="Show the full code: Seat inventory — the core (68 lines)">
 
@@ -224,14 +319,22 @@ public final class InMemorySeatInventory implements SeatInventory {
 
 </FullCode>
 
-Design points:
+Points to say out loud:
 
-- **All-or-nothing**: either all requested seats are held or none (no partial selections left dangling).
-- **Granularity**: one monitor **per show** — users booking different shows never contend; within one show, check-then-set is atomic.
-- **Expiry is lazy**: an expired hold is treated as free on the next check; a background sweeper can clean them up.
-- Seat state is behind an **interface**, so a distributed implementation (Redis `SET NX PX` per seat with a Lua script for multi-seat holds, or conditional `UPDATE`s on seat rows) can replace it without changing the booking service.
+- **All or nothing**: every requested seat is held, or none are. No half-selections left lying around.
+- **One lock per show**: different shows never wait for each other.
+- **Lazy expiry**: an expired hold counts as free next time anyone checks. A background job can tidy up, but correctness doesn't depend on it.
+- **Behind an interface**: with several servers, you'd swap this for Redis (one key per seat, set only if absent, with an expiry) or conditional database updates, and the booking service wouldn't change.
 
-## 5. Booking service
+#### The booking service and the payment problem
+
+Remember the interviewer's "you tell me"? Here's the problem: payment takes time. What if the user's hold expires **while** they're paying, and someone else books the seat?
+
+`confirm(bookingId, payment)` handles it in three steps:
+
+1. **Before charging**, check the user still holds the seats. If the hold has already lapsed, mark the booking expired and **don't take any money**.
+2. **Charge the payment, outside any lock.** Payment can take seconds; holding the show's lock that long would freeze everyone else booking that show. The booking id is passed as an idempotency key, so a retried request can't charge twice.
+3. **Atomically turn holds into bookings.** If this fails because the hold ran out *during* payment, mark the booking expired and **refund** the money.
 
 <FullCode title="Show the full code: Booking service (43 lines)">
 
@@ -283,21 +386,49 @@ public final class BookingService {
 
 </FullCode>
 
-The subtle case interviewers probe: **payment completes after the hold expired** and another user grabbed the seat. Step 1 avoids charging when the hold is already gone; step 3 catches the rarer case where it lapses mid-payment, and refunds. Keeping the hold TTL comfortably longer than the payment provider's timeout makes step 3 very rare.
+Undoing an action when a later step fails (here, a refund) is called a **compensating action**. To make step 3 rare, set the hold time comfortably longer than the payment provider's timeout, and show the user a countdown.
 
-## 6. Pricing and other variation points
+#### Other places the design can change
 
-- `PricingStrategy` — base price by seat type, plus weekend/prime-time surcharges, dynamic pricing, offers (decorators: `WeekendSurcharge(new SeatTypePricing(...))`).
-- `PaymentGateway` — adapters for different providers.
-- `NotificationService` — observers for booking confirmed/cancelled (email, SMS).
-- `CancellationPolicy` — refund percentage by time before the show.
+- **`PricingStrategy`**: price by seat type, plus weekend or prime-time extras. Wrap strategies to stack rules: `new WeekendSurcharge(new SeatTypePricing(...))`.
+- **`PaymentGateway`**: an adapter per payment provider.
+- **Notifications**: observers send an email or SMS when a booking is confirmed or cancelled.
+- **`CancellationPolicy`**: how much to refund depending on how long before the show.
 
-## 7. Patterns used
+## Step 5: Trace two users racing
+
+Show S1 at 9 pm. Asha and Ben both want seats F7 and F8.
+
+1. Asha calls `hold(S1, [F7, F8])`. She gets S1's lock, checks both seats are free, holds both for 5 minutes and releases the lock.
+2. Ben calls `hold(S1, [F8, F9])` a millisecond later. He waits for the lock, then finds F8 held by Asha. The hold fails; F9 is **not** held either (all or nothing).
+3. Asha pays. Before charging, the service checks her hold: still valid. The payment goes through.
+4. `confirm` takes S1's lock, checks F7 and F8 are still Asha's, and marks them booked.
+5. If Asha had walked away instead, her holds would expire after 5 minutes. The next time anyone asks, F7 and F8 count as free.
+
+## Step 6: Handle follow-up questions
+
+**"Run this on several servers."** In-memory locks only work inside one process. Move seat state to Redis (one key per show-seat, set only if absent, with an expiry; a Lua script makes multi-seat holds all-or-nothing) or to a database (`UPDATE … WHERE status = 'AVAILABLE'`, plus a unique constraint on show and seat for bookings). The `SeatInventory` interface means the service doesn't change.
+
+**"Clean up expired holds and mark their bookings expired."** A scheduled job takes each show's lock and removes expired holds. If a confirm is racing with it, the shared lock means one of them wins cleanly.
+
+**"Don't let people leave a single empty seat between taken seats."** Check it inside `hold`, under the show's lock, because it depends on neighbouring seats. Make it a pluggable rule so cinemas can turn it off.
+
+**"Weekend pricing."** A new pricing strategy, or a wrapper around the existing one.
+
+## Common mistakes
+
+- **Storing a booking status on `Seat`**, ignoring that the same seat is in many shows.
+- **Checking availability and holding in two separate steps** without a lock.
+- **Holding some of the requested seats** when one of them fails.
+- **Charging the card while holding the lock.**
+- **Charging without checking the hold first**, or confirming without a refund path when the hold was lost.
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
 | **Strategy** | `PricingStrategy`, `CancellationPolicy`, `SeatInventory` implementations (in-memory, Redis, database) |
-| **State** | `BookingStatus` transitions (PENDING → CONFIRMED/EXPIRED/FAILED → CANCELLED) |
+| **State** | `BookingStatus` (PENDING → CONFIRMED / EXPIRED / FAILED → CANCELLED) |
 | **Observer** | Notifications on booking events |
 | **Adapter** | Payment gateway integrations |
 | **Facade** | `BookingService` |
@@ -305,35 +436,35 @@ The subtle case interviewers probe: **payment completes after the hold expired**
 ## Interview questions
 
 <QA q="How do you prevent two users from booking the same seat?">
-Keep all seat state for a show — holds and bookings — in one place guarded by one lock per show (or, distributed, conditional writes per seat). Holding is check-then-set for every requested seat, all-or-nothing, with an owner and expiry. Confirmation moves seats from held to booked under the same lock, only if the user still holds every one. Using the same lock for both steps is what rules out a hold being granted on a seat that is being booked at the same moment.
+Keep all seat state for a show, holds and bookings, in one place guarded by one lock per show (or, with several servers, conditional writes per seat). Holding checks every requested seat and then sets every seat, all or nothing, with an owner and an expiry. Confirming moves seats from held to booked under the same lock, only if the user still holds all of them. Using the same lock for both is what stops a hold being granted on a seat that is being booked at that moment.
 </QA>
 
 <QA q="What happens if the user's seat lock expires while they're paying?">
-First, check the hold before charging: if it has already lapsed, mark the booking expired without taking money. If it lapses while the payment is in flight and another user books the seats, the final atomic confirm fails; mark the booking expired and refund (a compensating action). To make this rare, set the hold TTL longer than the payment provider's timeout and show a countdown in the UI.
+First, check the hold before charging: if it has already lapsed, mark the booking expired without taking money. If it lapses while the payment is in progress and another user books the seats, the final atomic confirm fails; mark the booking expired and refund. To make this rare, set the hold time longer than the payment provider's timeout and show a countdown.
 </QA>
 
 <QA q="How would this design change for multiple application servers?">
-In-memory locks only work within one process. Replace the SeatInventory with a shared implementation: Redis keys per (show, seat) set with NX and an expiry (with a Lua script for all-or-nothing multi-seat locking), or conditional updates on seat rows in a database (UPDATE … WHERE status = 'AVAILABLE'), with a unique constraint on (show, seat) for confirmed bookings as the final guarantee. Because locking is behind an interface, the booking service doesn't change.
+In-memory locks only work within one process. Replace the SeatInventory with a shared implementation: Redis keys per (show, seat) set only if absent and with an expiry (with a Lua script for all-or-nothing multi-seat holds), or conditional updates on seat rows in a database (UPDATE … WHERE status = 'AVAILABLE'), with a unique constraint on (show, seat) for confirmed bookings as the final guarantee. Because seat state is behind an interface, the booking service doesn't change.
 </QA>
 
 <Practice task="Expired holds are only cleaned up lazily. Add a sweeper that frees them and marks PENDING bookings as EXPIRED. What race must it handle?">
 
-A scheduled task iterates shows (or a priority queue of hold expiries), and under each show's lock removes holds whose expiry has passed and marks the matching `PENDING` bookings `EXPIRED`. The race: a user whose payment just succeeded may be calling `confirm` at the same moment. Because `confirm` moves seats from held to booked under the same per-show lock and checks expiry there, whichever runs first wins cleanly — if the sweeper wins, confirm fails and refunds; if confirm wins, the sweeper finds no hold to expire.
+A scheduled task goes through the shows (or a priority queue of hold expiries), and under each show's lock removes holds whose time has passed and marks the matching `PENDING` bookings `EXPIRED`. The race: a user whose payment just succeeded may be calling `confirm` at the same moment. Because `confirm` moves seats from held to booked under the same per-show lock and checks expiry there, whichever runs first wins cleanly. If the sweeper wins, confirm fails and refunds; if confirm wins, the sweeper finds no hold to expire.
 
 </Practice>
 
 <Practice task="Add a rule: a selection may not leave a single empty seat between booked or held seats in the same row. Where does the check go?">
 
-Into the hold step, inside the per-show lock, because it depends on the current state of neighbouring seats: after tentatively adding the requested seats, scan the affected rows and reject if any free seat would have both neighbours occupied (row ends count as walls). Make it a pluggable `SeatSelectionRule` so cinemas can turn it off. Doing the check outside the lock would let two users each create a gap the other's check didn't see.
+In the hold step, inside the per-show lock, because it depends on the current state of neighbouring seats: after tentatively adding the requested seats, scan the affected rows and reject if any free seat would have both neighbours taken (the ends of a row count as walls). Make it a pluggable `SeatSelectionRule` so cinemas can turn it off. Checking outside the lock would let two users each create a gap the other's check didn't see.
 
 </Practice>
 
 <Takeaways>
 
-- Seat availability belongs to (show, seat), not to the physical seat.
-- Lock all requested seats atomically with an owner and TTL; lock per show for low contention.
-- Re-validate on confirmation and compensate (refund) if the hold was lost.
-- Keep locking, pricing and payment behind interfaces so they scale or change independently.
+- A seat's availability belongs to the (show, seat) pair, not to the physical seat.
+- Hold all requested seats at once, with an owner and an expiry, under one lock per show.
+- Check the hold before charging, charge outside the lock, and refund if the hold was lost.
+- Keep seat state, pricing and payment behind interfaces so each can change or scale on its own.
 
 </Takeaways>
 

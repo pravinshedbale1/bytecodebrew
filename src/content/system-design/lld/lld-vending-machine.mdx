@@ -1,10 +1,158 @@
 <Related ids={['state-pattern', 'strategy-pattern', 'chain-of-responsibility-pattern', 'concurrency-for-lld', 'interview-grade-code']} />
 
-The vending machine is **the** State-pattern problem. Interviewers watch for three things: a clear state diagram, invalid operations handled explicitly in every state, and correct money handling (including change).
+A vending machine does something different for the same button depending on what's already happened. Press "select" before inserting money and nothing should come out; press it after and you get a snack. That makes it **the** classic State-pattern question. The interviewer is looking for three things: a clear picture of the machine's states, a sensible answer for every button in every state, and money handled correctly, including change.
 
-## What the interviewer expects
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">How do people pay? Coins, notes, cards?</Turn>
+<Turn who="them">Coins and notes: ₹1, 2, 5, 10, 20, 50 and 100. Cards can be a follow-up.</Turn>
+<Turn who="you">How do they choose a product?</Turn>
+<Turn who="them">Each slot has a code like A1 or B3. One product per purchase.</Turn>
+<Turn who="you">Does the machine give change? What if it doesn't have the right coins?</Turn>
+<Turn who="them">It gives change from the coins it has. If it can't make exact change, it should refuse the sale and give the money back.</Turn>
+<Turn who="you">Can the customer cancel?</Turn>
+<Turn who="them">Yes, any time before the product drops, with a full refund.</Turn>
+<Turn who="you">Is there an operator side, like restocking?</Turn>
+<Turn who="them">Yes. An operator can restock and put the machine into maintenance mode.</Turn>
+</Dialogue>
+
+The answer that matters most: "**any time before the product drops**". It tells you the machine has a moment, while dispensing, when cancel is no longer allowed. That's a state.
+
+**The machine must:**
+
+1. Accept coins and notes, adding them to the customer's balance.
+2. Sell a product by code if it's in stock and the balance covers the price.
+3. Return correct change using only the coins it has, or refuse the sale if it can't.
+4. Refund everything on cancel, unless the product is already dropping.
+5. Reject actions that make no sense right now (select with no money, for example) with a clear message.
+6. Let an operator restock and enter maintenance mode, but never in the middle of a sale.
+
+**Out of scope for now:** card payments, buying several items at once.
+
+## Step 2: Find the core entities
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Vending machine | a class | The thing the buttons talk to. It holds the current state. |
+| State (idle, has money, dispensing, maintenance) | **one class per state**, sharing an interface | Each button behaves differently in each state. That's what the State pattern is for. |
+| Product | a record | Code, name, price. It doesn't change. |
+| Inventory | a class | Which products exist and how many are left. |
+| Coin / note | an enum `Denomination` | A fixed set of values. |
+| Cash box | a class | How many of each coin the machine holds, and working out change. |
+| Change rule | an interface `ChangeStrategy` | There's a simple way and a correct way to make change (more below). |
+| Hardware | an interface | The motor and coin return. In the interview it just prints, which keeps the logic testable. |
+
+## Step 3: Design the states
+
+This is the step that makes or breaks the round. **Draw the states before writing any classes.**
+
+```mermaid
+stateDiagram-v2
+  [*] --> Idle
+  Idle --> HasMoney: insert money
+  HasMoney --> HasMoney: insert more money
+  HasMoney --> Idle: cancel / refund all
+  HasMoney --> Dispensing: select product [valid, in stock, enough money, change possible]
+  HasMoney --> HasMoney: select product [insufficient money] / show amount due
+  Dispensing --> Idle: product dispensed, change returned
+  Idle --> Maintenance: admin starts maintenance
+  Maintenance --> Idle: admin finishes
+```
+
+Then write down what every button does in every state. This table *is* the specification of each state class, and drawing it is the single most useful thing you can do in this interview:
+
+| Button ↓ / State → | Idle | HasMoney | Dispensing | Maintenance |
+| --- | --- | --- | --- | --- |
+| insert money | accept → HasMoney | accept | reject (busy) | reject → refund |
+| select product | error "insert money" | check → Dispensing | reject | reject |
+| cancel | nothing to do | refund → Idle | reject (too late) | nothing to do |
+| maintenance | → Maintenance | reject (sale in progress) | reject | — |
+
+Why one class per state? Compare the options:
+
+<Approach verdict="bad" title="Boolean flags">
+
+```java
+boolean hasMoney, isDispensing, inMaintenance;
+```
+
+Three booleans allow eight combinations, and most are nonsense (dispensing *and* in maintenance?). Every method needs a pile of `if`s, and it's easy to forget one.
+
+</Approach>
+
+<Approach verdict="good" title="An enum and a switch in every method">
+
+```java
+enum Mode { IDLE, HAS_MONEY, DISPENSING, MAINTENANCE }
+void select(String code) { switch (mode) { case IDLE -> …; case HAS_MONEY -> …; … } }
+```
+
+Only valid states exist, which is a big step up. But one state's rules are spread across every method, and adding a state means editing every switch. For two or three states it's perfectly fine.
+
+</Approach>
+
+<Approach verdict="great" title="A class per state (State pattern)">
+
+Each state is a class with a method per button. The machine just forwards: `select(code)` becomes `state.select(this, code)`. All of "what happens when there's money in the machine" lives in one class, buttons a state doesn't support fail by default, and a new state (say, `Error`) is a new class that touches nothing else.
+
+</Approach>
+
+The other classes are simpler:
+
+**`VendingMachine`**: knows the current state, the inventory, the cash box and the coins inserted so far. Its public methods (insert, select, cancel, maintenance) just pass the call to the current state.
+
+**`Inventory`**: knows the products and their stock. It can look up a product, say whether it's available and remove one.
+
+**`CashBox`**: knows how many of each coin the machine holds. It can add coins, **plan** change without giving it yet, and then give out the planned coins.
+
+```mermaid
+classDiagram
+  class VendingMachine {
+    -State state
+    -Inventory inventory
+    -CashBox cashBox
+    -List~Denomination~ inserted
+    +insert(Denomination)
+    +select(String code)
+    +cancel()
+    ~transitionTo(State)
+  }
+  class State {
+    <<interface>>
+    +insert(VendingMachine, Denomination)
+    +select(VendingMachine, String)
+    +cancel(VendingMachine)
+  }
+  class Inventory {
+    -Map~String,Slot~ slots
+    +product(String) Product
+    +isAvailable(String) boolean
+    +removeOne(String)
+    +restock(String, int)
+  }
+  class CashBox {
+    -EnumMap~Denomination,Integer~ counts
+    +add(List~Denomination~)
+    +makeChange(int) Optional~List~
+  }
+  class ChangeStrategy {
+    <<interface>>
+    +compute(int, Map) Optional~List~
+  }
+  VendingMachine --> State
+  VendingMachine *-- Inventory
+  VendingMachine *-- CashBox
+  CashBox --> ChangeStrategy
+  State <|.. IdleState
+  State <|.. HasMoneyState
+  State <|.. DispensingState
+  State <|.. MaintenanceState
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="45–60" lines="50" write={["A `State` interface with Idle and HasMoney states", "The machine forwarding each button to its current state", "Insert coin, select, cancel and refund"]} say={["How you would give change with a limited set of coins", "A Dispensing state for when the motor can fail", "Why the State pattern beats a big `switch`"]} skip={["Maintenance mode and restocking screens", "Card payments", "Hardware drivers"]} />
 
@@ -65,94 +213,23 @@ class VendingMachine {                             // the context: it just forwa
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. **`State`** declares the three buttons. Each one has a **default** that throws. A state only overrides the buttons it allows, so "select with no money" fails without anyone writing that check.
+2. **`Idle`** allows only `insertCoin`: it adds to the balance and switches to `HasMoney`.
+3. **`HasMoney`** allows more coins, `select` and `cancel`. `select` checks in a careful order: the product exists, it's in stock, the balance is enough. Only when **all** checks pass does it change anything: take one from stock, work out change, reset the balance and go back to `Idle`.
+4. If a check fails, `select` throws and nothing has changed. The machine stays in `HasMoney`, so the customer can add money, pick something else or cancel. Their money is never lost.
+5. **`VendingMachine`** has no rules of its own. Each public method forwards to the current state. `synchronized` makes sure an operator and a customer can't press buttons at exactly the same moment.
+
+<Callout type="tip" title="How to practise this">
+Draw the state diagram and the button × state table first, then write the code from them. Once you can produce all three in about 30 minutes, the interview version is under control.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-| Question | Assumption |
-| --- | --- |
-| Payment | Coins and notes (₹1, 2, 5, 10, 20, 50, 100); card is an extension |
-| Selection | Product codes like `A1`, `B3`; one product per transaction |
-| Change | Return change using available coins/notes; if exact change is impossible, refuse the sale and refund |
-| Cancel | User can cancel any time before dispensing → full refund |
-| Admin | Restock products, refill/collect cash, put machine in maintenance |
-| Concurrency | One user at a time at the panel; admin operations must not interleave with a sale |
+The full version adds real coins, limited change and a maintenance mode.
 
-## 2. States
-
-```mermaid
-stateDiagram-v2
-  [*] --> Idle
-  Idle --> HasMoney: insert money
-  HasMoney --> HasMoney: insert more money
-  HasMoney --> Idle: cancel / refund all
-  HasMoney --> Dispensing: select product [valid, in stock, enough money, change possible]
-  HasMoney --> HasMoney: select product [insufficient money] / show amount due
-  Dispensing --> Idle: product dispensed, change returned
-  Idle --> Maintenance: admin starts maintenance
-  Maintenance --> Idle: admin finishes
-```
-
-| Operation ↓ / State → | Idle | HasMoney | Dispensing | Maintenance |
-| --- | --- | --- | --- | --- |
-| insert money | accept → HasMoney | accept | reject (busy) | reject → refund |
-| select product | error "insert money" | validate → Dispensing | reject | reject |
-| cancel | no-op | refund → Idle | reject (too late) | no-op |
-| maintenance | → Maintenance | reject (sale in progress) | reject | — |
-
-Writing this table first is the single best thing you can do in the interview — it *is* the specification of every state class.
-
-## 3. Class design
-
-```mermaid
-classDiagram
-  class VendingMachine {
-    -State state
-    -Inventory inventory
-    -CashBox cashBox
-    -List~Denomination~ inserted
-    +insert(Denomination)
-    +select(String code)
-    +cancel()
-    ~transitionTo(State)
-  }
-  class State {
-    <<interface>>
-    +insert(VendingMachine, Denomination)
-    +select(VendingMachine, String)
-    +cancel(VendingMachine)
-  }
-  class Inventory {
-    -Map~String,Slot~ slots
-    +product(String) Product
-    +isAvailable(String) boolean
-    +removeOne(String)
-    +restock(String, int)
-  }
-  class CashBox {
-    -EnumMap~Denomination,Integer~ counts
-    +add(List~Denomination~)
-    +makeChange(int) Optional~List~
-  }
-  class ChangeStrategy {
-    <<interface>>
-    +compute(int, Map) Optional~List~
-  }
-  VendingMachine --> State
-  VendingMachine *-- Inventory
-  VendingMachine *-- CashBox
-  CashBox --> ChangeStrategy
-  State <|.. IdleState
-  State <|.. HasMoneyState
-  State <|.. DispensingState
-  State <|.. MaintenanceState
-```
-
-## 4. Implementation
-
-### Money
+#### Money: coins as an enum, amounts as integers
 
 ```java
 public enum Denomination {
@@ -163,9 +240,11 @@ public enum Denomination {
 }
 ```
 
-Use **integer rupees (or paise)** — never `double` for money.
+Always store money as whole rupees (or paise) in an `int` or `long`. Never use `double`: `0.1 + 0.2` isn't exactly `0.3` in floating point, and a machine that's out by a paisa every thousand sales is a bug report.
 
-### Inventory
+#### Inventory
+
+The inventory keeps products and their stock in two maps. Asking for an unknown code throws a clear error instead of returning `null`.
 
 ```java
 public record Product(String code, String name, int price) { }
@@ -190,9 +269,9 @@ public final class Inventory {
 }
 ```
 
-### Making change
+#### Making change: the part people get wrong
 
-Greedy (largest denomination first) is optimal for canonical coin systems like ₹1/2/5/10, but **not** in general — and the machine may be **out of some coins**. A bounded search over available counts is safer:
+Say the customer is owed ₹6. The obvious approach is **greedy**: hand out the biggest coin that fits, then repeat.
 
 ```java
 public interface ChangeStrategy {
@@ -214,9 +293,12 @@ public final class GreedyChange implements ChangeStrategy {
 }
 ```
 
-<Callout type="note">
-Greedy can fail even when change is possible: owing 6 with only one ₹5 and three ₹2 coins available, greedy takes the 5 and can't make 1 — but 2+2+2 works. A dynamic-programming `ChangeStrategy` (bounded coin change) solves this. Making change a **strategy** lets you start with greedy and swap in DP if the interviewer pushes.
-</Callout>
+Greedy works for normal coin sets *when you have plenty of every coin*. But a vending machine often runs low on some coins. Suppose it owes ₹6 and holds one ₹5 and three ₹2 coins:
+
+- Greedy takes the ₹5, leaving ₹1 to pay. There's no ₹1 coin, so greedy says "can't make change".
+- But 2 + 2 + 2 = 6 works.
+
+So greedy can refuse a sale that was possible. The fix is a small dynamic-programming search over the coins actually in the box (the bounded coin-change problem). Because change is rarely more than ₹100, it runs in microseconds:
 
 ```java
 /** Bounded coin change: fewest coins using only what is in the box. O(amount × coins in box). */
@@ -245,7 +327,11 @@ public final class BoundedChange implements ChangeStrategy {
 }
 ```
 
-Amounts in a vending machine are small (change is rarely above ₹100), so this runs in microseconds.
+Both classes implement `ChangeStrategy`. Start with greedy in the round, mention the counter-example, and offer to swap in the DP version. That's the ideal answer.
+
+#### `CashBox`: plan first, then pay out
+
+The cash box separates **planning** change (no coins move) from **dispensing** it (coins leave the box). That split lets the machine check "can I make change?" before committing to a sale.
 
 ```java
 public final class CashBox {
@@ -272,7 +358,17 @@ public final class CashBox {
 }
 ```
 
-### States
+#### The states
+
+The full `HasMoneyState.select` follows these steps:
+
+1. Look up the product and check it's in stock.
+2. Check the customer has paid enough. If not, throw and stay in `HasMoney`.
+3. Put the customer's coins into the cash box **first**, because they can be part of the change.
+4. Plan the change. If it's impossible, take the customer's coins back out and throw "exact change required". They can cancel or insert the exact amount.
+5. Only now commit: switch to `Dispensing`, take one from stock, pay out the change, drop the product, return to `Idle`.
+
+`DispensingState` overrides nothing, so every customer button is rejected while the motor runs. `MaintenanceState` hands any inserted coin straight back.
 
 <FullCode title="Show the full code: States (72 lines)">
 
@@ -353,7 +449,9 @@ final class MaintenanceState implements State {
 
 </FullCode>
 
-### The machine (context)
+#### `VendingMachine`: the context
+
+The machine creates each state once and keeps them as fields, so switching state is just changing a reference. The package-private helper methods give the states what they need without making them public.
 
 ```java
 public final class VendingMachine {
@@ -392,68 +490,86 @@ public final class VendingMachine {
 }
 ```
 
-`Hardware` is an interface (`dropProduct`, `returnMoney`) — in the interview it prints; in reality it drives motors. This keeps business logic testable.
+`Hardware` is an interface (`dropProduct`, `returnMoney`). In the interview it prints; in a real machine it drives motors. Keeping it behind an interface means you can test the whole flow without a motor.
 
-## 5. Edge cases to call out
+## Step 5: Trace a purchase
 
-- **Exact change unavailable** — refuse before dispensing, keep the user's money in a refundable state.
-- **Sold out after money inserted** — error, stay in `HasMoney`; user picks another or cancels.
-- **Hardware failure while dispensing** (product stuck) — transition to an error/maintenance state and refund, rather than silently keeping money.
-- **Cancel during dispensing** — not allowed; the operation is already committed.
-- **Money as integers**, and the inserted coins must be accounted for in the cash box before computing change (they can be part of the change).
+A crisp packet `A1` costs ₹15. The machine holds one ₹5 and three ₹2 coins.
 
-## 6. Patterns used
+1. **Idle.** The customer inserts ₹20. `IdleState.insert` records it and switches to **HasMoney**.
+2. They press `B9`, which doesn't exist: "unknown product". Still **HasMoney**, still ₹20 credit.
+3. They press `A1`. It's in stock, and ₹20 ≥ ₹15.
+4. The ₹20 note goes into the cash box. Change needed: ₹5. The strategy finds the ₹5 coin.
+5. Switch to **Dispensing**. If the customer presses cancel now, it's rejected.
+6. Stock of `A1` drops by one, the ₹5 coin is paid out, the crisps drop, and the machine returns to **Idle**.
+
+Now the next customer pays ₹20 for a ₹14 item, so they're owed ₹6. The ₹5 coin has gone, so even greedy finds 2 + 2 + 2. But if the ₹5 had still been in the box, greedy would have grabbed it first, been left owing ₹1 with no ₹1 coin, and refused a sale it could have made. The DP strategy never makes that mistake.
+
+## Step 6: Handle follow-up questions
+
+**"The motor sometimes jams. What happens to the money?"** Add an `Error` state. The hardware reports whether the product actually dropped. On failure: don't reduce stock, refund the customer, and move to `Error`, where every button is rejected until an operator resets the machine. The principle interviewers want to hear: **never keep money for a product that wasn't delivered.**
+
+**"Add card and UPI."** With a card you choose first and pay second, so add an `AwaitingPayment` state entered after selection, with a timeout back to `Idle`. Change only applies to cash.
+
+**"Alert the operator when stock is low."** Publish events like `ProductSold` and `LowStock`, and let an alerting service subscribe (Observer).
+
+**"Add a discount on Fridays."** A pricing strategy applied when the product is selected.
+
+## Common mistakes
+
+- **Writing code before drawing the states.** The diagram and table do most of the work.
+- **Changing anything before all checks pass.** If stock goes down and *then* the balance check fails, the machine has lost a product.
+- **Assuming greedy change always works.** Mention the limited-coins counter-example.
+- **Using `double` for money.**
+- **Forgetting that the customer's own coins can be used for their change.**
+- **Letting maintenance start in the middle of a sale.**
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
 | **State** | `IdleState`, `HasMoneyState`, `DispensingState`, `MaintenanceState` |
-| **Strategy** | `ChangeStrategy` (greedy vs DP) |
-| **Chain of Responsibility** (alternative) | Dispensing change denomination by denomination |
-| **Facade** | `VendingMachine` public API |
-
-## 7. Extensions
-
-- **Card/UPI payments**: a `PaymentMethod` abstraction; `HasMoneyState` generalises to "has credit".
-- **Multiple quantities / cart**: a selection state collecting items before payment.
-- **Telemetry**: publish events (`ProductSold`, `LowStock`) to an observer that alerts operators.
-- **Promotions**: a pricing strategy applied at selection.
+| **Strategy** | `ChangeStrategy` (greedy or DP) |
+| **Chain of Responsibility** (alternative) | Paying out change one denomination at a time |
+| **Facade** | `VendingMachine`'s public methods |
 
 ## Interview questions
 
 <QA q="Why use the State pattern instead of an enum and switch statements?">
-The machine has several states and every operation behaves differently in each, so a switch-based design spreads each state's rules across all operations and grows with every new state. State classes group the behaviour per state, make invalid operations explicit (defaults throw), and let you add a state such as Maintenance or Error without editing the others. For a two-state toy, an enum would be fine.
+The machine has several states, and every button behaves differently in each, so a switch-based design spreads each state's rules across all buttons and grows with every new state. State classes keep each state's behaviour together, make unsupported buttons fail by default, and let you add a state such as Maintenance or Error without editing the others. For a two-state toy, an enum would be fine.
 </QA>
 
 <QA q="When is greedy change-making wrong, and how do you fix it?">
-Greedy is optimal only for canonical coin systems with unlimited coins. With limited stock or non-canonical denominations it can fail to find change that exists — for example owing 6 with one 5 and three 2s. Use a bounded dynamic-programming coin-change algorithm over the available counts (amounts are small, so it's cheap), behind the same ChangeStrategy interface.
+Greedy is only guaranteed to work for standard coin sets with unlimited coins. With limited stock it can fail to find change that exists: owing 6 with one 5 and three 2s, greedy takes the 5 and gets stuck, while 2 + 2 + 2 works. Use a bounded dynamic-programming coin-change search over the coins actually in the box (amounts are small, so it's cheap), behind the same ChangeStrategy interface.
 </QA>
 
 <QA q="How do you keep an admin restock from interfering with a customer purchase?">
-Serialise operations on the machine with a single lock (synchronized public methods), and only allow maintenance to start from the Idle state — if a sale is in progress the request is rejected. During Maintenance, customer operations are rejected and inserted money is refunded.
+Every public method on the machine is synchronized, so operations run one at a time. Maintenance can only start from Idle; if a sale is in progress the request is rejected. During Maintenance, customer buttons are rejected and inserted money is returned.
 </QA>
 
 <Practice task="Add card and UPI payments alongside coins. How does the state machine change?">
 
-Generalise "inserted money" to a `Payment` abstraction: coins accumulate credit as now; a card/UPI payment is authorised for the product price after selection (select first, then pay). That suggests a new state, `AwaitingPayment`, entered from `Idle` on selection when the user chooses card, with a timeout back to `Idle`. Change-making only applies to cash. Dispensing still requires the payment to be captured; if the motor fails after capture, refund through the payment provider.
+Generalise "inserted money" to a `Payment` abstraction: coins build up credit as now; a card or UPI payment is authorised for the product price after selection (select first, then pay). That suggests a new state, `AwaitingPayment`, entered from `Idle` on selection when the customer chooses card, with a timeout back to `Idle`. Change only applies to cash. Dispensing still requires the payment to be captured; if the motor fails after capture, refund through the payment provider.
 
 </Practice>
 
 <Practice task="The motor sometimes jams while dispensing. Design what happens to the customer's money and the machine.">
 
-Add an `Error` (or `OutOfOrder`) state. `Hardware.dropProduct` reports success or failure (sensor confirms the drop). On failure: don't decrement stock, refund the customer (return the inserted coins, or void the card authorisation), record the fault and move to `Error`, where every customer operation is rejected and inserted coins are returned immediately. Only an admin `reset()` returns to `Idle`. The point interviewers look for: never keep money for a product that wasn't delivered.
+Add an `Error` (or `OutOfOrder`) state. `Hardware.dropProduct` reports success or failure (a sensor confirms the drop). On failure: don't reduce stock, refund the customer (return the inserted coins, or cancel the card authorisation), record the fault and move to `Error`, where every customer button is rejected and inserted coins are returned immediately. Only an operator `reset()` returns to `Idle`. The point interviewers look for: never keep money for a product that wasn't delivered.
 
 </Practice>
 
 <Takeaways>
 
-- Start with the state diagram and an operation × state table — it is the spec.
-- Each state class implements valid operations and rejects invalid ones explicitly.
-- Handle money in integers; plan change before committing; refund on any failure.
-- Make change-making a strategy (greedy vs DP) and hardware an interface.
+- Draw the state diagram and the button × state table before writing code. They are the spec.
+- Each state class handles the buttons it allows; everything else fails by default.
+- Check everything first, then change state. A failed check must leave the machine exactly as it was.
+- Store money as integers, plan change before committing, and refund on any failure.
+- Greedy change can fail with limited coins; a bounded DP behind `ChangeStrategy` fixes it.
 
 </Takeaways>
 
 ## Further reading
 
 - [State](/system-design/lld/state-pattern) and [Strategy](/system-design/lld/strategy-pattern).
-- Freeman and Robson, *Head First Design Patterns* — the gumball machine chapter.
+- Freeman and Robson, *Head First Design Patterns*: the gumball machine chapter.

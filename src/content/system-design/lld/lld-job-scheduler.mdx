@@ -1,10 +1,138 @@
 <Related ids={['concurrency-for-lld', 'command-pattern', 'strategy-pattern', 'observer-pattern']} />
 
-"Design a task scheduler" — run jobs at a time, on a fixed rate, or with a delay between runs; with priorities, retries and cancellation — is a concurrency problem dressed as an LLD problem. The interviewer wants to see a **priority queue ordered by time**, a dispatcher that **sleeps until the next job is due without busy-waiting**, a worker pool, and precise answers about edge cases (missed runs, retries, cancelling a running job). It's what `ScheduledThreadPoolExecutor`, Quartz and cron do inside.
+A job scheduler runs code **later**: "send this reminder at 9 am", "refresh the cache every 5 minutes", "retry this upload in 30 seconds". Java's `ScheduledExecutorService`, Quartz and cron all do this. It's a concurrency problem dressed up as an LLD problem. The interviewer wants to see three things: a **queue ordered by run time**, a thread that **sleeps until the next job is due** without checking the clock over and over, and a **worker pool** so one slow job doesn't hold up the rest.
 
-## What the interviewer expects
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">What kinds of schedule? Once at a time, and repeating?</Turn>
+<Turn who="them">Once, and repeating every N seconds.</Turn>
+<Turn who="you">For repeating jobs, is it "every N from the start" or "N after the last run finishes"?</Turn>
+<Turn who="them">Good question. Support both.</Turn>
+<Turn who="you">If a job fails?</Turn>
+<Turn who="them">Retry a few times with growing delays, then mark it failed.</Turn>
+<Turn who="you">Can jobs be cancelled?</Turn>
+<Turn who="them">Yes, any time. A cancelled job must never start again.</Turn>
+<Turn who="you">If two jobs are due at the same moment?</Turn>
+<Turn who="them">High priority first.</Turn>
+<Turn who="you">If the machine was asleep for an hour, should an every-minute job run 60 times to catch up?</Turn>
+<Turn who="them">No. Once is enough.</Turn>
+</Dialogue>
+
+The "every N from the start" or "N after it finishes" question shows real experience. The two have names, **fixed rate** and **fixed delay**, and the difference is explained below.
+
+**The scheduler must:**
+
+1. Run a job once at a given time, at a **fixed rate**, or with a **fixed delay** between runs.
+2. Run high-priority jobs first when several are due together.
+3. Retry failures with growing delays, then mark the job failed.
+4. Cancel a job at any time; it never starts again.
+5. Run jobs on a pool of worker threads, so a slow job doesn't delay others.
+6. After a pause, run a missed repeating job once, not once per missed slot.
+
+**Out of scope for now:** saving jobs to disk, several machines, cron expressions.
+
+## Step 2: Find the core entities
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Job | a class | The **definition**: the code to run, its schedule, priority, retry rule and status. Lives as long as the job does. |
+| Trigger | a record | **One upcoming run**: "run this job at this time". A repeating job creates a new trigger after each run. |
+| Schedule | a sealed interface with `Once`, `FixedRate`, `FixedDelay` | Three kinds, each working out the next run differently. |
+| Priority | an enum | `HIGH`, `NORMAL`, `LOW`. |
+| Retry rule | an interface `RetryPolicy` | "How long until the next attempt, or give up?" |
+| Scheduler | a class | The queue, the dispatcher thread and the worker pool. |
+
+Separating **Job** from **Trigger** keeps the queue simple: it only ever holds "what runs next, and when".
+
+## Step 3: Design the scheduler
+
+Three moving parts:
+
+1. **A priority queue of triggers**, ordered by time (then priority, then the order they were added). The earliest trigger is always at the head, available in O(1).
+2. **One dispatcher thread** that waits until the head trigger is due, takes it off the queue and hands it to a worker.
+3. **A worker pool** that actually runs the job code.
+
+How should the dispatcher wait?
+
+<Approach verdict="bad" title="Check every millisecond">
+
+```java
+while (true) { if (queue.peek().runAt <= now()) run(); Thread.sleep(1); }
+```
+
+It burns CPU when nothing is due, and is still up to 1 ms late.
+
+</Approach>
+
+<Approach verdict="bad" title="Sleep exactly until the head is due">
+
+`Thread.sleep(head.runAt - now)`. Efficient, until someone schedules a job that's due **sooner** than the one we're sleeping for. We'd sleep straight past it.
+
+</Approach>
+
+<Approach verdict="great" title="Wait with a timeout, and be woken when the queue changes">
+
+Wait on a condition (or `wait(timeout)`) for exactly as long as the head needs. Whenever a job is scheduled, **signal** the dispatcher. It wakes up, looks at the head again (which may now be the new, earlier job) and recalculates how long to wait. No wasted CPU, and never late.
+
+</Approach>
+
+And why a separate worker pool? If the dispatcher ran the job itself, a job that takes 10 seconds would make every other job up to 10 seconds late.
+
+**Fixed rate vs fixed delay**, the distinction every interviewer asks about:
+
+| | Fixed rate | Fixed delay |
+| --- | --- | --- |
+| Next run | Previous **scheduled** time + period | Previous **finish** time + delay |
+| Use for | Metrics, heartbeats: "every minute, on the minute" | Cleanup, polling: "rest between runs" |
+| If a run is slow | The next may start right away | There's always a gap |
+
+```mermaid
+classDiagram
+  class JobScheduler {
+    -PriorityQueue~Trigger~ queue
+    -Map~JobId,Job~ jobs
+    -ReentrantLock lock
+    -Condition changed
+    -Executor workers
+    +schedule(String, Runnable, Schedule, Priority, RetryPolicy) JobId
+    +cancel(JobId)
+    +start()
+    +shutdown()
+  }
+  class Job {
+    -JobId id
+    -Runnable task
+    -Schedule schedule
+    -Priority priority
+    -RetryPolicy retry
+    -AtomicReference~JobStatus~ status
+  }
+  class Trigger {
+    -Job job
+    -Instant at
+    -long seq
+  }
+  class Schedule {
+    <<sealed>>
+  }
+  class RetryPolicy {
+    <<interface>>
+    +nextDelay(int attempt) Optional~Duration~
+  }
+  JobScheduler o-- Job
+  JobScheduler *-- Trigger
+  Trigger --> Job
+  Job --> Schedule
+  Job --> RetryPolicy
+  Schedule <|-- Once
+  Schedule <|-- FixedRate
+  Schedule <|-- FixedDelay
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="45–60" lines="40" write={["A priority queue ordered by run time", "One dispatcher thread that sleeps until the next job is due", "A worker pool that runs jobs, and repeating jobs"]} say={["Fixed rate vs fixed delay", "Retries with back-off", "Why cancelling by marking is cheaper than searching the heap"]} skip={["Cron expressions", "Running across many machines"]} />
 
@@ -57,68 +185,26 @@ class Scheduler {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. **`Job`** holds an id, when to run, the code, and how often to repeat (0 means once).
+2. The **queue** is a `PriorityQueue` ordered by `runAt`, so `peek()` is always the next job due.
+3. **`schedule`** adds a job and calls `notify()`. That wakes the dispatcher in case this job is now the earliest.
+4. **`dispatchLoop`** (on its own thread):
+   - Nothing queued → `wait()` until something is scheduled.
+   - The head isn't due yet → `wait(howLongUntilDue)`. Either the time passes, or `notify` wakes it early, and it loops round and checks again.
+   - The head is due → take it off, skip it if cancelled, hand it to the worker pool, and if it repeats, queue the next run.
+5. **`cancel`** just adds the id to a set. The job is skipped when it comes due. Removing it from the middle of a heap would be O(n); this is O(1).
+
+<Callout type="tip" title="How to practise this">
+Explain out loud what happens when the dispatcher is waiting 60 seconds for job A and someone schedules job B due in 5 seconds. (`notify` wakes it, it peeks, sees B, and waits 5 seconds instead.) Then write the code.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-| Question | Assumption |
-| --- | --- |
-| Schedules | One-time at an instant; **fixed rate** (every N, aligned to the start); **fixed delay** (N after the previous run *finishes*) |
-| Priority | At the same due time, HIGH before NORMAL before LOW |
-| Failures | Per-job retry policy with exponential backoff, then mark failed |
-| Cancellation | Any time; a cancelled job never starts again |
-| Execution | A bounded worker pool; a slow job must not delay others' start times |
-| Missed runs | If the process was paused, a fixed-rate job runs **once** and realigns — no burst of catch-up runs |
-| Out of scope | Persistence and multiple nodes (extensions); cron expressions (a `Schedule` implementation) |
+#### Jobs, triggers and schedules
 
-## 2. Design
-
-```mermaid
-classDiagram
-  class JobScheduler {
-    -PriorityQueue~Trigger~ queue
-    -Map~JobId,Job~ jobs
-    -ReentrantLock lock
-    -Condition changed
-    -Executor workers
-    +schedule(String, Runnable, Schedule, Priority, RetryPolicy) JobId
-    +cancel(JobId)
-    +start()
-    +shutdown()
-  }
-  class Job {
-    -JobId id
-    -Runnable task
-    -Schedule schedule
-    -Priority priority
-    -RetryPolicy retry
-    -AtomicReference~JobStatus~ status
-  }
-  class Trigger {
-    -Job job
-    -Instant at
-    -long seq
-  }
-  class Schedule {
-    <<sealed>>
-  }
-  class RetryPolicy {
-    <<interface>>
-    +nextDelay(int attempt) Optional~Duration~
-  }
-  JobScheduler o-- Job
-  JobScheduler *-- Trigger
-  Trigger --> Job
-  Job --> Schedule
-  Job --> RetryPolicy
-  Schedule <|-- Once
-  Schedule <|-- FixedRate
-  Schedule <|-- FixedDelay
-```
-
-The key split: a **Job** is the long-lived definition (what, how often, how to retry); a **Trigger** is one queue entry — "run this job at this instant". A recurring job produces a new trigger after each run.
+A trigger orders by time, then priority, then a sequence number, so two triggers with the same time and priority run in the order they were added:
 
 ```java
 /** Ordered by time, then priority, then insertion order (FIFO for equal keys). */
@@ -139,9 +225,11 @@ public sealed interface Schedule {
 }
 ```
 
-## 3. The dispatcher: sleep until the next job, wake early when needed
+`Schedule` is a **sealed** interface: the compiler knows the only kinds are `Once`, `FixedRate` and `FixedDelay`, so a `switch` over them can't forget one.
 
-One thread owns the queue's head. It waits on a `Condition` for exactly as long as the earliest trigger needs, and `schedule()` signals it — because a newly added job might be **earlier** than the one it's waiting for.
+#### The dispatcher
+
+Same idea as the short version, with a `ReentrantLock` and a `Condition` called `changed`:
 
 ```java
 private void loop() {
@@ -172,9 +260,11 @@ private void enqueue(Job job, Instant at) {
 }
 ```
 
-The loop re-checks the head after every wake-up, so spurious wake-ups and early signals are harmless — the classic **condition-variable pattern**: always wait in a loop that re-tests the condition.
+Note the **inner `while`**: after every wake-up, the dispatcher re-reads the head and re-checks whether it's due. That makes spurious wake-ups (Java allows a waiting thread to wake for no reason) and early signals harmless. "Always wait in a loop that re-checks the condition" is the rule for condition variables.
 
-`runDue()` pops every due trigger under the lock, then hands them to the worker pool **outside** the lock. The dispatcher never runs job code itself, so a slow job can't delay the next job's start.
+#### Taking due jobs off the queue and running them
+
+`runDue` pops every due trigger **under the lock**, then hands them to workers **outside** it. `dispatch` uses a compare-and-set on the job's status: if the job was cancelled in the meantime, it isn't `SCHEDULED` any more, so it doesn't start.
 
 ```java
 public void runDue() {
@@ -194,9 +284,14 @@ private void dispatch(Trigger t) {
 }
 ```
 
-Making `runDue()` public has a second benefit: tests can drive the scheduler with a **fake clock** and an inline executor (`Runnable::run`) — completely deterministic, no sleeps.
+Making `runDue()` public has a bonus: a test can use a **fake clock** and run jobs inline (`Runnable::run`), with no real waiting at all.
 
-## 4. Running, rescheduling and retrying
+#### Running, rescheduling and retrying
+
+After a job runs:
+
+- **Success**: work out the next run from the schedule. `Once` → done. `FixedRate` → the previous **scheduled** time plus the period; if that's already in the past (the machine was asleep), keep adding periods until it's in the future, so it runs **once** and lines up again. `FixedDelay` → now plus the delay.
+- **Failure**: ask the retry policy for a delay. If there is one, queue a retry; otherwise mark the job `FAILED`. The exponential policy waits 1×, 2×, 4×... the base delay.
 
 ```java
 private void execute(Job job, Instant scheduledFor) {
@@ -237,82 +332,97 @@ public interface RetryPolicy {
 }
 ```
 
-| | Fixed rate | Fixed delay |
-| --- | --- | --- |
-| Next run | Previous **scheduled** time + period | Previous **finish** time + delay |
-| Use for | Metrics, heartbeats — "every minute on the minute" | Cleanup, polling — "rest between runs" |
-| Slow run | Next run may start immediately | Always a gap |
-| Can overlap? | Not here: a job runs again only after it was rescheduled | Never |
+#### Cancelling safely
 
-## 5. Cancellation without searching the heap
-
-Removing an arbitrary element from a `PriorityQueue` is O(n). Instead, cancellation flips the job's status, and the dispatcher **lazily drops** cancelled triggers when they reach the head (`dispatch` refuses to start a job that isn't `SCHEDULED`). A job cancelled **while running** finishes its current run, and then `reschedule` sees it's no longer `RUNNING` and doesn't re-enqueue it. Every status change is a compare-and-set, so cancel, finish and retry can't trample each other.
-
-## 6. Concurrency summary
+Cancelling sets the job's status to `CANCELLED`. A trigger for a cancelled job is simply ignored when it reaches the head. A job cancelled **while it's running** finishes its current run; then `reschedule` sees it's no longer `RUNNING` and doesn't queue another. Every status change is a compare-and-set, so cancel, finish and retry can't overwrite each other.
 
 | Shared state | Protection |
 | --- | --- |
-| Priority queue | One lock; held only to add or pop |
-| Dispatcher sleep/wake | `Condition` on the same lock; `signal` on every enqueue |
-| Job status | `AtomicReference` with compare-and-set transitions |
-| Job code | Runs on the worker pool, never under the scheduler lock |
+| The priority queue | One lock, held only to add or remove |
+| The dispatcher's sleep and wake-up | A `Condition` on the same lock, signalled on every add |
+| Job status | `AtomicReference` with compare-and-set changes |
+| Job code | Runs on the worker pool, never under the scheduler's lock |
 
-The reference solution schedules 1,100 real-time jobs, cancels 100, and checks that the other 1,000 each run exactly once and never before their time.
+The reference solution schedules 1,100 real jobs, cancels 100, and checks that the other 1,000 each run exactly once and never early.
 
-## 7. Patterns used
+## Step 5: Trace a timeline
+
+It's 10:00:00. The scheduler is empty, and the dispatcher is waiting with no timeout.
+
+1. `schedule(report, once at 10:05)`. Signal. The dispatcher wakes, sees the head is due in 5 minutes, and waits 5 minutes.
+2. At 10:00:10, `schedule(heartbeat, fixed rate every 30 s from 10:00:20)`. Signal. The dispatcher wakes, sees the heartbeat is now the head (due in 10 seconds), and waits 10 seconds.
+3. At 10:00:20, the heartbeat is due. It goes to a worker. Its next run is 10:00:50, queued straight away.
+4. The heartbeat throws an exception. The retry policy says "try again in 1 second", so a retry trigger is queued for 10:00:21.
+5. At 10:01:00 someone cancels the report. Its status becomes `CANCELLED`. At 10:05 its trigger reaches the head, `dispatch` sees it's not `SCHEDULED`, and drops it.
+
+## Step 6: Handle follow-up questions
+
+**"Kill a job that runs too long."** Submit it to get a `Future`, and schedule a watchdog at start + timeout that calls `future.cancel(true)`. Treat that as a failure, so the retry rule applies. The job code must respond to interruption.
+
+**"At most 2 report jobs running at once."** A `Semaphore` per job type. In `dispatch`, `tryAcquire` first; if there's no permit, re-queue the trigger a little later. Never make the dispatcher **wait** for a permit: that would stall every other job.
+
+**"Survive restarts."** Store jobs and their next run times in a database and reload them at startup. Decide what to do about runs missed while down.
+
+**"Several scheduler machines."** Only one may run each trigger: claim it with a conditional database update or a lease. See [Design a Distributed Job Scheduler](/system-design/hld/design-job-scheduler).
+
+**"Millions of timers."** A **hierarchical timing wheel** (used by Kafka and Netty) gives O(1) add and cancel instead of O(log n).
+
+## Common mistakes
+
+- **Polling the clock in a tight loop.**
+- **Sleeping a fixed time** and missing a newly added, earlier job.
+- **Running job code on the dispatcher thread.**
+- **Using `if` instead of `while`** around the wait.
+- **Removing cancelled jobs from the middle of the heap** (O(n)) instead of skipping them.
+- **Firing every missed run** after a pause.
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
-| **Command** | Each job's `Runnable` — the request as an object |
-| **Strategy** | `RetryPolicy`, and `Schedule` variants (a `CronSchedule` would be another) |
-| **Producer–consumer** | `schedule()` produces triggers; dispatcher and workers consume |
-| **Observer** (extension) | Listeners for job succeeded/failed events (alerts, metrics) |
-
-## 8. Extensions
-
-- **Persistence**: store jobs and next-run times in a database; on startup, reload. Decide what happens to runs missed while down (skip, run once, run all).
-- **Multiple scheduler nodes**: only one node may fire a given trigger — claim it with a conditional update (`UPDATE ... SET owner = me WHERE id = ? AND owner IS NULL`) or a lease. See the HLD case [Design a Distributed Job Scheduler](/system-design/hld/design-job-scheduler).
-- **Timeouts**: run jobs via `Future` and cancel ones exceeding a limit.
-- **Huge numbers of timers**: a **hierarchical timing wheel** (used in Kafka and Netty) gives O(1) insert and cancel instead of O(log n).
+| **Command** | Each job's `Runnable`: an action stored as an object |
+| **Strategy** | `RetryPolicy`, and the `Schedule` kinds (a `CronSchedule` would be another) |
+| **Producer–consumer** | `schedule()` produces triggers; the dispatcher and workers consume them |
+| **Observer** (follow-up) | Listeners for job succeeded and failed events |
 
 ## Interview questions
 
 <QA q="How does the scheduler know when to wake up without polling?">
-The dispatcher waits on a condition variable with a timeout equal to the time until the earliest trigger in a time-ordered priority queue. Adding a job signals the condition, because the new job may be earlier than the current head; the dispatcher wakes, re-reads the head and recomputes the wait. Waiting in a loop that re-checks the condition makes spurious or early wake-ups harmless.
+The dispatcher waits on a condition variable with a timeout equal to the time until the earliest trigger in a time-ordered priority queue. Adding a job signals the condition, because the new job may be earlier than the current head; the dispatcher wakes, re-reads the head and works out the wait again. Waiting in a loop that re-checks the condition makes spurious or early wake-ups harmless.
 </QA>
 
 <QA q="What's the difference between fixed-rate and fixed-delay scheduling?">
-Fixed rate computes the next run from the previous scheduled time, so runs stay aligned to a grid (every minute on the minute) and a slow run may be followed immediately by the next. Fixed delay computes the next run from when the previous run finished, guaranteeing a gap between runs. Java's ScheduledExecutorService offers both as scheduleAtFixedRate and scheduleWithFixedDelay.
+Fixed rate works out the next run from the previous scheduled time, so runs stay on a grid (every minute, on the minute) and a slow run may be followed straight away by the next. Fixed delay works out the next run from when the previous run finished, guaranteeing a gap between runs. Java's ScheduledExecutorService offers both as scheduleAtFixedRate and scheduleWithFixedDelay.
 </QA>
 
 <QA q="The machine was asleep for an hour. What should a job scheduled every minute do when it wakes?">
-It's a policy decision; state one. Firing 60 catch-up runs at once is usually harmful (a burst against downstream systems), so a common choice is to run once and realign to the next grid point, which is what this design does. Some jobs (billing, for example) must account for every missed period — they should compute what they missed from data rather than rely on the number of timer firings.
+It's a policy decision, so state one. Firing 60 catch-up runs at once usually hurts (a burst against other systems), so a common choice is to run once and line up with the next grid point, which is what this design does. Some jobs (billing, for example) must account for every missed period; they should work out what they missed from the data rather than rely on how many times the timer fired.
 </QA>
 
 <Practice task="Add a per-job timeout: if a run takes longer than its limit, it is interrupted and treated as a failure (so the retry policy applies). Where does the code go?">
 
-Run job code via `ExecutorService.submit` to get a `Future`, and schedule a watchdog (on the same scheduler or a small `ScheduledExecutorService`) at start + timeout that calls `future.cancel(true)`. In `execute`, treat `CancellationException`/`InterruptedException` from the task as a failure and go through the retry path. Jobs must respond to interruption for this to work — document it.
+Run job code with `ExecutorService.submit` to get a `Future`, and schedule a watchdog (on the same scheduler or a small `ScheduledExecutorService`) at start + timeout that calls `future.cancel(true)`. In `execute`, treat `CancellationException` or `InterruptedException` from the task as a failure and go through the retry path. Jobs must respond to interruption for this to work, so document it.
 
 </Practice>
 
 <Practice task="Add 'at most N jobs of the same type running at once' (for example, at most 2 report generations). How do you enforce it without blocking the dispatcher?">
 
-Keep a `Semaphore` (or counter) per job type. In `dispatch`, `tryAcquire` before handing the job to a worker; if no permit is available, re-enqueue the trigger a short delay later (or park it in a per-type waiting queue that is drained when a permit is released). Release the permit in a `finally` after the run. Never block the dispatcher thread on the semaphore — it would stall every other job.
+Keep a `Semaphore` (or counter) per job type. In `dispatch`, `tryAcquire` before handing the job to a worker; if no permit is free, re-queue the trigger a short delay later (or park it in a waiting list for that type, drained when a permit is released). Release the permit in a `finally` after the run. Never make the dispatcher thread wait on the semaphore; it would stall every other job.
 
 </Practice>
 
 <Takeaways>
 
-- Separate jobs (definitions) from triggers (queue entries); order triggers by time, priority, then sequence.
-- One dispatcher waits on a condition until the head is due and is signalled when an earlier job arrives; workers run the job code.
-- Fixed rate realigns to its grid (skip missed runs); fixed delay counts from completion.
-- Cancel lazily with status flags and compare-and-set transitions.
-- Expose a `runDue()` driven by an injected clock for deterministic tests.
+- Separate jobs (definitions) from triggers (upcoming runs); order triggers by time, then priority, then sequence.
+- One dispatcher waits until the head is due and is woken when an earlier job arrives; workers run the job code.
+- Fixed rate stays on its grid and skips missed runs; fixed delay counts from when the last run finished.
+- Cancel by marking the status, and skip cancelled jobs when they come due.
+- Expose `runDue()` and inject the clock so tests run instantly.
 
 </Takeaways>
 
 ## Further reading
 
-- Java SE API — `ScheduledThreadPoolExecutor` and `DelayQueue` source code (the same design).
+- Java SE API: the `ScheduledThreadPoolExecutor` and `DelayQueue` source code (the same design).
 - George Varghese and Tony Lauck, "Hashed and Hierarchical Timing Wheels" (SOSP, 1987).
 - HLD view: [Design a Distributed Job Scheduler](/system-design/hld/design-job-scheduler).

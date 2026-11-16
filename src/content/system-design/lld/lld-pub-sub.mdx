@@ -1,16 +1,141 @@
 <Related ids={['observer-pattern', 'concurrency-for-lld', 'strategy-pattern', 'iterator-pattern', 'interview-grade-code']} />
 
-"Design an in-memory pub-sub / message queue (like a mini Kafka)" is a hard machine-coding problem because it's mostly about **concurrency**: multiple publishers, multiple subscribers consuming at their own pace, ordering guarantees, offsets and replay. A clean answer shows producer–consumer done right.
+In a pub-sub system, **publishers** send messages to a named **topic** ("orders", "payments") without knowing who's listening, and **subscribers** receive every message on the topics they've subscribed to. It's how one service can announce "order placed" and have the email service, the warehouse and analytics all react, without the order service knowing any of them exist.
 
-## What the interviewer expects
+"Design an in-memory pub-sub (a mini Kafka)" is a hard machine-coding problem because it's mostly about **concurrency**: several publishers and subscribers at once, each subscriber going at its own speed, messages arriving in order, and the ability to replay old messages.
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
+
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">If three subscribers are on a topic, does each one get every message, or is each message handled by just one of them?</Turn>
+<Turn who="them">Each gets every message.</Turn>
+<Turn who="you">Do messages need to arrive in the order they were published?</Turn>
+<Turn who="them">Yes, for each subscriber.</Turn>
+<Turn who="you">What if one subscriber is slow, say it writes to a slow database?</Turn>
+<Turn who="them">It must not slow down publishers or the other subscribers.</Turn>
+<Turn who="you">Can a subscriber go back and re-read old messages?</Turn>
+<Turn who="them">Yes, that would be useful.</Turn>
+<Turn who="you">What if a subscriber keeps failing on one message?</Turn>
+<Turn who="them">Retry a few times, then move on. Don't get stuck.</Turn>
+</Dialogue>
+
+**The system must:**
+
+1. Create topics; let publishers publish messages to a topic.
+2. Deliver **every** message on a topic to **every** subscriber of that topic.
+3. Deliver each subscriber's messages **in order**.
+4. Let each subscriber go at its own pace: a slow one mustn't block publishers or others.
+5. Let a subscriber rewind and replay messages.
+6. Retry failing deliveries a few times, then set the message aside instead of getting stuck.
+
+**Out of scope for now:** consumer groups, saving to disk, partitions.
+
+## Step 2: Find the core entities
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Message | a record | Offset, key, payload, time. It never changes once published. |
+| Topic | a class | Holds its messages and lets readers wait for new ones. |
+| Subscriber | an interface | One method, `onMessage`. Whatever the user wants to do with a message. |
+| Subscription | a class | Connects one subscriber to one topic, with that subscriber's **position** in the topic. |
+| Broker | a class | The front door: create topics, publish, subscribe. |
+
+The key design choice is how a topic stores messages:
+
+<Approach verdict="bad" title="One shared queue per topic">
+
+Publishers add to a queue; subscribers take from it. But taking a message **removes** it, so only one subscriber gets each message, which breaks requirement 2. And there's no way to replay.
+
+</Approach>
+
+<Approach verdict="good" title="A queue per subscriber">
+
+When a message is published, copy it into every subscriber's own queue. Now every subscriber gets every message. But publishing gets slower with every new subscriber, memory is multiplied, and replay is still impossible once a message is taken.
+
+</Approach>
+
+<Approach verdict="great" title="An append-only log, and a position per subscriber">
+
+The topic keeps messages in a list that only ever grows; each message's index in the list is its **offset**. Each subscriber remembers **its own offset**: "the next message I'll read is #4". Publishing is one append. Subscribers read independently. Replay is just "set my offset back to 0". This is exactly how Kafka works.
+
+</Approach>
+
+```mermaid
+flowchart LR
+  P1[Publisher] --> T
+  P2[Publisher] --> T
+  subgraph T["Topic 'orders' (append-only log)"]
+    m0[0] --> m1[1] --> m2[2] --> m3[3] --> m4[4]
+  end
+  T -->|offset 4| S1[Subscriber A]
+  T -->|offset 1| S2["Subscriber B (slow)"]
+```
+
+Subscriber A is up to date; subscriber B is slow and still on message 1. Neither affects the other.
+
+## Step 3: Design each class
+
+**`Topic`**: knows its list of messages. It can:
+
+- `append(message)`: add to the end and **wake up** any subscribers waiting for new messages.
+- `read(offset)`: return the message at that offset, or **wait** if it hasn't been published yet.
+
+That waiting matters. Without it, subscribers would loop asking "anything new?" millions of times a second, burning CPU. Instead, a reader that's caught up **sleeps** until `append` wakes it. In Java that's `wait`/`notifyAll`, or a `Condition` on a `ReentrantLock`.
+
+**`Subscription`**: knows its topic, its subscriber and its offset. It runs on **its own thread** in a loop: read the message at my offset (waiting if needed), hand it to the subscriber, move my offset forward. Because each subscription has its own thread, a slow subscriber only slows itself (requirement 4), and delivering one at a time in a loop keeps the order (requirement 3).
+
+**`Broker`**: a map of topic names to topics. `subscribe` starts a new subscription thread.
+
+```mermaid
+classDiagram
+  class Broker {
+    -ConcurrentMap~String,Topic~ topics
+    +createTopic(String)
+    +publish(String topic, Message)
+    +subscribe(String topic, Subscriber) Subscription
+  }
+  class Topic {
+    -String name
+    -List~Message~ log
+    -ReentrantLock lock
+    -Condition newData
+    +append(Message) long
+    +read(long offset, int max) List~Message~
+  }
+  class Message {
+    -long offset
+    -String key
+    -byte[] payload
+    -Instant timestamp
+  }
+  class Subscriber {
+    <<interface>>
+    +onMessage(Message)
+  }
+  class SubscriptionWorker {
+    -Topic topic
+    -Subscriber subscriber
+    -AtomicLong offset
+    +run()
+    +seek(long)
+    +stop()
+  }
+  Broker *-- Topic
+  Broker o-- SubscriptionWorker
+  SubscriptionWorker --> Topic
+  SubscriptionWorker --> Subscriber
+  Topic o-- Message
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="45–60" lines="60" write={["Topics that keep messages in an append-only list", "One reader per subscriber with its own offset", "Subscribers on separate threads, so a slow one only slows itself"]} say={["Why a log (keep messages) beats a queue (delete on read)", "Retries and a dead-letter list for failing subscribers", "Starting from the beginning vs only new messages"]} skip={["Partitions, consumer groups and disk storage (that is Kafka, an HLD topic)"]} />
 
 ### The interview-sized version
 
-Topics as logs, one offset per subscriber, and delivery that a slow subscriber can’t block. It's about **60 lines**, and it compiles and runs.
+Topics as logs, one offset per subscriber, and delivery that a slow subscriber can't block. It's about **60 lines**, and it compiles and runs.
 
 ```java
 interface Subscriber { void onMessage(String topic, String message); }
@@ -73,80 +198,23 @@ class Broker {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. **`Topic.publish`** adds the message to the list and calls `notifyAll()` to wake every waiting reader. It's `synchronized`, which is required for `notifyAll`.
+2. **`Topic.read(offset)`**: `while (offset >= log.size()) wait();` means "if this message doesn't exist yet, sleep until someone publishes". It's a `while`, not an `if`, because a thread can wake up without a new message (Java allows spurious wake-ups), so it must re-check.
+3. **`Subscription.run`** loops forever: read, deliver, `offset++`. Each subscription has its own offset, starting at 0.
+4. **`Broker.subscribe`** starts each subscription on its own virtual thread (cheap, Java 21). Thousands of subscribers are fine.
+5. **`shutdown`** interrupts every worker; the interrupt wakes them from `wait()` and the loop exits.
+
+<Callout type="tip" title="How to practise this">
+Explain out loud why a slow subscriber can't slow down a publisher: the publisher only holds the topic's lock for one `add` and `notifyAll`, and never waits for anyone. Then write the code.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-- Create topics; publishers publish messages to a topic.
-- Subscribers subscribe to a topic and receive **every** message published after (or from a chosen offset) — each subscriber independently.
-- Messages within a topic are delivered to each subscriber **in order**.
-- Subscribers consume at their own speed; a slow subscriber must not block publishers or other subscribers.
-- Subscribers can **reset their offset** to replay.
-- Extensions: consumer groups (messages shared among group members), retention, acknowledgements and retries, partitions.
+#### The topic: an append-only log with timed, batched reads
 
-## 2. Design choice: log, not queue
-
-Store each topic as an **append-only log** (a list of messages with increasing offsets). Each subscriber keeps its **own offset**. Benefits: publishers just append; subscribers are independent; replay is "move your offset back". This mirrors Kafka.
-
-```mermaid
-flowchart LR
-  P1[Publisher] --> T
-  P2[Publisher] --> T
-  subgraph T["Topic 'orders' (append-only log)"]
-    m0[0] --> m1[1] --> m2[2] --> m3[3] --> m4[4]
-  end
-  T -->|offset 4| S1[Subscriber A]
-  T -->|offset 1| S2["Subscriber B (slow)"]
-```
-
-## 3. Class design
-
-```mermaid
-classDiagram
-  class Broker {
-    -ConcurrentMap~String,Topic~ topics
-    +createTopic(String)
-    +publish(String topic, Message)
-    +subscribe(String topic, Subscriber) Subscription
-  }
-  class Topic {
-    -String name
-    -List~Message~ log
-    -ReentrantLock lock
-    -Condition newData
-    +append(Message) long
-    +read(long offset, int max) List~Message~
-  }
-  class Message {
-    -long offset
-    -String key
-    -byte[] payload
-    -Instant timestamp
-  }
-  class Subscriber {
-    <<interface>>
-    +onMessage(Message)
-  }
-  class SubscriptionWorker {
-    -Topic topic
-    -Subscriber subscriber
-    -AtomicLong offset
-    +run()
-    +seek(long)
-    +stop()
-  }
-  Broker *-- Topic
-  Broker o-- SubscriptionWorker
-  SubscriptionWorker --> Topic
-  SubscriptionWorker --> Subscriber
-  Topic o-- Message
-```
-
-## 4. Implementation
-
-### Topic: append-only log with blocking reads
+The full topic uses a `ReentrantLock` and a `Condition` called `newData`. Two improvements over the short version: `read` returns a **batch** of up to `max` messages at once (fewer lock round trips), and it waits only up to a **timeout**, so a worker can periodically check whether it has been stopped.
 
 ```java
 public final class Topic {
@@ -189,7 +257,7 @@ public final class Topic {
 }
 ```
 
-Messages are immutable once appended, so returning copies of sub-lists is safe outside the lock. A record holding a `byte[]` isn't immutable by itself — the array can be changed through the accessor — so copy it on the way in and out:
+Messages never change once added, so handing out copies of parts of the list is safe outside the lock. One catch: a record holding a `byte[]` isn't truly unchangeable, because someone could modify the array. So `Message` copies the array on the way in and on the way out:
 
 ```java
 public record Message(long offset, String key, byte[] payload, Instant timestamp) {
@@ -198,9 +266,16 @@ public record Message(long offset, String key, byte[] payload, Instant timestamp
 }
 ```
 
-(Why a plain `ReentrantLock` and not a read-write lock? `read` must be able to *wait* for new data, and only the plain lock's `Condition` supports that cleanly; appends are short, so readers rarely wait for the lock itself.)
+(Why not a read-write lock? `read` has to **wait** for new data, and only a plain lock's `Condition` supports that cleanly. Appends are tiny, so readers rarely wait for the lock itself.)
 
-### Subscription worker: one thread (or task) per subscription
+#### The subscription worker: retries, a dead-letter list, and rewinding
+
+In plain steps, each pass of the loop:
+
+1. Read a batch of up to 100 messages from my offset, waiting up to 500 ms.
+2. For each message: deliver it, retrying a few times with a growing delay if the subscriber throws.
+3. If it keeps failing, put it in a **dead-letter** list for a human to look at, and move on. One bad message (a "poison message") must not stop everything behind it.
+4. Move my offset forward by one.
 
 <FullCode title="Show the full code: Subscription worker: one thread (or task) per subscription (41 lines)">
 
@@ -250,11 +325,15 @@ public final class SubscriptionWorker implements Runnable {
 
 </FullCode>
 
+`seek(offset)` lets a subscriber rewind or skip ahead. That creates a subtle bug, explained here:
+
 <Callout type="warning" title="Seek and the in-flight batch">
-The worker reads a batch of up to 100 messages and then delivers them one by one. If the subscriber calls `seek(0)` halfway through, the compare-and-set correctly refuses to move the offset forward — but without the `break`, the loop would keep delivering the rest of the **old** batch first. The reference solution's test shows the difference: 36 stale messages delivered after a rewind without the check, at most one (the one already in flight) with it.
+The worker reads a batch of up to 100 messages, then delivers them one by one. If the subscriber calls `seek(0)` halfway through, the compare-and-set correctly refuses to move the offset forward. But without the `break`, the loop would carry on delivering the rest of the **old** batch first. The reference solution's test shows the difference: 36 stale messages delivered after a rewind without the check, and at most one (the one already being delivered) with it.
 </Callout>
 
-### Broker
+#### The broker
+
+`subscribe` takes a `StartFrom` option: `EARLIEST` reads the whole history from offset 0; `LATEST` starts at the end and sees only new messages.
 
 ```java
 public final class Broker implements AutoCloseable {
@@ -290,26 +369,48 @@ public final class Broker implements AutoCloseable {
 }
 ```
 
-## 5. Why this design satisfies the requirements
+#### How each requirement is met
 
 | Requirement | How |
 | --- | --- |
-| Independent subscribers | Each has its own worker and offset; a slow one only lags itself |
-| Ordering per subscriber | One worker delivers sequentially from an ordered log |
-| Publishers never blocked by consumers | Publishing is an O(1) append under a short lock |
+| Every subscriber gets every message | Messages stay in the log; each subscriber has its own offset |
+| In order | One worker per subscription delivers one message at a time from an ordered log |
+| A slow subscriber doesn't block others | Its own thread and its own offset; it just falls behind |
+| Publishers never wait for subscribers | Publishing is one append under a very short lock |
 | Replay | `seek(offset)` |
-| No busy waiting | `Condition.awaitNanos` until new data arrives |
-| Poison messages | Bounded retries, then dead-letter |
+| No busy waiting | Readers sleep on a condition until new data arrives |
+| A failing message doesn't block everything | Limited retries, then the dead-letter list |
 
-## 6. Extensions
+## Step 5: Trace a slow subscriber
 
-- **Consumer groups**: members share one offset per group; a message is delivered to exactly one member. With a single log, assign messages by `key` hash to members, or split topics into **partitions** (each partition owned by one member) — exactly Kafka's model and what preserves per-key ordering.
-- **Acknowledgements**: advance a *committed* offset only after `onMessage` succeeds; on restart, resume from the committed offset (at-least-once delivery).
-- **Retention**: drop log segments older than a time/size limit; keep a base offset so offsets stay stable.
-- **Back-pressure**: bounded in-memory log, or block/reject publishers when memory is full.
-- **Push vs pull**: this design is pull-based (workers read); push-based delivery to remote subscribers needs per-subscriber queues and flow control.
+Topic `orders`. Subscriber A is fast; subscriber B takes 1 second per message.
 
-## 7. Patterns used
+1. Both subscribe from `EARLIEST`. Both workers call `read(0)` and sleep: the log is empty.
+2. A publisher publishes three orders. Each append wakes both workers.
+3. A's worker delivers 0, 1 and 2 in milliseconds and goes back to sleep at offset 3.
+4. B's worker delivers 0, then spends a second, then 1, and so on. B's offset lags behind A's, but the messages wait in the log for it.
+5. Meanwhile the publisher publishes 100 more orders. Each publish is instant: it never waits for B.
+6. B's code throws on message 7 every time. After 3 tries it goes to the dead-letter list, and B continues with message 8.
+
+## Step 6: Handle follow-up questions
+
+**"Add consumer groups, where each message goes to just one member of a group."** Split each topic into several logs (**partitions**), choosing one by `hash(key) % N`, so all messages with the same key stay in order in one partition. A group keeps one offset per partition and gives each partition to exactly one member. When members join or leave, reassign partitions and continue from the group's saved offsets.
+
+**"Only keep the last 24 hours."** Store the log in segments and delete whole old segments. Offsets stay the same; the topic tracks its earliest available offset. A subscriber whose offset was deleted gets told to restart from the earliest or latest.
+
+**"Survive a restart."** Write the log and each subscriber's committed offset to disk. Move the committed offset only after a message is successfully handled; on restart, resume from there. Messages may then be delivered twice (at-least-once), so subscribers should handle duplicates safely.
+
+**"Push to remote subscribers."** This design is pull-based (workers read). Pushing over a network needs a queue per subscriber and flow control so a slow client can't flood memory.
+
+## Common mistakes
+
+- **One shared queue**, so each message reaches only one subscriber.
+- **Delivering on the publisher's thread**, so a slow subscriber slows publishing.
+- **Busy-waiting** (`while (true) { if (hasNew) ... }`) instead of sleeping on a condition.
+- **`if` instead of `while` around `wait()`.**
+- **Retrying a poison message forever**, blocking every message behind it.
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
@@ -322,35 +423,36 @@ public final class Broker implements AutoCloseable {
 ## Interview questions
 
 <QA q="How do you prevent a slow subscriber from slowing down publishers and other subscribers?">
-Decouple them with an append-only log per topic and a separate worker per subscription. Publishers only append under a short lock; each worker reads from its own offset at its own pace and delivers sequentially. A slow subscriber simply lags further behind; nobody waits for it. Memory is bounded with retention, and alerting on lag tells operators it's falling behind.
+Separate them with an append-only log per topic and a separate worker per subscription. Publishers only append under a short lock; each worker reads from its own offset at its own pace and delivers one message at a time. A slow subscriber simply falls further behind; nobody waits for it. Retention keeps memory bounded, and alerting on how far behind a subscriber is tells operators it's lagging.
 </QA>
 
 <QA q="How would you add consumer groups where each message is processed by only one member?">
-Track one offset per group rather than per subscriber, and split the topic into partitions, assigning each partition to exactly one group member at a time. Messages are routed to partitions by key hash, so per-key ordering is preserved within a partition. When members join or leave, rebalance partition assignments, resuming each partition from the group's committed offset.
+Keep one offset per group rather than per subscriber, and split the topic into partitions, assigning each partition to exactly one group member at a time. Route messages to partitions by key hash so messages with the same key stay in order within a partition. When members join or leave, reassign partitions and resume each from the group's committed offset.
 </QA>
 
 <QA q="What delivery guarantee does your design provide?">
-In-memory with offsets advanced after successful delivery, it's at-least-once within the process lifetime: a message whose delivery throws is retried, and a subscriber may see a message again after a retry. If the process crashes, in-memory messages and offsets are lost. For durability, persist the log and committed offsets to disk; for exactly-once effects, make subscribers idempotent by message offset or ID.
+In memory, with offsets advanced after successful delivery, it's at-least-once while the process is running: a message whose delivery throws is retried, so a subscriber may see it again. If the process crashes, in-memory messages and offsets are lost. For durability, save the log and committed offsets to disk; for exactly-once effects, make subscribers ignore messages they've already handled (by offset or message id).
 </QA>
 
 <Practice task="Implement consumer groups: within a group, each message goes to exactly one member; different groups each get every message. What's the minimal change to this design?">
 
-Partition topics: a topic becomes N append-only logs, and `publish` picks a partition by `hash(key) % N` so per-key order is preserved. A group keeps one committed offset per partition and assigns each partition to exactly one member (round-robin over members). Each member runs a worker per assigned partition. When members join or leave, the group rebalances: stop workers, reassign partitions, and resume each from the group's committed offset — at-least-once delivery across the handover.
+Partition topics: a topic becomes N append-only logs, and `publish` picks a partition by `hash(key) % N` so messages with the same key stay in order. A group keeps one committed offset per partition and assigns each partition to exactly one member (round-robin over members). Each member runs a worker per assigned partition. When members join or leave, the group rebalances: stop workers, reassign partitions, and resume each from the group's committed offset, giving at-least-once delivery across the handover.
 
 </Practice>
 
 <Practice task="Add retention: keep only the last 24 hours (or 1 GB) of messages per topic, without breaking offsets held by subscribers.">
 
-Store the log in segments (for example 10,000 messages each) and remember each segment's base offset. A cleaner deletes whole segments that are entirely older than the retention limit. Offsets stay absolute; the topic tracks its earliest available offset. A subscriber whose offset falls before it gets an "offset out of range" signal and must reset — to the earliest available offset or to the latest, by policy (Kafka's `auto.offset.reset`).
+Store the log in segments (for example 10,000 messages each) and remember each segment's first offset. A cleaner deletes whole segments that are entirely older than the limit. Offsets stay absolute; the topic tracks its earliest available offset. A subscriber whose offset is before that gets an "offset out of range" signal and must reset, to the earliest available offset or to the latest, by policy (Kafka's `auto.offset.reset`).
 
 </Practice>
 
 <Takeaways>
 
-- Model topics as append-only logs; give each subscriber its own offset.
-- Use condition variables (or blocking queues) for efficient waiting; keep publish locks short.
-- One worker per subscription preserves order and isolates slow consumers.
-- Offsets enable replay, acknowledgements and consumer groups via partitions.
+- Store each topic as an append-only log, and give each subscriber its own offset.
+- Publishing is one quick append; readers sleep until new data arrives instead of busy-waiting.
+- One worker per subscription keeps order and stops a slow subscriber affecting anyone else.
+- Retry a failing message a few times, then set it aside.
+- Offsets make replay possible, and lead naturally to consumer groups and partitions.
 
 </Takeaways>
 
@@ -358,4 +460,4 @@ Store the log in segments (for example 10,000 messages each) and remember each s
 
 - Jay Kreps, "The Log: What every software engineer should know about real-time data's unifying abstraction" (2013).
 - HLD context: [Message Queues & Event Streaming](/system-design/hld/message-queues).
-- Brian Goetz et al., *Java Concurrency in Practice* — chapter 14, "Building Custom Synchronizers" (condition queues).
+- Brian Goetz et al., *Java Concurrency in Practice*: chapter 14, "Building Custom Synchronizers" (condition queues).

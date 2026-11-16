@@ -33,6 +33,8 @@ import { ProblemTracker } from './ProblemTracker';
 import { Quiz } from './Quiz';
 import { FullCode } from './FullCode';
 import { InterviewScope } from './InterviewScope';
+import { Dialogue, Turn } from './Dialogue';
+import { Approach } from './Approach';
 import { ConstraintDecoder, ComplexityRuler, MagnitudeBars, ModClock } from './ConstraintVisuals';
 import { lazyViz } from './viz/lazyViz';
 import { problemSlug } from '../../hooks/useSolved';
@@ -230,6 +232,9 @@ export const mdxComponents = {
   Quiz,
   FullCode,
   InterviewScope,
+  Dialogue,
+  Turn,
+  Approach,
   ConstraintDecoder,
   ComplexityRuler,
   MagnitudeBars,

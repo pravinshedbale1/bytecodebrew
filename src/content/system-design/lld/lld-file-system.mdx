@@ -1,10 +1,123 @@
 <Related ids={['composite-pattern', 'visitor-pattern', 'iterator-pattern', 'concurrency-for-lld']} />
 
-"Design an in-memory file system" (`mkdir`, `ls`, read/write files, delete, move, find) is the textbook **Composite** problem, and a common machine-coding round in its own right (a version of it is LeetCode 588). It tests tree modelling, path parsing, precise error handling and — in the follow-ups — operations over the whole tree and thread safety.
+"Design an in-memory file system" means supporting commands like `mkdir`, `ls`, writing and reading files, deleting, moving and searching, all on a tree that lives in memory. It's the textbook example of the **Composite** pattern, and a common machine-coding round (LeetCode 588 is a version of it). It tests how you model a tree, how carefully you handle paths and errors, and, in the follow-ups, how you work across the whole tree and keep it safe for many threads.
 
-## What the interviewer expects
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">Paths look like `/a/b/c`? Always absolute?</Turn>
+<Turn who="them">Yes, absolute. Supporting `.` and `..` would be good.</Turn>
+<Turn who="you">Which commands?</Turn>
+<Turn who="them">mkdir (creating parents too), write and append to a file, read, ls, delete, move, and size.</Turn>
+<Turn who="you">What does `ls` return?</Turn>
+<Turn who="them">Sorted names. On a file, just that file's name.</Turn>
+<Turn who="you">How should errors look?</Turn>
+<Turn who="them">Specific. "No such path" is different from "that's a file, not a folder".</Turn>
+<Turn who="you">Many threads at once?</Turn>
+<Turn who="them">Yes, eventually.</Turn>
+</Dialogue>
+
+**The file system must:**
+
+1. Create folders, including any missing parents (`mkdir -p`).
+2. Write, append to and read files.
+3. List a folder's contents in sorted order (`ls`); `ls` on a file returns its name.
+4. Report the size of a file or a whole folder.
+5. Delete, and move or rename, files and folders.
+6. Give a specific error for each kind of mistake.
+7. Be safe to use from several threads.
+
+**Out of scope for now:** permissions, links, saving to disk.
+
+## Step 2: Find the core entities
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| File | a class | A name and its content. |
+| Folder (directory) | a class | A name and its children, which can be files **or** folders. |
+| Something in the tree | an abstract class `Node` | Files and folders share a name, a parent and a size. |
+| Path | a list of names, after parsing | `"/a/./b/../c"` becomes `["a", "c"]` once, up front. |
+| File system | a class | The front door: parses paths, finds nodes, reports errors, locks. |
+
+The key decision is how files and folders relate:
+
+<Approach verdict="bad" title="Two unrelated classes">
+
+`File` and `Folder` with nothing in common. A folder needs two lists, `List<File> files` and `List<Folder> folders`, and every operation (size, delete, search) has to handle both, with `instanceof` checks everywhere.
+
+</Approach>
+
+<Approach verdict="great" title="One shared Node type (Composite)">
+
+`FileNode` and `DirectoryNode` both extend `Node`. A folder holds `Map<String, Node>`, so its children can be either. Then `size()` on a file returns its length, and `size()` on a folder **adds up its children's sizes**, whatever they are. The recursion lives in the structure, and callers never need to know which kind they have. That's the **Composite** pattern: treat a single item and a group of items the same way.
+
+</Approach>
+
+## Step 3: Design each class
+
+**`Node`** (abstract): knows its name and its parent folder. Every node can report its `size()` and its full `path()`.
+
+**`FileNode`**: knows its content. It can read, write (replace) and append.
+
+**`DirectoryNode`**: knows its children in a **`TreeMap`**, keyed by name. A `TreeMap` keeps keys sorted, so `ls` comes out in order for free, and finding a child by name is O(log n). It can add, remove and look up a child.
+
+Only `DirectoryNode` has `add` and `remove`. That way, nobody can ever ask a file to hold a child.
+
+Every node also knows its **parent**. That makes three things easy: building the full path, handling `..`, and stopping a folder being moved inside itself (more below).
+
+**`FileSystem`**: does all the path work. Every command follows the same three steps:
+
+1. **Parse** the path into clean parts.
+2. **Walk** down the tree from the root, one part at a time, failing with a specific error if a part is missing or isn't a folder.
+3. **Do** the command on the node found.
+
+```mermaid
+classDiagram
+  class Node {
+    <<abstract>>
+    -String name
+    -DirectoryNode parent
+    +size()* long
+    +path() String
+    +accept(NodeVisitor) R
+  }
+  class FileNode {
+    -StringBuilder content
+    +read() String
+    +write(String)
+    +append(String)
+  }
+  class DirectoryNode {
+    -TreeMap~String,Node~ children
+    +child(String) Optional~Node~
+    +add(Node)
+    +remove(String)
+  }
+  class NodeVisitor {
+    <<interface>>
+    +visitFile(FileNode) R
+    +visitDirectory(DirectoryNode) R
+  }
+  class FileSystem {
+    -DirectoryNode root
+    -ReadWriteLock lock
+    +mkdirs(String)
+    +writeFile(String, String)
+    +readFile(String) String
+    +ls(String) List~String~
+    +move(String, String)
+    +find(String, Predicate) List~String~
+  }
+  Node <|-- FileNode
+  Node <|-- DirectoryNode
+  DirectoryNode o-- Node : children
+  FileSystem --> DirectoryNode : root
+  NodeVisitor <|.. FindVisitor
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="45–60" lines="70" write={["Files and folders sharing one `Node` type (Composite)", "Path splitting and walking the tree", "`mkdir -p`, write, read, `ls` and `size`"]} say={["`mv` and how to stop moving a folder inside itself", "Visitors for search and size reports", "Locking a tree: one lock first, finer locks later"]} skip={["Permissions, links and file handles", "Disk blocks and inodes"]} />
 
@@ -86,79 +199,25 @@ class FileSystem {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. **`Node`** declares `size()`. `FileNode.size()` is its content length; `Directory.size()` sums its children's sizes, recursively.
+2. **`parts(path)`** splits on `/` and drops empty pieces, so `"/a//b/"` becomes `["a", "b"]`.
+3. **`mkdir`** walks the parts. `computeIfAbsent` creates a missing folder as it goes (that's `mkdir -p`). If a part turns out to be a file, it fails.
+4. **`writeFile`** finds the parent folder (every part except the last), then gets or creates the file. It refuses if the name is already a folder.
+5. **`nodeAt`** is the shared "walk the tree" helper, with one clear error for a missing path.
+6. **`ls`** returns the sorted child names of a folder, or just the name for a file.
+7. Every public method is `synchronized`: one lock for the whole tree. Simple and correct.
+
+<Callout type="tip" title="How to practise this">
+Draw this tree first: `/` containing `docs` (containing `a.txt` and `b.txt`) and `notes.txt`. Then trace `size("/")`. Once the recursion feels obvious, write the code.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-| Question | Assumption |
-| --- | --- |
-| Paths | Absolute, `/`-separated; support `.` and `..` |
-| Operations | `mkdir`, `mkdirs` (create parents), `writeFile`, `appendFile`, `readFile`, `ls`, `delete` (optionally recursive), `move`/rename, `size`, `find` |
-| `ls` output | Sorted names; `ls` on a file returns just that file's name |
-| Errors | Specific: no such path, not a directory, is a directory, already exists, directory not empty |
-| Concurrency | Many threads may use the file system at once |
-| Out of scope | Permissions, links, persistence (extensions) |
+#### The nodes
 
-## 2. Model: Composite
-
-Files and directories share an interface (name, parent, size), and a directory holds children of either kind. The size of a directory is the sum of its children's sizes — the recursion lives in the structure.
-
-```mermaid
-classDiagram
-  class Node {
-    <<abstract>>
-    -String name
-    -DirectoryNode parent
-    +size()* long
-    +path() String
-    +accept(NodeVisitor) R
-  }
-  class FileNode {
-    -StringBuilder content
-    +read() String
-    +write(String)
-    +append(String)
-  }
-  class DirectoryNode {
-    -TreeMap~String,Node~ children
-    +child(String) Optional~Node~
-    +add(Node)
-    +remove(String)
-  }
-  class NodeVisitor {
-    <<interface>>
-    +visitFile(FileNode) R
-    +visitDirectory(DirectoryNode) R
-  }
-  class FileSystem {
-    -DirectoryNode root
-    -ReadWriteLock lock
-    +mkdirs(String)
-    +writeFile(String, String)
-    +readFile(String) String
-    +ls(String) List~String~
-    +move(String, String)
-    +find(String, Predicate) List~String~
-  }
-  Node <|-- FileNode
-  Node <|-- DirectoryNode
-  DirectoryNode o-- Node : children
-  FileSystem --> DirectoryNode : root
-  NodeVisitor <|.. FindVisitor
-```
-
-Design choices:
-
-- **`TreeMap` for children**: `ls` must be sorted, and lookups by name are O(log n). A `HashMap` plus sorting on every `ls` also works.
-- **Child management only on `DirectoryNode`** (the "safe" Composite variant): a file can never be asked to `add` a child.
-- **Parent pointers** make `path()` and `..` easy, and let `move` detect cycles.
-- **`FileSystem` is the facade**: it owns path parsing, error reporting and locking; nodes stay simple.
-
-## 3. Implementation
-
-### Nodes
+`Node` is **sealed**: only `FileNode` and `DirectoryNode` may extend it. `path()` builds the full path by asking the parent for its path and adding this node's name.
 
 ```java
 public abstract sealed class Node permits FileNode, DirectoryNode {
@@ -196,9 +255,9 @@ public final class DirectoryNode extends Node {
 }
 ```
 
-### Path parsing — normalise first
+#### Parsing paths, including `.` and `..`
 
-Turn a path string into clean components once, handling `.`, `..` and repeated slashes; everything else works on the list.
+Clean the path once, then everything else works with a simple list. Use a stack: skip empty parts and `.`; for `..`, pop the last part (staying at the root if already there); push anything else.
 
 ```java
 private List<String> parts(String path) {
@@ -222,7 +281,19 @@ private Node resolve(String path) {
 }
 ```
 
-### Operations
+So `/a/./b/../c` becomes `["a", "c"]`. `resolve` then walks the tree with a specific error for each problem: "not a directory" if we hit a file mid-path, "no such path" if a name is missing.
+
+#### The commands
+
+`writeFile` checks the parent exists, refuses if the name is a folder, overwrites an existing file, or creates a new one.
+
+`move` is the one to study. In plain steps:
+
+1. Find the source node.
+2. Find the destination's parent folder.
+3. **Walk up from the destination folder to the root.** If we meet the source on the way, the destination is **inside** the source. Refuse.
+4. Refuse if the destination name is already taken.
+5. Detach the source from its old parent, rename it, attach it to the new parent.
 
 ```java
 public void writeFile(String path, String content) {
@@ -266,11 +337,11 @@ public void move(String from, String to) {
 }
 ```
 
-The **cycle check in `move`** is the detail interviewers look for: moving `/a` into `/a/b/c` would detach a subtree and make it its own ancestor. Walking up from the destination with parent pointers catches it in O(depth).
+Step 3 is what interviewers look for. Moving `/a` into `/a/b/c` would cut the `/a` subtree off from the root and make it its own ancestor, a loop. With parent pointers, checking costs only O(depth).
 
-### Operations over the whole tree: Visitor
+#### Working across the whole tree: Visitor
 
-"Find all `.log` files larger than 1 MB" or "total size by extension" are operations across every node. A visitor keeps them out of the node classes:
+Requests like "find every `.log` file over 1 MB" or "total size by file type" go over every node. Putting each of these as a method on `Node` would bloat it. A **visitor** keeps them in their own classes: the visitor has one method per node type, and each node just calls the right one.
 
 ```java
 public interface NodeVisitor<R> {
@@ -294,11 +365,11 @@ public final class FindVisitor implements NodeVisitor<Void> {
 fs.find("/", n -> n instanceof FileNode f && f.name().endsWith(".log") && f.size() > 1_000_000);
 ```
 
-Because `Node` is a **sealed** class, a `switch` with pattern matching is an equally good modern alternative to the visitor ([Visitor](/system-design/lld/visitor-pattern) discusses the trade-off).
+Because `Node` is sealed, a `switch` with pattern matching is an equally good modern alternative. ([Visitor](/system-design/lld/visitor-pattern) discusses the trade-off.)
 
-## 4. Concurrency
+#### Concurrency
 
-The simplest correct design is **one read-write lock for the whole tree**: `ls`, `readFile`, `size` and `find` take the read lock and run in parallel; anything that changes structure or content takes the write lock.
+The simplest correct design is **one read-write lock for the whole tree**. `ls`, `readFile`, `size` and `find` take the **read** lock and can run at the same time. Anything that changes the tree or a file takes the **write** lock and runs alone.
 
 ```java
 private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -310,69 +381,93 @@ private <T> T read(Callable<T> op) {
 }
 ```
 
-Finer-grained options, in increasing complexity:
+If the interviewer pushes for more concurrency:
 
 | Option | Idea | Catch |
 | --- | --- | --- |
-| Lock per directory, acquired top-down | Lock each directory along the path ("lock coupling") | `move` needs two paths locked: lock in a global order (for example by path string) to avoid deadlock |
-| Lock per file for content | Writes to different files proceed in parallel | Structure changes still need directory locks |
-| Copy-on-write tree | Writers build a new path of nodes and swap the root atomically | Readers never block; writes allocate |
+| A lock per folder, taken top-down | Lock each folder along the path ("lock coupling") | `move` needs two paths locked: lock them in a fixed order (by path string) to avoid deadlock |
+| A lock per file for content | Writes to different files run in parallel | Changing the tree still needs folder locks |
+| Copy-on-write tree | Writers build a new copy of the changed path and swap the root atomically | Readers never wait; every write creates objects |
 
-For an interview, the single read-write lock plus a sentence on lock coupling is the right depth. The reference solution creates 3,200 files from 16 threads concurrently and checks none are lost.
+In the round, the single read-write lock plus a sentence about lock coupling is the right depth. The reference solution creates 3,200 files from 16 threads at once and checks none are lost.
 
-## 5. Patterns used
+## Step 5: Trace some commands
+
+1. `mkdir("/docs/2024")`: `docs` doesn't exist, so it's created; `2024` is created inside it.
+2. `writeFile("/docs/2024/plan.txt", "hello")`: the parent `/docs/2024` exists; `plan.txt` is created with 5 characters.
+3. `writeFile("/docs/2024", "x")`: the last part is a folder, so: "is a directory".
+4. `ls("/docs")` → `["2024"]`. `ls("/docs/2024/plan.txt")` → `["plan.txt"]`.
+5. `size("/")` → root asks `docs`, which asks `2024`, which asks `plan.txt`: 5.
+6. `move("/docs", "/docs/2024/old")`: walking up from `/docs/2024` reaches `/docs`, the source itself. Refused: "cannot move into itself".
+7. `readFile("/docs/../docs/2024/./plan.txt")`: the path cleans to `["docs", "2024", "plan.txt"]` → `"hello"`.
+
+## Step 6: Handle follow-up questions
+
+**"Make folder size O(1)."** Keep a cached size on each folder. When a file grows by n bytes, add n to every ancestor. When a node moves, subtract its size from the old ancestors and add it to the new ones. Writes become O(depth) instead of reads being O(whole subtree).
+
+**"Add `du`: each child with its size, largest first."** A new visitor (or a method on the file system using one). The node classes don't change.
+
+**"Symbolic links."** A third node type holding a target path. While resolving, a link restarts resolution from its target. Guard against loops (`a → b → a`) with a hop limit; Linux uses 40.
+
+**"Permissions."** An owner and permission bits on each node, checked in `FileSystem` before every command.
+
+**"Huge files."** Store content in fixed-size blocks instead of one string, as real file systems do.
+
+## Common mistakes
+
+- **Separate `File` and `Folder` lists** instead of one `Node` type.
+- **Not checking for moving a folder inside itself.**
+- **One vague error for everything**, instead of "no such path", "not a directory", "is a directory" and so on.
+- **Parsing paths in every method** instead of once.
+- **Putting `add`/`remove` on `Node`**, so files can be asked to hold children.
+- **Sorting children on every `ls`** when a `TreeMap` keeps them sorted.
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
-| **Composite** | `Node`, `FileNode`, `DirectoryNode`; recursive `size()` |
+| **Composite** | `Node`, `FileNode`, `DirectoryNode`; `size()` adds up recursively |
 | **Visitor** | `find` and other whole-tree operations |
 | **Facade** | `FileSystem` hides path parsing, errors and locking |
-| **Iterator** (alternative) | Depth-first traversal for streaming large trees |
-
-## 6. Extensions
-
-- **Permissions**: an owner and mode bits on `Node`; check them in the facade before each operation (a protection proxy is another option).
-- **Symbolic links**: a third `Node` kind holding a target path; `resolve` follows links with a hop limit to stop loops.
-- **Large files**: store content in fixed-size blocks instead of one `StringBuilder`; this is how real file systems and HDFS work.
-- **Size caching**: keep a running size on each directory and update ancestors on every write — O(depth) per write instead of O(subtree) per `size()`.
+| **Iterator** (alternative) | Depth-first traversal for streaming very large trees |
 
 ## Interview questions
 
 <QA q="Why is the file system a good fit for the Composite pattern?">
-Files and directories form a part-whole tree, and many operations (size, delete, search, permissions) must treat a single file and a whole directory uniformly. With a common Node type, a directory implements those operations by delegating to its children, so callers never branch on type and the recursion is defined once, in the structure itself.
+Files and folders form a tree of parts and wholes, and many operations (size, delete, search, permissions) must treat one file and a whole folder the same way. With a shared Node type, a folder carries out those operations by asking its children, so callers never check the type and the recursion is written once, in the structure itself.
 </QA>
 
 <QA q="How do you stop someone moving a directory into its own subdirectory?">
-Before moving, walk up from the destination's parent directory to the root using parent pointers. If you meet the source node on the way, the destination is inside the source and the move would create a cycle, so reject it. With parent pointers this costs O(depth).
+Before moving, walk up from the destination's parent folder to the root using parent pointers. If you meet the source node on the way, the destination is inside the source and the move would create a loop, so refuse it. With parent pointers this costs O(depth).
 </QA>
 
 <QA q="How would you make directory size O(1)?">
-Cache a size field on each directory and update it incrementally: when a file grows by n bytes, add n to every ancestor's cached size; when a node is added, removed or moved, subtract its size from the old ancestors and add it to the new ones. Writes become O(depth) instead of reads being O(subtree size); do the updates under the same lock as the change.
+Cache a size on each folder and update it as things change: when a file grows by n bytes, add n to every ancestor's cached size; when a node is added, removed or moved, subtract its size from the old ancestors and add it to the new ones. Writes become O(depth) instead of reads being O(subtree size); do the updates under the same lock as the change.
 </QA>
 
 <Practice task="Add 'du -h'-style output: for a directory, print each child with its total size, largest first. Which class does the work?">
 
-A new visitor (or a method on the facade that uses one): for each child of the directory, compute `child.size()` (or use cached sizes), sort descending, and format. Nothing in `FileNode` or `DirectoryNode` changes — that's the point of keeping whole-tree operations in visitors.
+A new visitor (or a method on the file system that uses one): for each child of the folder, get `child.size()` (or the cached size), sort largest first, and format. Nothing in `FileNode` or `DirectoryNode` changes, which is the point of keeping whole-tree operations in visitors.
 
 </Practice>
 
 <Practice task="Support symbolic links. What changes in path resolution, and what new failure mode must you guard against?">
 
-Add a `SymlinkNode` holding a target path. In `resolve`, when you reach a symlink in the middle of a path (or at the end, for reads), restart resolution from its target, appending the remaining components. Guard against loops (`a → b → a`) with a hop limit (Linux uses 40) and fail with a clear error. `size` and `find` must decide whether to follow links — usually not, to avoid double counting and infinite recursion.
+Add a `SymlinkNode` holding a target path. In `resolve`, when you reach a link in the middle of a path (or at the end, for reads), restart resolution from its target with the remaining parts added on. Guard against loops (`a → b → a`) with a hop limit (Linux uses 40) and fail with a clear error. `size` and `find` must decide whether to follow links; usually not, to avoid double counting and endless recursion.
 
 </Practice>
 
 <Takeaways>
 
-- Composite models the tree: shared `Node` type, children only on directories, recursive operations in the structure.
-- Normalise paths once (`.`, `..`, extra slashes) and give each failure its own exception.
-- Use parent pointers for `path()`, `..` and cycle-safe `move`.
-- Put whole-tree queries in visitors (or a sealed-type switch).
-- One read-write lock is a correct baseline; name lock coupling and copy-on-write as next steps.
+- Composite: one `Node` type for files and folders, children only on folders, recursive operations in the structure.
+- Clean each path once (`.`, `..`, extra slashes), then walk the tree with a specific error for each problem.
+- Parent pointers give you `path()`, `..` and a safe `move`.
+- Put whole-tree queries in visitors (or a sealed-type `switch`).
+- One read-write lock is a correct starting point; name lock coupling and copy-on-write as next steps.
 
 </Takeaways>
 
 ## Further reading
 
 - [Composite](/system-design/lld/composite-pattern) and [Visitor](/system-design/lld/visitor-pattern).
-- Remzi and Andrea Arpaci-Dusseau, *Operating Systems: Three Easy Pieces* — the file system chapters (free online).
+- Remzi and Andrea Arpaci-Dusseau, *Operating Systems: Three Easy Pieces*: the file system chapters (free online).

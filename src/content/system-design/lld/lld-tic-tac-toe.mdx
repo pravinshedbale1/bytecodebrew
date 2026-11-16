@@ -1,10 +1,123 @@
 <Related ids={['strategy-pattern', 'state-pattern', 'observer-pattern', 'interview-grade-code']} />
 
-Tic-tac-toe looks trivial, which is exactly why it's asked: the interviewer is grading **structure and extensibility**, not the game. Can your design handle an N×N board, K-in-a-row, more than two players, and bots — without rewriting? And can you detect a win in **O(1)** per move instead of scanning the board?
+Everyone knows how to play tic-tac-toe, and that's the point: the interviewer doesn't need to explain the rules, so the whole round is about **how you structure the code**. Can it grow to a bigger board, more players or a computer opponent without a rewrite? And can you tell that someone has won without scanning the whole board after every move?
 
-## What the interviewer expects
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">Just the classic 3×3 board, or should the size be configurable?</Turn>
+<Turn who="them">Let's say N×N, with 3 as the default.</Turn>
+<Turn who="you">To win, you need a full row, column or diagonal, so N in a row?</Turn>
+<Turn who="them">Yes.</Turn>
+<Turn who="you">Two players only? Humans, or can one be the computer?</Turn>
+<Turn who="them">Two players for now. A computer player would be nice to support later.</Turn>
+<Turn who="you">What should happen on a bad move, like a taken cell or a move after the game ends?</Turn>
+<Turn who="them">Reject it with a clear error. The same player should try again.</Turn>
+<Turn who="you">Do I need a user interface, or is a class you can call enough?</Turn>
+<Turn who="them">No UI. Just the game logic.</Turn>
+</Dialogue>
+
+**The game must:**
+
+1. Use an N×N board (default 3).
+2. Let two players, X and O, take turns placing their mark.
+3. Reject moves that are off the board, on a taken cell, or made after the game has ended.
+4. Detect a win (N in a row, column or diagonal) and a draw (board full, no winner).
+5. Be easy to extend with computer players and more players.
+
+**Out of scope for now:** undo, a UI, networked play.
+
+## Step 2: Find the core entities
+
+Underline the nouns: a **game** is played on a **board** made of **cells** by **players**, each with a **mark**. A **move** places a mark; the game ends in a **win** or a **draw**.
+
+| Noun | Make it… | Why |
+| --- | --- | --- |
+| Board | a class | It holds the grid and changes with every move. It should check its own rules (in bounds, not taken). |
+| Cell / position | a record `Position(row, col)` | Just two numbers. A record is clearer than passing `int r, int c` everywhere. |
+| Mark / symbol | an enum (or a `char`) | A fixed set of values. |
+| Player | a record | A name and a mark. Later, also "how it picks a move". |
+| Game | a class | Whose turn it is, whether it's over, who won. It coordinates the board and players. |
+| Status | an enum | `IN_PROGRESS`, `WON`, `DRAW`. A tiny state machine. |
+| Win / draw | **not** separate classes | They're outcomes, so they become the status. |
+
+## Step 3: Design each class
+
+**`Board`**: knows its size and the grid of cells. It can place a mark (and refuse bad placements), and say whether it's full.
+
+**`Game`**: knows the board, the players, whose turn it is, the status and the winner. It can make a move: check the game isn't over, place the current player's mark, then decide whether that move won, drew or simply passes the turn.
+
+**`Player`**: knows its name and mark. To support computer players, it will also know **how it chooses a move**. That's the one thing that differs between a human and a bot, so it goes behind an interface, `MoveStrategy`.
+
+**Win detection**: this deserves a moment of thought before coding, because it's the part interviewers dig into.
+
+<Approach verdict="bad" title="Scan the whole board after every move">
+
+After each move, check all N rows, all N columns and both diagonals. That's O(N²) work per move. It's fine for 3×3, but it's the answer interviewers expect you to improve.
+
+</Approach>
+
+<Approach verdict="good" title="Check only the lines through the last move">
+
+A move at (r, c) can only complete row r, column c, and possibly the two diagonals. Check just those: O(N) per move. Much better, and it works for any "K in a row" rule.
+
+</Approach>
+
+<Approach verdict="great" title="Keep running counters: O(1) per move">
+
+Keep a counter for each row, each column and the two diagonals. Add **+1 for X and −1 for O**. When a counter reaches **+N or −N**, every cell in that line has the same mark, so someone has won. Each move updates at most four counters. No scanning at all.
+
+Why does that work? A row only reaches +N if all N cells are X (any O would subtract 1). The same goes for −N and O.
+
+</Approach>
+
+The class diagram for the full design, with strategies for players and for win detection:
+
+```mermaid
+classDiagram
+  class Game {
+    -Board board
+    -List~Player~ players
+    -int turn
+    -GameStatus status
+    -WinDetector detector
+    +play()
+    +makeMove(Player, Position) MoveResult
+  }
+  class Board {
+    -int size
+    -Symbol[][] cells
+    +place(Position, Symbol)
+    +isEmpty(Position) boolean
+    +isFull() boolean
+  }
+  class Player {
+    -String name
+    -Symbol symbol
+    -MoveStrategy strategy
+    +nextMove(Board) Position
+  }
+  class MoveStrategy {
+    <<interface>>
+    +choose(Board, Symbol) Position
+  }
+  class WinDetector {
+    <<interface>>
+    +record(Position, Symbol) boolean
+  }
+  Game *-- Board
+  Game o-- Player
+  Game --> WinDetector
+  Player --> MoveStrategy
+  MoveStrategy <|.. HumanInput
+  MoveStrategy <|.. RandomBot
+  MoveStrategy <|.. MinimaxBot
+  WinDetector <|.. CounterWinDetector
+```
+
+## Step 4: Write the code
 
 <InterviewScope minutes="30–45" lines="50" write={["A `Board` with O(1) win detection using row and column counters", "A `Game` that takes turns and reports win or draw", "Clear errors for bad moves"]} say={["Making the board N×N (this code already is)", "Bots behind a `MoveStrategy` interface", "K-in-a-row variants"]} skip={["Undo, replays and a UI", "Minimax unless they ask for an AI"]} />
 
@@ -63,70 +176,23 @@ class Game {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. **`Board.place`** first rejects bad moves: off the board, or a taken cell. Because it throws **before** changing anything, the player simply tries again (requirement 3).
+2. It then writes the mark and updates the counters: `d` is +1 for X and −1 for O. Row `r` and column `c` always change; the main diagonal only when `r == c`; the other diagonal only when `r + c == n - 1`.
+3. It returns `true` if any of those four counters hit ±n. That's the O(1) win check.
+4. **`Game`** keeps the players in a queue. The player at the front moves; after a normal move they go to the back. That's a turn order that also works for three or more players.
+5. **`Game.move`** refuses moves after the game ends, then sets `WON`, `DRAW` or passes the turn. Note the order: check for a win **before** a draw, because the last move on a full board can also be a winning move.
+
+<Callout type="tip" title="How to practise this">
+Write this from memory until it takes you under 25 minutes. The counter trick is the part to really understand. Try it on paper with a 3×3 board and a few moves.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-- Board of size N×N (default 3); a player wins with N in a row (row, column or diagonal). Extension: K-in-a-row on larger boards.
-- Two players (extension: more), each with a symbol; human or bot.
-- Players alternate; invalid moves (occupied cell, out of bounds, game over) are rejected.
-- Detect win and draw; support undo (extension).
+The full version splits the counting into its own class, lets players be humans or bots, and adds more marks for more players.
 
-## 2. Class design
-
-```mermaid
-classDiagram
-  class Game {
-    -Board board
-    -List~Player~ players
-    -int turn
-    -GameStatus status
-    -WinDetector detector
-    +play()
-    +makeMove(Player, Position) MoveResult
-  }
-  class Board {
-    -int size
-    -Symbol[][] cells
-    +place(Position, Symbol)
-    +isEmpty(Position) boolean
-    +isFull() boolean
-  }
-  class Player {
-    -String name
-    -Symbol symbol
-    -MoveStrategy strategy
-    +nextMove(Board) Position
-  }
-  class MoveStrategy {
-    <<interface>>
-    +choose(Board, Symbol) Position
-  }
-  class WinDetector {
-    <<interface>>
-    +record(Position, Symbol) boolean
-  }
-  Game *-- Board
-  Game o-- Player
-  Game --> WinDetector
-  Player --> MoveStrategy
-  MoveStrategy <|.. HumanInput
-  MoveStrategy <|.. RandomBot
-  MoveStrategy <|.. MinimaxBot
-  WinDetector <|.. CounterWinDetector
-```
-
-Key choices:
-
-- **Player behaviour is a strategy** — humans and bots differ only in how they choose a move.
-- **Win detection is separate** from the board (SRP) and pluggable (N-in-a-row vs K-in-a-row).
-- `GameStatus` (IN_PROGRESS, WON, DRAW) is a tiny state machine.
-
-## 3. Implementation
-
-### Models
+#### The small data types
 
 ```java
 public enum Symbol { X, O, TRIANGLE }                           // more symbols → more players
@@ -138,7 +204,11 @@ public enum GameStatus { IN_PROGRESS, WON, DRAW }
 public record MoveResult(GameStatus status, Player winner) { }
 ```
 
-### Board
+`Position` replaces the `int r, int c` pairs. `MoveResult` bundles the status and winner so a caller gets everything from one move in one value.
+
+#### `Board`: only the grid and its rules
+
+The board checks bounds and occupancy and counts filled cells. It no longer decides who won. That job moves to a separate class, so each class has one reason to change.
 
 ```java
 public final class Board {
@@ -173,9 +243,9 @@ public final class Board {
 }
 ```
 
-### O(1) win detection with counters
+#### Win detection: counters, behind an interface
 
-Scanning the whole board after each move is O(N²). Instead, keep per-player counters for every row, column and the two diagonals; a move increments four counters at most, and a counter reaching N is a win.
+With more than two players, +1/−1 no longer works, so this version keeps **separate counters for each mark**. A mark wins when one of its counters for a row, column or diagonal reaches N.
 
 ```java
 public interface WinDetector {
@@ -204,7 +274,9 @@ public final class CounterWinDetector implements WinDetector {
 }
 ```
 
-For **K-in-a-row on a larger board** (Gomoku-style), counters don't work; instead check the four directions through the last move — O(K) per move:
+Look at the single `|` in `++r[...] == n | ++c[...] == n`. A double `||` would stop after the first `true` and skip updating the column counter, quietly corrupting the counts for later moves. With a single `|`, both sides always run.
+
+If the interviewer changes the rule to "**K in a row on a big board**" (like Gomoku), counters stop working, because a line can contain K matching marks without being full. Instead, count matching marks outward from the last move in four directions:
 
 ```java
 public final class KInARowDetector implements WinDetector {
@@ -232,7 +304,9 @@ public final class KInARowDetector implements WinDetector {
 }
 ```
 
-### Players and strategies
+Because both detectors implement `WinDetector`, `Game` doesn't care which one it has.
+
+#### Players: humans and bots differ only in how they choose
 
 ```java
 public interface MoveStrategy { Position choose(Board board, Symbol me); }
@@ -251,9 +325,19 @@ public record Player(String name, Symbol symbol, MoveStrategy strategy) {
 }
 ```
 
-A `MinimaxBot` implementing perfect play is a natural extension (and an algorithm question in itself).
+`RandomBot` takes its `Random` from outside, so a test can pass a seeded one and get the same moves every run. A human player would have a `HumanInput` strategy that reads from the console. A `MinimaxBot` that never loses is a natural extension.
 
-### The game
+#### `Game`: turns, rules and the result
+
+`makeMove` is the heart of it. In plain steps:
+
+1. Refuse if the game is over or it isn't this player's turn.
+2. Place the mark (the board refuses bad cells).
+3. Tell the win detector about the move. If it wins, record the winner.
+4. Otherwise, if the board is full, it's a draw.
+5. Otherwise, pass the turn to the next player.
+
+`play()` just loops: ask the current player for a move, make it, repeat until the game ends.
 
 <FullCode title="Show the full code: The game (41 lines)">
 
@@ -303,54 +387,77 @@ public final class Game {
 
 </FullCode>
 
-## 4. Patterns used
+## Step 5: Trace a game
+
+On a 3×3 board, X plays (0,0), O plays (1,1), X plays (0,1), O plays (2,2), X plays (0,2):
+
+1. X at (0,0): row 0 = +1, column 0 = +1, main diagonal = +1. No counter at ±3.
+2. O at (1,1): row 1 = −1, column 1 = −1, main diagonal = 0, anti-diagonal = −1.
+3. X at (0,1): row 0 = +2, column 1 = 0.
+4. O at (2,2): row 2 = −1, column 2 = −1, main diagonal = −1.
+5. X at (0,2): row 0 = **+3**. That's N, so X wins. Status becomes `WON`, and any further move throws "Game is over".
+
+## Step 6: Handle follow-up questions
+
+**"Add a computer player."** Write a class implementing `MoveStrategy` and give it to a `Player`. `Game` doesn't change.
+
+**"Support three players."** Add a symbol per player. The turn order already cycles through any number of players, and the per-mark counters handle the win check.
+
+**"Add undo."** Keep a stack of moves. Undo pops the last one, clears the cell, decrements the same counters `record` incremented, moves the turn back and sets the status to `IN_PROGRESS` (undoing a winning move reopens the game).
+
+**"Make it Connect Four."** The move becomes a column, and the piece drops to the lowest free row. Put that rule in the board (or a `DropRule`), and use `KInARowDetector` with K = 4. `Game`, `Player` and the strategies stay as they are.
+
+**"Make it online."** Moves arrive from clients, so the server validates every one. Use one lock per game so two moves for the same game can't interleave.
+
+## Common mistakes
+
+- **Scanning the whole board after every move** and not mentioning the O(1) improvement.
+- **Using `||` when updating several counters**, which skips some updates.
+- **Checking for a draw before a win.** The last move can fill the board *and* win.
+- **Putting everything in one `TicTacToe` class** with `main`, input reading, drawing and rules mixed together.
+- **Not rejecting moves after the game has ended.**
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
-| **Strategy** | `MoveStrategy` (human, random, minimax), `WinDetector` |
-| **State** | `GameStatus` (simple enum; grows if you add pause/resume) |
-| **Command / Memento** (extension) | Undo: moves pushed to history; undo pops and reverses the counters |
-| **Observer** (extension) | UI or spectators subscribe to move events |
-
-## 5. Extensions
-
-- **Undo**: store moves; undo clears the cell and decrements the counters (counters make this easy), and moves the turn back.
-- **More players**: unique symbols and the modulo turn order already handle it.
-- **Networked play**: moves arrive from clients — validate on the server; serialise moves per game (one lock per game).
-- **Timer per move**: a strategy wrapper that falls back to a random move on timeout.
+| **Strategy** | `MoveStrategy` (human, random, minimax), `WinDetector` (counters, K-in-a-row) |
+| **State** | `GameStatus` (a simple enum; it grows if you add pause or resume) |
+| **Command / Memento** (follow-up) | Undo: moves pushed to a history stack and reversed |
+| **Observer** (follow-up) | A UI or spectators subscribe to move events |
 
 ## Interview questions
 
 <QA q="How do you detect a win in O(1) per move?">
-Maintain counters per player for each row, each column and the two diagonals. When a player marks (r, c), increment that player's row r and column c counters, and the diagonal counters if r equals c or r + c equals n − 1. If any of these reaches n, the player has won. This costs constant time per move instead of rescanning the board, and undo is just decrementing.
+Keep counters for each row, each column and the two diagonals. When a player marks (r, c), update row r and column c, and the diagonal counters if r equals c or r + c equals n − 1. If any of these reaches n (for that player), the player has won. That's constant work per move instead of rescanning the board, and undo is just reversing the update.
 </QA>
 
 <QA q="How would your design change for Connect Four or Gomoku?">
-The board and placement rules change (Connect Four drops a piece into the lowest empty row of a column — a different move-validation rule), and the win condition becomes K in a row, best checked by counting in four directions from the last move. With win detection and move validation behind interfaces, Game, Player and the strategies stay the same.
+The board's placement rule changes (in Connect Four a piece drops to the lowest empty row of a column), and the win condition becomes K in a row, best checked by counting outward in four directions from the last move. With win detection and move validation behind interfaces, Game, Player and the strategies stay the same.
 </QA>
 
 <Practice task="Add undo: the current player can take back the last move. What must the win detector support, and what about the turn?">
 
-Keep the move history (already a stack). Undo pops the last position, clears the cell (`Board.clear` decrements `filled`), tells the detector to remove it — `CounterWinDetector.unrecord(p, symbol)` decrements the same counters `record` incremented — moves the turn back to the previous player, and resets the status to `IN_PROGRESS` (undoing a winning move must reopen the game). `KInARowDetector` needs nothing, because it reads the board.
+Keep the move history (already a stack). Undo pops the last position, clears the cell (`Board.clear` decrements `filled`), tells the detector to remove it (`CounterWinDetector.unrecord(p, symbol)` decrements the same counters `record` incremented), moves the turn back to the previous player, and resets the status to `IN_PROGRESS`, because undoing a winning move must reopen the game. `KInARowDetector` needs nothing, because it reads the board.
 
 </Practice>
 
 <Practice task="Turn the design into Connect Four (7 columns, pieces drop to the lowest free row, 4 in a row wins). What do you change?">
 
-The move input becomes a column, not a cell: a `DropRule` (or a `ConnectFourBoard` subclass) computes the landing row and rejects full columns. Win detection is `KInARowDetector` with k = 4 on a 6 × 7 board. `Game`, `Player` and the strategies stay the same — the bot strategies just choose columns. Board size validation ("at least 3") moves into the rule set.
+The move input becomes a column, not a cell: a `DropRule` (or a `ConnectFourBoard`) computes the landing row and rejects full columns. Win detection is `KInARowDetector` with k = 4 on a 6 × 7 board. `Game`, `Player` and the strategies stay the same; bot strategies just choose columns. The "size at least 3" check moves into the rule set.
 
 </Practice>
 
 <Takeaways>
 
-- Keep Board, WinDetector, Player strategy and Game orchestration as separate responsibilities.
-- Players differ only in how they choose moves — a strategy.
-- Counters give O(1) win detection for N-in-a-row; directional checks handle K-in-a-row.
-- Validate turn order, bounds, occupancy and game-over state explicitly.
+- Separate the board (grid and placement rules), win detection, player strategy and the game (turns and result).
+- Humans and bots differ only in how they choose a move, so that's a strategy.
+- Counters (+1 for X, −1 for O) give O(1) win detection; for K-in-a-row, count outward from the last move.
+- Reject bad moves before changing any state, and check for a win before a draw.
 
 </Takeaways>
 
 ## Further reading
 
 - [Strategy](/system-design/lld/strategy-pattern), [Command](/system-design/lld/command-pattern) (for undo).
-- Russell and Norvig, *Artificial Intelligence: A Modern Approach* — minimax and alpha–beta pruning.
+- Russell and Norvig, *Artificial Intelligence: A Modern Approach*: minimax and alpha–beta pruning.

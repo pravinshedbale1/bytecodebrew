@@ -1,10 +1,93 @@
 <Related ids={['strategy-pattern', 'concurrency-for-lld', 'decorator-pattern', 'interview-grade-code']} />
 
-"Design an LRU cache" is half data-structures question, half LLD question. The data-structure half: **O(1) `get` and `put`** with a hash map plus a doubly linked list. The LLD half: generics, a pluggable **eviction policy**, **TTL**, and **thread safety** — the follow-ups that distinguish senior answers.
+"Design an LRU cache" is half a data-structures question and half an LLD question. The data-structures half: make `get` and `put` run in **O(1)**. The LLD half comes in the follow-ups: can you swap in a different eviction rule, add expiry, and make it safe for many threads?
 
-## What the interviewer expects
+**LRU** means *least recently used*. The cache has a fixed size. When it's full and a new item arrives, it throws out the item nobody has touched for the longest time. The idea is that something you used a moment ago is likely to be used again soon.
 
-The full design in this lesson is longer than anything you'd write in one round. It's there so you understand the edge cases and can answer follow-up questions. In the round itself, aim for this:
+We'll use the same six steps as every case study: requirements, entities, class design, code, a worked example, and follow-ups. (The [parking lot](/system-design/lld/lld-parking-lot) lesson explains the plan in detail.)
+
+## Step 1: Pin down the requirements
+
+<Dialogue>
+<Turn who="you">So `get(key)` returns the value if it's there, and `put(key, value)` adds or updates it?</Turn>
+<Turn who="them">Yes.</Turn>
+<Turn who="you">Does a `get` count as "using" the key, so it becomes the most recent?</Turn>
+<Turn who="them">Yes, both get and put count as a use.</Turn>
+<Turn who="you">What complexity are you looking for?</Turn>
+<Turn who="them">Both operations in O(1).</Turn>
+<Turn who="you">Will several threads use it at once?</Turn>
+<Turn who="them">Start single-threaded, then tell me how you'd make it thread-safe.</Turn>
+<Turn who="you">Any other eviction rules, or expiry times?</Turn>
+<Turn who="them">Possibly later. Keep it in mind.</Turn>
+</Dialogue>
+
+**The cache must:**
+
+1. Return the value for a key, or "not found". A hit counts as a use.
+2. Insert or update a key. That also counts as a use.
+3. Hold at most `capacity` entries. When full, evict the least recently used one.
+4. Do both operations in O(1).
+5. Be easy to extend: other eviction rules, expiry, thread safety.
+
+## Step 2: Find the core pieces
+
+This problem is less about domain nouns and more about **which data structures** to combine. Ask what each operation needs:
+
+| Need | Which structure gives it in O(1)? |
+| --- | --- |
+| Find the entry for a key | A **hash map** |
+| Know which entry is least recently used | Something **ordered by recency** |
+| Move an entry to "most recent" when it's used | A list where you can **remove from the middle** cheaply |
+| Remove the oldest entry | Taking from **one end** of that list |
+
+Now try the options for "ordered by recency":
+
+<Approach verdict="bad" title="A map plus a timestamp on each entry">
+
+Store the last-used time with each value. Finding the oldest means scanning every entry: O(n) per eviction.
+
+</Approach>
+
+<Approach verdict="bad" title="A map plus an ArrayList or a queue">
+
+Moving an item to the front of an array means shifting everything after it: O(n). A plain queue can't remove from the middle at all.
+
+</Approach>
+
+<Approach verdict="great" title="A map plus a doubly linked list">
+
+Keep entries in a **doubly linked list**, most recent at the head and least recent at the tail. Each node knows its neighbours, so once you **have** the node you can unlink it and move it to the head in O(1). The map stores `key → node`, so you can find any node in O(1). Together, every operation is O(1).
+
+</Approach>
+
+```mermaid
+flowchart LR
+  subgraph Map["HashMap: key → node"]
+    k1["'a'"] --> n1
+    k2["'b'"] --> n2
+    k3["'c'"] --> n3
+  end
+  H((head)) --> n1["a (most recent)"] --> n2[b] --> n3["c (least recent)"] --> T((tail))
+```
+
+## Step 3: Design the pieces
+
+**`Node`**: knows its key, value and its previous and next nodes. It stores the **key** as well as the value, because when we evict the tail node we need to remove its key from the map too.
+
+**The list**: two **sentinel** nodes, `head` and `tail`, that never hold data. With them, every real node always has a node on both sides, so adding and removing never needs "what if the list is empty?" checks.
+
+**`LruCache`**: knows the capacity, the map and the list. Its two public methods:
+
+- **`get(key)`**: look up the node. Not there? Return nothing. Otherwise move it to the head and return its value.
+- **`put(key, value)`**: if the key exists, update the value and move it to the head. If not and the cache is full, remove the node just before `tail` (the least recent) from both the list and the map. Then create a node, add it to the map and put it at the head.
+
+And three tiny private helpers do all the pointer work: `unlink`, `addFront` and `moveToFront`.
+
+Step through it to see the list and map change together:
+
+<LruViz />
+
+## Step 4: Write the code
 
 <InterviewScope minutes="30–45" lines="50" write={["A `HashMap` plus a doubly linked list with sentinel nodes", "`get` and `put` in O(1), evicting the least recently used", "`synchronized` methods for thread safety"]} say={["Why `LinkedHashMap` can do this in 10 lines, and why they want to see it by hand", "Pluggable eviction (LFU, FIFO) behind an interface", "Lock striping or a concurrent cache for heavy traffic"]} skip={["TTL expiry, unless asked", "Metrics and size by bytes"]} />
 
@@ -61,36 +144,24 @@ class LruCache<K, V> {
 }
 ```
 
-<Callout type="tip" title="How to use the rest of this lesson">
-Practise writing the short version above, in your own words, until you can do it in about 30 minutes. Then read the full design below for the edge cases and follow-up answers. Interviewers often ask about those, but they rarely ask you to type them all.
+**Reading it top to bottom:**
+
+1. The constructor links `head` straight to `tail`: an empty list.
+2. **`get`**: one map lookup, then `moveToFront`, because reading counts as a use.
+3. **`put`** on an existing key: update the value in place and move it to the front. The size doesn't change, so nothing is evicted.
+4. **`put`** on a new key when full: `tail.prev` is the least recent node. Unlink it **and** remove its key from the map. Forgetting the map is the most common bug.
+5. **`unlink`** joins a node's neighbours to each other. **`addFront`** slots a node in right after `head`. Draw four boxes and arrows the first time; the order of the four assignments in `addFront` matters.
+6. `synchronized` makes it safe for several threads (more on that below).
+
+<Callout type="tip" title="How to practise this">
+Draw the list on paper with capacity 2 and run: put a, put b, get a, put c. Which key gets evicted? (Answer: b, because a was used more recently.) Then write the code without looking.
 </Callout>
 
-## 1. Requirements
+### Growing it into the full design
 
-- `get(key)` returns the value or empty; counts as a use.
-- `put(key, value)` inserts or updates; counts as a use.
-- Fixed capacity; when full, evict the **least recently used** entry.
-- Both operations **O(1)**.
-- Extensions: other eviction policies (LFU, FIFO), per-entry TTL, thread-safety, stats (hits/misses), eviction listeners.
+#### The same thing, with `Optional` and checks
 
-## 2. Core idea
-
-- A **HashMap** gives O(1) lookup from key to node.
-- A **doubly linked list** keeps entries in recency order: most recent at the head, least recent at the tail. Moving a node to the head or removing the tail is O(1) because each node knows its neighbours.
-
-```mermaid
-flowchart LR
-  subgraph Map["HashMap: key → node"]
-    k1["'a'"] --> n1
-    k2["'b'"] --> n2
-    k3["'c'"] --> n3
-  end
-  H((head)) --> n1["a (most recent)"] --> n2[b] --> n3["c (least recent)"] --> T((tail))
-```
-
-Sentinel head and tail nodes remove null checks at the ends.
-
-## 3. Implementation (single-threaded)
+The full single-threaded version is the same algorithm, returning `Optional` instead of `null` and rejecting null keys.
 
 <FullCode title="Show the full code: Implementation (single-threaded) (62 lines)">
 
@@ -162,7 +233,7 @@ public final class LruCache<K, V> {
 </FullCode>
 
 <Callout type="tip" title="The JDK shortcut">
-`LinkedHashMap` with `accessOrder = true` plus an overridden `removeEldestEntry` is a complete LRU cache in a few lines. Mention it — then implement the map + list version if the interviewer wants to see the mechanics.
+`LinkedHashMap` can keep entries in **access order** and lets you override `removeEldestEntry`. That's a complete LRU cache in a few lines. Mention it, and then write the map-plus-list version if the interviewer wants to see the mechanics (they usually do).
 
 ```java
 public final class SimpleLru<K, V> extends LinkedHashMap<K, V> {
@@ -174,9 +245,9 @@ public final class SimpleLru<K, V> extends LinkedHashMap<K, V> {
 
 </Callout>
 
-## 4. Making eviction pluggable
+#### Follow-up 1: "What if we want LFU or FIFO instead?"
 
-An LLD interviewer will ask: "What if we want LFU or FIFO?" Separate **storage** from the **eviction policy**:
+Split the cache into two jobs: **storing** values, and **deciding what to evict**. The second job goes behind an `EvictionPolicy` interface. The cache tells the policy whenever a key is added, used or removed, and asks it "which key should go?" when it's full.
 
 ```mermaid
 classDiagram
@@ -242,7 +313,7 @@ public final class Cache<K, V> {
 }
 ```
 
-Simple policies can lean on `LinkedHashSet`, which keeps insertion order with O(1) add, remove and "first element":
+Simple policies can use `LinkedHashSet`, which keeps insertion order and supports O(1) add, remove and "give me the first one":
 
 ```java
 public final class LruPolicy<K> implements EvictionPolicy<K> {
@@ -262,17 +333,17 @@ public final class FifoPolicy<K> implements EvictionPolicy<K> {
 }
 ```
 
-(The hand-written doubly linked list from section 3 does the same job as `LinkedHashSet` here; interviewers usually want to see it once, then accept the library class.)
+The only difference between LRU and FIFO: on access, LRU moves the key to the end, and FIFO does nothing. (The hand-written linked list does the same job as `LinkedHashSet`. Interviewers usually want to see it once, then accept the library class.)
 
-### O(1) LFU
+#### LFU in O(1)
 
-LFU evicts the least frequently used key (ties broken by recency). The O(1) design keeps:
+**LFU** (*least frequently used*) evicts the key used the fewest times; among ties, the one used least recently. The trick to O(1) is to group keys by how often they've been used:
 
-- `key → frequency`,
-- `frequency → LinkedHashSet<key>` (insertion-ordered set gives recency within a frequency),
-- `minFrequency`.
+- `key → frequency`
+- `frequency → keys with that frequency, oldest first` (a `LinkedHashSet`)
+- `minFrequency`, the smallest frequency that has any keys
 
-On access, move the key from bucket `f` to `f + 1`; if bucket `minFrequency` became empty and `f == minFrequency`, increment `minFrequency`. On insert, `minFrequency = 1`. Evict the first key of the `minFrequency` bucket.
+On access, move the key from bucket `f` to bucket `f + 1`. If bucket `f` is now empty and it was the minimum, the minimum becomes `f + 1`. A new key always starts at frequency 1, so the minimum resets to 1. To evict, take the first key in the `minFrequency` bucket.
 
 ```java
 public final class LfuPolicy<K> implements EvictionPolicy<K> {
@@ -310,11 +381,11 @@ public final class LfuPolicy<K> implements EvictionPolicy<K> {
 }
 ```
 
-`keyRemoved` doesn't need to repair `minFrequency`: the cache only removes the eviction candidate and then immediately adds a new key, which resets the minimum to 1.
+`keyRemoved` doesn't need to fix `minFrequency`: the cache only removes the eviction candidate and then immediately adds a new key, which resets the minimum to 1.
 
-## 5. TTL (expiry)
+#### Follow-up 2: "Add expiry (TTL)."
 
-Store an expiry time with each entry and treat expired entries as misses:
+Store an expiry time with each entry, and treat an expired entry as missing:
 
 ```java
 private record Entry<V>(V value, Instant expiresAt) {
@@ -322,15 +393,29 @@ private record Entry<V>(V value, Instant expiresAt) {
 }
 ```
 
-- **Lazy expiry** on `get` (cheap, always correct).
-- **Active cleanup**: a scheduled task, or a priority queue/`DelayQueue` ordered by expiry, to reclaim memory from entries that are never read again.
-- Inject a `Clock` so TTL logic is testable.
+- **Lazy expiry**: check on `get`. Cheap and always correct.
+- **Active cleanup**: a scheduled task (or a priority queue ordered by expiry) removes entries that will never be read again, so they stop using memory.
+- Pass in a `Clock` so tests can jump forward in time.
 
-## 6. Thread safety
+#### Follow-up 3: "Make it thread-safe."
 
-The map and the linked list must change **together** atomically — a `ConcurrentHashMap` alone is not enough, because `get` also mutates the list (moves the node to the head).
+The map and the list must change **together**. Here's the trap:
 
-**Option 1 — one lock** (simple, correct, the right first answer):
+<Approach verdict="bad" title="Swap HashMap for ConcurrentHashMap">
+
+That makes individual map operations safe, but the list is still unprotected, and even `get` changes the list (it moves a node). Two threads moving nodes at once can corrupt the links.
+
+</Approach>
+
+<Approach verdict="bad" title="A read-write lock, with get taking the read lock">
+
+Sounds clever, but in an LRU cache `get` **writes**: it moves the node to the front. So every operation needs the write lock, and you've gained nothing.
+
+</Approach>
+
+<Approach verdict="good" title="One lock around every operation">
+
+Simple and correct. This is the right first answer.
 
 ```java
 private final ReentrantLock lock = new ReentrantLock();
@@ -341,13 +426,35 @@ public Optional<V> get(K key) {
 }
 ```
 
-Note that a `ReadWriteLock` doesn't help for LRU: `get` is a **write** to the recency list.
+</Approach>
 
-**Option 2 — segmentation (striping)**: split the cache into S independent segments by `hash(key) % S`, each with its own lock and capacity/S. Contention drops by roughly S×; LRU becomes approximate globally (exact per segment). This is how high-throughput caches scale.
+<Approach verdict="great" title="Split the cache into segments">
 
-**Option 3 — approximate recency** (what production caches do): Caffeine records accesses in lock-free buffers and applies them to the policy in batches, and uses W-TinyLFU for a better hit ratio than pure LRU. Mention it as the "real-world" answer.
+Divide it into, say, 16 independent caches, each with its own lock and 1/16 of the capacity. Pick the segment by `hash(key) % 16`. Threads working on different segments don't block each other. Eviction is now exact within a segment but only approximate overall, which is fine for nearly every real use.
 
-## 7. Patterns used
+</Approach>
+
+For the "how do real systems do it?" question: the Caffeine library records accesses in lock-free buffers, applies them to the policy in batches, and uses an eviction rule called W-TinyLFU that beats plain LRU on hit rate.
+
+## Step 5: Trace it
+
+Capacity 2.
+
+1. `put(a, 1)`: list is `head → a → tail`.
+2. `put(b, 2)`: `head → b → a → tail`.
+3. `get(a)` returns 1 and moves a to the front: `head → a → b → tail`.
+4. `put(c, 3)`: the cache is full. The least recent is `tail.prev`, which is **b**. Unlink b and remove it from the map. Add c: `head → c → a → tail`.
+5. `get(b)` returns nothing. `get(a)` returns 1.
+
+## Common mistakes
+
+- **Not storing the key in the node**, so after evicting the tail you can't remove it from the map.
+- **Forgetting that `get` counts as a use** and must move the node.
+- **Updating an existing key by inserting a second node**, which leaves a stale node in the list.
+- **Assuming `ConcurrentHashMap` makes the whole thing thread-safe.**
+- **Getting the four pointer assignments in `addFront` in the wrong order.** Draw it.
+
+## Patterns used
 
 | Pattern | Where |
 | --- | --- |
@@ -359,40 +466,41 @@ Note that a `ReadWriteLock` doesn't help for LRU: `get` is a **write** to the re
 ## Interview questions
 
 <QA q="Why do you need both a hash map and a doubly linked list?">
-The hash map gives O(1) lookup from key to entry, but no ordering. The doubly linked list gives an O(1)-maintainable recency order — move a node to the front on access, remove the tail on eviction — because each node can be unlinked using its prev and next pointers. Storing the list node in the map combines both: find in O(1), reorder in O(1).
+The hash map gives O(1) lookup from key to entry, but no order. The doubly linked list keeps recency order and lets you move a node to the front or remove the tail in O(1), because each node can be unlinked using its own prev and next pointers. Storing the list node in the map combines both: find in O(1), reorder in O(1).
 </QA>
 
 <QA q="Why isn't a ConcurrentHashMap enough to make the LRU cache thread-safe?">
-Each operation updates two structures — the map and the recency list — and even get modifies the list. ConcurrentHashMap only makes individual map operations atomic; the list updates and the combination with the map are still racy, corrupting links or evicting wrongly. You need a lock around the compound operation, segmented locks, or a design like Caffeine's that buffers access events and applies them under a lock.
+Each operation updates two structures, the map and the recency list, and even get changes the list. ConcurrentHashMap only makes single map operations atomic; the list updates, and keeping them in step with the map, are still unprotected and can corrupt the links or evict the wrong entry. You need a lock around the combined operation, segmented locks, or a design like Caffeine's that buffers accesses and applies them under a lock.
 </QA>
 
 <QA q="How would you implement LFU in O(1)?">
-Keep a map from key to (value, frequency), a map from frequency to an insertion-ordered set of keys, and the current minimum frequency. On access, remove the key from its frequency bucket and add it to frequency + 1, updating minFrequency if its old bucket was the minimum and is now empty. On insert of a new key, evict the oldest key in the minFrequency bucket if full, then add the new key with frequency 1 and set minFrequency to 1.
+Keep a map from key to frequency, a map from frequency to an insertion-ordered set of keys, and the current minimum frequency. On access, move the key from its frequency bucket to the next one, raising the minimum if its old bucket was the minimum and is now empty. On inserting a new key, evict the oldest key in the minimum bucket if full, then add the new key with frequency 1 and set the minimum to 1.
 </QA>
 
 <Practice task="Make the cache scale to 32 threads without one global lock, accepting that LRU becomes approximate. Sketch it.">
 
-Stripe it: N independent `LruCache` segments (N a power of two, e.g. 16), each with capacity / N and its own lock; route keys with `hash(key) & (N − 1)` (after spreading the hash bits). Gets and puts on different segments run in parallel. Eviction is LRU *within* a segment, so globally it's approximate — acceptable for most caches. Mention Caffeine's alternative (buffer access events and replay them under a lock) as the production-grade answer.
+Stripe it: N independent `LruCache` segments (N a power of two, such as 16), each with capacity / N and its own lock; route keys with `hash(key) & (N − 1)` (after spreading the hash bits). Gets and puts on different segments run in parallel. Eviction is LRU *within* a segment, so overall it's approximate, which is acceptable for most caches. Mention Caffeine's alternative (buffer access events and replay them under a lock) as the production-grade answer.
 
 </Practice>
 
 <Practice task="Entries with a TTL that are never read again still occupy memory. Add active expiry without scanning the whole cache.">
 
-Keep a priority queue (or `DelayQueue`) of (expiresAt, key), ordered by expiry. A background task — or every `put` — pops entries whose time has passed and removes them from the cache if the cached entry still has that same expiry (it may have been overwritten with a new TTL). This is O(log n) per entry instead of a full scan. Lazy expiry on `get` stays as the correctness guarantee; active expiry is about reclaiming memory.
+Keep a priority queue (or `DelayQueue`) of (expiresAt, key), ordered by expiry. A background task, or every `put`, pops entries whose time has passed and removes them from the cache if the cached entry still has that same expiry (it may have been overwritten with a new TTL). That's O(log n) per entry instead of a full scan. Lazy expiry on `get` stays as the guarantee of correctness; active expiry is about freeing memory.
 
 </Practice>
 
 <Takeaways>
 
-- LRU = hash map (lookup) + doubly linked list (recency), both O(1); sentinels simplify edge cases.
-- LinkedHashMap with access order is the built-in shortcut.
-- Make eviction a strategy so LFU/FIFO plug in; add TTL with an injected Clock.
-- Thread safety needs atomic map-plus-list updates: one lock, segments, or buffered access recording.
+- LRU = a hash map (find a node) plus a doubly linked list (recency order). Both operations are O(1).
+- Store the key in each node, and use sentinel head and tail nodes to avoid edge cases.
+- `LinkedHashMap` in access order is the built-in shortcut; mention it, then write it by hand.
+- Make eviction a strategy so LFU and FIFO plug in; add TTL with an injected `Clock`.
+- For thread safety, the map and list must change together: one lock first, segments to scale.
 
 </Takeaways>
 
 ## Further reading
 
-- Java SE API — `LinkedHashMap` (access-order mode and `removeEldestEntry`).
-- Einziger, Friedman and Manes, "TinyLFU: A Highly Efficient Cache Admission Policy" (2017) and the [Caffeine](https://github.com/ben-manes/caffeine) wiki.
+- Java SE API: `LinkedHashMap` (access-order mode and `removeEldestEntry`).
+- Einziger, Friedman and Manes, "TinyLFU: A Highly Efficient Cache Admission Policy" (2017), and the [Caffeine](https://github.com/ben-manes/caffeine) wiki.
 - HLD context: [Caching](/system-design/hld/caching).
