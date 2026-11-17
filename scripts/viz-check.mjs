@@ -697,7 +697,7 @@ function common(name, steps, code, kinds) {
 
   const runB = (input) => {
     const steps = sp.bits(input);
-    common(`bits ${JSON.stringify(input)}`, steps, sp.bitsCode(input.mode), ['start', 'clear', 'xor', 'cancel', 'done']);
+    common(`bits ${JSON.stringify(input)}`, steps, sp.bitsCode(input.mode), ['start', 'sub', 'clear', 'xor', 'cancel', 'done']);
     const want = input.mode === 'popcount' ? input.n.toString(2).split('').filter((c) => c === '1').length
       : input.mode === 'single' ? input.a.find((v) => input.a.indexOf(v) === input.a.lastIndexOf(v))
         : Array.from({ length: input.a.length + 1 }, (_, k) => k).find((k) => !input.a.includes(k));

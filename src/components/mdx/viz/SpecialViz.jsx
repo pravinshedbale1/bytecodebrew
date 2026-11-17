@@ -2,7 +2,7 @@ import { StepViz, Key } from './StepViz';
 import { Arcs, ArrayStrip, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
 import styles from './SpecialViz.module.css';
 import {
-  BITS, BIT_WIDTH, GREEDY, TRIE, bits, bitsCode, greedy, greedyCode, parseBits, parseGreedy, parseTrie, randomBits, randomGreedy, randomTrie, toBits,
+  BITS, GREEDY, TRIE, bits, bitsCode, greedy, greedyCode, parseBits, parseGreedy, parseTrie, randomBits, randomGreedy, randomTrie, toBits,
   trie, trieCode, trieQueriesText,
 } from './models/special';
 
@@ -194,46 +194,67 @@ export function TrieViz(props) {
 
 // ---------------------------------------------------------------- bits
 
+const OP_RULE = {
+  '&': '& → 1 only where both rows have a 1',
+  '^': '^ → 1 where the rows differ (an odd number of 1s), 0 where they match',
+};
+
 function BitsStage({ step: f, width }) {
-  const cell = Math.max(26, Math.min(40, Math.floor((Math.min(width, 520) - 120) / BIT_WIDTH)));
+  const w = f.w;
+  const cell = Math.max(26, Math.min(40, Math.floor((Math.min(width, 520) - 150) / w)));
+  const op = f.rows.find((r) => r.op)?.op;
   return (
     <div className={styles.wrap}>
-      <div className={styles.bits} style={{ gridTemplateColumns: `90px repeat(${BIT_WIDTH}, ${cell}px) 46px` }}>
+      <p className={styles.bitsHow}>Each row is one number in binary, lined up by place value. Read <b>down a column</b> to see what the operator does to that bit.</p>
+      <div className={styles.bits} style={{ gridTemplateColumns: `18px 74px repeat(${w}, ${cell}px) 46px` }}>
         <span />
-        {Array.from({ length: BIT_WIDTH }, (_, k) => <span key={k} className={styles.place}>{2 ** (BIT_WIDTH - 1 - k)}</span>)}
+        <span />
+        {Array.from({ length: w }, (_, k) => <span key={k} className={styles.place}>{2 ** (w - 1 - k)}</span>)}
         <span />
         {f.rows.map((row, r) => {
-          const b = toBits(row.v);
-          const markCol = row.mark ? BIT_WIDTH - 1 - Math.log2(row.mark) : -1;
+          const b = toBits(row.v, w);
           return [
+            row.result && f.rows.length > 1 && <span key={`rule${r}`} className={styles.bitsRule} />,
+            <span key={`o${r}`} className={styles.op}>{row.op ?? (row.result && f.rows.length > 1 ? '=' : '')}</span>,
             <span key={`l${r}`} className={`${styles.rowLabel} ${row.result ? styles.resultLabel : ''}`}>{row.label}</span>,
-            ...b.map((bit, k) => (
-              <span key={`${r}-${k}`} className={[styles.bit, bit ? styles.one : styles.zero, row.result && styles.result, k === markCol && styles.mark, row.mark && k > markCol && styles.below].filter(Boolean).join(' ')} style={{ height: cell }}>{bit}</span>
-            )),
+            ...b.map((bit, k) => {
+              const tag = row.tags?.[2 ** (w - 1 - k)];
+              return <span key={`${r}-${k}`} className={[styles.bit, bit ? styles.one : styles.zero, row.result && styles.result, tag && styles[`t_${tag}`]].filter(Boolean).join(' ')} style={{ height: cell }}>{bit}</span>;
+            }),
             <span key={`v${r}`} className={`${styles.dec} ${row.result ? styles.resultLabel : ''}`}>{row.v}</span>,
           ];
         })}
       </div>
-      {f.mode === 'popcount' && <Chips label="bits cleared" chips={Array.from({ length: f.count }, (_, k) => ({ key: k, text: String(k + 1), tone: 'success', isNew: k === f.count - 1 && f.kind === 'clear' }))} empty="none yet" />}
+      {op && <p className={styles.bitsRuleText}>{OP_RULE[op]}</p>}
+      {f.mode === 'popcount'
+        ? <Chips label={`1s turned off (${f.count})`} chips={f.removed.map((p, k) => ({ key: k, text: `${p}s`, tone: 'success', isNew: k === f.removed.length - 1 && f.kind === 'clear' }))} empty="none yet" />
+        : (
+          <>
+            <Chips label="x holds" chips={f.holds.map((v, k) => ({ key: `${v}-${k}`, text: String(v), tone: f.kind === 'done' ? 'success' : 'accent' }))} empty="nothing (x = 0)" />
+            <Chips label="cancelled pairs" chips={f.cancelled.map((v, k) => ({ key: k, text: `${v} ^ ${v}`, tone: 'muted', isNew: k === f.cancelled.length - 1 && f.kind === 'cancel' }))} empty="none yet" />
+          </>
+        )}
     </div>
   );
 }
 
 const bitsSpec = {
-  title: 'Bits, one row at a time',
+  title: 'Bits, column by column',
   examples: BITS,
   simulate: bits,
   code: (input) => bitsCode(input.mode),
-  kinds: { start: ['Start', 'neutral'], clear: ['Clear a bit', 'accent'], xor: ['XOR', 'accent'], cancel: ['Cancels', 'success'], done: ['Answer', 'success'] },
+  kinds: { start: ['Start', 'neutral'], sub: ['n − 1', 'warn'], clear: ['AND', 'accent'], xor: ['XOR', 'accent'], cancel: ['Cancels', 'success'], done: ['Answer', 'success'] },
   describe: (input) => (input.mode === 'popcount' ? `n = ${input.n}` : `a = ${list(input.a)}`),
   rule: (input) => (input.mode === 'popcount' ? 'n & (n − 1) removes the lowest 1-bit.' : 'v ^ v = 0 and v ^ 0 = v: pairs cancel.'),
   stats: () => [],
-  legend: (f, input) => [[<Key shape="box" tone="accent">1</Key>, 'a 1-bit'], ...(input.mode === 'popcount' ? [[<Key shape="box" tone="warn">1</Key>, 'the lowest set bit']] : []), [<Key shape="box" tone="success">1</Key>, 'result row']],
+  legend: (f, input) => (input.mode === 'popcount'
+    ? [[<Key shape="box" tone="accent">1</Key>, 'a 1-bit (switch on)'], [<Key shape="box" tone="warn">1</Key>, 'the lowest 1'], [<Key shape="box" tone="warn">·</Key>, 'flipped by − 1'], [<Key shape="box" tone="success">1</Key>, 'result']]
+    : [[<Key shape="box" tone="accent">1</Key>, 'a 1-bit (switch on)'], [<Key shape="box" tone="danger">0</Key>, '1 ^ 1 = 0'], [<Key shape="box" tone="success">1</Key>, 'result']]),
   fields: (input) => (input.mode === 'popcount' ? [{ name: 'n', label: 'n (1 to 255)', placeholder: '52', short: true }] : [{ name: 'a', label: input.mode === 'single' ? 'a (pairs + one single)' : 'a (0…n, one missing)', placeholder: input.mode === 'single' ? '4, 1, 2, 1, 2' : '3, 0, 1' }]),
   values: (input) => (input.mode === 'popcount' ? { n: String(input.n) } : { a: input.a.join(', ') }),
   parse: parseBits,
   random: (input) => randomBits(input),
-  hint: () => 'Values up to 255, so everything fits in 8 bits.',
+  hint: () => 'Values up to 255 (at most 8 bits). Small values are drawn with fewer bits.',
   delay: () => 2400,
   Stage: BitsStage,
 };

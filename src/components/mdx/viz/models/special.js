@@ -279,48 +279,85 @@ export const bitsCode = (mode) => ({
   missing: [['init', 'x = n;                           // include n itself'], ['loop', 'for (i < n) x ^= i ^ a[i];       // every present number cancels its index'], ['end', 'return x;']],
 })[mode];
 
-export const BIT_WIDTH = 8;
-export const toBits = (v) => Array.from({ length: BIT_WIDTH }, (_, k) => (v >> (BIT_WIDTH - 1 - k)) & 1);
+/** Bits drawn for an input: just enough for its largest value (4 to 8), so small examples aren't a wall of 0s. */
+export const bitWidth = (input) => {
+  const max = input.mode === 'popcount' ? input.n : Math.max(input.a.length, ...input.a);
+  return Math.min(8, Math.max(4, max.toString(2).length));
+};
+export const toBits = (v, w) => Array.from({ length: w }, (_, k) => (v >> (w - 1 - k)) & 1);
+const bin = (v, w) => v.toString(2).padStart(w, '0');
 
+/**
+ * Each step is a small sum written in binary: rows of bits lined up by place value, an operator in
+ * front of the second operand, a line, then the result. row.tags maps a place value (1, 2, 4…) to how
+ * that cell is highlighted: 'low' (the lowest 1-bit), 'flip' (changed by − 1), 'gone' (cleared), 'cancel'
+ * (1 ^ 1 → 0). step.holds lists what x is "made of" (values XOR-ed in an odd number of times).
+ */
 export function bits(input) {
   const { mode } = input;
+  const w = bitWidth(input);
   const steps = [];
-  const snap = (x) => steps.push({ mode, ...x });
+  const snap = (x) => steps.push({ mode, w, ...x });
   if (mode === 'popcount') {
     let n = input.n, count = 0;
-    snap({ kind: 'start', rows: [{ label: 'n', v: n }], count, lines: [], title: `Count the 1-bits of ${n}`, text: `${n} in binary is ${n.toString(2)}. Subtracting 1 flips the lowest 1-bit to 0 and every 0 below it to 1; AND-ing with the original wipes all of those. So n & (n − 1) removes exactly one 1-bit: loop until n is 0, counting.`, calc: [`${n} = ${n.toString(2)}₂`] });
+    const removed = [];
+    snap({ kind: 'start', rows: [{ label: 'n', v: n }], removed: [], count, lines: [], title: `Count the 1-bits of ${n}`, text: `Read the row as switches: ${n} = ${bin(n, w)}, so the switches for ${[...bin(n, w)].map((c, k) => (c === '1' ? 2 ** (w - 1 - k) : null)).filter(Boolean).join(' + ')} are on. The trick turns off one switch per round, the lowest one, and counts the rounds.`, calc: [`${n} = ${bin(n, w)}₂`] });
     while (n) {
       const m = n - 1, next = n & m;
       const low = n & -n;
+      const flip = {};
+      for (let p = 1; p <= low; p *= 2) flip[p] = p === low ? 'low' : 'flip';
+      snap({ kind: 'sub', rows: [{ label: 'n', v: n, tags: flip }, { label: 'n − 1', v: m, tags: flip }], removed: [...removed], count, lines: ['loop', 'clear'], title: `Step 1: n − 1 flips the lowest 1 and everything right of it`, text: low === 1 ? `The lowest 1 of ${n} is in the 1s place, so subtracting 1 just turns it off. Nothing else changes.` : `Subtracting 1 has to borrow: the lowest 1 (the ${low}s place) turns off, and the 0s to its right all turn on. Only the highlighted columns changed; everything to the left is the same in both rows.`, calc: [`${n} − 1 = ${m}`, `${bin(n, w)} → ${bin(m, w)}`] });
       count++;
-      snap({ kind: 'clear', rows: [{ label: 'n', v: n, mark: low }, { label: 'n − 1', v: m, mark: low }, { label: 'n & (n − 1)', v: next, result: true }], count, lines: ['loop', 'clear'], title: `${n} & ${m} = ${next}: one bit gone (${count})`, text: `The lowest 1-bit of ${n} is worth ${low}. n − 1 turns it off and turns on the 0s below it; the AND keeps only bits set in both, so that lowest bit disappears and nothing else changes.`, calc: [`${n.toString(2)} & ${m.toString(2)} = ${next.toString(2) || '0'}`, `count = ${count}`] });
+      removed.push(low);
+      const gone = { [low]: 'gone' };
+      snap({ kind: 'clear', rows: [{ label: 'n', v: n, tags: flip }, { label: 'n − 1', v: m, op: '&', tags: flip }, { label: 'result', v: next, result: true, tags: gone }], removed: [...removed], count, lines: ['loop', 'clear'], title: `Step 2: AND them → ${next}. One 1 gone (count = ${count})`, text: `& gives 1 only where both rows have a 1. In the highlighted columns the two rows disagree (one has 0, the other 1), so they all become 0. The columns to the left agree, so they're copied. Net effect: exactly the lowest 1 (worth ${low}) is turned off.`, calc: [`${bin(n, w)} & ${bin(m, w)} = ${bin(next, w)}`, `count = ${count}`] });
       n = next;
     }
-    snap({ kind: 'done', rows: [{ label: 'n', v: 0 }], count, lines: ['end'], answer: `${count} set bits`, title: `${input.n} has ${count} set bits`, text: `The loop ran once per 1-bit, not once per bit position. The same identity tests for a power of two: n > 0 && (n & (n − 1)) == 0, because a power of two has exactly one 1-bit.`, calc: [`count = ${count}`] });
+    snap({ kind: 'done', rows: [{ label: 'n', v: 0 }], removed: [...removed], count, lines: ['end'], answer: `${count} set bits`, title: `${input.n} has ${count} set bits`, text: `n is all 0s, so the loop stops. It ran once per 1-bit (${removed.join(' + ')} = ${input.n}), not once per bit position. Bonus: a power of two has exactly one 1, so n & (n − 1) == 0 tests for it in one step.`, calc: [`count = ${count}`] });
     return steps;
   }
+  // XOR modes. holds: the values currently "inside" x, in order of arrival.
+  const cancelTags = (a, b) => {
+    const t = {};
+    for (let p = 1; p < 2 ** w; p *= 2) if ((a & p) && (b & p)) t[p] = 'cancel';
+    return t;
+  };
+  const toggle = (holds, v, note) => {
+    const k = holds.findIndex((h) => h.v === v);
+    if (k >= 0) { const [h] = holds.splice(k, 1); return { gone: { ...h, with: note } }; }
+    holds.push({ v, note });
+    return { gone: null };
+  };
   if (mode === 'single') {
     const a = input.a;
     let x = 0;
-    snap({ kind: 'start', rows: [{ label: 'x', v: 0 }], i: null, lines: ['loop'], title: `Every value appears twice except one: ${list(a)}`, text: 'XOR is 1 where the bits differ. So v ^ v = 0, v ^ 0 = v, and the order doesn\'t matter. XOR everything together: each pair cancels itself out, wherever the two copies are, and only the odd one out is left.', calc: ['x = 0'] });
+    const holds = [], cancelled = [];
+    snap({ kind: 'start', rows: [{ label: 'x', v: 0 }], holds: [], cancelled: [], i: null, lines: ['loop'], title: `Every value appears twice except one: ${list(a)}`, text: '^ (XOR) gives 1 where the two rows differ and 0 where they match. So a number XOR-ed with itself is all 0s, and XOR-ing in 0 changes nothing. Think of x as a bag: XOR-ing a value in puts it in the bag, and XOR-ing the same value again takes it back out.', calc: ['x = 0  (empty bag)'] });
     a.forEach((v, i) => {
       const before = x;
       x ^= v;
-      const seen = a.slice(0, i).includes(v);
-      snap({ kind: seen ? 'cancel' : 'xor', rows: [{ label: 'x', v: before }, { label: `a[${i}]`, v }, { label: 'x ^ a[i]', v: x, result: true }], i, lines: ['loop'], title: `x ^= ${v} → ${x}${seen ? ` (the second ${v} cancels the first)` : ''}`, text: seen ? `${v} was XOR-ed in before, so its bits flip back: as far as x is concerned, the pair of ${v}s never happened.` : `x picks up the bits of ${v}. If another ${v} comes later, it will take them away again.`, calc: [`${before.toString(2)} ^ ${v.toString(2)} = ${x.toString(2)}`] });
+      const { gone } = toggle(holds, v, `a[${i}]`);
+      if (gone) cancelled.push(v);
+      snap({ kind: gone ? 'cancel' : 'xor', rows: [{ label: 'x', v: before }, { label: `a[${i}]`, v, op: '^' }, { label: 'new x', v: x, result: true, tags: cancelTags(before, v) }], holds: holds.map((h) => h.v), cancelled: [...cancelled], i, lines: ['loop'], title: gone ? `x ^= ${v}: the second ${v} takes the first one out` : `x ^= ${v}: ${v} goes into x`, text: gone ? `${v} is already in the bag, so XOR-ing it again takes it back out. The pair of ${v}s vanishes as if neither had been seen, even though the copies weren't next to each other.` : `${v} goes into the bag. Column by column: matching bits give 0, different bits give 1 (a crossed cell is 1 ^ 1 = 0). If another ${v} comes later, it will undo exactly this change.`, calc: [`${bin(before, w)} ^ ${bin(v, w)} = ${bin(x, w)}`, `x holds ${holds.length ? holds.map((h) => h.v).join(' ^ ') : 'nothing'} = ${x}`] });
     });
-    snap({ kind: 'done', rows: [{ label: 'x', v: x, result: true }], i: null, lines: ['end'], answer: `${x}`, title: `The single number is ${x}`, text: 'O(n) time and O(1) memory, with no hash set.', calc: [`x = ${x}`] });
+    snap({ kind: 'done', rows: [{ label: 'x', v: x, result: true }], holds: holds.map((h) => h.v), cancelled: [...cancelled], i: null, lines: ['end'], answer: `${x}`, title: `The single number is ${x}`, text: `Every pair took itself back out, so only ${x} is left in the bag. O(n) time and O(1) memory: one int instead of a hash set.`, calc: [`x = ${x}`] });
     return steps;
   }
   const a = input.a, n = a.length;
   let x = n;
-  snap({ kind: 'start', rows: [{ label: 'x', v: x }], i: null, lines: ['init'], title: `One number from 0…${n} is missing: ${list(a)}`, text: `XOR together every index 0…${n} and every value. Each number that is present appears twice (once as an index, once as a value) and cancels. The missing one appears only once, as an index, so it's what remains. Start with x = n, since n has no index.`, calc: [`x = ${n}`] });
+  const holds = [{ v: n, note: 'n' }], cancelled = [];
+  snap({ kind: 'start', rows: [{ label: 'x', v: x }], holds: [n], cancelled: [], i: null, lines: ['init'], title: `One number from 0…${n} is missing: ${list(a)}`, text: `XOR in every index 0…${n - 1}, every value, and n itself. A number that is present goes into x twice (once as an index or n, once as a value), so it cancels. The missing number only ever goes in once, so it's what's left. Start with x = n.`, calc: [`x = ${n}`] });
   a.forEach((v, i) => {
     const before = x;
     x ^= i ^ v;
-    snap({ kind: 'xor', rows: [{ label: 'x', v: before }, { label: `i = ${i}`, v: i }, { label: `a[${i}]`, v }, { label: 'x ^ i ^ a[i]', v: x, result: true }], i, lines: ['loop'], title: `x ^= ${i} ^ ${v} → ${x}`, text: `Mix in index ${i} and value ${v}. Whenever an index and the same value have both been mixed in, they have cancelled, wherever they were.`, calc: [`${before} ^ ${i} ^ ${v} = ${x}`] });
+    const g1 = toggle(holds, i, `index ${i}`).gone;
+    const g2 = toggle(holds, v, `a[${i}]`).gone;
+    [g1, g2].forEach((g) => g && cancelled.push(g.v));
+    const said = [g1 && `index ${i} cancels the ${i} already in x`, g2 && `value ${v} cancels the ${v} already in x`].filter(Boolean);
+    snap({ kind: g1 || g2 ? 'cancel' : 'xor', rows: [{ label: 'x', v: before }, { label: `index ${i}`, v: i, op: '^' }, { label: `a[${i}]`, v, op: '^' }, { label: 'new x', v: x, result: true }], holds: holds.map((h) => h.v), cancelled: [...cancelled], i, lines: ['loop'], title: `x ^= ${i} ^ ${v} → ${x}`, text: `Put index ${i} and value ${v} into x. ${said.length ? `${said.join('; ').replace(/^./, (c) => c.toUpperCase())}: a matched pair is gone.` : 'Neither has a partner in x yet, so both stay for now.'} A column of the result is 1 when an odd number of rows have a 1 there.`, calc: [`${bin(before, w)} ^ ${bin(i, w)} ^ ${bin(v, w)} = ${bin(x, w)}`, `x holds ${holds.length ? holds.map((h) => h.v).join(' ^ ') : 'nothing'} = ${x}`] });
   });
-  snap({ kind: 'done', rows: [{ label: 'x', v: x, result: true }], i: null, lines: ['end'], answer: `${x}`, title: `Missing: ${x}`, text: 'The sum formula n(n + 1)/2 − sum works too; XOR can never overflow.', calc: [`x = ${x}`] });
+  snap({ kind: 'done', rows: [{ label: 'x', v: x, result: true }], holds: holds.map((h) => h.v), cancelled: [...cancelled], i: null, lines: ['end'], answer: `${x}`, title: `Missing: ${x}`, text: `Every present number met its partner and cancelled; only ${x} went in once. The sum formula n(n + 1)/2 − sum works too, but XOR can never overflow.`, calc: [`x = ${x}`] });
   return steps;
 }
 

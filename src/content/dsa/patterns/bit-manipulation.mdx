@@ -148,6 +148,26 @@ static int getSum(int a, int b) {
 }
 ```
 
+## Quick tricks cheat sheet
+
+These are the one-liners you should be able to write without thinking. Most of them come from the identities above. (The list follows TLE Eliminators' "10 Bitwise Tricks" video, linked in Further reading.)
+
+| Trick | Code | Why it works |
+| --- | --- | --- |
+| Odd or even | `(n & 1) == 1` → odd | The last bit is the 2⁰ place, and every other place is even |
+| Power of two | `n > 0 && (n & (n - 1)) == 0` | A power of two has exactly one bit set ([Identity 1](#identity-1-n--n--1-clears-the-lowest-set-bit)) |
+| Test / set / clear / flip bit i | `n & (1 << i)`, `n \| (1 << i)`, `n & ~(1 << i)`, `n ^ (1 << i)` | Build a mask with one bit set, then AND, OR or XOR it ([Single bits](#single-bits)) |
+| Count set bits | `while (n != 0) { n &= n - 1; c++; }` | Each step removes one 1-bit |
+| Clear trailing 1s | `n & (n + 1)` | Adding 1 turns the trailing 1s into 0s and carries into the next 0. AND-ing then wipes the trailing run: `1011 & 1100 = 1000` |
+| Multiply / divide by 2ᵏ | `n << k`, `n >> k` | Shifting moves every bit one place value up or down. `>>` rounds toward −∞ for negatives, but `/` rounds toward 0 |
+| Swap without a temp | `a ^= b; b ^= a; a ^= b;` | XOR cancels pairs ([Identity 2](#identity-2-xor-cancels-pairs)). It breaks if `a` and `b` are the **same variable** (both become 0) |
+
+<Callout type="note" title="Tricks to mention, not to show off">
+
+In real code, prefer `a % 2`, `a * 2` and a temp variable. The JIT compiler generates the same machine instructions, and the readable version is easier to review. Use these tricks when the problem is about bits or when the interviewer asks for O(1) space without extra variables.
+
+</Callout>
+
 ## Bitmasks as subsets
 
 For a set of n ≤ 20 items, the integers `0 … 2ⁿ − 1` represent every subset: bit i set means "item i is in the subset".
@@ -227,5 +247,6 @@ Use a bitmask per subset (2¹⁵ = 32,768 masks). Precompute for each task a `co
 ## Further reading
 
 - Henry S. Warren, *Hacker's Delight* (2nd ed., 2012) — the reference for bit tricks.
+- TLE Eliminators, [*Learn these 10 Bitwise Tricks*](https://www.youtube.com/watch?v=LGrE0siZ-ZA) (video, 29 min) — a quick tour of the tricks in the cheat sheet above.
 - Next: [Designing Data Structures](/dsa/patterns/design-data-structures).
 - [The Pattern Picker](/dsa/playbook/pattern-picker) — choosing among all the patterns in this course.
