@@ -39,6 +39,7 @@ export const PATTERNS = {
   greedy: { name: 'Greedy', confused: ['dp-linear', 'sorting-and-selection', 'heap-patterns', 'two-pointers'] },
   tries: { name: 'Trie', confused: ['hashing', 'backtracking', 'string-matching', 'bit-manipulation'] },
   'bit-manipulation': { name: 'Bit manipulation', confused: ['hashing', 'math-for-interviews', 'dp-linear', 'two-pointers'] },
+  'contribution-technique': { name: 'Contribution (what each element adds)', confused: ['prefix-sums', 'monotonic-stack', 'sliding-window', 'math-for-interviews'] },
   'design-data-structures': { name: 'Design a data structure', confused: ['hashing', 'heap-patterns', 'stack-patterns', 'linked-list-manipulation'] },
   'matrix-simulation': { name: 'Matrix simulation', confused: ['graph-traversal', 'dp-grid', 'binary-search', 'two-pointers'] },
   'math-for-interviews': { name: 'Math', confused: ['bit-manipulation', 'dp-made-easy', 'binary-search', 'greedy'] },

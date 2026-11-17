@@ -1,0 +1,748 @@
+{
+ "sum-of-all-odd-length-subarrays": {
+  "pattern": "Contribution technique: index i is in (i + 1)(n − i) subarrays, about half of them odd-length",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sum every odd-length subarray",
+    "idea": "Try every start and every odd length, and add up the elements of each subarray with an inner loop.",
+    "steps": [
+     "For every start `l` and every end `r ≥ l` with `r − l` even (odd length):",
+     "add `arr[l] + … + arr[r]` to the total with a third loop."
+    ],
+    "time": "O(n³)",
+    "space": "O(1)",
+    "why": "About n²/4 subarrays, each summed in O(n). Fine for n = 100, but the work per subarray is repeated over and over.",
+    "code": {
+     "java": "class Solution {\n    public int sumOddLengthSubarrays(int[] arr) {\n        int n = arr.length, total = 0;\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n; r += 2)\n                for (int k = l; k <= r; k++) total += arr[k];\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int sumOddLengthSubarrays(vector<int>& arr) {\n        int n = arr.size(), total = 0;\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n; r += 2)\n                for (int k = l; k <= r; k++) total += arr[k];\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def sumOddLengthSubarrays(self, arr: List[int]) -> int:\n        n = len(arr)\n        return sum(sum(arr[l:r + 1]) for l in range(n) for r in range(l, n, 2))",
+     "javascript": "var sumOddLengthSubarrays = function(arr) {\n    const n = arr.length;\n    let total = 0;\n    for (let l = 0; l < n; l++)\n        for (let r = l; r < n; r += 2)\n            for (let k = l; k <= r; k++) total += arr[k];\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Prefix sums",
+    "idea": "Precompute prefix sums so each subarray sum is p[r + 1] − p[l] in O(1).",
+    "steps": [
+     "Build `p` with `p[i + 1] = p[i] + arr[i]`.",
+     "For every start `l` and odd-length end `r`, add `p[r + 1] − p[l]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "Each subarray is now O(1), but there are still O(n²) of them.",
+    "code": {
+     "java": "class Solution {\n    public int sumOddLengthSubarrays(int[] arr) {\n        int n = arr.length, total = 0;\n        int[] p = new int[n + 1];\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + arr[i];\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n; r += 2) total += p[r + 1] - p[l];\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int sumOddLengthSubarrays(vector<int>& arr) {\n        int n = arr.size(), total = 0;\n        vector<int> p(n + 1, 0);\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + arr[i];\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n; r += 2) total += p[r + 1] - p[l];\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def sumOddLengthSubarrays(self, arr: List[int]) -> int:\n        n = len(arr)\n        p = [0] * (n + 1)\n        for i, x in enumerate(arr):\n            p[i + 1] = p[i] + x\n        return sum(p[r + 1] - p[l] for l in range(n) for r in range(l, n, 2))",
+     "javascript": "var sumOddLengthSubarrays = function(arr) {\n    const n = arr.length, p = new Array(n + 1).fill(0);\n    for (let i = 0; i < n; i++) p[i + 1] = p[i] + arr[i];\n    let total = 0;\n    for (let l = 0; l < n; l++)\n        for (let r = l; r < n; r += 2) total += p[r + 1] - p[l];\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Contribution of each element",
+    "idea": "arr[i] is in (i + 1)(n − i) subarrays (starts × ends); ⌈that / 2⌉ of them have odd length. Add arr[i] times that count.",
+    "steps": [
+     "For each `i`, `all = (i + 1) × (n − i)` subarrays contain it.",
+     "Odd length means start and end have the same parity, which is `(all + 1) / 2` of them.",
+     "Add `arr[i] × (all + 1) / 2`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "One pass and a little arithmetic per element: the sum is reorganised by element instead of by subarray.",
+    "code": {
+     "java": "class Solution {\n    public int sumOddLengthSubarrays(int[] arr) {\n        int n = arr.length, total = 0;\n        for (int i = 0; i < n; i++) {\n            int all = (i + 1) * (n - i);           // subarrays containing i\n            total += arr[i] * ((all + 1) / 2);     // the odd-length ones\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int sumOddLengthSubarrays(vector<int>& arr) {\n        int n = arr.size(), total = 0;\n        for (int i = 0; i < n; i++) {\n            int all = (i + 1) * (n - i);\n            total += arr[i] * ((all + 1) / 2);\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def sumOddLengthSubarrays(self, arr: List[int]) -> int:\n        n = len(arr)\n        return sum(x * (((i + 1) * (n - i) + 1) // 2) for i, x in enumerate(arr))",
+     "javascript": "var sumOddLengthSubarrays = function(arr) {\n    const n = arr.length;\n    let total = 0;\n    for (let i = 0; i < n; i++) {\n        const all = (i + 1) * (n - i);\n        total += arr[i] * Math.floor((all + 1) / 2);\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "number-of-zero-filled-subarrays": {
+  "pattern": "Contribution technique: credit each all-zero subarray to its right end",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "From every start, extend to the right while the elements are zero; each step is one more all-zero subarray.",
+    "steps": [
+     "For each start `l`: walk `r = l, l + 1, …` while `nums[r] == 0`.",
+     "Count one subarray per step."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "An array of 10⁵ zeros makes every start walk to the end: about 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public long zeroFilledSubarray(int[] nums) {\n        long count = 0;\n        for (int l = 0; l < nums.length; l++)\n            for (int r = l; r < nums.length && nums[r] == 0; r++) count++;\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long zeroFilledSubarray(vector<int>& nums) {\n        long long count = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n && nums[r] == 0; r++) count++;\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def zeroFilledSubarray(self, nums: List[int]) -> int:\n        count = 0\n        for l in range(len(nums)):\n            r = l\n            while r < len(nums) and nums[r] == 0:\n                count += 1\n                r += 1\n        return count",
+     "javascript": "var zeroFilledSubarray = function(nums) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++)\n        for (let r = l; r < nums.length && nums[r] === 0; r++) count++;\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Length of the current zero run",
+    "idea": "If the run of zeros ending at i has length run, exactly run all-zero subarrays end at i. Add run at every index.",
+    "steps": [
+     "Keep `run`: `run + 1` on a zero, `0` otherwise.",
+     "Add `run` to the total at every index (64-bit)."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Every all-zero subarray is counted once, at its right end, so one pass suffices.",
+    "code": {
+     "java": "class Solution {\n    public long zeroFilledSubarray(int[] nums) {\n        long total = 0, run = 0;\n        for (int x : nums) {\n            run = (x == 0) ? run + 1 : 0;   // all-zero subarrays ending here\n            total += run;\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long zeroFilledSubarray(vector<int>& nums) {\n        long long total = 0, run = 0;\n        for (int x : nums) {\n            run = (x == 0) ? run + 1 : 0;\n            total += run;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def zeroFilledSubarray(self, nums: List[int]) -> int:\n        total = run = 0\n        for x in nums:\n            run = run + 1 if x == 0 else 0\n            total += run\n        return total",
+     "javascript": "var zeroFilledSubarray = function(nums) {\n    let total = 0, run = 0;\n    for (const x of nums) {\n        run = x === 0 ? run + 1 : 0;\n        total += run;\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "vowels-of-all-substrings": {
+  "pattern": "Contribution technique: a vowel at i is in (i + 1)(n − i) substrings",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every substring with a running count",
+    "idea": "Fix the start, extend the end one character at a time while counting vowels, and add the running count for each substring.",
+    "steps": [
+     "For each start `l`, set `vowels = 0`.",
+     "For each end `r ≥ l`: add 1 if `word[r]` is a vowel, then add `vowels` to the total."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "There are about n²/2 substrings: 5 × 10⁹ for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public long countVowels(String word) {\n        long total = 0;\n        for (int l = 0; l < word.length(); l++) {\n            long vowels = 0;\n            for (int r = l; r < word.length(); r++) {\n                if (\"aeiou\".indexOf(word.charAt(r)) >= 0) vowels++;\n                total += vowels;\n            }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countVowels(string word) {\n        long long total = 0;\n        int n = word.size();\n        for (int l = 0; l < n; l++) {\n            long long vowels = 0;\n            for (int r = l; r < n; r++) {\n                if (string(\"aeiou\").find(word[r]) != string::npos) vowels++;\n                total += vowels;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def countVowels(self, word: str) -> int:\n        total = 0\n        for l in range(len(word)):\n            vowels = 0\n            for r in range(l, len(word)):\n                vowels += word[r] in 'aeiou'\n                total += vowels\n        return total",
+     "javascript": "var countVowels = function(word) {\n    let total = 0;\n    for (let l = 0; l < word.length; l++) {\n        let vowels = 0;\n        for (let r = l; r < word.length; r++) {\n            if ('aeiou'.includes(word[r])) vowels++;\n            total += vowels;\n        }\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Contribution of each vowel",
+    "idea": "A substring containing index i starts in 0 … i and ends in i … n − 1, so a vowel at i is counted (i + 1) × (n − i) times.",
+    "steps": [
+     "For each index `i` holding a vowel, add `(i + 1) × (n − i)`.",
+     "Use 64-bit arithmetic: the product reaches 2.5 × 10⁹."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each character is looked at once, and its contribution is a product of two counts.",
+    "code": {
+     "java": "class Solution {\n    public long countVowels(String word) {\n        long n = word.length(), total = 0;\n        for (int i = 0; i < n; i++)\n            if (\"aeiou\".indexOf(word.charAt(i)) >= 0) total += (i + 1) * (n - i);\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countVowels(string word) {\n        long long n = word.size(), total = 0;\n        for (long long i = 0; i < n; i++)\n            if (string(\"aeiou\").find(word[i]) != string::npos) total += (i + 1) * (n - i);\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def countVowels(self, word: str) -> int:\n        n = len(word)\n        return sum((i + 1) * (n - i) for i, c in enumerate(word) if c in 'aeiou')",
+     "javascript": "var countVowels = function(word) {\n    const n = word.length;\n    let total = 0;\n    for (let i = 0; i < n; i++)\n        if ('aeiou'.includes(word[i])) total += (i + 1) * (n - i);\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "total-hamming-distance": {
+  "pattern": "Contribution technique per bit: bit b adds ones × zeros",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every pair",
+    "idea": "For every pair, count the set bits of a ^ b.",
+    "steps": [
+     "For every pair `i < j`: add `bitCount(nums[i] ^ nums[j])`.",
+     "Return the total."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "n = 10⁴ gives 5 × 10⁷ pairs: borderline, and the per-bit view is much faster.",
+    "code": {
+     "java": "class Solution {\n    public int totalHammingDistance(int[] nums) {\n        int total = 0;\n        for (int i = 0; i < nums.length; i++)\n            for (int j = i + 1; j < nums.length; j++) total += Integer.bitCount(nums[i] ^ nums[j]);\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int totalHammingDistance(vector<int>& nums) {\n        int total = 0, n = nums.size();\n        for (int i = 0; i < n; i++)\n            for (int j = i + 1; j < n; j++) total += __builtin_popcount(nums[i] ^ nums[j]);\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def totalHammingDistance(self, nums: List[int]) -> int:\n        n = len(nums)\n        return sum(bin(nums[i] ^ nums[j]).count('1') for i in range(n) for j in range(i + 1, n))",
+     "javascript": "var totalHammingDistance = function(nums) {\n    const bits = (x) => { let c = 0; while (x) { x &= x - 1; c++; } return c; };\n    let total = 0;\n    for (let i = 0; i < nums.length; i++)\n        for (let j = i + 1; j < nums.length; j++) total += bits(nums[i] ^ nums[j]);\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Count ones per bit",
+    "idea": "Bits are independent. At bit b, with ones numbers having a 1, exactly ones × (n − ones) pairs differ there.",
+    "steps": [
+     "For each bit `b` from 0 to 31: count `ones`.",
+     "Add `ones × (n − ones)`."
+    ],
+    "time": "O(32 · n)",
+    "space": "O(1)",
+    "why": "Each pair is never looked at directly: it is counted once per bit where it differs, through the column counts.",
+    "code": {
+     "java": "class Solution {\n    public int totalHammingDistance(int[] nums) {\n        int n = nums.length, total = 0;\n        for (int b = 0; b < 32; b++) {\n            int ones = 0;\n            for (int x : nums) ones += (x >> b) & 1;\n            total += ones * (n - ones);         // (1, 0) pairs differ at bit b\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int totalHammingDistance(vector<int>& nums) {\n        int n = nums.size(), total = 0;\n        for (int b = 0; b < 32; b++) {\n            int ones = 0;\n            for (int x : nums) ones += (x >> b) & 1;\n            total += ones * (n - ones);\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def totalHammingDistance(self, nums: List[int]) -> int:\n        n, total = len(nums), 0\n        for b in range(32):\n            ones = sum((x >> b) & 1 for x in nums)\n            total += ones * (n - ones)\n        return total",
+     "javascript": "var totalHammingDistance = function(nums) {\n    const n = nums.length;\n    let total = 0;\n    for (let b = 0; b < 32; b++) {\n        let ones = 0;\n        for (const x of nums) ones += (x >>> b) & 1;\n        total += ones * (n - ones);\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "bitwise-xor-of-all-pairings": {
+  "pattern": "Contribution technique with XOR parity: each value appears (other length) times",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "XOR every pair",
+    "idea": "Loop over every (i, j) and XOR nums1[i] ^ nums2[j] into the answer.",
+    "steps": [
+     "For every `a` in `nums1` and `b` in `nums2`: `x ^= a ^ b`.",
+     "Return `x`."
+    ],
+    "time": "O(n · m)",
+    "space": "O(1)",
+    "why": "Up to 10¹⁰ pairs for two arrays of 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int xorAllNums(int[] nums1, int[] nums2) {\n        int x = 0;\n        for (int a : nums1) for (int b : nums2) x ^= a ^ b;\n        return x;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int xorAllNums(vector<int>& nums1, vector<int>& nums2) {\n        int x = 0;\n        for (int a : nums1) for (int b : nums2) x ^= a ^ b;\n        return x;\n    }\n};",
+     "python": "class Solution:\n    def xorAllNums(self, nums1: List[int], nums2: List[int]) -> int:\n        x = 0\n        for a in nums1:\n            for b in nums2:\n                x ^= a ^ b\n        return x",
+     "javascript": "var xorAllNums = function(nums1, nums2) {\n    let x = 0;\n    for (const a of nums1) for (const b of nums2) x ^= a ^ b;\n    return x;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Only odd counts survive",
+    "idea": "Each nums1 value is XOR-ed nums2.length times and each nums2 value nums1.length times; an even count cancels to 0.",
+    "steps": [
+     "If `nums2.length` is odd, XOR every element of `nums1` into the answer.",
+     "If `nums1.length` is odd, XOR every element of `nums2` into the answer."
+    ],
+    "time": "O(n + m)",
+    "space": "O(1)",
+    "why": "Contribution by value: only whether a value appears an odd number of times matters for XOR.",
+    "code": {
+     "java": "class Solution {\n    public int xorAllNums(int[] nums1, int[] nums2) {\n        int x = 0;\n        if (nums2.length % 2 == 1) for (int a : nums1) x ^= a;   // each a appears nums2.length times\n        if (nums1.length % 2 == 1) for (int b : nums2) x ^= b;   // each b appears nums1.length times\n        return x;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int xorAllNums(vector<int>& nums1, vector<int>& nums2) {\n        int x = 0;\n        if (nums2.size() % 2 == 1) for (int a : nums1) x ^= a;\n        if (nums1.size() % 2 == 1) for (int b : nums2) x ^= b;\n        return x;\n    }\n};",
+     "python": "class Solution:\n    def xorAllNums(self, nums1: List[int], nums2: List[int]) -> int:\n        x = 0\n        if len(nums2) % 2:\n            for a in nums1:\n                x ^= a\n        if len(nums1) % 2:\n            for b in nums2:\n                x ^= b\n        return x",
+     "javascript": "var xorAllNums = function(nums1, nums2) {\n    let x = 0;\n    if (nums2.length % 2 === 1) for (const a of nums1) x ^= a;\n    if (nums1.length % 2 === 1) for (const b of nums2) x ^= b;\n    return x;\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-absolute-differences-in-a-sorted-array": {
+  "pattern": "Contribution technique with prefix sums: sorted, so |x − y| splits into a left and a right part",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Sum each row directly",
+    "idea": "For every i, loop over every j and add |nums[i] − nums[j]|.",
+    "steps": [
+     "For each `i`: `res[i] = Σ |nums[i] − nums[j]|` over all `j`.",
+     "Return `res`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1) extra",
+    "why": "10¹⁰ operations for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int[] getSumAbsoluteDifferences(int[] nums) {\n        int n = nums.length;\n        int[] res = new int[n];\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++) res[i] += Math.abs(nums[i] - nums[j]);\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> getSumAbsoluteDifferences(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> res(n, 0);\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++) res[i] += abs(nums[i] - nums[j]);\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def getSumAbsoluteDifferences(self, nums: List[int]) -> List[int]:\n        return [sum(abs(x - y) for y in nums) for x in nums]",
+     "javascript": "var getSumAbsoluteDifferences = function(nums) {\n    return nums.map((x) => nums.reduce((s, y) => s + Math.abs(x - y), 0));\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Prefix sums on both sides",
+    "idea": "Everything before i is ≤ nums[i] and everything after is ≥ it, so res[i] = (nums[i]·i − sum before) + (sum after − nums[i]·(n − 1 − i)).",
+    "steps": [
+     "Build prefix sums `p` with `p[i + 1] = p[i] + nums[i]`.",
+     "Left part: `nums[i] × i − p[i]`.",
+     "Right part: `(p[n] − p[i + 1]) − nums[i] × (n − 1 − i)`; add both."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "The sort removes the absolute value, and prefix sums give each side's total in O(1).",
+    "code": {
+     "java": "class Solution {\n    public int[] getSumAbsoluteDifferences(int[] nums) {\n        int n = nums.length;\n        int[] p = new int[n + 1];\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        int[] res = new int[n];\n        for (int i = 0; i < n; i++) {\n            int left = nums[i] * i - p[i];                          // to everything before i\n            int right = (p[n] - p[i + 1]) - nums[i] * (n - 1 - i);  // to everything after i\n            res[i] = left + right;\n        }\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> getSumAbsoluteDifferences(vector<int>& nums) {\n        int n = nums.size();\n        vector<int> p(n + 1, 0), res(n);\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        for (int i = 0; i < n; i++) {\n            int left = nums[i] * i - p[i];\n            int right = (p[n] - p[i + 1]) - nums[i] * (n - 1 - i);\n            res[i] = left + right;\n        }\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def getSumAbsoluteDifferences(self, nums: List[int]) -> List[int]:\n        n = len(nums)\n        p = [0] * (n + 1)\n        for i, x in enumerate(nums):\n            p[i + 1] = p[i] + x\n        return [(x * i - p[i]) + (p[n] - p[i + 1] - x * (n - 1 - i)) for i, x in enumerate(nums)]",
+     "javascript": "var getSumAbsoluteDifferences = function(nums) {\n    const n = nums.length, p = new Array(n + 1).fill(0);\n    for (let i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n    return nums.map((x, i) => (x * i - p[i]) + (p[n] - p[i + 1] - x * (n - 1 - i)));\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-distances": {
+  "pattern": "Contribution technique with prefix sums, per group of equal values",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Compare every pair of indices",
+    "idea": "For every i, scan every j with the same value and add |i − j|.",
+    "steps": [
+     "For each `i`, loop over all `j`.",
+     "If `nums[j] == nums[i]`, add `|i − j|` to `res[i]`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1) extra",
+    "why": "10¹⁰ comparisons for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public long[] distance(int[] nums) {\n        int n = nums.length;\n        long[] res = new long[n];\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++) if (nums[i] == nums[j]) res[i] += Math.abs(i - j);\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<long long> distance(vector<int>& nums) {\n        int n = nums.size();\n        vector<long long> res(n, 0);\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++) if (nums[i] == nums[j]) res[i] += abs(i - j);\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def distance(self, nums: List[int]) -> List[int]:\n        n = len(nums)\n        return [sum(abs(i - j) for j in range(n) if nums[j] == nums[i]) for i in range(n)]",
+     "javascript": "var distance = function(nums) {\n    const n = nums.length, res = new Array(n).fill(0);\n    for (let i = 0; i < n; i++)\n        for (let j = 0; j < n; j++) if (nums[i] === nums[j]) res[i] += Math.abs(i - j);\n    return res;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Group indices, then prefix sums",
+    "idea": "Collect the (sorted) indices of each value. For the k-th index j in a group: (j·k − sum before) + (sum after − j·(size − 1 − k)).",
+    "steps": [
+     "Group indices by value with a hash map (left to right, so each list is sorted).",
+     "For each group, compute its total and walk it with a running sum of the indices before.",
+     "Set `res[j] = (j·k − left) + (right − j·(size − 1 − k))`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every index is handled once in its group, with O(1) work from the running sums.",
+    "code": {
+     "java": "class Solution {\n    public long[] distance(int[] nums) {\n        Map<Integer, List<Integer>> groups = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) groups.computeIfAbsent(nums[i], k -> new ArrayList<>()).add(i);\n        long[] res = new long[nums.length];\n        for (List<Integer> idx : groups.values()) {\n            long total = 0;\n            for (int j : idx) total += j;\n            long left = 0;                          // sum of the indices before position k\n            for (int k = 0; k < idx.size(); k++) {\n                long j = idx.get(k);\n                long right = total - left - j;     // sum of the indices after position k\n                res[(int) j] = (j * k - left) + (right - j * (idx.size() - 1 - k));\n                left += j;\n            }\n        }\n        return res;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<long long> distance(vector<int>& nums) {\n        unordered_map<int, vector<int>> groups;\n        for (int i = 0; i < (int) nums.size(); i++) groups[nums[i]].push_back(i);\n        vector<long long> res(nums.size(), 0);\n        for (auto& [v, idx] : groups) {\n            long long total = 0, left = 0, m = idx.size();\n            for (int j : idx) total += j;\n            for (long long k = 0; k < m; k++) {\n                long long j = idx[k], right = total - left - j;\n                res[j] = (j * k - left) + (right - j * (m - 1 - k));\n                left += j;\n            }\n        }\n        return res;\n    }\n};",
+     "python": "class Solution:\n    def distance(self, nums: List[int]) -> List[int]:\n        groups = defaultdict(list)\n        for i, v in enumerate(nums):\n            groups[v].append(i)\n        res = [0] * len(nums)\n        for idx in groups.values():\n            total, left, m = sum(idx), 0, len(idx)\n            for k, j in enumerate(idx):\n                right = total - left - j\n                res[j] = (j * k - left) + (right - j * (m - 1 - k))\n                left += j\n        return res",
+     "javascript": "var distance = function(nums) {\n    const groups = new Map();\n    nums.forEach((v, i) => { if (!groups.has(v)) groups.set(v, []); groups.get(v).push(i); });\n    const res = new Array(nums.length).fill(0);\n    for (const idx of groups.values()) {\n        const m = idx.length;\n        let total = 0, left = 0;\n        for (const j of idx) total += j;\n        idx.forEach((j, k) => {\n            const right = total - left - j;\n            res[j] = (j * k - left) + (right - j * (m - 1 - k));\n            left += j;\n        });\n    }\n    return res;\n};"
+    }
+   }
+  ]
+ },
+ "subarray-product-less-than-k": {
+  "pattern": "Sliding window + contribution: right end r adds r − l + 1",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "From each start, multiply in elements to the right until the product reaches k (positive values only grow it).",
+    "steps": [
+     "For each start `l`, set `prod = 1`.",
+     "Extend `r` while `prod × nums[r] < k`, counting each step; stop as soon as it reaches `k`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "With many 1s every start walks almost to the end: about 4.5 × 10⁸ steps for 3 × 10⁴ ones.",
+    "code": {
+     "java": "class Solution {\n    public int numSubarrayProductLessThanK(int[] nums, int k) {\n        int count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            long prod = 1;\n            for (int r = l; r < nums.length; r++) {\n                prod *= nums[r];\n                if (prod >= k) break;               // only grows from here\n                count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numSubarrayProductLessThanK(vector<int>& nums, int k) {\n        int count = 0, n = nums.size();\n        for (int l = 0; l < n; l++) {\n            long long prod = 1;\n            for (int r = l; r < n; r++) {\n                prod *= nums[r];\n                if (prod >= k) break;\n                count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def numSubarrayProductLessThanK(self, nums: List[int], k: int) -> int:\n        count = 0\n        for l in range(len(nums)):\n            prod = 1\n            for r in range(l, len(nums)):\n                prod *= nums[r]\n                if prod >= k:\n                    break\n                count += 1\n        return count",
+     "javascript": "var numSubarrayProductLessThanK = function(nums, k) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let prod = 1;\n        for (let r = l; r < nums.length; r++) {\n            prod *= nums[r];\n            if (prod >= k) break;\n            count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window, count at the right end",
+    "idea": "Keep the window [l, r] with product < k. Every subarray ending at r and starting in [l, r] is valid: r − l + 1 of them.",
+    "steps": [
+     "If `k ≤ 1`, return 0.",
+     "For each `r`: multiply in `nums[r]`, then divide out `nums[l++]` while the product is `≥ k`.",
+     "Add `r − l + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Each index enters and leaves the window once, and each valid subarray is credited exactly once, to its right end.",
+    "code": {
+     "java": "class Solution {\n    public int numSubarrayProductLessThanK(int[] nums, int k) {\n        if (k <= 1) return 0;                       // no product of positive integers is < 1\n        int count = 0, l = 0;\n        long prod = 1;\n        for (int r = 0; r < nums.length; r++) {\n            prod *= nums[r];\n            while (prod >= k) prod /= nums[l++];\n            count += r - l + 1;                     // subarrays ending at r\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int numSubarrayProductLessThanK(vector<int>& nums, int k) {\n        if (k <= 1) return 0;\n        int count = 0, l = 0;\n        long long prod = 1;\n        for (int r = 0; r < (int) nums.size(); r++) {\n            prod *= nums[r];\n            while (prod >= k) prod /= nums[l++];\n            count += r - l + 1;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def numSubarrayProductLessThanK(self, nums: List[int], k: int) -> int:\n        if k <= 1:\n            return 0\n        count = l = 0\n        prod = 1\n        for r, x in enumerate(nums):\n            prod *= x\n            while prod >= k:\n                prod //= nums[l]\n                l += 1\n            count += r - l + 1\n        return count",
+     "javascript": "var numSubarrayProductLessThanK = function(nums, k) {\n    if (k <= 1) return 0;\n    let count = 0, l = 0, prod = 1;\n    for (let r = 0; r < nums.length; r++) {\n        prod *= nums[r];\n        while (prod >= k) prod /= nums[l++];\n        count += r - l + 1;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "count-subarrays-where-max-element-appears-at-least-k-times": {
+  "pattern": "Sliding window + contribution: for \"at least\", right end r adds l",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Count copies from every start",
+    "idea": "From each start, extend to the right counting copies of the maximum; once there are k, every longer subarray also qualifies.",
+    "steps": [
+     "Find the maximum `m`.",
+     "For each start `l`, extend `r` counting copies of `m`; when the count reaches `k`, add `n − r` and stop."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "When copies of the maximum are rare, each start walks far: up to 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, int k) {\n        int n = nums.length, max = Arrays.stream(nums).max().getAsInt();\n        long count = 0;\n        for (int l = 0; l < n; l++) {\n            int seen = 0;\n            for (int r = l; r < n; r++) {\n                if (nums[r] == max) seen++;\n                if (seen >= k) { count += n - r; break; }   // [l..r], [l..r+1], …, [l..n−1]\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, int k) {\n        int n = nums.size(), mx = *max_element(nums.begin(), nums.end());\n        long long count = 0;\n        for (int l = 0; l < n; l++) {\n            int seen = 0;\n            for (int r = l; r < n; r++) {\n                if (nums[r] == mx) seen++;\n                if (seen >= k) { count += n - r; break; }\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        n, mx, count = len(nums), max(nums), 0\n        for l in range(n):\n            seen = 0\n            for r in range(l, n):\n                seen += nums[r] == mx\n                if seen >= k:\n                    count += n - r\n                    break\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    const n = nums.length, mx = Math.max(...nums);\n    let count = 0;\n    for (let l = 0; l < n; l++) {\n        let seen = 0;\n        for (let r = l; r < n; r++) {\n            if (nums[r] === mx) seen++;\n            if (seen >= k) { count += n - r; break; }\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window, count valid starts",
+    "idea": "For each r, shrink from the left while the window still holds k copies. Then every start before l keeps at least k copies, so r contributes l.",
+    "steps": [
+     "Find the maximum `m`; keep `seen` = copies of `m` in `[l, r]`.",
+     "For each `r`: count `nums[r]`; while `seen ≥ k`, drop `nums[l++]`.",
+     "Add `l`: starts `0 … l − 1` all work for this `r`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Both pointers only move forward, and each valid subarray is credited once, to its right end.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, int k) {\n        int max = Arrays.stream(nums).max().getAsInt();\n        long count = 0;\n        int seen = 0, l = 0;\n        for (int r = 0; r < nums.length; r++) {\n            if (nums[r] == max) seen++;\n            while (seen >= k) if (nums[l++] == max) seen--;   // shrink until it stops being valid\n            count += l;                                         // starts 0 … l − 1 have ≥ k copies\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, int k) {\n        int mx = *max_element(nums.begin(), nums.end()), seen = 0, l = 0;\n        long long count = 0;\n        for (int r = 0; r < (int) nums.size(); r++) {\n            if (nums[r] == mx) seen++;\n            while (seen >= k) if (nums[l++] == mx) seen--;\n            count += l;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        mx, seen, l, count = max(nums), 0, 0, 0\n        for x in nums:\n            seen += x == mx\n            while seen >= k:\n                seen -= nums[l] == mx\n                l += 1\n            count += l\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    const mx = Math.max(...nums);\n    let seen = 0, l = 0, count = 0;\n    for (let r = 0; r < nums.length; r++) {\n        if (nums[r] === mx) seen++;\n        while (seen >= k) if (nums[l++] === mx) seen--;\n        count += l;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-subarray-ranges": {
+  "pattern": "Contribution technique: sum of maximums − sum of minimums, each with monotonic stacks",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every subarray, scanned",
+    "idea": "For every subarray, scan it for its minimum and maximum.",
+    "steps": [
+     "For every `l ≤ r`: scan `nums[l..r]` for min and max.",
+     "Add `max − min`."
+    ],
+    "time": "O(n³)",
+    "space": "O(1)",
+    "why": "About n³/6 operations: 1.7 × 10⁸ for n = 1000.",
+    "code": {
+     "java": "class Solution {\n    public long subArrayRanges(int[] nums) {\n        long total = 0;\n        for (int l = 0; l < nums.length; l++)\n            for (int r = l; r < nums.length; r++) {\n                int mn = Integer.MAX_VALUE, mx = Integer.MIN_VALUE;\n                for (int k = l; k <= r; k++) { mn = Math.min(mn, nums[k]); mx = Math.max(mx, nums[k]); }\n                total += (long) mx - mn;\n            }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long subArrayRanges(vector<int>& nums) {\n        long long total = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++)\n            for (int r = l; r < n; r++) {\n                int mn = INT_MAX, mx = INT_MIN;\n                for (int k = l; k <= r; k++) { mn = min(mn, nums[k]); mx = max(mx, nums[k]); }\n                total += (long long) mx - mn;\n            }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def subArrayRanges(self, nums: List[int]) -> int:\n        n = len(nums)\n        return sum(max(nums[l:r + 1]) - min(nums[l:r + 1]) for l in range(n) for r in range(l, n))",
+     "javascript": "var subArrayRanges = function(nums) {\n    let total = 0;\n    for (let l = 0; l < nums.length; l++)\n        for (let r = l; r < nums.length; r++) {\n            let mn = Infinity, mx = -Infinity;\n            for (let k = l; k <= r; k++) { mn = Math.min(mn, nums[k]); mx = Math.max(mx, nums[k]); }\n            total += mx - mn;\n        }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Running min and max",
+    "idea": "Fix the start and extend the end, updating the running minimum and maximum in O(1).",
+    "steps": [
+     "For each `l`, start `mn = mx = nums[l]`.",
+     "For each `r ≥ l`, update `mn` and `mx` with `nums[r]` and add `mx − mn`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Fast enough for n = 1000 (5 × 10⁵ subarrays), and what most people write first; the follow-up asks for O(n).",
+    "code": {
+     "java": "class Solution {\n    public long subArrayRanges(int[] nums) {\n        long total = 0;\n        for (int l = 0; l < nums.length; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < nums.length; r++) {\n                mn = Math.min(mn, nums[r]);\n                mx = Math.max(mx, nums[r]);\n                total += (long) mx - mn;\n            }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long subArrayRanges(vector<int>& nums) {\n        long long total = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < n; r++) {\n                mn = min(mn, nums[r]);\n                mx = max(mx, nums[r]);\n                total += (long long) mx - mn;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def subArrayRanges(self, nums: List[int]) -> int:\n        total = 0\n        for l in range(len(nums)):\n            mn = mx = nums[l]\n            for r in range(l, len(nums)):\n                mn, mx = min(mn, nums[r]), max(mx, nums[r])\n                total += mx - mn\n        return total",
+     "javascript": "var subArrayRanges = function(nums) {\n    let total = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let mn = nums[l], mx = nums[l];\n        for (let r = l; r < nums.length; r++) {\n            mn = Math.min(mn, nums[r]);\n            mx = Math.max(mx, nums[r]);\n            total += mx - mn;\n        }\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Contribution with monotonic stacks",
+    "idea": "Range sum = Σ maximums − Σ minimums. a[i] is the minimum of (i − prev smaller) × (next smaller-or-equal − i) subarrays; likewise for maximums.",
+    "steps": [
+     "With a monotonic stack, find for each `i` the previous strictly smaller index and the next smaller-or-equal index (the tie rule stops double counting).",
+     "Sum `a[i] × (i − prev) × (next − i)` for minimums; repeat with the comparisons flipped for maximums.",
+     "Return maximums − minimums."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index is pushed and popped once per pass, and every subarray is credited to exactly one minimum and one maximum.",
+    "code": {
+     "java": "class Solution {\n    public long subArrayRanges(int[] nums) {\n        return sumOf(nums, true) - sumOf(nums, false);\n    }\n\n    private long sumOf(int[] a, boolean max) {\n        int n = a.length;\n        int[] prev = new int[n], next = new int[n];\n        Deque<Integer> st = new ArrayDeque<>();\n        for (int i = 0; i < n; i++) {\n            while (!st.isEmpty() && (max ? a[st.peek()] <= a[i] : a[st.peek()] >= a[i])) next[st.pop()] = i;\n            prev[i] = st.isEmpty() ? -1 : st.peek();\n            st.push(i);\n        }\n        while (!st.isEmpty()) next[st.pop()] = n;\n        long total = 0;\n        for (int i = 0; i < n; i++) total += (long) a[i] * (i - prev[i]) * (next[i] - i);\n        return total;\n    }\n}",
+     "cpp": "class Solution {\n    long long sumOf(vector<int>& a, bool mx) {\n        int n = a.size();\n        vector<int> prev(n), next(n, n), st;\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && (mx ? a[st.back()] <= a[i] : a[st.back()] >= a[i])) { next[st.back()] = i; st.pop_back(); }\n            prev[i] = st.empty() ? -1 : st.back();\n            st.push_back(i);\n        }\n        long long total = 0;\n        for (int i = 0; i < n; i++) total += (long long) a[i] * (i - prev[i]) * (next[i] - i);\n        return total;\n    }\npublic:\n    long long subArrayRanges(vector<int>& nums) {\n        return sumOf(nums, true) - sumOf(nums, false);\n    }\n};",
+     "python": "class Solution:\n    def subArrayRanges(self, nums: List[int]) -> int:\n        def sum_of(beats):\n            n = len(nums)\n            prev, nxt, st = [-1] * n, [n] * n, []\n            for i, x in enumerate(nums):\n                while st and not beats(nums[st[-1]], x):\n                    nxt[st.pop()] = i\n                prev[i] = st[-1] if st else -1\n                st.append(i)\n            return sum(nums[i] * (i - prev[i]) * (nxt[i] - i) for i in range(n))\n        return sum_of(lambda a, b: a > b) - sum_of(lambda a, b: a < b)",
+     "javascript": "var subArrayRanges = function(nums) {\n    const sumOf = (beats) => {\n        const n = nums.length, prev = new Array(n), next = new Array(n).fill(n), st = [];\n        for (let i = 0; i < n; i++) {\n            while (st.length && !beats(nums[st.at(-1)], nums[i])) next[st.pop()] = i;\n            prev[i] = st.length ? st.at(-1) : -1;\n            st.push(i);\n        }\n        let total = 0;\n        for (let i = 0; i < n; i++) total += nums[i] * (i - prev[i]) * (next[i] - i);\n        return total;\n    };\n    return sumOf((a, b) => a > b) - sumOf((a, b) => a < b);\n};"
+    }
+   }
+  ]
+ },
+ "minimum-fuel-cost-to-report-to-the-capital": {
+  "pattern": "Contribution of each tree edge: the road above v costs ⌈size(v) / seats⌉",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Walk every representative up",
+    "idea": "For every city, walk its path to the capital and add one person to each road it uses; then each road costs ⌈people / seats⌉.",
+    "steps": [
+     "Root the tree at 0 (BFS) to get each city's parent.",
+     "For every city `v`, walk `v → parent → … → 0`, adding 1 to `people` on each road (stored at the lower city).",
+     "Add `⌈people[v] / seats⌉` for every non-capital city."
+    ],
+    "time": "O(n · depth)",
+    "space": "O(n)",
+    "why": "On a path of 10⁵ cities the walks add up to about 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public long minimumFuelCost(int[][] roads, int seats) {\n        int n = roads.length + 1;\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : roads) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        int[] parent = new int[n];\n        Arrays.fill(parent, -2);\n        parent[0] = -1;\n        Deque<Integer> q = new ArrayDeque<>(List.of(0));\n        while (!q.isEmpty()) { int v = q.poll(); for (int c : adj.get(v)) if (parent[c] == -2) { parent[c] = v; q.add(c); } }\n        long[] people = new long[n];\n        for (int v = 1; v < n; v++)\n            for (int u = v; u != 0; u = parent[u]) people[u]++;     // v's representative uses the road above u\n        long fuel = 0;\n        for (int v = 1; v < n; v++) fuel += (people[v] + seats - 1) / seats;\n        return fuel;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long minimumFuelCost(vector<vector<int>>& roads, int seats) {\n        int n = roads.size() + 1;\n        vector<vector<int>> adj(n);\n        for (auto& e : roads) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<int> parent(n, -2);\n        parent[0] = -1;\n        queue<int> q;\n        q.push(0);\n        while (!q.empty()) { int v = q.front(); q.pop(); for (int c : adj[v]) if (parent[c] == -2) { parent[c] = v; q.push(c); } }\n        vector<long long> people(n, 0);\n        for (int v = 1; v < n; v++)\n            for (int u = v; u != 0; u = parent[u]) people[u]++;\n        long long fuel = 0;\n        for (int v = 1; v < n; v++) fuel += (people[v] + seats - 1) / seats;\n        return fuel;\n    }\n};",
+     "python": "class Solution:\n    def minimumFuelCost(self, roads: List[List[int]], seats: int) -> int:\n        n = len(roads) + 1\n        adj = [[] for _ in range(n)]\n        for a, b in roads:\n            adj[a].append(b)\n            adj[b].append(a)\n        parent = [-2] * n\n        parent[0] = -1\n        q = deque([0])\n        while q:\n            v = q.popleft()\n            for c in adj[v]:\n                if parent[c] == -2:\n                    parent[c] = v\n                    q.append(c)\n        people = [0] * n\n        for v in range(1, n):\n            u = v\n            while u != 0:\n                people[u] += 1\n                u = parent[u]\n        return sum((people[v] + seats - 1) // seats for v in range(1, n))",
+     "javascript": "var minimumFuelCost = function(roads, seats) {\n    const n = roads.length + 1, adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of roads) { adj[a].push(b); adj[b].push(a); }\n    const parent = new Array(n).fill(-2);\n    parent[0] = -1;\n    const q = [0];\n    for (let h = 0; h < q.length; h++) for (const c of adj[q[h]]) if (parent[c] === -2) { parent[c] = q[h]; q.push(c); }\n    const people = new Array(n).fill(0);\n    for (let v = 1; v < n; v++) for (let u = v; u !== 0; u = parent[u]) people[u]++;\n    let fuel = 0;\n    for (let v = 1; v < n; v++) fuel += Math.ceil(people[v] / seats);\n    return fuel;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Subtree sizes in one traversal",
+    "idea": "The people crossing the road above v are exactly v's subtree, so that road costs ⌈size(v) / seats⌉. Compute every subtree size bottom-up.",
+    "steps": [
+     "BFS from the capital to get a parent array and an order (parents before children).",
+     "Walk the order backwards: `size[v] += 1`, add `⌈size[v] / seats⌉`, then push `size[v]` into its parent."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each road's cost depends only on its subtree size, and one bottom-up pass gives all of them; iterative so a 10⁵-city path can't overflow the stack.",
+    "code": {
+     "java": "class Solution {\n    public long minimumFuelCost(int[][] roads, int seats) {\n        int n = roads.length + 1;\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : roads) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        int[] parent = new int[n], order = new int[n], size = new int[n];\n        parent[0] = -1;\n        int len = 0;\n        order[len++] = 0;                           // BFS order: parents before children\n        for (int k = 0; k < len; k++)\n            for (int c : adj.get(order[k])) if (c != parent[order[k]]) { parent[c] = order[k]; order[len++] = c; }\n        long fuel = 0;\n        for (int k = n - 1; k > 0; k--) {           // children before parents\n            int v = order[k];\n            size[v] += 1;\n            fuel += (size[v] + seats - 1) / seats;  // cars on the road from v to its parent\n            size[parent[v]] += size[v];\n        }\n        return fuel;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long minimumFuelCost(vector<vector<int>>& roads, int seats) {\n        int n = roads.size() + 1;\n        vector<vector<int>> adj(n);\n        for (auto& e : roads) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<int> parent(n, -1), order, size(n, 0);\n        order.push_back(0);\n        for (int k = 0; k < (int) order.size(); k++)\n            for (int c : adj[order[k]]) if (c != parent[order[k]]) { parent[c] = order[k]; order.push_back(c); }\n        long long fuel = 0;\n        for (int k = n - 1; k > 0; k--) {\n            int v = order[k];\n            size[v] += 1;\n            fuel += (size[v] + seats - 1) / seats;\n            size[parent[v]] += size[v];\n        }\n        return fuel;\n    }\n};",
+     "python": "class Solution:\n    def minimumFuelCost(self, roads: List[List[int]], seats: int) -> int:\n        n = len(roads) + 1\n        adj = [[] for _ in range(n)]\n        for a, b in roads:\n            adj[a].append(b)\n            adj[b].append(a)\n        parent, order, size = [-1] * n, [0], [0] * n\n        for v in order:                         # BFS order: the list grows while we walk it\n            for c in adj[v]:\n                if c != parent[v]:\n                    parent[c] = v\n                    order.append(c)\n        fuel = 0\n        for v in reversed(order[1:]):\n            size[v] += 1\n            fuel += (size[v] + seats - 1) // seats\n            size[parent[v]] += size[v]\n        return fuel",
+     "javascript": "var minimumFuelCost = function(roads, seats) {\n    const n = roads.length + 1, adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of roads) { adj[a].push(b); adj[b].push(a); }\n    const parent = new Array(n).fill(-1), order = [0], size = new Array(n).fill(0);\n    for (let k = 0; k < order.length; k++)\n        for (const c of adj[order[k]]) if (c !== parent[order[k]]) { parent[c] = order[k]; order.push(c); }\n    let fuel = 0;\n    for (let k = n - 1; k > 0; k--) {\n        const v = order[k];\n        size[v] += 1;\n        fuel += Math.ceil(size[v] / seats);\n        size[parent[v]] += size[v];\n    }\n    return fuel;\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-subsequence-widths": {
+  "pattern": "Contribution after sorting: a[i] is the max of 2^i and the min of 2^(n−1−i) subsequences",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every subsequence",
+    "idea": "Enumerate all 2ⁿ − 1 non-empty subsets with a bitmask and add max − min for each.",
+    "steps": [
+     "For every mask from 1 to `2ⁿ − 1`, scan the chosen elements for min and max.",
+     "Add `max − min` modulo 10⁹ + 7."
+    ],
+    "time": "O(2ⁿ · n)",
+    "space": "O(1)",
+    "why": "Exponential: hopeless beyond n ≈ 20, while n goes up to 10⁵.",
+    "timesOut": [
+     "generated"
+    ],
+    "code": {
+     "java": "class Solution {\n    public int sumSubseqWidths(int[] nums) {\n        int n = nums.length;\n        long total = 0;\n        for (int mask = 1; mask < (1 << n); mask++) {\n            int mn = Integer.MAX_VALUE, mx = Integer.MIN_VALUE;\n            for (int k = 0; k < n; k++) if ((mask >> k & 1) == 1) { mn = Math.min(mn, nums[k]); mx = Math.max(mx, nums[k]); }\n            total = (total + mx - mn) % 1_000_000_007;\n        }\n        return (int) total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int sumSubseqWidths(vector<int>& nums) {\n        int n = nums.size();\n        long long total = 0;\n        for (int mask = 1; mask < (1 << n); mask++) {\n            int mn = INT_MAX, mx = INT_MIN;\n            for (int k = 0; k < n; k++) if (mask >> k & 1) { mn = min(mn, nums[k]); mx = max(mx, nums[k]); }\n            total = (total + mx - mn) % 1000000007;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def sumSubseqWidths(self, nums: List[int]) -> int:\n        n, total = len(nums), 0\n        for mask in range(1, 1 << n):\n            pick = [nums[k] for k in range(n) if mask >> k & 1]\n            total += max(pick) - min(pick)\n        return total % (10**9 + 7)",
+     "javascript": "var sumSubseqWidths = function(nums) {\n    const n = nums.length;\n    let total = 0;\n    for (let mask = 1; mask < (1 << n); mask++) {\n        let mn = Infinity, mx = -Infinity;\n        for (let k = 0; k < n; k++) if (mask >> k & 1) { mn = Math.min(mn, nums[k]); mx = Math.max(mx, nums[k]); }\n        total = (total + mx - mn) % 1000000007;\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort, then powers of two",
+    "idea": "Width = max − min, and only the chosen values matter, so sort. Then nums[i] adds nums[i] × (2^i − 2^(n−1−i)).",
+    "steps": [
+     "Sort `nums` and precompute `pow2[k] = 2^k mod 10⁹ + 7`.",
+     "Add `nums[i] × (pow2[i] − pow2[n − 1 − i])` for every `i`, modulo 10⁹ + 7.",
+     "The running total may be negative: add the modulus before the final `%`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Counting subsets by who their max and min are replaces 2ⁿ subsets with n contributions.",
+    "code": {
+     "java": "class Solution {\n    public int sumSubseqWidths(int[] nums) {\n        final int MOD = 1_000_000_007;\n        int n = nums.length;\n        Arrays.sort(nums);\n        long[] pow2 = new long[n];\n        pow2[0] = 1;\n        for (int i = 1; i < n; i++) pow2[i] = pow2[i - 1] * 2 % MOD;\n        long total = 0;\n        for (int i = 0; i < n; i++)\n            total = (total + nums[i] * (pow2[i] - pow2[n - 1 - i])) % MOD;   // may go negative\n        return (int) ((total + MOD) % MOD);\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int sumSubseqWidths(vector<int>& nums) {\n        const long long MOD = 1000000007;\n        int n = nums.size();\n        sort(nums.begin(), nums.end());\n        vector<long long> pow2(n, 1);\n        for (int i = 1; i < n; i++) pow2[i] = pow2[i - 1] * 2 % MOD;\n        long long total = 0;\n        for (int i = 0; i < n; i++)\n            total = (total + nums[i] * (pow2[i] - pow2[n - 1 - i])) % MOD;\n        return (total + MOD) % MOD;\n    }\n};",
+     "python": "class Solution:\n    def sumSubseqWidths(self, nums: List[int]) -> int:\n        MOD = 10**9 + 7\n        nums.sort()\n        n = len(nums)\n        pow2 = [1] * n\n        for i in range(1, n):\n            pow2[i] = pow2[i - 1] * 2 % MOD\n        return sum(x * (pow2[i] - pow2[n - 1 - i]) for i, x in enumerate(nums)) % MOD",
+     "javascript": "var sumSubseqWidths = function(nums) {\n    const MOD = 1000000007, n = nums.length;\n    nums.sort((a, b) => a - b);\n    const pow2 = new Array(n).fill(1);\n    for (let i = 1; i < n; i++) pow2[i] = pow2[i - 1] * 2 % MOD;\n    let total = 0;\n    for (let i = 0; i < n; i++)\n        total = (total + nums[i] * (pow2[i] - pow2[n - 1 - i])) % MOD;   // nums[i] × diff < 2⁵³\n    return (total + MOD) % MOD;\n};"
+    }
+   }
+  ]
+ },
+ "total-appeal-of-a-string": {
+  "pattern": "Contribution technique: credit the first copy of each letter, (i − last) × (n − i)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every substring with a seen set",
+    "idea": "Fix the start, extend the end, and track the distinct letters seen so far; add that count for every substring.",
+    "steps": [
+     "For each start `l`, clear a 26-entry `seen` array and set `distinct = 0`.",
+     "For each end `r ≥ l`: mark `s[r]` (counting it if new) and add `distinct`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About 5 × 10⁹ substrings for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public long appealSum(String s) {\n        long total = 0;\n        for (int l = 0; l < s.length(); l++) {\n            boolean[] seen = new boolean[26];\n            int distinct = 0;\n            for (int r = l; r < s.length(); r++) {\n                if (!seen[s.charAt(r) - 'a']) { seen[s.charAt(r) - 'a'] = true; distinct++; }\n                total += distinct;\n            }\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long appealSum(string s) {\n        long long total = 0;\n        int n = s.size();\n        for (int l = 0; l < n; l++) {\n            bool seen[26] = {};\n            int distinct = 0;\n            for (int r = l; r < n; r++) {\n                if (!seen[s[r] - 'a']) { seen[s[r] - 'a'] = true; distinct++; }\n                total += distinct;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def appealSum(self, s: str) -> int:\n        total = 0\n        for l in range(len(s)):\n            seen = set()\n            for r in range(l, len(s)):\n                seen.add(s[r])\n                total += len(seen)\n        return total",
+     "javascript": "var appealSum = function(s) {\n    let total = 0;\n    for (let l = 0; l < s.length; l++) {\n        const seen = new Set();\n        for (let r = l; r < s.length; r++) {\n            seen.add(s[r]);\n            total += seen.size;\n        }\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Last-seen positions",
+    "idea": "s[i] is the first copy of its letter in a substring exactly when the substring starts after the letter's previous occurrence: (i − last) starts × (n − i) ends.",
+    "steps": [
+     "Keep `last[26]`, initialised to −1.",
+     "For each `i`: add `(i − last[c]) × (n − i)`, then set `last[c] = i`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Every substring's appeal is split among its letters' first copies, and each copy's share is a product of two counts.",
+    "code": {
+     "java": "class Solution {\n    public long appealSum(String s) {\n        int[] last = new int[26];\n        Arrays.fill(last, -1);                      // \"no copy yet\" = index −1\n        long n = s.length(), total = 0;\n        for (int i = 0; i < n; i++) {\n            int c = s.charAt(i) - 'a';\n            total += (i - last[c]) * (n - i);       // starts after the previous copy, any end\n            last[c] = i;\n        }\n        return total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long appealSum(string s) {\n        vector<long long> last(26, -1);\n        long long n = s.size(), total = 0;\n        for (long long i = 0; i < n; i++) {\n            int c = s[i] - 'a';\n            total += (i - last[c]) * (n - i);\n            last[c] = i;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def appealSum(self, s: str) -> int:\n        last = {}\n        n, total = len(s), 0\n        for i, c in enumerate(s):\n            total += (i - last.get(c, -1)) * (n - i)\n            last[c] = i\n        return total",
+     "javascript": "var appealSum = function(s) {\n    const last = new Array(26).fill(-1), n = s.length;\n    let total = 0;\n    for (let i = 0; i < n; i++) {\n        const c = s.charCodeAt(i) - 97;\n        total += (i - last[c]) * (n - i);\n        last[c] = i;\n    }\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "count-unique-characters-of-all-substrings-of-a-given-string": {
+  "pattern": "Contribution technique: s[i] counts between its previous and next copies, (i − prev) × (next − i)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every substring with letter counts",
+    "idea": "Fix the start and extend the end, keeping letter counts and the number of letters that appear exactly once.",
+    "steps": [
+     "For each start `l`, clear the counts and set `unique = 0`.",
+     "For each end `r`: update `count[s[r]]` (1 → unique + 1, 2 → unique − 1) and add `unique`."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About 5 × 10⁹ substrings for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int uniqueLetterString(String s) {\n        long total = 0;\n        for (int l = 0; l < s.length(); l++) {\n            int[] count = new int[26];\n            int unique = 0;\n            for (int r = l; r < s.length(); r++) {\n                int c = ++count[s.charAt(r) - 'A'];\n                if (c == 1) unique++;\n                else if (c == 2) unique--;\n                total += unique;\n            }\n        }\n        return (int) total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniqueLetterString(string s) {\n        long long total = 0;\n        int n = s.size();\n        for (int l = 0; l < n; l++) {\n            int count[26] = {}, unique = 0;\n            for (int r = l; r < n; r++) {\n                int c = ++count[s[r] - 'A'];\n                if (c == 1) unique++;\n                else if (c == 2) unique--;\n                total += unique;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def uniqueLetterString(self, s: str) -> int:\n        total = 0\n        for l in range(len(s)):\n            count = [0] * 26\n            unique = 0\n            for r in range(l, len(s)):\n                k = ord(s[r]) - 65\n                count[k] += 1\n                if count[k] == 1:\n                    unique += 1\n                elif count[k] == 2:\n                    unique -= 1\n                total += unique\n        return total",
+     "javascript": "var uniqueLetterString = function(s) {\n    let total = 0;\n    for (let l = 0; l < s.length; l++) {\n        const count = new Array(26).fill(0);\n        let unique = 0;\n        for (let r = l; r < s.length; r++) {\n            const c = ++count[s.charCodeAt(r) - 65];\n            if (c === 1) unique++;\n            else if (c === 2) unique--;\n            total += unique;\n        }\n    }\n    return total;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Previous and next occurrence",
+    "idea": "s[i] is the only copy of its letter in substrings that start after the previous copy and end before the next one: (i − prev[i]) × (next[i] − i).",
+    "steps": [
+     "Left to right, record `prev[i]` (−1 if none); right to left, `next[i]` (n if none).",
+     "Add `(i − prev[i]) × (next[i] − i)` for every `i`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each letter copy's contribution is a product of two distances, so no substring is ever listed.",
+    "code": {
+     "java": "class Solution {\n    public int uniqueLetterString(String s) {\n        int n = s.length();\n        int[] prev = new int[n], next = new int[n], seen = new int[26];\n        Arrays.fill(seen, -1);\n        for (int i = 0; i < n; i++) { int c = s.charAt(i) - 'A'; prev[i] = seen[c]; seen[c] = i; }\n        Arrays.fill(seen, n);\n        for (int i = n - 1; i >= 0; i--) { int c = s.charAt(i) - 'A'; next[i] = seen[c]; seen[c] = i; }\n        long total = 0;\n        for (int i = 0; i < n; i++) total += (long) (i - prev[i]) * (next[i] - i);\n        return (int) total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int uniqueLetterString(string s) {\n        int n = s.size();\n        vector<int> prev(n), next(n), seen(26, -1);\n        for (int i = 0; i < n; i++) { prev[i] = seen[s[i] - 'A']; seen[s[i] - 'A'] = i; }\n        fill(seen.begin(), seen.end(), n);\n        for (int i = n - 1; i >= 0; i--) { next[i] = seen[s[i] - 'A']; seen[s[i] - 'A'] = i; }\n        long long total = 0;\n        for (int i = 0; i < n; i++) total += (long long) (i - prev[i]) * (next[i] - i);\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def uniqueLetterString(self, s: str) -> int:\n        n = len(s)\n        prev, nxt, seen = [0] * n, [0] * n, {}\n        for i, c in enumerate(s):\n            prev[i] = seen.get(c, -1)\n            seen[c] = i\n        seen = {}\n        for i in range(n - 1, -1, -1):\n            nxt[i] = seen.get(s[i], n)\n            seen[s[i]] = i\n        return sum((i - prev[i]) * (nxt[i] - i) for i in range(n))",
+     "javascript": "var uniqueLetterString = function(s) {\n    const n = s.length, prev = new Array(n), next = new Array(n);\n    let seen = new Array(26).fill(-1);\n    for (let i = 0; i < n; i++) { const c = s.charCodeAt(i) - 65; prev[i] = seen[c]; seen[c] = i; }\n    seen = new Array(26).fill(n);\n    for (let i = n - 1; i >= 0; i--) { const c = s.charCodeAt(i) - 65; next[i] = seen[c]; seen[c] = i; }\n    let total = 0;\n    for (let i = 0; i < n; i++) total += (i - prev[i]) * (next[i] - i);\n    return total;\n};"
+    }
+   }
+  ]
+ },
+ "count-subarrays-with-score-less-than-k": {
+  "pattern": "Sliding window + contribution: right end r adds r − l + 1",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "From each start, extend to the right with a running sum; stop once sum × length reaches k (it only grows).",
+    "steps": [
+     "For each start `l`, keep a running `sum`.",
+     "Extend `r` while `sum × (r − l + 1) < k`, counting each step."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "With small values and a huge k, every start walks to the end: about 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, long k) {\n        long count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            long sum = 0;\n            for (int r = l; r < nums.length; r++) {\n                sum += nums[r];\n                if (sum * (r - l + 1) >= k) break;   // only grows from here\n                count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, long long k) {\n        long long count = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++) {\n            long long sum = 0;\n            for (int r = l; r < n; r++) {\n                sum += nums[r];\n                if (sum * (r - l + 1) >= k) break;\n                count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        count = 0\n        for l in range(len(nums)):\n            total = 0\n            for r in range(l, len(nums)):\n                total += nums[r]\n                if total * (r - l + 1) >= k:\n                    break\n                count += 1\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let sum = 0;\n        for (let r = l; r < nums.length; r++) {\n            sum += nums[r];\n            if (sum * (r - l + 1) >= k) break;\n            count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window, count at the right end",
+    "idea": "Keep the longest window ending at r with score < k; every subarray ending at r inside it is valid: r − l + 1 of them.",
+    "steps": [
+     "Add `nums[r]` to `sum`.",
+     "While `sum × (r − l + 1) ≥ k`, subtract `nums[l++]`.",
+     "Add `r − l + 1` (64-bit)."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "Positive values make validity monotone, so each pointer only moves forward and each subarray is counted once.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, long k) {\n        long sum = 0, count = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            sum += nums[r];\n            while (sum * (r - l + 1) >= k) sum -= nums[l++];\n            count += r - l + 1;                     // subarrays ending at r\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, long long k) {\n        long long sum = 0, count = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            sum += nums[r];\n            while (sum * (r - l + 1) >= k) sum -= nums[l++];\n            count += r - l + 1;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        total = count = l = 0\n        for r, x in enumerate(nums):\n            total += x\n            while total * (r - l + 1) >= k:\n                total -= nums[l]\n                l += 1\n            count += r - l + 1\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    let sum = 0, count = 0, l = 0;\n    for (let r = 0; r < nums.length; r++) {\n        sum += nums[r];\n        while (sum * (r - l + 1) >= k) sum -= nums[l++];\n        count += r - l + 1;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-total-strength-of-wizards": {
+  "pattern": "Contribution with a monotonic stack + prefix sums of prefix sums",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every group with a running min and sum",
+    "idea": "Fix the start and extend the end, keeping the running minimum and sum; add min × sum for each group.",
+    "steps": [
+     "For each start `l`, set `mn = ∞` and `sum = 0`.",
+     "For each end `r`: update `mn` and `sum`, add `mn × sum` modulo 10⁹ + 7."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "About 5 × 10⁹ groups for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int totalStrength(int[] strength) {\n        final long MOD = 1_000_000_007;\n        long total = 0;\n        for (int l = 0; l < strength.length; l++) {\n            long mn = Long.MAX_VALUE, sum = 0;\n            for (int r = l; r < strength.length; r++) {\n                mn = Math.min(mn, strength[r]);\n                sum = (sum + strength[r]) % MOD;\n                total = (total + mn % MOD * sum) % MOD;\n            }\n        }\n        return (int) total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int totalStrength(vector<int>& strength) {\n        const long long MOD = 1000000007;\n        long long total = 0;\n        int n = strength.size();\n        for (int l = 0; l < n; l++) {\n            long long mn = LLONG_MAX, sum = 0;\n            for (int r = l; r < n; r++) {\n                mn = min(mn, (long long) strength[r]);\n                sum = (sum + strength[r]) % MOD;\n                total = (total + mn % MOD * sum) % MOD;\n            }\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def totalStrength(self, strength: List[int]) -> int:\n        MOD = 10**9 + 7\n        total = 0\n        for l in range(len(strength)):\n            mn, s = float('inf'), 0\n            for r in range(l, len(strength)):\n                mn = min(mn, strength[r])\n                s += strength[r]\n                total += mn * s\n        return total % MOD",
+     "javascript": "var totalStrength = function(strength) {\n    const MOD = 1000000007n;\n    let total = 0n;\n    for (let l = 0; l < strength.length; l++) {\n        let mn = Infinity, sum = 0n;\n        for (let r = l; r < strength.length; r++) {\n            mn = Math.min(mn, strength[r]);\n            sum = (sum + BigInt(strength[r])) % MOD;\n            total = (total + BigInt(mn) * sum) % MOD;\n        }\n    }\n    return Number(total);\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Stack spans + prefix of prefix sums",
+    "idea": "Credit each group to its weakest wizard (strict on the left, non-strict on the right). For i, the groups are starts prev+1 … i and ends i … next−1; their sums total (i − prev)·ΣP[i+1..next] − (next − i)·ΣP[prev+1..i].",
+    "steps": [
+     "Monotonic stack: previous strictly smaller index `prev[i]`, next smaller-or-equal index `next[i]`.",
+     "Prefix sums `P` and prefix sums of those, `PP`, all modulo 10⁹ + 7.",
+     "For each `i`, combine the two `PP` ranges as above and add `strength[i] ×` the result."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "The stack gives each wizard's span in O(n) total, and PP turns \"sum of all group sums in the span\" into O(1).",
+    "code": {
+     "java": "class Solution {\n    public int totalStrength(int[] strength) {\n        final long MOD = 1_000_000_007;\n        int n = strength.length;\n        int[] prev = new int[n], next = new int[n];\n        Deque<Integer> st = new ArrayDeque<>();\n        for (int i = 0; i < n; i++) {\n            while (!st.isEmpty() && strength[st.peek()] >= strength[i]) next[st.pop()] = i;\n            prev[i] = st.isEmpty() ? -1 : st.peek();\n            st.push(i);\n        }\n        while (!st.isEmpty()) next[st.pop()] = n;\n        long[] p = new long[n + 1], pp = new long[n + 2];          // pp[k] = p[0] + … + p[k − 1]\n        for (int i = 0; i < n; i++) p[i + 1] = (p[i] + strength[i]) % MOD;\n        for (int i = 0; i <= n; i++) pp[i + 1] = (pp[i] + p[i]) % MOD;\n        long total = 0;\n        for (int i = 0; i < n; i++) {\n            int l = prev[i], r = next[i];\n            long ends = (pp[r + 1] - pp[i + 1] + MOD) % MOD * (i - l) % MOD;     // P[i+1..r], once per start\n            long starts = (pp[i + 1] - pp[l + 1] + MOD) % MOD * (r - i) % MOD;   // P[l+1..i], once per end\n            total = (total + strength[i] * ((ends - starts + MOD) % MOD)) % MOD;\n        }\n        return (int) total;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int totalStrength(vector<int>& strength) {\n        const long long MOD = 1000000007;\n        int n = strength.size();\n        vector<int> prev(n), next(n, n), st;\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && strength[st.back()] >= strength[i]) { next[st.back()] = i; st.pop_back(); }\n            prev[i] = st.empty() ? -1 : st.back();\n            st.push_back(i);\n        }\n        vector<long long> p(n + 1, 0), pp(n + 2, 0);\n        for (int i = 0; i < n; i++) p[i + 1] = (p[i] + strength[i]) % MOD;\n        for (int i = 0; i <= n; i++) pp[i + 1] = (pp[i] + p[i]) % MOD;\n        long long total = 0;\n        for (int i = 0; i < n; i++) {\n            int l = prev[i], r = next[i];\n            long long ends = (pp[r + 1] - pp[i + 1] + MOD) % MOD * (i - l) % MOD;\n            long long starts = (pp[i + 1] - pp[l + 1] + MOD) % MOD * (r - i) % MOD;\n            total = (total + strength[i] * ((ends - starts + MOD) % MOD)) % MOD;\n        }\n        return total;\n    }\n};",
+     "python": "class Solution:\n    def totalStrength(self, strength: List[int]) -> int:\n        MOD = 10**9 + 7\n        n = len(strength)\n        prev, nxt, st = [-1] * n, [n] * n, []\n        for i, x in enumerate(strength):\n            while st and strength[st[-1]] >= x:\n                nxt[st.pop()] = i\n            prev[i] = st[-1] if st else -1\n            st.append(i)\n        p = [0] * (n + 1)\n        for i, x in enumerate(strength):\n            p[i + 1] = p[i] + x\n        pp = [0] * (n + 2)\n        for i in range(n + 1):\n            pp[i + 1] = pp[i] + p[i]\n        total = 0\n        for i, x in enumerate(strength):\n            l, r = prev[i], nxt[i]\n            total += x * ((pp[r + 1] - pp[i + 1]) * (i - l) - (pp[i + 1] - pp[l + 1]) * (r - i))\n        return total % MOD",
+     "javascript": "var totalStrength = function(strength) {\n    const MOD = 1000000007n, n = strength.length;\n    const prev = new Array(n), next = new Array(n).fill(n), st = [];\n    for (let i = 0; i < n; i++) {\n        while (st.length && strength[st.at(-1)] >= strength[i]) next[st.pop()] = i;\n        prev[i] = st.length ? st.at(-1) : -1;\n        st.push(i);\n    }\n    const p = new Array(n + 1).fill(0n), pp = new Array(n + 2).fill(0n);\n    for (let i = 0; i < n; i++) p[i + 1] = (p[i] + BigInt(strength[i])) % MOD;\n    for (let i = 0; i <= n; i++) pp[i + 1] = (pp[i] + p[i]) % MOD;\n    let total = 0n;\n    for (let i = 0; i < n; i++) {\n        const l = prev[i], r = next[i];\n        const ends = (pp[r + 1] - pp[i + 1] + MOD) % MOD * BigInt(i - l) % MOD;\n        const starts = (pp[i + 1] - pp[l + 1] + MOD) % MOD * BigInt(r - i) % MOD;\n        total = (total + BigInt(strength[i]) * ((ends - starts + MOD) % MOD)) % MOD;   // BigInt: 10⁹ × 10⁹ > 2⁵³\n    }\n    return Number(total);\n};"
+    }
+   }
+  ]
+ },
+ "sum-of-distances-in-tree": {
+  "pattern": "Edge contribution for the root, then rerooting",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "BFS from every node",
+    "idea": "Run a BFS from each node and add up the distances it finds.",
+    "steps": [
+     "Build the adjacency list.",
+     "For every node `s`, BFS and set `ans[s]` = sum of distances."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "9 × 10⁸ steps for n = 3 × 10⁴.",
+    "code": {
+     "java": "class Solution {\n    public int[] sumOfDistancesInTree(int n, int[][] edges) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        int[] ans = new int[n], dist = new int[n], q = new int[n];\n        for (int s = 0; s < n; s++) {\n            Arrays.fill(dist, -1);\n            dist[s] = 0;\n            int head = 0, tail = 0;\n            q[tail++] = s;\n            while (head < tail) {\n                int v = q[head++];\n                ans[s] += dist[v];\n                for (int c : adj.get(v)) if (dist[c] < 0) { dist[c] = dist[v] + 1; q[tail++] = c; }\n            }\n        }\n        return ans;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> sumOfDistancesInTree(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<int> ans(n, 0), dist(n), q(n);\n        for (int s = 0; s < n; s++) {\n            fill(dist.begin(), dist.end(), -1);\n            dist[s] = 0;\n            int head = 0, tail = 0;\n            q[tail++] = s;\n            while (head < tail) {\n                int v = q[head++];\n                ans[s] += dist[v];\n                for (int c : adj[v]) if (dist[c] < 0) { dist[c] = dist[v] + 1; q[tail++] = c; }\n            }\n        }\n        return ans;\n    }\n};",
+     "python": "class Solution:\n    def sumOfDistancesInTree(self, n: int, edges: List[List[int]]) -> List[int]:\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        ans = [0] * n\n        for s in range(n):\n            dist = [-1] * n\n            dist[s] = 0\n            q = [s]\n            for v in q:\n                ans[s] += dist[v]\n                for c in adj[v]:\n                    if dist[c] < 0:\n                        dist[c] = dist[v] + 1\n                        q.append(c)\n        return ans",
+     "javascript": "var sumOfDistancesInTree = function(n, edges) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const ans = new Array(n).fill(0);\n    for (let s = 0; s < n; s++) {\n        const dist = new Array(n).fill(-1), q = [s];\n        dist[s] = 0;\n        for (let h = 0; h < q.length; h++) {\n            const v = q[h];\n            ans[s] += dist[v];\n            for (const c of adj[v]) if (dist[c] < 0) { dist[c] = dist[v] + 1; q.push(c); }\n        }\n    }\n    return ans;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Subtree sizes, then rerooting",
+    "idea": "ans[0] = Σ size[v] over non-root v (each node below an edge uses it once to reach 0). Moving the root to a child c: ans[c] = ans[parent] − size[c] + (n − size[c]).",
+    "steps": [
+     "BFS from 0 for parents and an order; walk it backwards to get subtree sizes and `ans[0]`.",
+     "Walk the order forwards: `ans[v] = ans[parent[v]] − size[v] + (n − size[v])`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Edge contribution gives one answer in O(n), and each reroot step changes it in O(1); both passes are iterative, so deep trees are safe.",
+    "code": {
+     "java": "class Solution {\n    public int[] sumOfDistancesInTree(int n, int[][] edges) {\n        List<List<Integer>> adj = new ArrayList<>();\n        for (int i = 0; i < n; i++) adj.add(new ArrayList<>());\n        for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }\n        int[] parent = new int[n], order = new int[n], size = new int[n], ans = new int[n];\n        parent[0] = -1;\n        int len = 0;\n        order[len++] = 0;\n        for (int k = 0; k < len; k++)\n            for (int c : adj.get(order[k])) if (c != parent[order[k]]) { parent[c] = order[k]; order[len++] = c; }\n        for (int k = n - 1; k >= 0; k--) {\n            int v = order[k];\n            size[v] += 1;\n            if (v != 0) { size[parent[v]] += size[v]; ans[0] += size[v]; }   // size[v] paths from 0 use the edge above v\n        }\n        for (int k = 1; k < n; k++) {\n            int v = order[k];\n            ans[v] = ans[parent[v]] - size[v] + (n - size[v]);              // closer to size[v], farther from the rest\n        }\n        return ans;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> sumOfDistancesInTree(int n, vector<vector<int>>& edges) {\n        vector<vector<int>> adj(n);\n        for (auto& e : edges) { adj[e[0]].push_back(e[1]); adj[e[1]].push_back(e[0]); }\n        vector<int> parent(n, -1), order{0}, size(n, 0), ans(n, 0);\n        for (int k = 0; k < (int) order.size(); k++)\n            for (int c : adj[order[k]]) if (c != parent[order[k]]) { parent[c] = order[k]; order.push_back(c); }\n        for (int k = n - 1; k >= 0; k--) {\n            int v = order[k];\n            size[v] += 1;\n            if (v != 0) { size[parent[v]] += size[v]; ans[0] += size[v]; }\n        }\n        for (int k = 1; k < n; k++) {\n            int v = order[k];\n            ans[v] = ans[parent[v]] - size[v] + (n - size[v]);\n        }\n        return ans;\n    }\n};",
+     "python": "class Solution:\n    def sumOfDistancesInTree(self, n: int, edges: List[List[int]]) -> List[int]:\n        adj = [[] for _ in range(n)]\n        for a, b in edges:\n            adj[a].append(b)\n            adj[b].append(a)\n        parent, order, size, ans = [-1] * n, [0], [0] * n, [0] * n\n        for v in order:\n            for c in adj[v]:\n                if c != parent[v]:\n                    parent[c] = v\n                    order.append(c)\n        for v in reversed(order):\n            size[v] += 1\n            if v:\n                size[parent[v]] += size[v]\n                ans[0] += size[v]\n        for v in order[1:]:\n            ans[v] = ans[parent[v]] - size[v] + (n - size[v])\n        return ans",
+     "javascript": "var sumOfDistancesInTree = function(n, edges) {\n    const adj = Array.from({ length: n }, () => []);\n    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }\n    const parent = new Array(n).fill(-1), order = [0], size = new Array(n).fill(0), ans = new Array(n).fill(0);\n    for (let k = 0; k < order.length; k++)\n        for (const c of adj[order[k]]) if (c !== parent[order[k]]) { parent[c] = order[k]; order.push(c); }\n    for (let k = n - 1; k >= 0; k--) {\n        const v = order[k];\n        size[v] += 1;\n        if (v !== 0) { size[parent[v]] += size[v]; ans[0] += size[v]; }\n    }\n    for (let k = 1; k < n; k++) {\n        const v = order[k];\n        ans[v] = ans[parent[v]] - size[v] + (n - size[v]);\n    }\n    return ans;\n};"
+    }
+   }
+  ]
+ }
+}

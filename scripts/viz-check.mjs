@@ -26,6 +26,7 @@ import * as bt from '../src/components/mdx/viz/models/backtracking.js';
 import * as dp from '../src/components/mdx/viz/models/dp.js';
 import * as sp from '../src/components/mdx/viz/models/special.js';
 import * as adv from '../src/components/mdx/viz/models/advanced.js';
+import * as ct from '../src/components/mdx/viz/models/contribution.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -705,6 +706,65 @@ function common(name, steps, code, kinds) {
   };
   for (const e of Object.values(sp.BITS)) runB(e.input);
   for (const mode of ['popcount', 'single', 'missing']) for (let t = 0; t < 1500; t++) runB(sp.randomBits({ mode }, rand));
+}
+
+// ---------------------------------------------------------------- contribution technique
+{
+  const run = (name, steps, code, kinds, want) => {
+    common(name, steps, code, kinds);
+    ok(steps.at(-1).answer === want, `${name}: answer ${steps.at(-1).answer} vs ${want}`);
+  };
+  const S = (input) => run(`span ${JSON.stringify(input)}`, ct.span(input), ct.spanCode(input.mode), ['start', 'count', 'done'], `${ct.spanAnswer(input)}`);
+  for (const e of Object.values(ct.SPAN)) S(e.input);
+  for (const mode of ['sum', 'odd']) for (let t = 0; t < 800; t++) {
+    const input = ct.randomSpan({ mode }, rand);
+    S(input);
+    // the (all + 1) / 2 rule for odd-length subarrays holds for every index
+    const n = input.nums.length;
+    if (mode === 'odd') for (const st of ct.span(input).filter((x) => x.kind === 'count')) ok(st.cnt === Math.floor(((st.i + 1) * (n - st.i) + 1) / 2), 'span: odd count formula');
+  }
+  ok(ct.span(ct.SPAN.odd.input).at(-1).answer === '58', 'span: LeetCode 1588 example is 58');
+
+  const B = (input) => run(`bits ${JSON.stringify(input)}`, ct.bitContrib(input), ct.bitContribCode(input.mode), ['start', 'column', 'skip', 'done'], `${ct.bitContribAnswer(input)}`);
+  for (const e of Object.values(ct.BIT_CONTRIB)) B(e.input);
+  for (const mode of ['hamming', 'pairxor', 'subsetxor']) for (let t = 0; t < 800; t++) B(ct.randomBitContrib({ mode }, rand));
+  ok(ct.bitContrib(ct.BIT_CONTRIB.hamming.input).at(-1).answer === '6', 'bits: LeetCode 477 example is 6');
+  ok(ct.bitContrib(ct.BIT_CONTRIB.subsetxor.input).at(-1).answer === '28', 'bits: LeetCode 1863 example is 28');
+
+  const O = (input) => {
+    const want = ct.sortedAnswer(input);
+    run(`sorted ${JSON.stringify(input)}`, ct.sorted(input), ct.sortedCode(input.mode), ['start', 'element', 'done'], Array.isArray(want) ? `[${want.join(', ')}]` : `${want}`);
+  };
+  for (const e of Object.values(ct.SORTED)) O(e.input);
+  for (const mode of ['pairs', 'each', 'widths']) for (let t = 0; t < 800; t++) O(ct.randomSorted({ mode }, rand));
+  ok(ct.sorted(ct.SORTED.widths.input).at(-1).answer === '6', 'sorted: LeetCode 891 example is 6');
+
+  const L = (input) => run(`lastSeen ${JSON.stringify(input)}`, ct.lastSeen(input), ct.lastSeenCode(input.mode), ['start', 'char', 'done'], `${ct.lastSeenAnswer(input)}`);
+  for (const e of Object.values(ct.LAST_SEEN)) L(e.input);
+  for (const mode of ['appeal', 'unique']) for (let t = 0; t < 800; t++) L(ct.randomLastSeen({ mode }, rand));
+  ok(ct.lastSeen({ mode: 'appeal', s: 'abbca' }).at(-1).answer === '28', 'lastSeen: LeetCode 2262 example is 28');
+  ok(ct.lastSeen({ mode: 'unique', s: 'abc' }).at(-1).answer === '10', 'lastSeen: LeetCode 828 example is 10');
+
+  const M = (input) => run(`minSpan ${JSON.stringify(input)}`, ct.minSpan(input), ct.minSpanCode(input.mode), ['start', 'span', 'done'], `${ct.minSpanAnswer(input)}`);
+  for (const e of Object.values(ct.MIN_SPAN)) M(e.input);
+  for (const mode of ['min', 'max']) for (let t = 0; t < 800; t++) M(ct.randomMinSpan({ mode }, rand));
+  ok(ct.minSpan({ mode: 'min', nums: [3, 1, 2, 4] }).at(-1).answer === '17', 'minSpan: LeetCode 907 example is 17');
+
+  const W = (input) => run(`window ${JSON.stringify(input)}`, ct.windowCount(input), ct.windowCode(input.mode), ['start', 'shrink', 'count', 'done'], `${ct.windowAnswer(input)}`);
+  for (const e of Object.values(ct.WINDOW)) W(e.input);
+  for (const mode of ['product', 'score']) for (let t = 0; t < 800; t++) W(ct.randomWindow({ mode }, rand));
+  ok(ct.windowCount(ct.WINDOW.product.input).at(-1).answer === '8', 'window: LeetCode 713 example is 8');
+  ok(ct.windowCount(ct.WINDOW.score.input).at(-1).answer === '6', 'window: LeetCode 2302 example is 6');
+
+  const E = (input) => run(`edges ${JSON.stringify(input)}`, ct.edgesModel(input), ct.edgesCode(input.mode), ['start', 'edge', 'done'], `${ct.edgesAnswer(input)}`);
+  for (const e of Object.values(ct.EDGES)) E(e.input);
+  for (const mode of ['pairs', 'fuel']) for (let t = 0; t < 800; t++) {
+    const input = ct.randomEdges({ mode }, rand);
+    E(input);
+    const back = ct.parseEdges({ edges: ct.edgesText(input.edges), seats: String(input.seats ?? '') }, input);
+    ok(back.input && back.input.n === input.n, 'edges: random input parses back');
+  }
+  ok(ct.edgesModel(ct.EDGES.fuel.input).at(-1).answer === '7', 'edges: LeetCode 2477 example is 7');
 }
 
 // ---------------------------------------------------------------- design, matrices and advanced topics

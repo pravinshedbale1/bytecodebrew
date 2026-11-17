@@ -88,6 +88,13 @@ const RobberTreeViz = lazyViz(() => import('./viz/DpViz'), 'RobberTreeViz');
 const GreedyViz = lazyViz(() => import('./viz/SpecialViz'), 'GreedyViz');
 const TrieViz = lazyViz(() => import('./viz/SpecialViz'), 'TrieViz');
 const BitsViz = lazyViz(() => import('./viz/SpecialViz'), 'BitsViz');
+const SpanViz = lazyViz(() => import('./viz/ContributionViz'), 'SpanViz');
+const BitContribViz = lazyViz(() => import('./viz/ContributionViz'), 'BitContribViz');
+const SortedContribViz = lazyViz(() => import('./viz/ContributionViz'), 'SortedContribViz');
+const LastSeenViz = lazyViz(() => import('./viz/ContributionViz'), 'LastSeenViz');
+const MinSpanViz = lazyViz(() => import('./viz/ContributionViz'), 'MinSpanViz');
+const WindowCountViz = lazyViz(() => import('./viz/ContributionViz'), 'WindowCountViz');
+const EdgeContribViz = lazyViz(() => import('./viz/ContributionViz'), 'EdgeContribViz');
 const LruViz = lazyViz(() => import('./viz/AdvancedViz'), 'LruViz');
 const MatrixViz = lazyViz(() => import('./viz/AdvancedViz'), 'MatrixViz');
 const MathViz = lazyViz(() => import('./viz/AdvancedViz'), 'MathViz');
@@ -285,6 +292,13 @@ export const mdxComponents = {
   GreedyViz,
   TrieViz,
   BitsViz,
+  SpanViz,
+  BitContribViz,
+  SortedContribViz,
+  LastSeenViz,
+  MinSpanViz,
+  WindowCountViz,
+  EdgeContribViz,
   LruViz,
   MatrixViz,
   MathViz,

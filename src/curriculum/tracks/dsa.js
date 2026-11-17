@@ -203,11 +203,12 @@ const patterns = {
     {
       id: 'greedy-special',
       title: 'Greedy & Special Topics',
-      description: 'When a local choice is safe, plus two data structures that appear often enough to learn.',
+      description: 'When a local choice is safe, two data structures that appear often enough to learn, bit tricks, and counting what each element contributes.',
       lessons: [
         L('greedy', 'Greedy', 'Make the best local choice — and how to convince yourself it is safe.', 18, 'Intermediate'),
         L('tries', 'Tries', 'Prefix trees for autocomplete, word search and prefix counting.', 16, 'Intermediate'),
         L('bit-manipulation', 'Bit Manipulation', 'XOR tricks, masks and counting bits — the handful that interviews use.', 14, 'Intermediate'),
+        L('contribution-technique', 'Contribution Technique', 'Sum over all subarrays, pairs, subsets or tree paths in O(n): count what each element adds, with bits, prefix sums, stacks, windows and trees.', 30, 'Intermediate'),
       ],
     },
     {

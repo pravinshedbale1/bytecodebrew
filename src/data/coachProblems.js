@@ -80,6 +80,25 @@ export default {
   'binary-search-tree-iterator': ['1', 'O(1) amortised per call, O(h) space'],
   'recover-binary-search-tree': ['n', 'O(n)'],
 
+  // ---- contribution technique
+  'sum-of-all-odd-length-subarrays': ['n', 'O(n), O(1) space'],
+  'number-of-zero-filled-subarrays': ['n', 'O(n), O(1) space'],
+  'vowels-of-all-substrings': ['n', 'O(n), O(1) space'],
+  'total-hamming-distance': ['n', 'O(32 · n)'],
+  'bitwise-xor-of-all-pairings': ['n', 'O(n + m)'],
+  'sum-of-absolute-differences-in-a-sorted-array': ['n', 'O(n) with prefix sums'],
+  'sum-of-distances': ['n', 'O(n) with grouped running sums'],
+  'subarray-product-less-than-k': ['n', 'O(n) sliding window'],
+  'count-subarrays-where-max-element-appears-at-least-k-times': ['n', 'O(n) sliding window'],
+  'sum-of-subarray-ranges': ['n', 'O(n) with two monotonic stacks'],
+  'minimum-fuel-cost-to-report-to-the-capital': ['n', 'O(n), one traversal'],
+  'sum-of-subsequence-widths': ['nlogn', 'O(n log n) for the sort'],
+  'total-appeal-of-a-string': ['n', 'O(n), O(1) space'],
+  'count-unique-characters-of-all-substrings-of-a-given-string': ['n', 'O(n)'],
+  'count-subarrays-with-score-less-than-k': ['n', 'O(n) sliding window'],
+  'sum-of-total-strength-of-wizards': ['n', 'O(n): monotonic stack + prefix of prefix sums'],
+  'sum-of-distances-in-tree': ['n', 'O(n), two traversals (rerooting)'],
+
   // ---- cyclic sort
   'find-all-numbers-disappeared-in-an-array': ['n', 'O(n), O(1) extra space'],
   'set-mismatch': ['n', 'O(n), O(1) extra space'],

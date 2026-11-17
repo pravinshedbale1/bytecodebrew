@@ -1,0 +1,558 @@
+Some problems ask you to add something up over **every** subarray, every pair, every subset, every substring or every path in a tree: "the sum of all subarray minimums", "the total Hamming distance between all pairs", "the sum of the widths of all subsequences". There are O(n²) subarrays and pairs, and 2ⁿ subsets, so listing them is hopeless. The **contribution technique** turns the sum around. Instead of asking *"what is each subarray worth?"*, ask *"how much does **this one element** add to the total, across all the subarrays it belongs to?"* Count that with a little arithmetic, add the contributions, and an O(n²) or O(2ⁿ) problem becomes O(n).
+
+It isn't a separate algorithm so much as a way of looking. It combines with almost every pattern you already know: plain counting, bit manipulation, sorting with prefix sums, previous/next occurrence, the monotonic stack, the sliding window and tree DFS. This lesson goes through each combination with a step-through you can drive yourself.
+
+<Callout type="note" title="New to these patterns?">
+
+The combinations below lean on [Prefix Sums](/dsa/patterns/prefix-sums), [Bit Manipulation](/dsa/patterns/bit-manipulation), the [Monotonic Stack](/dsa/patterns/monotonic-stack), [Sliding Window](/dsa/patterns/sliding-window) and [Tree DFS](/dsa/patterns/tree-dfs). You can read this lesson first and come back to each section after the matching lesson.
+
+</Callout>
+
+<Callout type="tip" title="How to spot it">
+
+- The answer is a **sum (or count) over all** subarrays, substrings, pairs, subsequences, subsets or tree paths.
+- n is up to 10⁵, so listing all O(n²) pairs or subarrays is too slow, and the answer is often "**modulo 10⁹ + 7**" because it is huge.
+- Words like "**total** appeal", "sum of **all** …", "**sum of** subarray minimums / ranges / widths", "**total** Hamming distance".
+- A count of subarrays with some property where **every subarray must be counted exactly once**.
+
+</Callout>
+
+## The idea: swap the order of the two sums
+
+Any "sum over all subarrays" is really a double sum: over every subarray, over the elements (or the one element) that make up its value. You may add a grid of numbers row by row or column by column; the total is the same. Brute force adds **row by row** (one subarray at a time). The contribution technique adds **column by column** (one element at a time).
+
+Think of a school with many clubs. To find how many club memberships there are in total, you could visit every club and count its members, or you could ask every student "how many clubs are you in?" and add up the answers. Same total, but the second way is fast when each answer is easy to work out.
+
+The recipe is always the same four questions:
+
+1. **What is being summed, and over what?** ("the minimum, over every subarray")
+2. **Which unit gets the credit?** Usually one element, but it can be one **bit** position, one **letter**, one **tree edge**, or one **right end** of a window.
+3. **In how many members of the collection does that unit count?** This is nearly always *(choices on the left) × (choices on the right)*.
+4. **Is anything counted twice?** When two units could both claim the same subarray (two equal minimums, the same letter twice), pick a tie rule so that exactly one of them does.
+
+## Plain counting: the subarrays that contain index i
+
+A subarray containing index `i` is fixed by two independent choices: where it **starts** (anywhere from `0` to `i`, so `i + 1` choices) and where it **ends** (anywhere from `i` to `n − 1`, so `n − i` choices). Every start pairs with every end, so index `i` is in exactly **`(i + 1) × (n − i)`** subarrays.
+
+In the step-through, the grid has one cell per subarray: the row is where it starts and the column is where it ends. The subarrays containing `i` always form a rectangle, `i + 1` rows tall and `n − i` columns wide. That rectangle is the whole technique in one picture.
+
+<SpanViz examples={['sum']} />
+
+```java
+static long sumOfAllSubarraySums(int[] a) {
+    int n = a.length;
+    long total = 0;
+    for (int i = 0; i < n; i++) total += (long) a[i] * (i + 1) * (n - i);
+    return total;
+}
+```
+
+### Odd-length subarrays only (LeetCode 1588)
+
+A subarray `[l, r]` has odd length exactly when `l` and `r` have the same parity. Of the `(i + 1) × (n − i)` subarrays containing `i`, that works out to `⌈(i + 1)(n − i) / 2⌉`: when both counts are odd, there is one more same-parity pair than mixed ones; otherwise it's exactly half. Step through it and watch the even-length cells inside the rectangle drop out.
+
+<SpanViz examples={['odd']} />
+
+```java
+public int sumOddLengthSubarrays(int[] arr) {
+    int n = arr.length, total = 0;
+    for (int i = 0; i < n; i++) {
+        int all = (i + 1) * (n - i);                 // subarrays containing i
+        total += arr[i] * ((all + 1) / 2);           // the odd-length ones
+    }
+    return total;
+}
+```
+
+### The same formula with a different value
+
+**Vowels of All Substrings (2063)** asks for the number of vowels in every substring, added up. Give each vowel a value of 1 and each consonant 0: it's the same sum.
+
+```java
+public long countVowels(String word) {
+    long n = word.length(), total = 0;
+    for (int i = 0; i < n; i++)
+        if ("aeiou".indexOf(word.charAt(i)) >= 0) total += (i + 1) * (n - i);
+    return total;
+}
+```
+
+### Credit each subarray to its right end
+
+Sometimes it's easier to count subarrays by **where they end**. In **Number of Zero-Filled Subarrays (2348)**, if the current run of zeros has length `run`, then exactly `run` all-zero subarrays end here (start anywhere in the run). Adding `run` at each index counts every all-zero subarray exactly once, at its right end. Keep this "credit the right end" view in mind; the sliding-window section uses it again.
+
+```java
+public long zeroFilledSubarray(int[] nums) {
+    long total = 0, run = 0;
+    for (int x : nums) {
+        run = (x == 0) ? run + 1 : 0;                // all-zero subarrays ending here
+        total += run;
+    }
+    return total;
+}
+```
+
+## With bit manipulation: one column at a time
+
+XOR, AND and OR work on each bit position **independently**: bit `b` of `x ^ y` depends only on bit `b` of `x` and bit `b` of `y`. So a sum over pairs or subsets can be split into 32 separate problems, one per column. In one column, only the **count of 1s** matters, not which numbers have them.
+
+- **Total Hamming Distance (477):** a pair differs at bit `b` exactly when one number has a 1 and the other a 0. With `ones` ones and `n − ones` zeros, that's `ones × (n − ones)` pairs.
+- **Sum of XOR over all pairs:** the same pairs, but each is worth `2^b`.
+- **Sum of All Subset XOR Totals (1863):** a subset's XOR has bit `b` when it picks an **odd** number of the numbers with that bit. If at least one number has it, exactly half of all subsets do: `2^(n − 1)`. So the answer is `(OR of all numbers) × 2^(n − 1)`.
+
+<BitContribViz examples={['hamming', 'pairxor', 'subsetxor']} />
+
+```java
+public int totalHammingDistance(int[] nums) {
+    int n = nums.length, total = 0;
+    for (int b = 0; b < 32; b++) {
+        int ones = 0;
+        for (int x : nums) ones += (x >> b) & 1;
+        total += ones * (n - ones);                  // (1, 0) pairs differ at bit b
+    }
+    return total;
+}
+
+static long sumOfPairXors(int[] nums) {
+    int n = nums.length;
+    long total = 0;
+    for (int b = 0; b < 31; b++) {
+        long ones = 0;
+        for (int x : nums) ones += (x >> b) & 1;
+        total += ones * (n - ones) << b;             // each such pair is worth 2^b
+    }
+    return total;
+}
+
+public int subsetXORSum(int[] nums) {
+    int or = 0;
+    for (int x : nums) or |= x;
+    return or << (nums.length - 1);                  // every set bit is on in half the subsets
+}
+```
+
+**Bitwise XOR of All Pairings (2425)** is contribution with parity. Every `nums1[i]` is paired with every `nums2[j]`, so each value of `nums1` appears `nums2.length` times in the big XOR. A value XOR-ed with itself an even number of times cancels, so it only matters whether that count is odd.
+
+```java
+public int xorAllNums(int[] nums1, int[] nums2) {
+    int x = 0;
+    if (nums2.length % 2 == 1) for (int a : nums1) x ^= a;   // each a appears nums2.length times
+    if (nums1.length % 2 == 1) for (int b : nums2) x ^= b;   // each b appears nums1.length times
+    return x;
+}
+```
+
+## With sorting and prefix sums
+
+`|x − y|` doesn't care about order, so you're free to **sort**. Once the array is sorted, the absolute value disappears: in every pair, the element on the right is the larger one. Then `a[i]` contributes
+
+- `+a[i]` once for each of the `i` smaller elements on its left, and
+- `−(each of those elements)`, which adds up to the **prefix sum** `a[0] + … + a[i − 1]`.
+
+So `a[i]` adds `a[i] × i − prefix[i]`, and a running prefix sum makes the whole thing O(n) after sorting.
+
+<SortedContribViz examples={['pairs', 'each']} />
+
+```java
+static long sumOfPairDifferences(int[] a) {
+    int[] s = a.clone();
+    Arrays.sort(s);                                  // order doesn't change |x − y|
+    long total = 0, prefix = 0;
+    for (int i = 0; i < s.length; i++) {
+        total += (long) s[i] * i - prefix;           // s[i] minus each of the i smaller values
+        prefix += s[i];
+    }
+    return total;
+}
+```
+
+**Sum of Absolute Differences in a Sorted Array (1685)** asks for this per element, so each element looks both ways: `a[i] × i − (sum on the left)` plus `(sum on the right) − a[i] × (n − 1 − i)`.
+
+```java
+public int[] getSumAbsoluteDifferences(int[] nums) {
+    int n = nums.length;
+    int[] p = new int[n + 1];
+    for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];
+    int[] res = new int[n];
+    for (int i = 0; i < n; i++) {
+        int left = nums[i] * i - p[i];                          // to everything before i
+        int right = (p[n] - p[i + 1]) - nums[i] * (n - 1 - i);  // to everything after i
+        res[i] = left + right;
+    }
+    return res;
+}
+```
+
+**Sum of Distances (2615)** is the same calculation on **indices**: for each value, collect the indices where it appears (already sorted, since you collect them left to right) and run the formula on each group.
+
+```java
+public long[] distance(int[] nums) {
+    Map<Integer, List<Integer>> groups = new HashMap<>();
+    for (int i = 0; i < nums.length; i++) groups.computeIfAbsent(nums[i], k -> new ArrayList<>()).add(i);
+    long[] res = new long[nums.length];
+    for (List<Integer> idx : groups.values()) {
+        long total = 0;
+        for (int j : idx) total += j;
+        long left = 0;                                // sum of the indices before position k
+        for (int k = 0; k < idx.size(); k++) {
+            long j = idx.get(k);
+            long right = total - left - j;           // sum of the indices after position k
+            res[(int) j] = (j * k - left) + (right - j * (idx.size() - 1 - k));
+            left += j;
+        }
+    }
+    return res;
+}
+```
+
+### Sum of Subsequence Widths (891)
+
+The width of a subsequence is `max − min`, so split it into "sum of maximums" minus "sum of minimums". After sorting, `a[i]` is the **maximum** of a subsequence exactly when the other elements come from the `i` smaller ones: `2^i` subsequences. It's the **minimum** of `2^(n − 1 − i)`. So it adds `a[i] × (2^i − 2^(n − 1 − i))`.
+
+<SortedContribViz examples={['widths']} title="Subsequence widths, element by element" />
+
+```java
+public int sumSubseqWidths(int[] nums) {
+    final int MOD = 1_000_000_007;
+    int n = nums.length;
+    Arrays.sort(nums);
+    long[] pow2 = new long[n];
+    pow2[0] = 1;
+    for (int i = 1; i < n; i++) pow2[i] = pow2[i - 1] * 2 % MOD;
+    long total = 0;
+    for (int i = 0; i < n; i++)
+        total = (total + nums[i] * (pow2[i] - pow2[n - 1 - i])) % MOD;   // may go negative
+    return (int) ((total + MOD) % MOD);
+}
+```
+
+## With the previous and next occurrence: strings
+
+When the value of a substring depends on **which letters** it contains, a letter that appears twice in a substring must not be counted twice. Give the credit to one copy only.
+
+- **Total Appeal of a String (2262)**: appeal = number of *distinct* letters. Give the credit to the **first** copy of each letter in the substring. `s[i]` is the first copy exactly when the substring starts **after the previous** `s[i]`. That's `i − last[s[i]]` starts, and any of `n − i` ends.
+- **Count Unique Characters of All Substrings (828)**: only letters that appear **exactly once** count. Now `s[i]` counts when the substring starts after the previous copy **and** ends before the next copy: `(i − prev[i]) × (next[i] − i)`.
+
+<LastSeenViz examples={['appeal', 'unique']} />
+
+```java
+public long appealSum(String s) {
+    int[] last = new int[26];
+    Arrays.fill(last, -1);                           // "no copy yet" = index −1
+    long n = s.length(), total = 0;
+    for (int i = 0; i < n; i++) {
+        int c = s.charAt(i) - 'a';
+        total += (i - last[c]) * (n - i);            // starts after the previous copy, any end
+        last[c] = i;
+    }
+    return total;
+}
+
+public int uniqueLetterString(String s) {
+    int n = s.length();
+    int[] prev = new int[n], next = new int[n], seen = new int[26];
+    Arrays.fill(seen, -1);
+    for (int i = 0; i < n; i++) { int c = s.charAt(i) - 'A'; prev[i] = seen[c]; seen[c] = i; }
+    Arrays.fill(seen, n);
+    for (int i = n - 1; i >= 0; i--) { int c = s.charAt(i) - 'A'; next[i] = seen[c]; seen[c] = i; }
+    long total = 0;
+    for (int i = 0; i < n; i++) total += (long) (i - prev[i]) * (next[i] - i);
+    return (int) total;
+}
+```
+
+The sentinels do the edge cases for free: "no previous copy" is index `−1` (so `i + 1` starts), and "no next copy" is index `n` (so `n − i` ends).
+
+## With a monotonic stack: where is a[i] the minimum?
+
+**Sum of Subarray Minimums (907)** is the classic. `a[i]` is the minimum of exactly the subarrays that contain `i` and stay **between the nearest smaller value on each side**. If `prev[i]` is the index of the previous smaller element and `next[i]` the next smaller one, there are `i − prev[i]` possible starts and `next[i] − i` possible ends. A [monotonic stack](/dsa/patterns/monotonic-stack) finds `prev` and `next` for every index in one O(n) pass.
+
+**Equal values need a tie rule.** In `[2, 4, 2]` the whole array has two minimums; if both claimed it, it would be counted twice. Make one side strict and the other not: stop at a **strictly smaller** value on the left and at a **smaller-or-equal** value on the right. Then, among equal minimums, only the rightmost one claims the subarray. Try the "With equal values" example.
+
+<MinSpanViz examples={['min', 'ties', 'max']} />
+
+```java
+public int sumSubarrayMins(int[] arr) {
+    final int MOD = 1_000_000_007;
+    int n = arr.length;
+    int[] prev = new int[n], next = new int[n];
+    Deque<Integer> st = new ArrayDeque<>();          // indices with increasing values
+    for (int i = 0; i < n; i++) {
+        while (!st.isEmpty() && arr[st.peek()] >= arr[i]) next[st.pop()] = i;   // smaller-or-equal: ends their span
+        prev[i] = st.isEmpty() ? -1 : st.peek();                              // strictly smaller
+        st.push(i);
+    }
+    while (!st.isEmpty()) next[st.pop()] = n;
+    long total = 0;
+    for (int i = 0; i < n; i++) total = (total + (long) arr[i] * (i - prev[i]) * (next[i] - i)) % MOD;
+    return (int) total;
+}
+```
+
+**Sum of Subarray Ranges (2104)**: range = max − min, so the answer is (sum of subarray maximums) − (sum of subarray minimums). Run the same function twice with the comparison flipped.
+
+```java
+public long subArrayRanges(int[] nums) {
+    return sumOf(nums, true) - sumOf(nums, false);
+}
+
+private long sumOf(int[] a, boolean max) {
+    int n = a.length;
+    int[] prev = new int[n], next = new int[n];
+    Deque<Integer> st = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) {
+        while (!st.isEmpty() && (max ? a[st.peek()] <= a[i] : a[st.peek()] >= a[i])) next[st.pop()] = i;
+        prev[i] = st.isEmpty() ? -1 : st.peek();
+        st.push(i);
+    }
+    while (!st.isEmpty()) next[st.pop()] = n;
+    long total = 0;
+    for (int i = 0; i < n; i++) total += (long) a[i] * (i - prev[i]) * (next[i] - i);
+    return total;
+}
+```
+
+### Stack plus prefix of prefix sums: Sum of Total Strength of Wizards (2281)
+
+Here a subarray is worth **min × sum**. The stack still tells you where `a[i]` is the minimum: starts `l` in `prev + 1 … i`, ends `r` in `i … next − 1`. But now `a[i]` must be multiplied by the sum of **every** such subarray, `Σ (P[r + 1] − P[l])` with prefix sums `P`. Each `P[r + 1]` is used once for every start, and each `P[l]` once for every end:
+
+`Σ sums = (i − prev) × (P[i+1] + … + P[next]) − (next − i) × (P[prev+1] + … + P[i])`
+
+Those runs of `P` are ranges of a **prefix sum of the prefix sums** `PP`, so each is O(1).
+
+```java
+public int totalStrength(int[] strength) {
+    final long MOD = 1_000_000_007;
+    int n = strength.length;
+    int[] prev = new int[n], next = new int[n];
+    Deque<Integer> st = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) {
+        while (!st.isEmpty() && strength[st.peek()] >= strength[i]) next[st.pop()] = i;
+        prev[i] = st.isEmpty() ? -1 : st.peek();
+        st.push(i);
+    }
+    while (!st.isEmpty()) next[st.pop()] = n;
+    long[] p = new long[n + 1], pp = new long[n + 2];          // pp[k] = p[0] + … + p[k − 1]
+    for (int i = 0; i < n; i++) p[i + 1] = (p[i] + strength[i]) % MOD;
+    for (int i = 0; i <= n; i++) pp[i + 1] = (pp[i] + p[i]) % MOD;
+    long total = 0;
+    for (int i = 0; i < n; i++) {
+        int l = prev[i], r = next[i];
+        long ends = (pp[r + 1] - pp[i + 1] + MOD) % MOD * (i - l) % MOD;     // P[i+1..r], once per start
+        long starts = (pp[i + 1] - pp[l + 1] + MOD) % MOD * (r - i) % MOD;   // P[l+1..i], once per end
+        total = (total + strength[i] * ((ends - starts + MOD) % MOD)) % MOD;
+    }
+    return (int) total;
+}
+```
+
+## With a sliding window: credit every subarray to its right end
+
+Counting subarrays with a property (rather than adding values) uses the same idea with a different unit: **the right end**. If all values are positive, shrinking a valid subarray keeps it valid. So for each right end `r`, the valid subarrays ending at `r` are exactly those starting at `l … r`, where `l` is the leftmost valid start. A [sliding window](/dsa/patterns/sliding-window) finds `l`, and `r` contributes **`r − l + 1`**. Every subarray is counted once, at its right end.
+
+<WindowCountViz examples={['product', 'score']} />
+
+```java
+public int numSubarrayProductLessThanK(int[] nums, int k) {
+    if (k <= 1) return 0;                            // no product of positive integers is < 1
+    int count = 0, l = 0;
+    long prod = 1;
+    for (int r = 0; r < nums.length; r++) {
+        prod *= nums[r];
+        while (prod >= k) prod /= nums[l++];
+        count += r - l + 1;                          // subarrays ending at r
+    }
+    return count;
+}
+
+public long countSubarrays(int[] nums, long k) {     // 2302: sum × length < k
+    long sum = 0, count = 0;
+    for (int l = 0, r = 0; r < nums.length; r++) {
+        sum += nums[r];
+        while (sum * (r - l + 1) >= k) sum -= nums[l++];
+        count += r - l + 1;
+    }
+    return count;
+}
+```
+
+When the property is "**at least**" something, the valid starts are on the **left** instead. In **Count Subarrays Where Max Element Appears at Least K Times (2962)**, shrink until the window just stops being valid; then every start before `l` still is, so `r` contributes `l`.
+
+```java
+public long countSubarrays(int[] nums, int k) {
+    int max = Arrays.stream(nums).max().getAsInt();
+    long count = 0;
+    int seen = 0, l = 0;
+    for (int r = 0; r < nums.length; r++) {
+        if (nums[r] == max) seen++;
+        while (seen >= k) if (nums[l++] == max) seen--;   // shrink until it stops being valid
+        count += l;                                         // starts 0 … l − 1 all have ≥ k copies
+    }
+    return count;
+}
+```
+
+## On trees: credit every path to the edges it uses
+
+The distance between two nodes is the number of edges on their path. So the **sum of distances over all pairs** is the sum, over every edge, of **how many paths cross it**. Cut an edge and the tree falls into two parts: the subtree below it (size `s`) and the rest (`n − s`). A path crosses the edge exactly when its two ends are in different parts: `s × (n − s)` paths. One DFS computes every subtree size.
+
+**Minimum Fuel Cost to Report to the Capital (2477)** is the same view. Everyone below a road must cross it to reach city 0, and they can all meet first and share cars. So the road costs `⌈s / seats⌉` litres, whatever happens elsewhere.
+
+<EdgeContribViz examples={['pairs', 'fuel']} />
+
+```java
+public long minimumFuelCost(int[][] roads, int seats) {
+    int n = roads.length + 1;
+    List<List<Integer>> adj = new ArrayList<>();
+    for (int i = 0; i < n; i++) adj.add(new ArrayList<>());
+    for (int[] e : roads) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }
+    int[] parent = new int[n], order = new int[n], size = new int[n];
+    parent[0] = -1;
+    int len = 0;
+    order[len++] = 0;                                // BFS order: parents before children
+    for (int k = 0; k < len; k++)
+        for (int c : adj.get(order[k])) if (c != parent[order[k]]) { parent[c] = order[k]; order[len++] = c; }
+    long fuel = 0;
+    for (int k = n - 1; k > 0; k--) {                // reverse BFS order: children before parents
+        int v = order[k];
+        size[v] += 1;                                // v itself, plus its children already added
+        fuel += (size[v] + seats - 1) / seats;       // cars on the road from v to its parent
+        size[parent[v]] += size[v];
+    }
+    return fuel;
+}
+```
+
+The traversal is iterative on purpose: with up to 10⁵ cities a path-shaped tree would overflow a recursive DFS (see [Reading Constraints](/dsa/data-structures/reading-constraints)).
+
+**Sum of Distances in Tree (834)** wants the distance sum **from every node**. Contribution gives the root's answer: each node below an edge uses that edge once on its way to node 0, so `ans[0] = Σ size[v]` over all non-root `v`. Then **rerooting**: moving the root from a parent to its child `c` brings the `size[c]` nodes in `c`'s subtree one step closer and pushes the other `n − size[c]` one step farther.
+
+```java
+public int[] sumOfDistancesInTree(int n, int[][] edges) {
+    List<List<Integer>> adj = new ArrayList<>();
+    for (int i = 0; i < n; i++) adj.add(new ArrayList<>());
+    for (int[] e : edges) { adj.get(e[0]).add(e[1]); adj.get(e[1]).add(e[0]); }
+    int[] parent = new int[n], order = new int[n], size = new int[n], ans = new int[n];
+    parent[0] = -1;
+    int len = 0;
+    order[len++] = 0;
+    for (int k = 0; k < len; k++)
+        for (int c : adj.get(order[k])) if (c != parent[order[k]]) { parent[c] = order[k]; order[len++] = c; }
+    for (int k = n - 1; k >= 0; k--) {
+        int v = order[k];
+        size[v] += 1;
+        if (v != 0) { size[parent[v]] += size[v]; ans[0] += size[v]; }   // size[v] paths from 0 use the edge above v
+    }
+    for (int k = 1; k < n; k++) {
+        int v = order[k];
+        ans[v] = ans[parent[v]] - size[v] + (n - size[v]);              // closer to size[v], farther from the rest
+    }
+    return ans;
+}
+```
+
+## With counting subsets
+
+The simplest counting fact of all: a given element is in exactly **half** of the `2ⁿ` subsets, `2^(n − 1)`, because every subset without it pairs up with the same subset plus it. So the **sum of all subset sums** is `(sum of the array) × 2^(n − 1)`, and Sum of All Subset XOR Totals used the same pairing argument per bit. The same move, "count how often each piece appears", is also behind **linearity of expectation** in probability questions: the expected number of fixed points of a random permutation is `n × (1/n) = 1`, without listing any permutations.
+
+## Choosing the unit
+
+| The sum is over… | Give the credit to… | It counts in… | Pairs with |
+| --- | --- | --- | --- |
+| all subarrays (a value per element) | each element `i` | `(i + 1) × (n − i)` subarrays | plain arithmetic |
+| all pairs, with XOR / AND / Hamming | each bit column | `ones × zeros` pairs (or subsets: `2^(n−1)`) | bit manipulation |
+| all pairs, with \|x − y\| | each element after sorting | `i` pairs where it's the larger | sorting + prefix sums |
+| all substrings, with distinct / unique letters | each letter `s[i]` | `(i − prev) × (n − i)` or `× (next − i)` | last-seen array |
+| all subarrays, with min / max | each element as the min / max | `(i − prev) × (next − i)` | monotonic stack |
+| subarrays with a monotone property | each right end `r` | `r − l + 1` (or `l` for "at least") | sliding window |
+| all tree paths | each edge | `size × (n − size)` paths | DFS subtree sizes |
+
+<Callout type="warning" title="Common mistakes">
+
+- **Counting a subarray twice when values tie.** Two equal minimums, or two copies of a letter, must not both claim the same subarray. Use strict on one side and non-strict on the other, or credit the first copy only.
+- **Off-by-one boundaries.** Use `−1` for "no previous" and `n` for "no next", then the counts are always `i − prev` and `next − i`. Check the formula on a one-element array: it must give 1 × 1.
+- **Overflow.** `a[i] × left × right` reaches about 10¹⁵ for n = 10⁵: multiply in `long`. With `% MOD`, take the remainder after each multiplication.
+- **Subtracting under a modulus.** `(x − y) % MOD` can be negative in Java; add `MOD` before the final `%`.
+- **A sliding window on negative numbers.** "Shrinking keeps it valid" only holds for positive values. With negatives, use prefix sums and a hash map instead.
+
+</Callout>
+
+## Practice ladder
+
+| # | Problem | Level | What it trains |
+| --- | --- | --- | --- |
+| 1588 | [Sum of All Odd Length Subarrays](https://leetcode.com/problems/sum-of-all-odd-length-subarrays/) | Easy | (i + 1)(n − i), then keep the odd half |
+| 1863 | [Sum of All Subset XOR Totals](https://leetcode.com/problems/sum-of-all-subset-xor-totals/) | Easy | Each set bit is on in 2^(n−1) subsets |
+| 2348 | [Number of Zero-Filled Subarrays](https://leetcode.com/problems/number-of-zero-filled-subarrays/) | Medium | Credit each subarray to its right end |
+| 2063 | [Vowels of All Substrings](https://leetcode.com/problems/vowels-of-all-substrings/) | Medium | (i + 1)(n − i) for each vowel |
+| 477 | [Total Hamming Distance](https://leetcode.com/problems/total-hamming-distance/) | Medium | ones × zeros per bit |
+| 2425 | [Bitwise XOR of All Pairings](https://leetcode.com/problems/bitwise-xor-of-all-pairings/) | Medium | How many times each value appears, mod 2 |
+| 1685 | [Sum of Absolute Differences in a Sorted Array](https://leetcode.com/problems/sum-of-absolute-differences-in-a-sorted-array/) | Medium | Left part and right part with prefix sums |
+| 2615 | [Sum of Distances](https://leetcode.com/problems/sum-of-distances/) | Medium | The same, on the indices of each value |
+| 713 | [Subarray Product Less Than K](https://leetcode.com/problems/subarray-product-less-than-k/) | Medium | Right end r adds r − l + 1 |
+| 2962 | [Count Subarrays Where Max Element Appears at Least K Times](https://leetcode.com/problems/count-subarrays-where-max-element-appears-at-least-k-times/) | Medium | "At least": right end r adds l |
+| 907 | [Sum of Subarray Minimums](https://leetcode.com/problems/sum-of-subarray-minimums/) | Medium | Monotonic stack spans and the tie rule |
+| 2104 | [Sum of Subarray Ranges](https://leetcode.com/problems/sum-of-subarray-ranges/) | Medium | Sum of maximums − sum of minimums |
+| 2477 | [Minimum Fuel Cost to Report to the Capital](https://leetcode.com/problems/minimum-fuel-cost-to-report-to-the-capital/) | Medium | Each road costs ⌈subtree size / seats⌉ |
+| 891 | [Sum of Subsequence Widths](https://leetcode.com/problems/sum-of-subsequence-widths/) | Hard | Max of 2^i, min of 2^(n−1−i) after sorting |
+| 2262 | [Total Appeal of A String](https://leetcode.com/problems/total-appeal-of-a-string/) | Hard | Credit the first copy of each letter |
+| 828 | [Count Unique Characters of All Substrings of a Given String](https://leetcode.com/problems/count-unique-characters-of-all-substrings-of-a-given-string/) | Hard | Between the previous and next copy |
+| 2302 | [Count Subarrays With Score Less Than K](https://leetcode.com/problems/count-subarrays-with-score-less-than-k/) | Hard | Sliding window + right-end credit |
+| 2281 | [Sum of Total Strength of Wizards](https://leetcode.com/problems/sum-of-total-strength-of-wizards/) | Hard | Stack spans + prefix of prefix sums |
+| 834 | [Sum of Distances in Tree](https://leetcode.com/problems/sum-of-distances-in-tree/) | Hard | Edge contribution, then rerooting |
+
+## Interview questions
+
+<QA q="What is the contribution technique, in one sentence?">
+Instead of computing the value of every subarray, pair or subset and adding them up, compute how much each element (or bit, letter, edge) adds to the total across all of them, and add those contributions. It is the same double sum added in the other order, and it usually turns O(n²) or O(2ⁿ) into O(n) or O(n log n).
+</QA>
+
+<QA q="Why is index i in exactly (i + 1) × (n − i) subarrays?">
+A subarray containing i is determined by its start and its end. The start can be any of 0 … i (i + 1 choices) and the end any of i … n − 1 (n − i choices), and the two choices are independent, so the count is their product. Drawn as a grid of starts × ends, those subarrays form a rectangle.
+</QA>
+
+<QA q="In Sum of Subarray Minimums, why is one boundary strict and the other not?">
+With equal values, a subarray can have several minimums. If both boundaries stopped only at strictly smaller values, every tied minimum would claim the subarray and it would be counted several times; if both stopped at smaller-or-equal, none of them would claim the subarrays where both appear. Making one side strict (previous strictly smaller) and the other non-strict (next smaller-or-equal) gives each subarray to exactly one of the tied minimums, the rightmost one.
+</QA>
+
+<QA q="How do you get the total Hamming distance of all pairs in O(32n) instead of O(n²)?">
+Bit positions are independent. For each bit b, count how many numbers have a 1 there (ones) and how many a 0 (n − ones). A pair differs at bit b exactly when it takes one of each, so bit b contributes ones × (n − ones). Add that over all 32 bits.
+</QA>
+
+<QA q="Sum of all pairwise distances in a tree: how does contribution make it O(n)?">
+A pair's distance is the number of edges on its path, so add, for each edge, the number of paths that use it. Removing an edge splits the tree into the subtree below (size s) and the rest (n − s); exactly the s × (n − s) pairs with one node on each side cross it. One DFS gives every subtree size, so the whole sum is O(n).
+</QA>
+
+<Practice task="Return the sum of the maximum of every subarray of [3, 1, 2]. First write down which subarrays each element is the maximum of, then give the formula you'd code.">
+
+3 is the maximum of [3], [3, 1], [3, 1, 2]: 3 subarrays. 1 is the maximum only of [1]. 2 is the maximum of [2] and [1, 2]. Total = 3 × 3 + 1 × 1 + 2 × 2 = 14. The formula: with prev[i] = previous strictly greater index and next[i] = next greater-or-equal index, add a[i] × (i − prev[i]) × (next[i] − i). For 3: prev = −1, next = 3, so (0 + 1) × (3 − 0) = 3 subarrays, as listed.
+
+</Practice>
+
+<Practice task="Give an O(n) way to add up the sum of every subarray's sum modulo 10⁹ + 7, where n ≤ 10⁵ and values ≤ 10⁹.">
+
+Each a[i] is in (i + 1)(n − i) subarrays, so the answer is the sum of a[i] × (i + 1) × (n − i). The count is up to about 2.5 × 10⁹ and a[i] up to 10⁹, so the product (2.5 × 10¹⁸) is close to the long limit. Take a[i] % MOD and the count % MOD first, multiply in long (each factor is below 10⁹ + 7, so the product fits), take % MOD, and add.
+
+</Practice>
+
+<Practice task="Count the substrings of a string where the first and last letters are the same (a single letter counts). For 'abcab' the answer is 7. Use contribution, not two loops.">
+
+Credit each such substring to its right end. A substring ending at i with the same first letter starts at any earlier copy of s[i], or at i itself. So index i contributes 1 + (copies of s[i] seen before i). Keep a count per letter: add count[c] + 1, then increment count[c]. For 'abcab': a → 1, b → 1, c → 1, a → 2, b → 2: total 7. O(n) time and O(1) space.
+
+</Practice>
+
+<Takeaways>
+
+- Turn "sum over all subarrays / pairs / subsets" around: sum, over each element, of (its value) × (how many of them it's in).
+- The count is nearly always (choices on the left) × (choices on the right): (i + 1)(n − i), (i − prev)(next − i), s × (n − s).
+- The unit can be an element, a bit column, a letter, a right end or a tree edge. Pick the one whose count is easy.
+- It combines with everything: bits (ones × zeros), sorting + prefix sums, last-seen arrays, monotonic stacks, sliding windows, tree DFS.
+- Watch ties (strict on one side only), overflow (long, and % MOD after each multiplication) and negative remainders.
+
+</Takeaways>
+
+## Further reading
+
+- *Introduction to Algorithms* (CLRS), Appendix A — summation identities, including reordering double sums.
+- Next: [Designing Data Structures](/dsa/patterns/design-data-structures).
+- [The Pattern Picker](/dsa/playbook/pattern-picker) — choosing among all the patterns in this course.
