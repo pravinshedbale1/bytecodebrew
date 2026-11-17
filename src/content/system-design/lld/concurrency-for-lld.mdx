@@ -239,9 +239,17 @@ Design choices to state out loud: **bounded** queue (back-pressure instead of OO
 
 Four conditions must all hold (Coffman): mutual exclusion, hold-and-wait, no preemption, circular wait. Break one:
 
+<Approach verdict="bad" title="Thread 1 transfers A→B (locks A then B); thread 2 transfers B→A (locks B then A) → deadlock">
+
 ```java
-// ❌ Thread 1 transfers A→B (locks A then B); thread 2 transfers B→A (locks B then A) → deadlock
-// ✅ Always lock in a global order, e.g., by account id
+
+```
+
+</Approach>
+
+<Approach verdict="great" title="Always lock in a global order, e.g., by account id">
+
+```java
 void transfer(Account a, Account b, long amount) {
     Account first = a.id().compareTo(b.id()) < 0 ? a : b;
     Account second = first == a ? b : a;
@@ -253,6 +261,8 @@ void transfer(Account a, Account b, long amount) {
     }
 }
 ```
+
+</Approach>
 
 Other remedies: `tryLock` with timeout and back off; lock fewer things; avoid calling alien methods (callbacks, listeners) while holding a lock.
 

@@ -46,9 +46,30 @@ The rest of this lesson covers hooks, and when to prefer Strategy over inheritan
 
 **The textbook definition:** define the **skeleton of an algorithm** in a base class, deferring some **steps** to subclasses. Subclasses redefine specific steps without changing the algorithm's overall structure.
 
+## How to spot it in an interview
+
+| You hear | Template Method |
+| --- | --- |
+| 'Every importer opens, parses, validates, transforms and saves, in that order' | `DataImporter.importFile` |
+| 'All games set up, then take turns until someone wins' | A `Game.play()` skeleton |
+| 'Every report has a header, a body and a footer; only the body differs' | A report base class |
+| 'Same steps, only one or two differ by type' | Template Method |
+
 ## The problem
 
 You import data files from several partners — CSV from one, JSON from another, XML from a third. Each importer does the same thing in the same order: open the source, parse records, validate them, transform to your model, save, and report. Only parsing (and sometimes validation) differs. Three separate importers duplicate the flow — and when you add "deduplicate before saving", you must change all three.
+
+<Approach verdict="bad" title="Copy the whole procedure for each format">
+
+`CsvImporter`, `JsonImporter` and `XmlImporter` each contain the full sequence: open, parse, validate, transform, save. Only the parsing really differs, but a fix to validation must be made three times.
+
+</Approach>
+
+<Approach verdict="great" title="Write the sequence once; let subclasses fill in the gaps">
+
+A base class has a `final` method with the fixed order of steps. The steps that differ (`parse`) are abstract; subclasses only implement those. The sequence can't be broken, and shared steps are written once.
+
+</Approach>
 
 ## The solution
 
@@ -119,6 +140,13 @@ Make the template method **`final`** so subclasses can't reorder or skip steps.
 
 The base class controls the flow and calls subclass methods at the right moments — the opposite of a subclass calling library code. This inversion is how frameworks work: you fill in steps; the framework decides when they run.
 
+## Walk through it
+
+1. The app calls `csvImporter.importFile(path)`. That method lives in the base class and is `final`.
+2. The base opens the file, then calls `parse(...)`, which runs the CSV subclass's version.
+3. The base validates each record (shared code), calls `transform`, and saves.
+4. A JSON importer runs exactly the same steps; only its `parse` differs.
+
 ## Where you've seen it
 
 - `java.io.InputStream.read(byte[], int, int)` is implemented in terms of the abstract `read()`.
@@ -145,6 +173,12 @@ public ImportReport importFile(Path file, Parser parser) { ... parser.parse(in) 
 This keeps the fixed skeleton but swaps inheritance for composition, avoiding a subclass per variant. Use classic Template Method when there are several related steps that vary together, or when building a framework designed for extension.
 
 **Factory Method is a specialisation of Template Method** — the factory method is one overridable step (creation) inside a larger algorithm.
+
+## Common mistakes
+
+- **Not making the template method `final`**, so a subclass can override it and skip validation.
+- **Too many abstract steps**, forcing every subclass to write code it doesn't care about. Give steps sensible defaults (hooks).
+- **Deep inheritance trees.** If the varying part could be swapped at runtime, Strategy is often the better choice.
 
 ## Pros and cons
 

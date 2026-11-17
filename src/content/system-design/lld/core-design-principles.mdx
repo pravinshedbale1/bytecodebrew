@@ -135,13 +135,21 @@ These three are your defence against **over-engineering**, the most common LLD r
 
 A method should only talk to its **immediate collaborators**: its own fields, its parameters, objects it creates. Avoid chains that reach through objects:
 
-```java
-// ❌ The caller knows the internal structure of Order, Customer and Address
-String city = order.getCustomer().getAddress().getCity();
+<Approach verdict="bad" title="The caller knows the internal structure of Order, Customer and Address">
 
-// ✅ Ask the object that has the knowledge
+```java
+String city = order.getCustomer().getAddress().getCity();
+```
+
+</Approach>
+
+<Approach verdict="great" title="Ask the object that has the knowledge">
+
+```java
 String city = order.shippingCity();
 ```
+
+</Approach>
 
 Long chains ("train wrecks") couple the caller to every class along the path. Note that fluent builders and stream pipelines (`list.stream().filter(...).map(...)`) are not violations — they operate on the same abstraction.
 
@@ -149,13 +157,21 @@ Long chains ("train wrecks") couple the caller to every class along the path. No
 
 Rather than pulling data out of an object to make a decision, tell the object to do the work:
 
-```java
-// ❌ Ask: decision logic lives outside the object that owns the data
-if (account.getBalance() >= amount) account.setBalance(account.getBalance() - amount);
+<Approach verdict="bad" title="Ask: decision logic lives outside the object that owns the data">
 
-// ✅ Tell: the account enforces its own rules
+```java
+if (account.getBalance() >= amount) account.setBalance(account.getBalance() - amount);
+```
+
+</Approach>
+
+<Approach verdict="great" title="Tell: the account enforces its own rules">
+
+```java
 account.withdraw(amount);
 ```
+
+</Approach>
 
 ## Separation of concerns and layering
 

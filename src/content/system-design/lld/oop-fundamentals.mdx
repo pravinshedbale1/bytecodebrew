@@ -33,11 +33,17 @@ public class BankAccount {
 
 **Bundle data with the methods that operate on it, and hide the internal representation.** Callers interact through a small public interface; invariants are enforced in one place.
 
-```java
-// ❌ Leaky: anyone can set an invalid balance; logic for "withdraw" lives in every caller
-public class Account { public long balance; }
+<Approach verdict="bad" title="Leaky: anyone can set an invalid balance; logic for 'withdraw' lives in every caller">
 
-// ✅ Encapsulated: the invariant "balance never goes negative" is enforced here, once
+```java
+public class Account { public long balance; }
+```
+
+</Approach>
+
+<Approach verdict="great" title="Encapsulated: the invariant 'balance never goes negative' is enforced here, once">
+
+```java
 public class Account {
     private long balance;
 
@@ -49,6 +55,8 @@ public class Account {
     public long balance() { return balance; }
 }
 ```
+
+</Approach>
 
 Encapsulation is not "make every field private and generate getters and setters". A class with a public setter for every field is still leaky. Expose **behaviour** (`withdraw`, `close`, `markPaid`), not raw state.
 
@@ -199,6 +207,17 @@ Prefer immutable **value objects** for money, dates, coordinates and identifiers
 ## Composition: objects made of objects
 
 Most real behaviour comes from objects **collaborating**: an `Order` has `LineItem`s, uses a `PricingPolicy`, and is persisted by an `OrderRepository`. Inheritance answers "what is it?"; composition answers "what does it have and use?" — and composition is the mechanism behind most design patterns. See [Class Relationships & UML](/system-design/lld/class-relationships-uml).
+
+## Walk through it: the four ideas in one design
+
+Here is how the four ideas show up in the [parking lot](/system-design/lld/lld-parking-lot) design, so you can see them working together rather than as definitions:
+
+1. **Encapsulation.** `ParkingSpot` keeps "which vehicle is parked here" private. Nobody can set it directly; they must call `occupy()` or `release()`, which refuse to park twice or free an empty spot. The rule lives in one place.
+2. **Abstraction.** `ParkingService` only knows `PricingStrategy.price(ticket, exitTime)`. It has no idea whether the fee is hourly, flat or weekend-based.
+3. **Polymorphism.** At runtime the service holds an `HourlyPricing` or a `FlatRatePricing`. The same call, `pricing.price(...)`, does different things depending on which object it is.
+4. **Inheritance (or not).** Bikes, cars and trucks differ only in the spot size they need, so they're an **enum**, not subclasses. Inheritance is saved for real differences in behaviour, like the chess pieces in [Design Chess](/system-design/lld/lld-chess).
+
+When an interviewer asks you to "explain OOP", an answer anchored in a design like this is far stronger than four definitions.
 
 ## Interview questions
 

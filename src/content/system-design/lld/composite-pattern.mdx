@@ -38,6 +38,16 @@ The rest of this lesson covers where `add`/`remove` should live, real uses (file
 
 Use it only when your model is genuinely a tree. When it is, Composite removes a lot of `instanceof` checking.
 
+## How to spot it in an interview
+
+| You hear | Composite |
+| --- | --- |
+| 'A folder contains files and other folders' | File system |
+| 'A bundle can contain products and other bundles' | Catalog items |
+| 'An org chart: managers have reports, who may be managers' | Employees |
+| 'A menu has items and sub-menus' | UI menus |
+| 'An expression is a number, or an operation on expressions' | Expression trees |
+
 ## The problem
 
 An e-commerce order can contain products, and **bundles** — and bundles can contain products and other bundles (a "home office kit" containing a "desk set" bundle). To compute the total price, naive code must check types at every level:
@@ -55,6 +65,18 @@ Money total(List<Object> items) {
 ```
 
 Every new operation (weight, tax, rendering) repeats this, and every new node type changes all of them.
+
+<Approach verdict="bad" title="Check the type at every level">
+
+Every operation (price, weight, tax) loops through items with `if (item instanceof Product) ... else if (item instanceof Bundle) ...` and recurses by hand. Every new operation repeats the traversal; every new item type changes every operation.
+
+</Approach>
+
+<Approach verdict="great" title="Give single items and groups one interface">
+
+Products and bundles both implement `CatalogItem`. A product returns its own price; a bundle asks each of its children for theirs and adds them up. Callers just call `item.price()`, whether it's one pen or a kit of kits.
+
+</Approach>
 
 ## The solution
 
@@ -132,6 +154,13 @@ The client works with `CatalogItem` and never asks "is this a product or a bundl
 
 Most modern Java code chooses **safety** (as above). Mention the trade-off if asked.
 
+## Walk through it
+
+1. The cart calls `homeOfficeKit.price()`.
+2. The kit is a bundle, so it asks each child: a chair (a product) returns ₹4,000; the desk set (a bundle) asks its own children.
+3. The desk set adds up its lamp and organiser, subtracts its discount, and returns the total.
+4. The kit adds everything up, subtracts its own discount and returns. The cart never checked a type.
+
 ## Real-world uses
 
 - **File systems**: `File` vs `Directory`, size of a directory = sum of its children.
@@ -147,6 +176,13 @@ Most modern Java code chooses **safety** (as above). Mention the trade-off if as
 - **Deep trees** risk stack overflow with naive recursion; use iterative traversal for very deep structures.
 - **Overly general interfaces**: forcing operations onto the common interface that make no sense for some nodes.
 - **Performance**: repeated recursive computation on large trees; cache aggregates if the tree is read far more than modified.
+
+## Common mistakes
+
+- **Putting `add`/`remove` on the shared interface**, so a single product can be asked to hold children.
+- **Allowing cycles** (a bundle inside itself), which makes every operation loop forever.
+- **Recomputing totals of huge trees** on every call when a cached value would do.
+- **Using Composite for a flat list** with no nesting.
 
 ## Pros and cons
 

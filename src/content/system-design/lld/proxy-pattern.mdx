@@ -42,6 +42,16 @@ The rest of this lesson covers the kinds of proxy and Java's built-in dynamic pr
 
 **The textbook definition:** provide a **substitute or placeholder** for another object to **control access** to it. The proxy implements the same interface as the real object, so clients can't tell the difference.
 
+## How to spot it in an interview
+
+| You hear | Proxy |
+| --- | --- |
+| 'Only admins may call this' | Protection proxy |
+| 'Loading it is expensive, and most screens never use it' | Virtual (lazy) proxy |
+| 'Cache the results of this slow lookup' | Caching proxy |
+| 'The object really lives on another server' | Remote proxy |
+| 'Log or time every call to this service' | Logging proxy |
+
 ## The problem
 
 Some objects need a gatekeeper:
@@ -52,6 +62,18 @@ Some objects need a gatekeeper:
 - A slow lookup whose results could be reused.
 
 Adding that logic to every client duplicates it; adding it to the real class mixes concerns (and you may not own the class).
+
+<Approach verdict="bad" title="Put the gatekeeping in every caller, or in the real class">
+
+Each caller checks 'is this user an admin?' or 'is it cached?' before calling, so the check is copied everywhere and one copy will be missed. Putting it inside the real class mixes security or caching into business logic, and you may not own that class anyway.
+
+</Approach>
+
+<Approach verdict="great" title="A stand-in with the same interface">
+
+A **proxy** implements the same interface as the real object and holds a reference to it. Callers can't tell the difference. The proxy does its gatekeeping (load later, check permission, return the cached answer) and then passes the call on, or doesn't.
+
+</Approach>
 
 ## The solution
 
@@ -181,6 +203,20 @@ PriceService monitored = timed(new RealPriceService(), PriceService.class, metri
 <Callout type="example" title="Spring is built on proxies">
 `@Transactional`, `@Cacheable`, `@Async` and Spring Security's method annotations all work by wrapping your bean in a proxy that starts/commits transactions, checks caches or verifies permissions around the real call. That's also why **self-invocation** (`this.otherTransactionalMethod()`) bypasses them — the call never goes through the proxy. This is a very common interview follow-up.
 </Callout>
+
+## Walk through it
+
+1. The app gives screens an `ImageService` that is really a proxy.
+2. A screen calls `render(id)`. The proxy checks its cache: on a hit it returns straight away, and the real service is never touched.
+3. On a miss, the proxy creates the real service if it hasn't yet (lazy loading), calls it, stores the result and returns it.
+4. The screen's code is the same whether it holds the proxy or the real service.
+
+## Common mistakes
+
+- **A proxy that changes what the method means**, not just whether or when it runs.
+- **Caching proxies with no expiry or size limit.**
+- **Hiding a network call** behind a proxy so callers don't expect slowness or failure.
+- **Confusing it with Decorator.** Same shape; a proxy controls access to one object, a decorator adds features you can stack.
 
 ## Pros and cons
 

@@ -1,6 +1,6 @@
 ## The idea in plain words
 
-Some objects **behave differently depending on their current state**. Cancelling an order is easy before it ships and impossible after. Instead of an `if (status == ...)` in every method, **each state becomes a small class** that knows how to handle each action and which state comes next.
+Some objects **behave differently depending on the situation they're in**. Cancelling an order is easy before it ships and impossible after. Instead of an `if (status == ...)` in every method, **each situation (state) becomes a small class** that knows how to handle each action and which state comes next.
 
 **Picture it:** your phone's power button. When the phone is off it turns on, when it's unlocked it locks the screen, when it's ringing it silences the call. Same button, different behaviour, decided by the state the phone is in.
 
@@ -37,19 +37,24 @@ class Demo {
 
 `Order` has no `if` at all. A new state like `OutForDelivery` is one new class.
 
-| Use it when | Skip it when |
+**The textbook definition:** allow an object to **change its behaviour when its internal state changes**, so that it appears to change its class.
+
+## How to spot it in an interview
+
+Listen for an object whose **allowed actions depend on what has already happened**:
+
+| You hear | The states |
 | --- | --- |
-| The allowed actions depend on a "mode" and the rules keep growing (vending machine, ATM, order, elevator) | Two or three states with simple rules: an enum and a `switch` are clearer |
+| "You can't select a product before inserting money" | Vending machine: Idle, HasMoney, Dispensing |
+| "Three wrong PINs and the card is kept" | ATM: Idle, CardInserted, Authenticated |
+| "Customers can cancel until it ships" | Order: Placed, Shipped, Delivered, Cancelled |
+| "A document can only be edited while it's a draft" | Draft, InReview, Approved, Published |
 
-The rest of this lesson builds a full state machine, the kind used in vending machine and ATM rounds.
+If you find yourself writing "it depends on the status" for several different actions, that's State.
 
-**The textbook definition:** allow an object to **alter its behaviour when its internal state changes** — the object appears to change its class.
+## Draw the states first
 
-State is the backbone of many machine-coding problems: vending machines, ATMs, elevators, orders, document workflows, game turns, traffic lights. If an object's valid operations depend on what "mode" it's in, think State.
-
-## Finite-state machines
-
-An object with a lifecycle is a **finite-state machine**: a finite set of states, events that trigger transitions, and rules for which transitions are allowed.
+An object with a life cycle like this is a **finite-state machine**: a fixed set of states, events that move it between them, and rules for which moves are allowed. Before writing any code, draw it:
 
 ```mermaid
 stateDiagram-v2
@@ -63,7 +68,11 @@ stateDiagram-v2
   OutOfService --> Idle: restocked
 ```
 
-## The problem: conditionals everywhere
+Then make a table: one row per action, one column per state, and what happens in each cell. In an interview, this table is half the answer. Every cell becomes a method in a state class, and every "not allowed" cell becomes a clear error.
+
+## The problem it solves
+
+<Approach verdict="bad" title="A switch on the status in every method">
 
 ```java
 // ❌ Every method switches on the state; every new state touches every method
@@ -84,11 +93,31 @@ public void selectProduct(String code) {
 // ... and the same switch in cancel(), dispense(), maintenance()
 ```
 
-With 5 states and 5 operations, logic is spread across 25 switch branches. Adding a state means editing every method.
+With 5 states and 5 actions, the rules are spread over 25 `switch` branches in 5 different methods. To understand "what can a user do while the machine has money?", you must read all five methods. Adding a state means editing every one of them.
 
-## The solution
+</Approach>
 
-Move each state's behaviour into its own class implementing a common `State` interface. The **context** (the machine) holds a reference to the current state object and delegates every operation to it. States trigger transitions by telling the context which state comes next.
+<Approach verdict="good" title="An enum plus a table of allowed moves">
+
+For small machines where states don't **do** much (orders, bookings), an enum and a table of allowed transitions is clear and short. You'll see it below, and several case studies use it.
+
+</Approach>
+
+<Approach verdict="great" title="One class per state">
+
+Each state becomes a class with one method per action. The object (the **context**) holds its current state and forwards every action to it. All the rules for "has money" live in `HasMoneyState`. Adding a state means adding a class.
+
+</Approach>
+
+## Building it step by step
+
+**Step 1: List the actions as an interface.** One method per button or event: `insertCoin`, `selectProduct`, `cancel`. Give each a **default that throws** "can't do that now". Then a state only has to write the actions it allows.
+
+**Step 2: Write one class per state.** Each overrides the actions it allows, does the work, and tells the context which state comes next.
+
+**Step 3: Make the context forward everything.** The machine keeps `state` and its data (balance, inventory). Each public method is one line: `state.insertCoin(this, coin)`. It also offers a `setState` method the states can call.
+
+**Step 4: Make it thread-safe** if several threads can press buttons: `synchronized` on the context's public methods, so one action finishes before the next starts.
 
 ```mermaid
 classDiagram
@@ -185,24 +214,31 @@ public final class VendingMachine {
 
 </FullCode>
 
-Each state class answers one question: *what does each operation mean in this state?* Invalid operations fall through to the `default` methods that throw a clear error.
+Each state class answers one question: *what does each action mean in this state?* Actions it doesn't allow fall through to the `default` methods, which throw a clear error.
+
+## Walk through it
+
+1. The machine starts in `IdleState`. The user presses "select": `IdleState` doesn't override `selectProduct`, so the default throws "Cannot select a product while IDLE".
+2. The user inserts ₹20. `IdleState.insertCoin` adds it to the balance and calls `setState(hasMoney)`.
+3. The user selects A1 (₹15). `HasMoneyState.selectProduct` checks stock and balance, switches to `Dispensing`, drops the product, returns ₹5 and switches back to `Idle`.
+4. The machine's own code never checked a status once. The current state object made every decision.
 
 See the full design in [Design a Vending Machine](/system-design/lld/lld-vending-machine).
 
 ## Design decisions
 
-### Who performs transitions?
+### Who decides the next state?
 
-- **States decide** (as above): each state knows its successors. Flexible; transitions are spread across state classes.
-- **Context or transition table decides**: states report events; a table `(state, event) → nextState` determines transitions. Centralised and easy to visualise/validate; good when the state graph is large or configurable.
+- **The states decide** (as above): each state knows what comes after it. Flexible, but the transitions are spread across the state classes.
+- **A transition table decides**: states report events, and a table `(state, event) → next state` decides. Everything is in one place, easy to draw and check. Better when there are many states or the rules come from configuration.
 
-### Stateless state objects vs per-context state objects
+### One shared object per state, or a new one each time?
 
-If states hold no data of their own (data lives in the context), share **one instance per state** — even across many machines (they're effectively flyweights/singletons). If states carry data (e.g., a countdown), create new instances on transition.
+If states hold no data of their own (the data lives in the context), create **one instance per state** and reuse it, even across many machines. If a state carries data (a countdown, a number of wrong tries), create a new one on each transition.
 
 ### Enum-based state machines
 
-For small machines, an enum with abstract methods is compact:
+For small machines, an enum where each value overrides a method is compact:
 
 ```java
 enum TrafficLight {
@@ -215,11 +251,11 @@ enum TrafficLight {
 }
 ```
 
-Use enums when states have little behaviour; use classes when states have rich logic or dependencies.
+Use enums when states have little behaviour; use classes when states have real logic or need other objects.
 
-### Order/workflow state with validation
+### Status enum plus a transition table
 
-For domain entities (orders, bookings), a lighter variant is often enough: an enum of statuses plus an explicit transition table, enforced in one method:
+For business objects (orders, bookings), a lighter version is often enough: an enum of statuses plus a table of allowed moves, checked in one method:
 
 ```java
 enum OrderStatus { CREATED, PAID, SHIPPED, DELIVERED, CANCELLED }
@@ -240,7 +276,7 @@ void transitionTo(OrderStatus next) {
 
 ### Concurrency
 
-If multiple threads call the context, transitions must be atomic — synchronise the public methods (as above) or use a lock, so two coins or two selections can't interleave mid-transition.
+If several threads call the context, each transition must happen in one piece: synchronise the public methods (as above) or use a lock, so two coins or two selections can't interleave halfway through a transition.
 
 ## Pros and cons
 
@@ -250,21 +286,27 @@ If multiple threads call the context, transitions must be atomic — synchronise
 | Adding a state doesn't modify existing states' logic much (OCP) | Transitions scattered across state classes (if states decide) |
 | Eliminates large conditionals; invalid operations handled explicitly | Overkill if there are only two or three states with trivial behaviour |
 
-## State vs Strategy
+## Don't confuse it with Strategy
 
-Both delegate behaviour to an object behind an interface. The difference:
+Both put behaviour behind an interface. The difference:
 
 | | Strategy | State |
 | --- | --- | --- |
-| Who chooses the object | The **client** / configuration | The **context's lifecycle** — transitions |
-| Do implementations know each other? | No — independent algorithms | Yes — states often trigger the next state |
-| Changes over the object's lifetime | Rarely | Constantly, as events happen |
-| Models | *How* to do something | *What* the object is currently allowed to do |
+| Who chooses the object | The **caller** or configuration | The object's **own life cycle**, as events happen |
+| Do the implementations know each other? | No: independent algorithms | Yes: states usually pick the next state |
+| How often it changes | Rarely | Constantly |
+| Models | *How* to do something | *What* the object is allowed to do right now |
 
-State can be seen as an extension of Strategy in which strategies can replace themselves.
+## Common mistakes
+
+- **Coding before drawing the diagram and the action × state table.**
+- **Forgetting the "not allowed" cells.** Every action must have a clear answer in every state, even if it's an error.
+- **Changing data before all checks pass**, leaving the machine half-way between states.
+- **Using full State classes for a two-state toggle.** An enum is clearer.
+- **States that reach into each other's data** instead of going through the context.
 
 <Callout type="interview">
-In vending machine, ATM, elevator or order-workflow problems, start by drawing the state diagram. Interviewers are impressed when you enumerate states and invalid transitions before coding — and handle "what if the user presses cancel while dispensing?" explicitly.
+In vending machine, ATM, elevator or order problems, start by drawing the state diagram. Interviewers are impressed when you list the states and the invalid actions before coding, and answer "what if the user presses cancel while it's dispensing?" explicitly.
 </Callout>
 
 ## Interview questions

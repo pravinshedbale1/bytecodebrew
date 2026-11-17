@@ -18,11 +18,17 @@ Even in a single-file IDE session, grouping classes this way signals layered thi
 
 **Value objects over primitives** ("primitive obsession" is a common smell):
 
-```java
-// ❌ What currency? Paise or rupees? Can it be negative?
-long fee;
+<Approach verdict="bad" title="What currency? Paise or rupees? Can it be negative?">
 
-// ✅ Rules live with the type
+```java
+long fee;
+```
+
+</Approach>
+
+<Approach verdict="great" title="Rules live with the type">
+
+```java
 public record Money(long minorUnits, Currency currency) {
     public Money {
         if (minorUnits < 0) throw new IllegalArgumentException("Money cannot be negative");
@@ -31,6 +37,8 @@ public record Money(long minorUnits, Currency currency) {
     public Money plus(Money o) { requireSameCurrency(o); return new Money(minorUnits + o.minorUnits, currency); }
 }
 ```
+
+</Approach>
 
 Other good value objects: `TicketId`, `EmailAddress`, `DateRange`, `Coordinate`, `SeatNumber`. They make method signatures self-documenting (`book(ShowId, Set<SeatId>, UserId)` instead of `book(String, List<String>, String)`).
 

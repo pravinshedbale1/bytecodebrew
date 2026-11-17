@@ -1,8 +1,8 @@
 ## The idea in plain words
 
-When something happens to one object, several other objects want to know. With **Observer**, they **subscribe** to that object, and it notifies all of them, without knowing who they are or what they'll do.
+When something happens to one object, several other objects want to know. With **Observer**, they **subscribe** to that object, and it notifies all of them without knowing who they are or what they'll do.
 
-**Picture it:** pressing the bell icon on a YouTube channel. When a new video goes up, every subscriber gets told. The channel doesn't call people one by one; it just announces.
+**Picture it:** pressing the bell icon on a YouTube channel. When a new video goes up, every subscriber is told. The channel doesn't call people one by one; it just announces.
 
 ### The smallest example
 
@@ -29,21 +29,28 @@ class Demo {
 }
 ```
 
-The channel never changes when a new kind of subscriber (email digest, analytics) is added.
+The channel never changes when a new kind of subscriber (an email digest, analytics) is added.
 
-| Use it when | Skip it when |
+**The textbook definition:** define a **one-to-many** relationship so that when one object (the **subject**, or publisher) changes, all the objects that depend on it (**observers**, or subscribers) are told automatically.
+
+Observer is the in-process ancestor of event-driven systems: listeners, event buses, reactive streams and pub-sub all build on it.
+
+## How to spot it in an interview
+
+Listen for **"when X happens, also do Y, Z and maybe more later"**:
+
+| You hear | Observer |
 | --- | --- |
-| One change should trigger several independent reactions (display boards, notifications, audit logs) | Exactly one thing reacts, always: call it directly |
+| "When a spot is taken, update the display boards" | Boards subscribe to the floor |
+| "Notify the customer, restaurant and rider on every status change" | Listeners on the order |
+| "When a reserved book comes back, tell the member" | The library publishes "copy returned" |
+| "Log every change for audit" | An audit listener |
 
-The rest of this lesson covers what goes in an event, unsubscribing, slow subscribers and thread safety.
+## The problem it solves
 
-**The textbook definition:** define a **one-to-many** dependency so that when one object (the **subject** or publisher) changes state, all its dependents (**observers** or subscribers) are notified automatically.
+When an order ships, the app must email the customer, update analytics, refresh the warehouse dashboard and award loyalty points.
 
-Observer is the in-process ancestor of event-driven architecture: listeners, event buses, reactive streams and pub-sub all build on it.
-
-## The problem
-
-When an order ships, several things must happen: email the customer, update analytics, notify the warehouse dashboard, award loyalty points. If `OrderService` calls each of them directly:
+<Approach verdict="bad" title="The service calls everyone directly">
 
 ```java
 // ❌ OrderService knows every interested party; adding one means editing it
@@ -56,11 +63,27 @@ void markShipped(Order o) {
 }
 ```
 
-The publisher is coupled to all consumers, and every new consumer requires changing and retesting it.
+`OrderService` now knows about email, analytics, dashboards and loyalty: four things that have nothing to do with shipping. Adding SMS means editing and retesting it. And if the email call throws, the loyalty points are never awarded.
 
-## The solution
+</Approach>
 
-The subject keeps a list of observers behind a common interface and notifies them; it knows nothing else about them.
+<Approach verdict="great" title="Publish an event; let listeners subscribe">
+
+`OrderService` announces "order shipped" and is done. Email, analytics and loyalty each **subscribe** to that event. Adding SMS is a new listener; `OrderService` never changes.
+
+</Approach>
+
+## Building it step by step
+
+**Step 1: Describe what happened as an event object.** A small, unchangeable record: `OrderShipped(orderId, trackingId, at)`. Listeners get everything they need from it.
+
+**Step 2: Define the listener interface.** One method, `onEvent(event)`.
+
+**Step 3: Give the publisher a list of listeners**, with `subscribe`, `unsubscribe` and `publish`. `publish` loops over the listeners and calls each one, catching errors **per listener** so one broken listener can't stop the rest.
+
+**Step 4: Publish after the change.** The service updates the order, then publishes. It doesn't know who's listening.
+
+**Step 5: Wire listeners at startup.** `events.subscribe(new EmailNotifier(mailer))`.
 
 ```mermaid
 classDiagram
@@ -122,6 +145,13 @@ events.subscribe(new EmailNotifier(mailer));
 events.subscribe(loyaltyService::onOrderEvent);
 ```
 
+## Walk through it
+
+1. At startup, `EmailNotifier` and `loyaltyService::onOrderEvent` subscribe.
+2. `markShipped` updates the order and publishes `OrderShipped`.
+3. `publish` loops over a **snapshot** of the listeners (`CopyOnWriteArrayList`), so a listener that unsubscribes mid-loop can't break the loop.
+4. `EmailNotifier` throws because the mail server is down. The `try/catch` logs it, and the loop carries on to the loyalty listener. The order is still shipped.
+
 ## Push vs pull
 
 | | Push | Pull |
@@ -132,11 +162,11 @@ events.subscribe(loyaltyService::onOrderEvent);
 
 Modern code usually pushes **immutable event objects** (records), as above.
 
-## Implementation concerns — where interview depth lies
+## Going deeper: what interviewers ask about
 
-### 1. Synchronous vs asynchronous delivery
+### 1. Should listeners run on the publisher's thread?
 
-The simple version calls listeners **on the publisher's thread**. A slow listener (sending email) slows the publisher; a blocking one stalls it.
+The simple version calls listeners **on the publisher's thread**. A slow listener (sending email) slows the publisher; a stuck one freezes it. Handing each event to a thread pool fixes that:
 
 ```java
 // Asynchronous: hand events to an executor
@@ -145,35 +175,35 @@ public void publish(OrderEvent e) {
 }
 ```
 
-Async gives isolation and throughput but loses ordering guarantees, makes error handling harder, and events may be lost if the process crashes before they're handled (for durable delivery, use a message broker — see [Message Queues](/system-design/hld/message-queues)).
+The trade-off: events may now be handled out of order, errors are harder to report, and events can be lost if the process crashes before they're handled. For delivery that survives crashes, use a message broker (see [Message Queues](/system-design/hld/message-queues)).
 
 ### 2. Exceptions in listeners
 
-Catch and log per listener so one failure doesn't break others or roll back the publisher's work — unless you deliberately want listeners to participate in the publisher's transaction.
+Catch and log per listener, so one failure doesn't break the others or undo the publisher's work. Only listeners that are truly part of the business rule should be able to make the whole operation fail.
 
-### 3. Concurrent modification
+### 3. Subscribing while publishing
 
-Listeners may subscribe/unsubscribe while notifications are in progress (even from inside a callback). `CopyOnWriteArrayList` iterates over a snapshot — ideal for listener lists that are read far more than modified.
+Listeners may subscribe or unsubscribe while a notification is in progress, even from inside their own callback. `CopyOnWriteArrayList` loops over a snapshot, which is ideal for lists that are read far more often than changed.
 
-### 4. Memory leaks (lapsed listener problem)
+### 4. Memory leaks from forgotten listeners
 
-The subject holds strong references to observers. If an observer (say, a UI screen) is discarded but never unsubscribes, it can't be garbage-collected. Always pair `subscribe` with `unsubscribe` (return a `Subscription` handle with `close()`), or use weak references carefully.
+The publisher keeps a reference to every listener. If a listener (say, a screen that was closed) never unsubscribes, it can never be garbage-collected. Always pair `subscribe` with `unsubscribe`, for example by returning a `Subscription` handle with `close()`.
 
-### 5. Ordering and re-entrancy
+### 5. Order and chain reactions
 
-Don't rely on listener order unless documented. Beware listeners that publish further events synchronously — cascades and infinite loops are possible.
+Don't rely on the order listeners run in unless you document it. Watch out for listeners that publish more events while handling one: chain reactions and even infinite loops are possible.
 
-### 6. Update storms
+### 6. Too many events
 
-Many small state changes → many notifications. Batch or debounce if needed.
+Many tiny changes mean many notifications. Batch or debounce them if needed.
 
 ## Where you've seen it
 
-- Swing/AWT listeners (`ActionListener`), JavaFX properties, Android `LiveData`.
-- `java.beans.PropertyChangeListener` / `PropertyChangeSupport`.
-- Spring `ApplicationEventPublisher` + `@EventListener` (and `@TransactionalEventListener` to fire after commit).
-- Reactive streams (`Flow.Publisher`/`Subscriber`, RxJava, Project Reactor) — Observer with back-pressure.
-- (`java.util.Observable` is deprecated since Java 9 — don't use it.)
+- Button click listeners in Swing and Android; JavaFX properties.
+- `java.beans.PropertyChangeListener`.
+- Spring's `ApplicationEventPublisher` with `@EventListener` (and `@TransactionalEventListener` to fire only after the database commit).
+- Reactive streams (`Flow.Publisher`/`Subscriber`, RxJava, Reactor): Observer plus a way for slow subscribers to say "slow down".
+- (`java.util.Observable` has been deprecated since Java 9. Don't use it.)
 
 ## Pros and cons
 
@@ -184,11 +214,18 @@ Many small state changes → many notifications. Batch or debounce if needed.
 | Runtime subscription/unsubscription | Memory leaks from forgotten subscriptions |
 | Foundation for event-driven design | Synchronous listeners can slow or break the publisher |
 
-## Comparisons
+## Don't confuse it with
 
-- **Observer vs Pub-Sub (broker)**: in Observer, the subject holds observer references directly, in the same process. In pub-sub, a **broker/event bus** sits between publishers and subscribers, who don't know each other — and it can be distributed and durable.
-- **Observer vs Mediator**: Observer sets up dynamic one-way subscriptions; [Mediator](/system-design/lld/mediator-pattern) centralises communication among peers. A common mediator implementation uses Observer internally (components subscribe to the mediator's events).
-- **Chain of Responsibility, Command, Mediator and Observer** are four ways to connect senders and receivers: a chain passes a request along until handled; a command links sender to one receiver via an object; a mediator removes direct links; observer lets receivers subscribe dynamically.
+- **Pub-sub with a broker**: in Observer, the publisher holds direct references to its listeners, in the same process. In pub-sub, a **broker** sits in the middle, publishers and subscribers don't know each other, and messages can be stored and replayed. See [Design a Pub-Sub System](/system-design/lld/lld-pub-sub).
+- **Mediator**: Observer sets up one-way subscriptions; a [Mediator](/system-design/lld/mediator-pattern) is a central object that coordinates several peers. Mediators often use Observer inside.
+
+## Common mistakes
+
+- **Not catching exceptions per listener**, so one broken listener stops the rest.
+- **Never unsubscribing**, leaking memory.
+- **Slow listeners on the publisher's thread.**
+- **Mutable event objects** that one listener changes before the next one reads them.
+- **Listeners that depend on running in a particular order.**
 
 ## Interview questions
 

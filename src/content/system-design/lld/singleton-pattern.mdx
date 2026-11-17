@@ -30,6 +30,13 @@ That is the whole pattern: a **private constructor** plus **one static field**. 
 | --- | --- |
 | There must truly be one of something per program, and it holds no per-user data | You just want "one instance": create one at startup and pass it in instead (easier to test) |
 
+## How to spot it in an interview
+
+Interviewers rarely want you to *use* a Singleton. They ask about it in two ways:
+
+- **"Implement a thread-safe singleton."** A Java concurrency question in disguise. Know the holder idiom, the enum, and why the naive versions break.
+- **"Should this be a singleton?"** (the parking lot, the logger factory, the rate limiter). The strong answer is usually: "One instance, yes, but created at startup and passed in, not reached through a static `getInstance()`."
+
 The rest of this lesson goes deeper, at the level interviewers probe.
 
 **The textbook definition:** ensure a class has exactly one instance and provide a global point of access to it.
@@ -78,7 +85,7 @@ public final class ConfigRegistry {
 
 Thread-safe for free — the JVM initialises static fields during class initialisation, which is guaranteed to happen once. Downside: created even if never used (rarely matters).
 
-### 2. Lazy, not thread-safe ❌
+### 2. Lazy, not thread-safe (broken)
 
 ```java
 public static ConfigRegistry getInstance() {
@@ -204,6 +211,24 @@ This is exactly what Spring does: beans are **singleton-scoped by default** — 
 <Callout type="interview">
 A strong answer to "implement a singleton" is: the holder idiom or enum, an explanation of why naive lazy init and DCL-without-volatile break, and then: "In application code I'd usually avoid the static accessor and inject a single instance instead, for testability."
 </Callout>
+
+## Walk through the race
+
+Here is exactly how version 2 breaks, step by step:
+
+1. Thread A calls `getInstance()`, sees `instance == null`, and is paused by the scheduler.
+2. Thread B calls `getInstance()`, also sees `null`, creates object #1 and stores it.
+3. Thread A wakes up. It already checked, so it creates object #2 and overwrites the field.
+4. Thread B is now holding a different object from everyone else. If it's a cache, the two halves of the program see different data.
+
+Every fix above closes the gap between "check" and "create": a lock (versions 3 and 4) or the JVM's own one-time class initialisation (versions 1, 5 and 6).
+
+## Common mistakes
+
+- **Double-checked locking without `volatile`.**
+- **A mutable singleton** (a shared cache or counter) with no thread safety: every thread shares it.
+- **Using a singleton to avoid passing a dependency**, then being unable to test the code.
+- **Assuming one per JVM.** It's one per class loader.
 
 ## Where you've seen it
 

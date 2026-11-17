@@ -64,6 +64,19 @@ LLD prompts are as vague as HLD ones. "Design a parking lot" could mean one floo
 - Ask about **scale and concurrency** at the object level: multiple entry gates at once? (→ thread-safe allocation).
 - Explicitly **descope**: "I'll skip reservations and admin UI unless you want them."
 
+A few good questions are worth more than many. Each one below changes the design:
+
+<Dialogue>
+<Turn who="you">Is there one entry gate, or several working at once?</Turn>
+<Turn who="them">Several, all at the same time.</Turn>
+<Turn who="you">Then I'll make sure two gates can never assign the same spot. How is the fee worked out, and might that change?</Turn>
+<Turn who="them">Hourly by vehicle type for now. We may add weekend pricing.</Turn>
+<Turn who="you">Then pricing goes behind an interface. I'll leave reservations and EV charging out unless you'd like them.</Turn>
+<Turn who="them">Leave them out.</Turn>
+</Dialogue>
+
+"Several gates at once" tells you concurrency matters. "We may add weekend pricing" tells you pricing is a variation point. Write the final list where the interviewer can see it.
+
 ### Step 2 — Identify entities and relationships (5–10 min)
 
 A reliable technique is **noun–verb analysis**: nouns in the requirements are candidate classes; verbs are candidate methods (and tell you *which* class owns them).
@@ -113,6 +126,8 @@ classDiagram
 
 Trace each main use case through the objects, ideally as a sequence: *gate → lot.park(vehicle) → strategy.allocate → spot.occupy → new Ticket*. This catches missing responsibilities before you code.
 
+Do it again **after** you've coded, with a concrete example and real values ("a car arrives at 10:00, leaves at 12:30, pays ₹120"). Every case study on this site ends its design with exactly this kind of worked example.
+
 ### Step 5 — Implement (the bulk of machine coding)
 
 Order matters when time is limited:
@@ -129,6 +144,10 @@ Keep everything **in memory** (maps and lists in repository classes) unless told
 ### Step 6 — Extend and harden
 
 Interviewers almost always add a twist: *"Now add EV charging spots"*, *"Support weekend pricing"*, *"What if two gates assign the same spot?"* A good design absorbs these by **adding a class** (new strategy, new spot type) rather than rewriting. Then discuss thread safety, error handling and how you'd test it.
+
+<Callout type="note" title="How the case studies follow this framework">
+Each case study is laid out in the same order: **Step 1** requirements (as a conversation), **Step 2** entities, **Step 3** class design with the key decision compared, **Step 4** the code, **Step 5** a worked example, **Step 6** follow-up questions. Start with the [parking lot](/system-design/lld/lld-parking-lot), which explains the plan in the most detail.
+</Callout>
 
 ## Code-quality checklist for the round
 

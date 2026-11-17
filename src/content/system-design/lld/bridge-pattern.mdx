@@ -47,6 +47,17 @@ The rest of this lesson gives the full picture and compares Bridge with Strategy
 
 Bridge is the pattern people find most abstract. The key is to look for **two independent dimensions of variation** tangled into one inheritance tree.
 
+## How to spot it in an interview
+
+The giveaway is **two things that vary independently**, where you'd otherwise need one class per combination.
+
+| You hear | Bridge |
+| --- | --- |
+| 'Alerts, reminders and promotions, sent by email, SMS or push' | Message type × channel |
+| 'Shapes drawn on screen or printed' | Shape × renderer |
+| 'Remote controls for TVs and radios' | Remote × device |
+| 'Reports exported as PDF or HTML' | Report × format |
+
 ## The problem: a hierarchy growing in two directions
 
 You build a messaging feature with message **types** (alert, reminder, promotion) sent through **channels** (email, SMS, push). With inheritance:
@@ -59,6 +70,18 @@ Message
 ```
 
 Add WhatsApp → three more classes. Add a "receipt" type → four more. Logic for each channel is duplicated across every message type, and logic for each type across every channel.
+
+<Approach verdict="bad" title="One subclass per combination">
+
+`AlertEmail`, `AlertSms`, `ReminderEmail`... 3 message types × 3 channels = 9 classes. Add WhatsApp: 3 more. Add a receipt type: 4 more. The code for each channel is copied into every message type.
+
+</Approach>
+
+<Approach verdict="great" title="Two hierarchies, joined by a reference">
+
+Message types form one hierarchy; channels form another. Each message **holds a channel** and asks it to deliver. 3 types + 3 channels = 6 classes, and any type works with any channel. Adding WhatsApp is one class.
+
+</Approach>
 
 ## The solution
 
@@ -134,6 +157,13 @@ new AlertMessage(new PushChannel(fcm), "Card used abroad").send(customer);    //
 
 Now types and channels grow **additively**: 3 types + 3 channels = 6 classes, and adding WhatsApp is one class that works with every message type.
 
+## Walk through it
+
+1. The app creates `new Reminder(new SmsChannel())`.
+2. `reminder.send(user)` builds the reminder's text and decides its priority. That's the message type's job.
+3. It hands the finished text to its channel: `channel.deliver(user, text)`.
+4. `SmsChannel` does the actual sending. The same `Reminder` class could just as well have been given `EmailChannel`.
+
 ## Classic examples
 
 - **Shapes × renderers**: `Circle`, `Square` (abstraction) drawn via `VectorRenderer` or `RasterRenderer` (implementation).
@@ -159,6 +189,12 @@ A pattern names the *problem* it solves, not just a shape of code. Saying "this 
 
 - **Abstract Factory + Bridge**: when certain abstractions only work with certain implementations, an abstract factory can create matching pairs and hide that pairing.
 - **Builder + Bridge**: a director (abstraction) can drive different builders (implementations).
+
+## Common mistakes
+
+- **Using Bridge when only one thing varies.** That's just Strategy or plain inheritance.
+- **Letting the channel know about message types**, which joins the two hierarchies back together.
+- **Designing a bridge up front for a second dimension that may never come.**
 
 ## Pros and cons
 

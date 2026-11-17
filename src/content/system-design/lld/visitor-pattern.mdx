@@ -43,12 +43,33 @@ In modern Java a `sealed` interface with a `switch` often does the same job with
 
 Visitor is the most complex GoF pattern and comes up less often in machine coding, but interviewers use it to test understanding of **double dispatch** and the **expression problem**.
 
+## How to spot it in an interview
+
+| You hear | Visitor |
+| --- | --- |
+| 'Calculate premium, export XML and score risk for every policy type' | One visitor per operation |
+| 'Compute size, search and print for files and folders' | File-system visitors |
+| 'Evaluate, print and simplify an expression tree' | Expression visitors |
+| 'The types rarely change, but new operations keep coming' | Visitor |
+
 ## The problem
 
 An insurance system models a portfolio of different policy types: `HealthPolicy`, `MotorPolicy`, `LifePolicy`. You need operations across all of them: calculate premium, export to XML, compute risk score, generate a regulatory report… and the list keeps growing.
 
 - Adding each operation as a method on every policy class bloats the domain classes with unrelated concerns (XML export inside `MotorPolicy`?) and requires editing all of them for every new operation.
 - Writing operations outside with `instanceof` chains loses type safety and silently misses new policy types.
+
+<Approach verdict="bad" title="A method per operation on every class, or `instanceof` chains">
+
+Putting `exportXml()` and `riskScore()` on `MotorPolicy`, `HealthPolicy` and `LifePolicy` fills the domain classes with unrelated code and means editing all of them for every new operation. Writing the operations outside with `instanceof` chains silently skips any new policy type.
+
+</Approach>
+
+<Approach verdict="great" title="One class per operation, with a method per type">
+
+Each operation becomes a **visitor** with one method per policy type: `visitMotor`, `visitHealth`, `visitLife`. Each policy has a single `accept(visitor)` that calls the right one. A new operation is a new visitor class, and the policy classes don't change.
+
+</Approach>
 
 ## The solution: double dispatch
 
@@ -133,11 +154,24 @@ static Money premium(Policy p) {
 
 Adding a new permitted subtype makes every non-exhaustive `switch` a **compile error** — the same safety Visitor gives, with less ceremony. Mentioning this shows you know where the language has moved.
 
+## Walk through it
+
+1. The report code calls `policy.accept(new RiskScoreVisitor())`. It holds a `Policy` and doesn't know which kind.
+2. The policy is a `MotorPolicy`, so its `accept` calls `visitor.visitMotor(this)`.
+3. `visitMotor` computes the motor risk score with full access to the motor policy's details.
+4. This 'call back with my own type' step is called **double dispatch**: the result depends on both the policy type and the visitor type.
+
 ## Where you've seen it
 
 - `java.nio.file.FileVisitor` / `Files.walkFileTree` — visit files and directories with different callbacks.
 - `javax.lang.model.element.ElementVisitor` (annotation processing), compiler ASTs (javac, Eclipse JDT, ANTLR parse-tree visitors).
 - Document/object-model exporters that render the same structure to HTML, PDF and plain text.
+
+## Common mistakes
+
+- **Using Visitor when new types are added often.** Each new type means adding a method to every visitor.
+- **Visitors that need private fields**, forcing the domain classes to expose them.
+- **Ignoring the modern alternative**: with sealed types, a `switch` with pattern matching often does the same job with less code.
 
 ## Pros and cons
 

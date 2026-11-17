@@ -43,6 +43,15 @@ The rest of this lesson shows the "intrinsic vs extrinsic" split properly and ho
 
 Flyweight is a **memory optimisation**. Reach for it only when you've measured (or can estimate) that object count is the problem.
 
+## How to spot it in an interview
+
+| You hear | Flyweight |
+| --- | --- |
+| 'Render two million trees on a map' | Share species data per tree type |
+| 'A text editor with a million characters' | Share font and style objects |
+| 'Thousands of chess or game pieces' | Share piece images and rules |
+| 'Memory is the problem, and most objects repeat the same data' | Flyweight |
+
 ## The problem
 
 A map renders 2 million trees. Each tree object stores:
@@ -55,6 +64,18 @@ colour, leaf shape, model   ~100 bytes (same for every tree of a species)
 ```
 
 If each tree holds its own copy of species data, memory explodes — even though only ~20 distinct species exist.
+
+<Approach verdict="bad" title="Every object carries its own copy of the shared data">
+
+Two million tree objects each store their species name, colour, model and texture. There are only 20 species, but the same data is stored two million times, and memory runs out.
+
+</Approach>
+
+<Approach verdict="great" title="Store the shared part once">
+
+Split each tree into what's **the same for every tree of its kind** (species, texture: kept once in a shared, unchangeable `TreeType`) and what's **unique** (its x and y). Each tree now holds two numbers and a reference to its type.
+
+</Approach>
 
 ## The solution: split intrinsic and extrinsic state
 
@@ -128,6 +149,13 @@ Memory now: 2M × (two ints + one reference ≈ 24–32 bytes) + 20 shared `Tree
 2. Clients **must not create flyweights with `new`**; always go through the factory so sharing actually happens.
 3. Extrinsic state lives in the context object or is passed to methods.
 4. The factory's cache must be **thread-safe** if used concurrently (`ConcurrentHashMap.computeIfAbsent`).
+
+## Walk through it
+
+1. The map asks the factory for the 'oak' type. The first time, it's created and cached; every later request returns the same object.
+2. Planting a tree creates a small object holding x, y and a reference to that shared 'oak' type.
+3. To draw, each tree calls `type.draw(canvas, x, y)`, passing in its own position.
+4. Two million trees now share 20 type objects, instead of each holding its own copy.
 
 ## Where you've seen it
 
@@ -234,6 +262,12 @@ Output: `140000 characters, 3 style objects` and `true`. Records give value-base
 <Callout type="interview">
 In LLD rounds Flyweight shows up as **chess** (one shared object per piece type and colour; the board stores positions), **text editors and spreadsheets** (shared formats), **maps and games** (shared sprites, textures and tile types) and the `Integer` cache trick question. Mention it when the interviewer asks how the design behaves with millions of objects.
 </Callout>
+
+## Common mistakes
+
+- **Making the shared object changeable.** Change it for one tree and every tree of that kind changes.
+- **Applying it before measuring.** It adds complexity; use it when memory is actually a problem.
+- **Factories that never stop caching** an unbounded number of distinct values.
 
 ## Interview questions
 

@@ -43,9 +43,30 @@ The rest of this lesson covers tree iterators, lazy paging and the mistakes inte
 
 Java built this pattern into the language — `Iterable`, `Iterator` and the enhanced `for` loop — so the interview interest lies in **implementing** custom iterators correctly and understanding traversal semantics.
 
+## How to spot it in an interview
+
+| You hear | Iterator |
+| --- | --- |
+| 'Go through every item without caring how they're stored' | `Iterable`/`Iterator` |
+| 'Results come back one page at a time from an API' | A lazy iterator that fetches the next page when needed |
+| 'Walk a tree in order, or level by level' | One iterator per traversal order |
+| 'The data is too big to load at once' | A streaming iterator |
+
 ## The problem
 
 Collections differ internally: arrays, linked lists, trees, graphs, or data that arrives page by page from an API. Clients want to "go through every element" without knowing which. If the collection exposes its internals (`getNodes()`, `getRoot()`), every client re-implements traversal, and changing the internal structure breaks them all. And one collection may need several traversals (depth-first, breadth-first, filtered).
+
+<Approach verdict="bad" title="Expose the collection's insides">
+
+Callers loop over `tree.getRoot().left...` or `list.getArray()[i]`. Every caller depends on how the data is stored, changing the storage breaks all of them, and each caller must reinvent the traversal.
+
+</Approach>
+
+<Approach verdict="great" title="A separate object that walks the collection">
+
+The collection hands out an **iterator** that remembers its own position, with `hasNext()` and `next()`. Callers use that and nothing else. Two callers can walk the same collection at once, each with its own iterator.
+
+</Approach>
 
 ## The solution
 
@@ -169,6 +190,20 @@ Callers just loop; pages are fetched on demand. Java `Stream`s and database curs
 
 - **External** — the client drives (`hasNext`/`next`) — flexible: stop early, interleave two iterators.
 - **Internal** — the collection drives and calls your function (`list.forEach(...)`, streams) — concise, and the collection can optimise or parallelise.
+
+## Walk through it
+
+1. The caller writes `for (Order o : orders)`. Java calls `orders.iterator()`.
+2. Each loop step calls `hasNext()`, then `next()`, which returns the next order and moves the iterator's position on.
+3. For a paged API, `hasNext()` fetches the next page only when the current one runs out.
+4. When `hasNext()` returns false, the loop ends. The caller never knew whether the data was a list, a tree or a remote API.
+
+## Common mistakes
+
+- **`next()` with no more items** must throw `NoSuchElementException`, not return null.
+- **`hasNext()` that changes the position**, so calling it twice skips an item.
+- **Changing the collection while iterating** without a clear rule (fail fast, or iterate over a snapshot).
+- **Loading everything into memory** to build the iterator, defeating the point for big data.
 
 ## Pros and cons
 

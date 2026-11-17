@@ -95,6 +95,27 @@ class Order {
 Interviewers rarely care about diamond shapes for their own sake. They care that you understand **who owns what and who is responsible for lifecycle** — that drives where creation logic lives, what gets deleted together, and what can be shared.
 </Callout>
 
+## Which relationship is it? Ask four questions
+
+When you're unsure which arrow to draw, ask these in order and stop at the first "yes":
+
+1. **Is A a kind of B?** (A savings account is a bank account.) → **Inheritance**, or **realization** if B is an interface.
+2. **Does A create B, and does B make no sense without A?** (An order's line items.) → **Composition**.
+3. **Does A hold B for a long time, but B lives on its own?** (A team's players.) → **Aggregation**, or plain **association** if "part of" doesn't fit (a driver and their car).
+4. **Does A only use B during one method call?** (A report service given a formatter.) → **Dependency**.
+
+<Approach verdict="bad" title="Drawing every line the same">
+
+A diagram where every box is joined by the same plain arrow says nothing about ownership. The interviewer can't tell what gets deleted together, what can be shared, or who creates what.
+
+</Approach>
+
+<Approach verdict="great" title="Showing ownership where it matters">
+
+You don't need every symbol perfect. Mark the few relationships that matter: which objects **own** others (composition), which are **interfaces** with several implementations, and which classes **extend** others. That's what drives the code.
+
+</Approach>
+
 ## Reading a full diagram
 
 ```mermaid

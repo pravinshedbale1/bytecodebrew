@@ -1,6 +1,6 @@
 ## The idea in plain words
 
-There are **several ways to do the same job**. Put each way in its own class behind one shared interface, and choose which one to use at runtime. The code that needs the job done only knows the interface.
+There are **several ways to do the same job**. Put each way in its own class behind one shared interface, and choose which one to use while the program runs. The code that needs the job done only knows the interface.
 
 **Picture it:** paying at a shop. The shopkeeper just says "₹250, please". Whether you pay by UPI, card or cash is your choice, and the shop's billing doesn't change.
 
@@ -30,21 +30,27 @@ class Demo {
 }
 ```
 
-Adding wallet payments is a new class. `Checkout` never changes, and each method can be tested alone.
+Adding wallet payments is a new class. `Checkout` never changes, and each payment method can be tested on its own.
 
-| Use it when | Skip it when |
+**The textbook definition:** define a **family of algorithms**, put each one behind a common interface, and make them **interchangeable**, so the algorithm can change independently of the code that uses it.
+
+## How to spot it in an interview
+
+Strategy is the most useful pattern in LLD interviews. Listen for requirements that say **"it can be done in different ways"**, or **"we might change how X works later"**:
+
+| You hear | Strategy |
 | --- | --- |
-| A requirement says "it can be done in different ways": pricing, splitting, matching, routing, ranking | There is one way and no sign of a second |
+| "Pricing is hourly, but events have a flat rate" | `PricingStrategy` |
+| "Split equally, by exact amounts or by percentage" | `SplitStrategy` |
+| "Pick the nearest driver, or maybe the highest-rated" | `MatchingStrategy` |
+| "Evict the least recently used, or least frequently used" | `EvictionPolicy` |
+| "A human or a computer can play" | `MoveStrategy` |
 
-The rest of this lesson uses a parking-lot pricing problem.
+## The problem it solves
 
-**The textbook definition:** define a **family of algorithms**, encapsulate each one behind a common interface, and make them **interchangeable** — so the algorithm can vary independently from the code that uses it.
+A parking lot charges an hourly fee. Then the business adds a flat rate for events, weekend rates, a discount for electric vehicles, and monthly passes. The obvious code grows like this:
 
-Strategy is the single most useful pattern in LLD interviews. Pricing, allocation, splitting, routing, ranking, retry, scheduling — whenever a requirement says "it can be done in different ways", Strategy is the answer.
-
-## The problem
-
-A parking lot computes fees. Initially: hourly. Then: flat rate for events, weekend rates, EV discounts, monthly passes.
+<Approach verdict="bad" title="One method with a growing chain of ifs">
 
 ```java
 // ❌ A growing conditional, edited for every new rule
@@ -57,9 +63,25 @@ Money fee(Ticket t, Instant exit) {
 }
 ```
 
-Every change risks breaking the others, the class grows without bound, and each rule can't be tested in isolation.
+Every new rule means editing this method, and every edit risks breaking the rules already there. The method grows without limit, and you can't test "weekend pricing" on its own: every test runs through the whole chain.
 
-## The solution
+</Approach>
+
+<Approach verdict="great" title="One class per rule, behind one interface">
+
+Each pricing rule becomes its own small class implementing `PricingStrategy`. The exit gate holds **a** strategy and calls it, without knowing which one it is. A new rule is a new class; nothing that already works is touched.
+
+</Approach>
+
+## Building it step by step
+
+**Step 1: Name the job as an interface.** One method that every way of doing the job will implement. Name it after the domain ("pricing"), not the pattern.
+
+**Step 2: Write one class per way of doing it.** `HourlyPricing`, `FlatEventPricing`, `WeekendPricing`. Each holds its own settings (rates, the flat amount) and nothing else.
+
+**Step 3: Make the user of the job depend only on the interface.** The exit gate receives a `PricingStrategy` in its constructor and calls `price(...)`. This class is called the **context**.
+
+**Step 4: Decide, in one place, which strategy to use** (see "Choosing the strategy" below).
 
 ```mermaid
 classDiagram
@@ -113,11 +135,16 @@ public final class ExitGate {
 }
 ```
 
-Adding a "festival surge" rule is a new class; `ExitGate` never changes.
+## Walk through it
+
+1. At startup, the app creates `new ExitGate(new HourlyPricing(rates))`.
+2. A car leaves. The gate calls `pricing.price(ticket, now)`.
+3. Java sends the call to `HourlyPricing.price`, which rounds the stay up to whole hours and multiplies by the rate.
+4. On a concert night, the app builds the gate with `new FlatEventPricing(Money.of(300))` instead. The gate's code is identical; only the object it was given is different.
 
 ## Choosing the strategy
 
-Something has to pick the strategy — keep that decision in **one place**:
+Something has to pick the strategy. Keep that decision in **one place**, not scattered around the code:
 
 ```java
 // A selector/factory chooses by context
@@ -133,11 +160,11 @@ public final class PricingSelector {
 }
 ```
 
-Or configure it at startup per lot/tenant, or let the user choose (shortest vs fastest route).
+Other options: wire it up once at startup per parking lot, or let the user choose (shortest vs fastest route).
 
-### Composing strategies
+### Combining strategies
 
-Strategies combine naturally with [Decorator](/system-design/lld/decorator-pattern):
+Strategies combine well with [Decorator](/system-design/lld/decorator-pattern): each wrapper adds one rule on top of the one inside it.
 
 ```java
 PricingStrategy pricing = new EvDiscount(new MinimumCharge(new HourlyPricing(rates), Money.of(20)), 20);
@@ -145,83 +172,89 @@ PricingStrategy pricing = new EvDiscount(new MinimumCharge(new HourlyPricing(rat
 
 ## Lambdas: the lightweight strategy
 
-In Java 8+, any functional interface is a strategy slot. `Comparator` is the most familiar strategy in the JDK:
+In Java 8+, any interface with a single method can be filled with a lambda. `Comparator` is the strategy you've used most:
 
 ```java
 orders.sort(Comparator.comparing(Order::placedAt).reversed());     // strategy passed as a lambda
 ```
 
-For single-method strategies without state or names worth keeping, a lambda or method reference is enough. Use full classes when strategies have configuration, multiple methods, or deserve names in the domain (`ExactSplit`, `PercentSplit`).
+Use a lambda for a small, one-off rule with no settings. Use a named class when the strategy has settings, several methods, or deserves a name in the domain (`ExactSplit`, `PercentSplit`).
 
 ## Where you've seen it
 
-- `java.util.Comparator`; `ThreadPoolExecutor`'s `RejectedExecutionHandler` (abort, caller-runs, discard policies).
-- Spring's `PasswordEncoder`, `ResourceLoader`, `TaskExecutor` — swap implementations by configuration.
-- Load-balancing algorithms, retry/backoff policies, cache eviction policies, compression algorithms, payment methods.
+- `java.util.Comparator`; `ThreadPoolExecutor`'s `RejectedExecutionHandler` (abort, caller-runs, discard).
+- Spring's `PasswordEncoder` and `TaskExecutor`: swap implementations through configuration.
+- Load-balancing algorithms, retry policies, cache eviction policies, compression algorithms, payment methods.
 
-## Strategy in LLD case studies
+## Strategy in the case studies
 
 | Case study | Strategy |
 | --- | --- |
-| Parking lot | `PricingStrategy`, `SpotAllocationStrategy` |
-| Splitwise | `SplitStrategy` (equal, exact, percentage) |
-| Elevator | `DispatchStrategy` (nearest suitable car, zoning) |
-| Rate limiter | `RateLimiter` implementations (token bucket, sliding window) |
-| Ride-hailing | `MatchingStrategy`, `FareStrategy` |
-| Cache | `EvictionPolicy` (LRU, LFU) |
-| Tic-tac-toe | `MoveStrategy` (human, random bot, minimax bot) |
+| [Parking lot](/system-design/lld/lld-parking-lot) | `PricingStrategy`, `SpotAllocationStrategy` |
+| [Splitwise](/system-design/lld/lld-splitwise) | `SplitStrategy` (equal, exact, percentage) |
+| [Elevator](/system-design/lld/lld-elevator-system) | `DispatchStrategy` (nearest suitable car, zoning) |
+| [Rate limiter](/system-design/lld/lld-rate-limiter) | `RateLimiter` implementations (token bucket, sliding window) |
+| [Cab booking](/system-design/lld/lld-cab-booking) | `MatchingStrategy`, `FareStrategy` |
+| [LRU cache](/system-design/lld/lld-lru-cache) | `EvictionPolicy` (LRU, LFU) |
+| [Tic-tac-toe](/system-design/lld/lld-tic-tac-toe) | `MoveStrategy` (human, random bot, minimax bot) |
 
 ## Pros and cons
 
 | Pros | Cons |
 | --- | --- |
-| Swap algorithms at runtime | More classes/objects |
-| Replace conditionals with polymorphism; each algorithm testable alone (SRP) | Clients (or a selector) must know which strategy to use |
-| Add algorithms without changing the context (OCP) | Overkill when there are only one or two stable algorithms |
+| Swap algorithms while the program runs | More classes and objects |
+| Replaces conditionals; each algorithm is testable alone | Someone (the client or a selector) must know which strategy to use |
+| Add algorithms without changing the context | Overkill when there are only one or two rules that never change |
 
-## Comparisons
+## Don't confuse it with
 
-- **Strategy vs State**: same structure; in Strategy the *client* chooses an algorithm and strategies don't know each other; in [State](/system-design/lld/state-pattern) the *context's state* drives the choice and states may trigger transitions to other states.
-- **Strategy vs Template Method**: Template Method varies steps via **inheritance** (static, class level); Strategy varies behaviour via **composition** (dynamic, object level).
-- **Strategy vs Command**: both wrap behaviour in objects. Strategy represents *different ways of doing the same thing*; [Command](/system-design/lld/command-pattern) turns *a request* into an object you can queue, log, undo.
-- **Strategy vs Decorator**: Decorator changes an object's "skin" (wraps around), Strategy changes its "guts" (replaces internals).
-- **Strategy vs Bridge**: similar shape; Bridge separates two hierarchies architecturally, Strategy swaps one algorithm.
+- **State**: the same shape. In Strategy, the **caller** picks the algorithm, and strategies don't know about each other. In [State](/system-design/lld/state-pattern), the object's **current situation** picks the behaviour, and states switch the object to other states.
+- **Template Method**: varies some steps through **inheritance** (fixed when the class is written). Strategy varies behaviour through **composition** (an object you can swap while running).
+- **Command**: both wrap behaviour in objects. Strategy is *different ways of doing the same thing*; [Command](/system-design/lld/command-pattern) is *a request* turned into an object you can queue, log or undo.
+- **Decorator**: changes an object's outside (wraps around it); Strategy changes its inside (replaces how it does the job).
+
+## Common mistakes
+
+- **Moving the `if` chain into whoever creates the strategy**, and then copying it in three places. Keep selection in one selector.
+- **A strategy interface with ten methods.** Most strategies need one or two.
+- **Naming classes after the pattern** (`StrategyImpl1`) instead of the domain (`WeekendPricing`).
+- **Using Strategy for a rule that has only one version and no sign of a second.**
 
 <Callout type="interview">
-Name strategies after the domain concept, and point to the axis of change: "Fees vary by event, weekday and vehicle type, so I've put pricing behind a `PricingStrategy`; adding festival surge pricing is just another implementation."
+Name strategies after the domain concept, and say what changes: "Fees vary by event, weekday and vehicle type, so pricing sits behind a `PricingStrategy`; festival surge pricing would just be another implementation."
 </Callout>
 
 ## Interview questions
 
 <QA q="How does Strategy help with the Open/Closed Principle?">
-The context depends only on the strategy interface. New behaviour is added by writing a new implementation rather than editing the context's conditional logic, so tested code stays unchanged — the context is closed for modification but open for extension through new strategies.
+The context depends only on the strategy interface. New behaviour is added by writing a new implementation rather than editing the context's conditional logic, so tested code stays unchanged: the context is closed for modification but open for extension through new strategies.
 </QA>
 
 <QA q="Who should decide which strategy to use?">
-Keep the decision in one place: either the client passes the strategy explicitly (user selects a route type), configuration wires it at startup (per tenant or environment), or a small selector/factory chooses based on context (event day vs weekday). Avoid having the context itself contain the selection conditionals — that reintroduces the switch you removed.
+Keep the decision in one place: the client passes the strategy explicitly (the user picks a route type), configuration wires it at startup (per tenant or environment), or a small selector chooses based on context (event day vs weekday). Don't put the selection conditionals inside the context; that brings back the switch you removed.
 </QA>
 
 <QA q="When would you use a lambda instead of a strategy class?">
-When the strategy is a single stateless function used in one place, such as a sort comparator or a small filter. Use classes when strategies carry configuration, have several methods, need clear domain names, are reused, or must be registered and selected by key.
+When the strategy is a single function with no state, used in one place, such as a sort comparator or a small filter. Use classes when strategies carry settings, have several methods, need clear domain names, are reused, or must be registered and chosen by key.
 </QA>
 
 <Practice task="A delivery app computes ETA as distance divided by 25 km/h. Product wants traffic-aware ETAs in big cities, the simple formula elsewhere, and an ML model in an A/B test. Design it.">
 
-An `EtaStrategy` interface (`Duration estimate(Location from, Location to, Instant at)`) with `FixedSpeedEta`, `TrafficAwareEta` (calling a traffic service through an adapter) and `ModelEta`. A selector chooses per request — by city configuration and A/B bucket — in one place. Add a fallback decorator: if the traffic or model service fails or times out, use `FixedSpeedEta`. The order service depends only on the interface.
+An `EtaStrategy` interface (`Duration estimate(Location from, Location to, Instant at)`) with `FixedSpeedEta`, `TrafficAwareEta` (calling a traffic service through an adapter) and `ModelEta`. A selector chooses per request, by city setting and A/B group, in one place. Add a fallback wrapper: if the traffic or model service fails or times out, use `FixedSpeedEta`. The order service depends only on the interface.
 
 </Practice>
 
 <Takeaways>
 
-- Strategy puts interchangeable algorithms behind one interface; the context delegates.
-- It replaces conditionals with polymorphism and keeps each algorithm testable in isolation.
-- Keep strategy selection in one place (client, configuration or a selector).
-- It is the most common pattern in machine-coding problems.
+- Strategy puts interchangeable ways of doing a job behind one interface; the context just calls it.
+- Reach for it when a requirement says "it can be done in different ways".
+- It replaces growing `if` chains and makes each rule testable on its own.
+- Keep the choice of strategy in one place.
 
 </Takeaways>
 
 ## Further reading
 
-- Gamma et al., *Design Patterns* (1994) — Strategy.
-- Freeman and Robson, *Head First Design Patterns* (2nd ed.) — chapter 1 (SimUDuck).
-- Alexander Shvets, *Dive Into Design Patterns* — "Strategy".
+- Gamma et al., *Design Patterns* (1994): Strategy.
+- Freeman and Robson, *Head First Design Patterns* (2nd ed.): chapter 1.
+- Alexander Shvets, *Dive Into Design Patterns*: "Strategy".

@@ -42,12 +42,33 @@ The rest of this lesson builds a proper undo history and covers keeping snapshot
 
 **The textbook definition:** capture and externalise an object's internal state as a **snapshot** so it can be **restored later** — without violating encapsulation.
 
+## How to spot it in an interview
+
+| You hear | Memento |
+| --- | --- |
+| 'Undo the last change' | Save a snapshot before each change |
+| 'Revert to the last saved version' | Keep the saved snapshot |
+| 'Roll the game back to the checkpoint' | Checkpoint snapshots |
+| 'Restore the object if a multi-step operation fails halfway' | Snapshot before, restore on failure |
+
 ## The problem
 
 You want undo in an editor, "revert to last saved" in a form, rollback of a game to a checkpoint, or restoring an object after a failed multi-step operation. To restore state you must save it somewhere. But:
 
 - If another object reads all the fields to copy them, those fields must be public — breaking encapsulation.
 - If the object's structure changes, every class that copies its state breaks.
+
+<Approach verdict="bad" title="Let another class copy the object's fields">
+
+An undo manager reads every field of the editor to save it. Those fields must now be public, and every time the editor gains a field, the undo manager breaks.
+
+</Approach>
+
+<Approach verdict="great" title="Let the object snapshot itself">
+
+The editor (the **originator**) creates its own snapshot, the **memento**, and can restore itself from one. The undo manager (the **caretaker**) just stores mementos on a stack without being able to look inside. The editor's fields stay private.
+
+</Approach>
 
 ## The solution
 
@@ -159,12 +180,26 @@ public final class FormatSelectionCommand implements Command {
 }
 ```
 
+## Walk through it
+
+1. Before a change, the history asks the editor: `editor.save()`. The editor returns a memento with its text and cursor position.
+2. The history pushes that memento onto its stack. It can't read or change what's inside.
+3. The user types, changing the editor.
+4. On undo, the history pops the memento and calls `editor.restore(memento)`. The editor puts its own fields back.
+
 ## Where you've seen it
 
 - Undo in editors and IDEs; "checkpoints" in games.
 - Transaction rollback (conceptually: a database's undo log restores prior state).
 - `java.io.Serializable` used to persist object state snapshots.
 - Form state preservation: Android's `onSaveInstanceState(Bundle)` saves UI state to restore after recreation.
+
+## Common mistakes
+
+- **Mementos that can be changed** after they're taken. Make them immutable.
+- **Unlimited history**, using more and more memory. Cap the stack or store only changes.
+- **Exposing the memento's contents** to the caretaker, which defeats the point.
+- **Snapshotting huge objects on every keystroke.** Group changes, or store differences.
 
 ## Pros and cons
 

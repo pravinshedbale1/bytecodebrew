@@ -46,9 +46,30 @@ The rest of this lesson builds undo/redo properly and shows commands in job queu
 
 **The textbook definition:** turn a **request into a standalone object** containing everything needed to perform it. That lets you pass requests as arguments, **queue** or **schedule** them, **log** them, and support **undo/redo**.
 
+## How to spot it in an interview
+
+| You hear | Command |
+| --- | --- |
+| 'Support undo and redo' | Commands with `execute` and `undo` |
+| 'Queue jobs and run them later' | Commands in a queue (see the [Job Scheduler](/system-design/lld/lld-job-scheduler)) |
+| 'The same action from a button, a menu and a shortcut' | One command object, many triggers |
+| 'Record every operation for audit or replay' | Stored commands |
+
 ## The problem
 
 A text editor has buttons, menu items and keyboard shortcuts that all trigger operations like "bold", "paste", "delete line". If each UI element calls the editor directly, the same logic is duplicated across invokers, and features like undo, macro recording or "repeat last action" have nothing to hold on to — an operation is just a method call that vanishes once executed.
+
+<Approach verdict="bad" title="Each button calls the editor directly">
+
+The Bold button, the Bold menu item and the Ctrl+B shortcut each call the editor with the same code. There's nothing to put on an undo stack, nothing to queue, and nothing to log, because an action is just a method call that has already happened.
+
+</Approach>
+
+<Approach verdict="great" title="Turn each action into an object">
+
+`BoldCommand` stores what it needs (the editor and the selection) and has `execute()` and `undo()`. Buttons, menus and shortcuts all just run a command. Because it's an object, you can push it onto a history stack, queue it or log it.
+
+</Approach>
 
 ## The solution
 
@@ -199,12 +220,26 @@ Serialise a command, send it over a network, execute it elsewhere — the basis 
 
 In application architecture, a "command" (`PlaceOrderCommand`) is a request object handled by a single handler — a close cousin of this pattern.
 
+## Walk through it
+
+1. The user presses Ctrl+B. The shortcut creates `new BoldCommand(editor, selection)` and the history runs `execute()`.
+2. The command remembers the old formatting, applies bold, and is pushed onto the undo stack.
+3. The user presses Ctrl+Z. The history pops that command and calls `undo()`, which restores the old formatting.
+4. Ctrl+Y (redo) runs `execute()` on it again and pushes it back.
+
 ## Where you've seen it
 
 - `java.lang.Runnable`, `java.util.concurrent.Callable`.
 - Swing `Action` objects; undo managers (`javax.swing.undo.UndoableEdit`).
 - Game input systems (rebindable keys map to command objects; recorded commands enable replays).
 - Task queues (Celery/Sidekiq jobs), Spring Batch steps.
+
+## Common mistakes
+
+- **An `undo()` that doesn't restore exactly what `execute()` changed.** Save the old state inside the command.
+- **Clearing the redo stack** is required when a new command runs after an undo. Forgetting it gives confusing redo behaviour.
+- **Commands that hold huge snapshots** when storing just the change would do.
+- **Using Command for a single direct call** that needs no undo, queueing or logging.
 
 ## Pros and cons
 

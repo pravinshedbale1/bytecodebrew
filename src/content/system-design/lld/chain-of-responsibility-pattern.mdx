@@ -48,11 +48,32 @@ The rest of this lesson covers both styles of chain (stop at the first handler v
 
 **The textbook definition:** pass a request along a **chain of handlers**. Each handler decides either to process the request, to pass it to the next handler — or both — so the sender doesn't need to know which handler will deal with it.
 
+## How to spot it in an interview
+
+| You hear | Chain of Responsibility |
+| --- | --- |
+| 'Requests pass auth, then rate limiting, then validation, then the handler' | A chain of request handlers (filters, middleware) |
+| 'Up to ₹10,000 a lead approves, up to ₹1,00,000 a manager, above that a director' | An approval chain |
+| 'Try the primary SMS provider, then the backup' | A failover chain |
+| 'Give ₹2000 notes, then ₹500, then ₹100' | The ATM's note dispenser |
+
 ## The problem
 
 An API request must pass several checks before reaching business logic: authentication, rate limiting, input validation, caching, then the actual handler. If the controller does all of this inline, it grows into a tangle of nested `if`s; reordering checks or reusing them for another endpoint means copying code.
 
 Or consider expense approvals: amounts up to ₹10,000 are approved by a team lead, up to ₹1,00,000 by a manager, above that by a director. Hard-coding the hierarchy into one method makes every policy change an edit to tested code.
+
+<Approach verdict="bad" title="One method that does every step">
+
+The controller checks the token, the rate limit and the input, looks in the cache, then calls the handler, all inline. Adding a step or changing the order means editing this method, and none of the steps can be reused or tested on their own.
+
+</Approach>
+
+<Approach verdict="great" title="One handler per step, linked in a chain">
+
+Each check becomes a small handler with one job and a reference to the **next** handler. It either deals with the request (rejects it, answers it) or passes it on. The order is set when the chain is built, so adding a step means adding a link.
+
+</Approach>
 
 ## The solution
 
@@ -170,6 +191,13 @@ for (Validator v : validators) {
 }
 ```
 
+## Walk through it
+
+1. A request enters the first handler, `AuthHandler`. The token is valid, so it passes the request to the next one.
+2. `RateLimitHandler` finds the user still has quota, and passes it on.
+3. `ValidationHandler` finds a missing field. It **stops the chain** and returns a 400 error. The business handler never runs.
+4. A valid request would have travelled all the way to the end and reached the business handler.
+
 ## Where you've seen it
 
 - **Servlet filters** (`FilterChain.doFilter`) and **Spring Security's filter chain**.
@@ -183,6 +211,13 @@ for (Validator v : validators) {
 - **ATM cash dispensing**: ₹2000 → ₹500 → ₹100 note dispensers, each dispensing what it can and passing the remainder. See [Design an ATM](/system-design/lld/lld-atm).
 - **Logging framework**: DEBUG → INFO → ERROR handlers, or appenders deciding by level. See [Design a Logging Framework](/system-design/lld/lld-logging-framework).
 - **Validation pipelines**, **discount rules**, **support ticket escalation**, **approval workflows**.
+
+## Common mistakes
+
+- **Forgetting to call the next handler**, silently dropping requests.
+- **No handler at the end**, so an unhandled request disappears without an error.
+- **Handlers that depend on running in a particular order** without the order being written down where the chain is built.
+- **Very long chains** that are hard to debug. Log which handler stopped a request.
 
 ## Pros and cons
 

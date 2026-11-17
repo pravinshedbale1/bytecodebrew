@@ -44,9 +44,16 @@ That example is a **Simple Factory**. Two more "factory" patterns build on the s
 | --- | --- |
 | Which class to create depends on input or configuration, or creating is more than one line | There's only one class and a plain `new` reads fine |
 
-Here is how the three compare, and when interviewers expect each one.
+## How to spot it in an interview
 
-Three related ideas share the word "factory". Interviewers expect you to distinguish them:
+| You hear | Reach for |
+| --- | --- |
+| "Users pick email, SMS or push" (one implementation chosen from input) | Simple factory or registry |
+| "The steps are the same, only the vehicle differs by subclass" | Factory Method |
+| "Each provider needs a matching client, refund client and webhook checker" | Abstract Factory |
+| "Creating it needs ten optional settings" | Not a factory: [Builder](/system-design/lld/builder-pattern) |
+
+Three related ideas share the word "factory", and interviewers expect you to tell them apart:
 
 | | Simple Factory | Factory Method (GoF) | Abstract Factory (GoF) |
 | --- | --- | --- | --- |
@@ -67,7 +74,19 @@ else if (pref.equals("SMS")) n = new SmsNotifier(twilio);
 else n = new PushNotifier(fcm);
 ```
 
-Factories **centralise creation** and let the rest of the code depend only on the abstraction (`Notifier`).
+That `if` chain is copied into every class that needs a notifier. Add WhatsApp and you must find and edit every copy, and miss one and that screen silently can't send WhatsApp messages.
+
+<Approach verdict="bad" title="Decide the class wherever an object is needed">
+
+The same decision is repeated everywhere, and every caller depends on every concrete class.
+
+</Approach>
+
+<Approach verdict="great" title="Decide it in one place">
+
+A factory makes the decision once. Callers ask for "a notifier for SMS" and only ever see the `Notifier` interface. Adding WhatsApp touches the factory and nothing else.
+
+</Approach>
 
 ## Simple Factory (not a GoF pattern, but the one you'll use most)
 
@@ -256,6 +275,13 @@ Adding a **new family** (a High-Contrast theme) is easy — one new factory plus
 | Copying a configured object is cheaper than building it | [Prototype](/system-design/lld/prototype-pattern) |
 
 Designs often **start** with Factory Method (simple, subclass-driven) and **evolve** toward Abstract Factory, Prototype or Builder as flexibility needs grow. Abstract Factories are frequently implemented with a set of factory methods, and are often single instances.
+
+## Common mistakes
+
+- **Calling every `create` method a "Factory Method".** A static method with a switch is a simple factory; Factory Method means subclasses override a creation step.
+- **A factory for a class with one implementation** and a one-line constructor. `new` is fine.
+- **The same switch in two factories.** One mapping, in one place.
+- **Using a factory when the real problem is many optional parameters.** That's a Builder.
 
 ## Pros and cons
 

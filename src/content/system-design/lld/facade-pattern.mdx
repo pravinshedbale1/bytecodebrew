@@ -40,6 +40,15 @@ In LLD case studies, the "service" class you write first (`ParkingService`, `Boo
 
 **The textbook definition:** provide a **simplified, unified interface** to a set of interfaces in a subsystem, making the subsystem easier to use.
 
+## How to spot it in an interview
+
+| You hear | Facade |
+| --- | --- |
+| 'Placing an order reserves stock, prices, charges, ships and notifies' | `OrderFacade.placeOrder(...)` |
+| 'The gates just call park and unpark' | `ParkingService` |
+| 'Wrap this complicated SDK so the team uses three methods' | A facade over the SDK |
+| 'The mobile app, web app and admin tool all place orders' | One facade they all call |
+
 ## The problem
 
 Placing an order touches many components: inventory reservation, pricing, coupon validation, payment, shipment creation and notification. A controller that orchestrates all of them directly knows every class, every call order and every failure mode:
@@ -56,6 +65,18 @@ notifications.orderPlaced(user, order, s);
 ```
 
 Clients are tightly coupled to the subsystem's internals; any change ripples into all of them.
+
+<Approach verdict="bad" title="Every caller runs the whole sequence itself">
+
+The web controller, the mobile API and the admin tool each repeat the same seven calls in the same order, with the same rollback when payment fails. Change one step and you must change all three, and one of them will be missed.
+
+</Approach>
+
+<Approach verdict="great" title="One class that offers the simple operation">
+
+`OrderFacade.placeOrder(cart, user, coupon)` runs the sequence in one place. Callers make one call. The subsystems stay available for anyone who needs finer control, but nobody has to know the choreography.
+
+</Approach>
 
 ## The solution
 
@@ -117,6 +138,14 @@ Key properties:
 - The subsystem **doesn't know** the facade exists; its classes remain directly usable for advanced cases.
 - You can have **several facades** for different client needs (a `CheckoutFacade` and an `AdminOrderFacade`).
 
+## Walk through it
+
+1. The controller calls `orderFacade.placeOrder(cart, user, "SAVE10")`.
+2. The facade reserves stock, prices the cart and applies the coupon.
+3. It charges the payment. If that fails, it releases the reserved stock and throws one clear error.
+4. It creates the shipment and sends the notification, then returns a confirmation.
+5. The mobile API makes the same single call, so the rules are identical everywhere.
+
 ## Where you've seen it
 
 - `javax.faces.context.FacesContext`, `java.net.URL.openStream()` (hides connection setup, protocol handlers and streams).
@@ -130,6 +159,13 @@ Key properties:
 - **God facade**: if the facade grows to dozens of unrelated methods, it becomes the very coupling magnet it was meant to remove. Split it by use case or client.
 - **Leaky facade**: returning subsystem types (e.g., a vendor's `RzpPayment`) re-exposes the internals. Return your own simple types.
 - **Business logic creep**: a facade should orchestrate, not own complex domain rules — those belong in the domain objects.
+
+## Common mistakes
+
+- **A god-facade** that grows into the whole application. Keep one facade per area (orders, payments).
+- **Business rules leaking into the facade.** It coordinates; the rules belong in the subsystems.
+- **Forcing everyone through it** when some callers genuinely need the lower-level classes.
+- **Confusing it with Adapter**: a facade simplifies; an adapter converts one interface into another.
 
 ## Pros and cons
 

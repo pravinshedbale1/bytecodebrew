@@ -35,6 +35,15 @@ The object knows its own class and fields, so it is the best one to copy itself.
 
 The tricky part is **shallow vs deep copy**: what happens to lists and other objects inside. That is what the rest of this lesson, and interviewers, focus on.
 
+## How to spot it in an interview
+
+| You hear | Prototype |
+| --- | --- |
+| "Duplicate this document / shape / order" | A `copy()` on the item |
+| "Spawn many enemies of the same type, each set up from a big file" | A registry of preconfigured prototypes |
+| "Each tenant starts from the default rule set, then overrides some rules" | Copy the default, then change the copy |
+| "Save a snapshot so we can undo" | Copying is a simple alternative to [Memento](/system-design/lld/memento-pattern) |
+
 **The textbook definition:** create new objects by **copying an existing object** (the prototype), without making your code depend on the object's concrete class.
 
 ## The problem
@@ -47,7 +56,22 @@ You want an exact copy of an object. The naive approach — create a new instanc
 
 ## The solution
 
-Let the object copy itself. Declare a copy operation in a common interface; each class implements it, with full access to its own private state.
+<Approach verdict="bad" title="Copy it from the outside">
+
+```java
+if (s instanceof Circle c) copy = new Circle(c.x(), c.y(), c.radius());
+else if (s instanceof Polygon p) copy = new Polygon(p.points());
+```
+
+Every caller needs a branch for every shape, can only copy what the getters expose, and breaks when a new shape is added.
+
+</Approach>
+
+<Approach verdict="great" title="Let the object copy itself">
+
+Declare `copy()` on the shared interface. Each class implements it, with full access to its own private fields. The caller just says `shape.copy()`.
+
+</Approach>
 
 ```mermaid
 classDiagram
@@ -152,6 +176,14 @@ Enemy e1 = registry.spawn("orc-archer");                                  // cop
 - Code must copy objects whose **concrete classes it doesn't know** (it only holds an interface).
 - Object creation is **expensive** and new objects differ little from an existing configured one (game entities, document templates, preconfigured requests).
 - You'd otherwise create many subclasses that differ only in how they're initialised — instead, keep prototypes configured differently.
+
+## Common mistakes
+
+- **A shallow copy of a mutable list**, so editing the copy changes the original.
+- **Using `Cloneable`** instead of a copy constructor.
+- **Copying the id** along with everything else, so two documents share one identity.
+- **Deep-copying immutable objects** (strings, records) for no reason.
+- **Forgetting cycles** in an object graph during a deep copy (keep a map of already-copied objects).
 
 ## Pros and cons
 

@@ -42,6 +42,15 @@ The rest of this lesson shows a realistic integration and how Adapter differs fr
 
 Adapter is one of the most practical patterns in real systems: every time you integrate a third-party SDK, a legacy module or an external API, you're writing an adapter — whether you call it that or not.
 
+## How to spot it in an interview
+
+| You hear | Adapter |
+| --- | --- |
+| 'Integrate this payment provider's SDK' | `RazorpayAdapter implements PaymentProcessor` |
+| 'Each SMS vendor has a different API' | One adapter per vendor behind `Provider` |
+| 'Use this old library from new code' | An adapter that translates calls |
+| 'Our ATM talks to the bank's network protocol' | `BankGateway` adapter |
+
 ## The problem
 
 Your checkout depends on your own abstraction:
@@ -63,6 +72,18 @@ public class RazorpayClient {
 ```
 
 Changing your checkout to call `RazorpayClient` directly would couple your business logic to a vendor (violating dependency inversion), and you'd repeat it for every provider.
+
+<Approach verdict="bad" title="Call the vendor SDK straight from business code">
+
+Checkout now uses `RazorpayClient`, its paise amounts and its order-then-capture steps. Your business logic depends on a vendor's API. Adding Stripe means a second set of calls everywhere, and testing checkout needs the real SDK.
+
+</Approach>
+
+<Approach verdict="great" title="Wrap the SDK in a class that speaks your interface">
+
+Write `RazorpayAdapter implements PaymentProcessor`. It takes your call, `pay(amount, customerId)`, and translates it into the vendor's calls and units. Checkout only knows `PaymentProcessor`. Stripe is another adapter; tests use a fake.
+
+</Approach>
 
 ## The solution: object adapter
 
@@ -138,6 +159,14 @@ public class LegacyPrinterAdapter extends LegacyPrinter implements Printer {
 
 At larger scale, a set of adapters protecting your domain model from an external system's model is called an **anti-corruption layer** (Domain-Driven Design). It's the same idea applied to a whole subsystem: your code speaks your language; translation happens at the boundary.
 
+## Walk through it
+
+1. Checkout calls `processor.pay(Money.inr(499), "cust-42")`. It doesn't know Razorpay exists.
+2. `RazorpayAdapter` converts ₹499 to 49,900 paise and calls `createOrder`.
+3. It then calls `capture` with the customer's token.
+4. It translates the vendor's response (and any vendor exception) into your own `PaymentResult`.
+5. Switching to Stripe means wiring in `StripeAdapter` at startup. Checkout doesn't change.
+
 ## Where you've seen it
 
 - `Arrays.asList(array)` — adapts an array to the `List` interface.
@@ -153,6 +182,14 @@ At larger scale, a set of adapters protecting your domain model from an external
 - Making old code usable from new code during a migration.
 
 **Don't** use an adapter when you control both sides — just change the interface. Avoid adapters that silently drop important behaviour (a vendor's partial-success semantics squeezed into a boolean).
+
+## Common mistakes
+
+- **Letting vendor types leak through** the adapter (returning `RzpPayment` instead of your own result).
+- **Putting business rules in the adapter.** It should only translate.
+- **Not translating errors**, so callers must catch vendor-specific exceptions.
+- **One giant adapter for several vendors.** One per vendor.
+- **Confusing it with Facade**: an adapter makes one interface look like another; a facade makes many classes look simple.
 
 ## Pros and cons
 

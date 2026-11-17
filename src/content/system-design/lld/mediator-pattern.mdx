@@ -50,6 +50,15 @@ The rest of this lesson shows a realistic mediator and how to stop it becoming a
 
 **The textbook definition:** reduce chaotic dependencies between objects by making them communicate **only through a mediator object**, instead of referring to each other directly.
 
+## How to spot it in an interview
+
+| You hear | Mediator |
+| --- | --- |
+| 'Choosing cash on delivery hides the card fields and changes the total' | A checkout form mediator |
+| 'Users in a chat room send messages to the room, not to each other' | `ChatRoom` |
+| 'Planes talk to the control tower, not to each other' | Air-traffic control |
+| 'Many components, each reacting to the others' | Mediator |
+
 ## The problem
 
 Consider an air-traffic scenario — or, closer to LLD interviews, a **chat room** or a **checkout form**. In a checkout form:
@@ -81,6 +90,18 @@ flowchart LR
     F2[DeliveryOptions] --- M
   end
 ```
+
+<Approach verdict="bad" title="Every component talks to every other">
+
+The payment selector updates the card fields, the coupon box updates the total and the payment options, the country selector updates tax and delivery... With N components there can be up to N² links, no component can be reused alone, and changing one breaks several.
+
+</Approach>
+
+<Approach verdict="great" title="Every component talks to one coordinator">
+
+Components only tell the **mediator** what happened ('payment method changed'). The mediator decides who else must react. Each component knows only the mediator, and all the interaction rules are in one place.
+
+</Approach>
 
 ## The solution
 
@@ -160,6 +181,13 @@ public final class GroupChatRoom implements ChatRoom {
 
 The room can add muting, moderation, message history or rate limits without touching `User`.
 
+## Walk through it
+
+1. The user picks 'Cash on delivery'. The payment selector calls `mediator.notify(this, "paymentChanged")`.
+2. The mediator hides the card fields and disables 'Save card'.
+3. It asks the total label to recalculate, because cash on delivery adds a fee.
+4. The payment selector never knew the card fields or the total label existed.
+
 ## Where you've seen it
 
 - `java.util.concurrent.Executor` decoupling task submitters from worker threads (loosely), `java.util.Timer`.
@@ -172,6 +200,12 @@ The room can add muting, moderation, message history or rate limits without touc
 
 - **God mediator**: all logic migrates into the mediator, which becomes huge and fragile. Split by use case (one mediator per dialog or room), and keep domain logic in domain objects.
 - **Hidden flow**: interactions are indirect; name events clearly and keep the mediator readable.
+
+## Common mistakes
+
+- **The mediator turning into a god object** with every rule in the app. Use one mediator per screen or area.
+- **Components still calling each other** directly as well as through the mediator.
+- **Confusing it with Observer**: observers subscribe to one source; a mediator coordinates many peers.
 
 ## Pros and cons
 

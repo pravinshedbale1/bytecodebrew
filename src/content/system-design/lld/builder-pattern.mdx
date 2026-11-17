@@ -41,6 +41,15 @@ Notice that `Pizza` has no setters. Once built, it can't change, and every call 
 | --- | --- |
 | Four or more parameters, several of them optional, or rules to check before the object exists | Two or three fields: a constructor or a record is clearer |
 
+## How to spot it in an interview
+
+| You hear | Builder |
+| --- | --- |
+| "A search has text, plus optional filters, sort and paging" | `SearchQuery.Builder` |
+| "A request has a URL and method, plus optional headers, body, timeout and retries" | `HttpRequest.Builder` |
+| "A pizza has a size, plus any number of toppings" | `Pizza.Builder` |
+| "Some combinations are invalid (GET with a body, min price above max)" | Validation in `build()` |
+
 The rest of this lesson covers validation in `build()`, the classic GoF version and the pitfalls.
 
 **The textbook definition:** separate the construction of a complex object from its representation, so you can build it step by step — and, in its modern Java form, create **valid, immutable objects with many optional parameters** readably.
@@ -53,8 +62,23 @@ An HTTP request has a URL and method (required) plus headers, query parameters, 
 new HttpRequest(url, "POST", headers, null, body, 5000, 3, null, true);   // what is null? what is true?
 ```
 
-- **Telescoping constructors** (one per combination) explode in number and are unreadable at the call site.
-- **JavaBeans setters** (`new X(); x.setA(); x.setB();`) are readable but leave the object **mutable** and possibly **half-built and invalid** between calls — and you can't make it immutable.
+<Approach verdict="bad" title="Telescoping constructors">
+
+One constructor per combination of optional parameters. With six optional fields that's dozens of constructors, and every call site is a row of unnamed values like the one above.
+
+</Approach>
+
+<Approach verdict="bad" title="A no-argument constructor plus setters">
+
+`new HttpRequest(); r.setUrl(...); r.setMethod(...);` reads well, but the object is **mutable** and can be **half-built and invalid** between calls (a POST with no URL yet). Another thread might even use it in that state. And it can never be made immutable.
+
+</Approach>
+
+<Approach verdict="great" title="A builder">
+
+Collect the values in a separate, temporary builder object. When the caller says `build()`, check every rule, then create the real object in one step, with all fields final. The product is never half-built and never changes afterwards.
+
+</Approach>
 
 ## The solution: a fluent builder
 
@@ -127,6 +151,13 @@ What you get:
 - **Validation** of cross-field rules in `build()` — an invalid object can never exist.
 - **Immutability** of the product.
 
+## Walk through it
+
+1. `HttpRequest.newBuilder(uri, POST)` creates a builder. The required URI and method are checked for null straight away.
+2. `.header(...)`, `.body(json)`, `.timeout(...)`, `.maxRetries(2)` each store a value and `return this`, which is what lets the calls chain.
+3. `.build()` checks the rules that involve several fields: no body on a GET, retries not negative. If any fails, no `HttpRequest` is ever created.
+4. The private constructor copies the values (including a defensive copy of the headers map and the body array), so changing the builder later can't affect the request.
+
 ## The classic GoF form: director + builders
 
 The original GoF Builder addresses a different emphasis: the **same construction process** producing **different representations**.
@@ -183,6 +214,14 @@ The **director** knows the order of steps; each **builder** knows how to impleme
 - **Don't** use a builder for objects with two or three fields — a constructor or static factory is clearer.
 - **Builders are not thread-safe** and should not be shared between threads; build, then share the immutable product.
 - Make the product constructor **private** so the builder is the only path (and validation can't be bypassed).
+
+## Common mistakes
+
+- **A builder for a class with two fields.** Use a constructor or a record.
+- **Leaving the product's constructor public**, so callers can skip `build()` and its validation.
+- **Not copying collections** passed in, so changing the builder's list later changes the "immutable" product.
+- **Sharing one builder between threads.**
+- **Validating cross-field rules in each setter**, where the other field may not be set yet. Do it in `build()`.
 
 ## Pros and cons
 

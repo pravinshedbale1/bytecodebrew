@@ -49,19 +49,27 @@ Treat them as **heuristics for managing change**, not laws. Each has a cost when
 
 "Responsibility" is best understood as **a source of change**: a group of people or a requirement area that could ask for modifications.
 
+<Approach verdict="bad" title="Three reasons to change: invoice rules (finance), PDF layout (design), storage (infra)">
+
 ```java
-// ❌ Three reasons to change: invoice rules (finance), PDF layout (design), storage (infra)
 class InvoiceService {
     Money calculateTotal(Invoice inv) { ... }
     byte[] renderPdf(Invoice inv) { ... }
     void saveToDatabase(Invoice inv) { ... }
 }
+```
 
-// ✅ Each class changes for one reason
+</Approach>
+
+<Approach verdict="great" title="Each class changes for one reason">
+
+```java
 class InvoiceCalculator { Money total(Invoice inv) { ... } }
 class InvoicePdfRenderer { byte[] render(Invoice inv) { ... } }
 interface InvoiceRepository { void save(Invoice inv); }
 ```
+
+</Approach>
 
 **Signals of violation:** a class name with "And" or "Manager"; methods that use disjoint sets of fields; a change in PDF layout requiring you to retest tax calculation.
 
@@ -75,8 +83,9 @@ Splitting every method into its own class produces a fragmented design where a s
 
 Add new behaviour by **adding new code** (a new class), not by editing existing, tested code. The usual mechanism is polymorphism behind an interface.
 
+<Approach verdict="bad" title="Every new discount type edits this method — and risks breaking the others">
+
 ```java
-// ❌ Every new discount type edits this method — and risks breaking the others
 class Checkout {
     Money discount(Order o, String type) {
         switch (type) {
@@ -87,8 +96,13 @@ class Checkout {
         }
     }
 }
+```
 
-// ✅ New discounts are new classes; Checkout never changes
+</Approach>
+
+<Approach verdict="great" title="New discounts are new classes; Checkout never changes">
+
+```java
 interface DiscountRule { Money apply(Order o); }
 class FestiveDiscount implements DiscountRule { public Money apply(Order o) { return o.total().percent(20); } }
 class NewUserDiscount implements DiscountRule { public Money apply(Order o) { return Money.of(100); } }
@@ -101,6 +115,8 @@ class Checkout {
     }
 }
 ```
+
+</Approach>
 
 Patterns that implement OCP: Strategy, Decorator, Observer, Template Method, Chain of Responsibility, Factory.
 
@@ -175,15 +191,21 @@ If callers need `instanceof` checks to avoid breaking a subtype, LSP is violated
 
 > Clients should not be forced to depend on methods they do not use.
 
+<Approach verdict="bad" title="Fat interface: a basic printer must 'implement' scan and fax with stubs or exceptions">
+
 ```java
-// ❌ Fat interface: a basic printer must "implement" scan and fax with stubs or exceptions
 interface MultiFunctionDevice {
     void print(Document d);
     void scan(Document d);
     void fax(Document d);
 }
+```
 
-// ✅ Role interfaces; a class implements the roles it actually plays
+</Approach>
+
+<Approach verdict="great" title="Role interfaces; a class implements the roles it actually plays">
+
+```java
 interface Printer { void print(Document d); }
 interface Scanner { void scan(Document d); }
 interface Fax     { void fax(Document d); }
@@ -191,6 +213,8 @@ interface Fax     { void fax(Document d); }
 class BasicPrinter implements Printer { ... }
 class OfficeMachine implements Printer, Scanner, Fax { ... }
 ```
+
+</Approach>
 
 Benefits: implementers aren't forced into `UnsupportedOperationException` stubs (an LSP violation), and clients depending on `Printer` don't recompile or redeploy when fax features change.
 
@@ -200,14 +224,20 @@ Benefits: implementers aren't forced into `UnsupportedOperationException` stubs 
 
 > High-level modules should not depend on low-level modules; both should depend on abstractions. Abstractions should not depend on details; details should depend on abstractions.
 
+<Approach verdict="bad" title="Business policy welded to infrastructure">
+
 ```java
-// ❌ Business policy welded to infrastructure
 class OrderService {
     private final MySqlOrderDao dao = new MySqlOrderDao();     // concrete, created internally
     private final SmtpEmailClient email = new SmtpEmailClient();
 }
+```
 
-// ✅ Policy owns the abstractions it needs; infrastructure implements them
+</Approach>
+
+<Approach verdict="great" title="Policy owns the abstractions it needs; infrastructure implements them">
+
+```java
 interface OrderRepository { void save(Order o); Optional<Order> find(OrderId id); }
 interface Notifier { void orderPlaced(Order o); }
 
@@ -223,6 +253,8 @@ class OrderService {
 class JdbcOrderRepository implements OrderRepository { ... }    // detail depends on abstraction
 class EmailNotifier implements Notifier { ... }
 ```
+
+</Approach>
 
 ```mermaid
 flowchart LR

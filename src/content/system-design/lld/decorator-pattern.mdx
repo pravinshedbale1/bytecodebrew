@@ -46,11 +46,32 @@ The rest of this lesson uses a real notification service and explains why the or
 
 **The textbook definition:** attach additional responsibilities to an object **dynamically**, by wrapping it in objects that implement the same interface. Decorators provide a flexible alternative to subclassing for extending behaviour.
 
+## How to spot it in an interview
+
+| You hear | Decorator |
+| --- | --- |
+| 'Some messages need retries, some logging, some both' | Wrappers you can stack in any order |
+| 'Add surge pricing on top of the base fare' | `SurgePricing(baseFare)` |
+| 'Weekend +25%, and festivals stack on top' | `Seasonal(Weekend(base))` |
+| 'Log or time every call, without touching the class' | A logging or metrics wrapper |
+
 ## The problem: subclass explosion
 
 A notification service sends messages. Requirements grow: some messages need **retries**, some need **rate limiting**, some need **logging**, some need **encryption** — in any combination.
 
 With inheritance you'd need `RetryingNotifier`, `LoggingRetryingNotifier`, `EncryptedLoggingNotifier`… one subclass per combination: 2^4 = 16 classes for four features, and they can't be changed at runtime.
+
+<Approach verdict="bad" title="A subclass for every combination">
+
+`RetryingNotifier`, `LoggingRetryingNotifier`, `EncryptedLoggingNotifier`... Four optional features give 16 combinations, each its own class, all fixed when you compile. Adding a fifth feature doubles the count.
+
+</Approach>
+
+<Approach verdict="great" title="Small wrappers that stack">
+
+Each feature is one class that **implements the same interface** and **wraps** another instance of it. It does its extra bit, then passes the call inward. Four features are four classes, and you combine them at startup in any order.
+
+</Approach>
 
 ## The solution
 
@@ -152,6 +173,14 @@ Decorators form a stack; the outermost runs first. Consider what each order mean
 
 Make the intended order explicit in one wiring place (a factory or configuration), not scattered.
 
+## Walk through it
+
+1. The client holds a `Notifier` and calls `send(message)`. It has no idea it's holding a stack of wrappers.
+2. `LoggingNotifier` logs 'sending', then calls its inner notifier.
+3. `RateLimitedNotifier` waits for a token if needed, then calls its inner one.
+4. `RetryingNotifier` calls `EmailNotifier`. If that throws a temporary error, it waits and tries again, up to 3 times.
+5. `EmailNotifier` actually sends the email. The call returns back out through each wrapper, and `LoggingNotifier` logs 'sent'.
+
 ## Where you've seen it
 
 - **Java I/O** — the canonical example:
@@ -175,6 +204,14 @@ Make the intended order explicit in one wiring place (a factory or configuration
 - **Removing a decorator** from the middle of a stack is awkward — rebuild the chain instead.
 - **Large interfaces** are painful: every decorator must implement every method (use an abstract base that delegates by default, as above).
 - **Debugging** deep stacks can be confusing; keep stacks shallow and named.
+
+## Common mistakes
+
+- **Forgetting to call the inner object**, so the real work never happens.
+- **A wrapper that doesn't implement the same interface**, so it can't be stacked.
+- **Ignoring the order of wrapping.** Retry outside the rate limiter behaves differently from retry inside it.
+- **Deep stacks for debugging** with no way to see what's wrapped. Give wrappers clear names and a sensible `toString`.
+- **Relying on `instanceof` on a decorated object**: the outer wrapper is not an `EmailNotifier` any more.
 
 ## Pros and cons
 
