@@ -13,7 +13,7 @@ concurrency:
 jobs:
   site:
     name: Content, build and browser smoke test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30          # a normal run takes 1-9 minutes; a stuck runner fails here, not after GitHub's 6 hours
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
 
   java:
     name: Lesson code and practice-problem references
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30          # a normal run takes 1-9 minutes; a stuck runner fails here, not after GitHub's 6 hours
     steps:
       - uses: actions/checkout@v4
