@@ -394,4 +394,155 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'smallest-number-in-infinite-set', title: 'Smallest Number in Infinite Set', level: 'Medium',
+    summary: 'The set starts with every positive integer. popSmallest removes and returns the smallest; addBack(num) puts num back if it isn\'t already in the set.',
+    design: { cls: 'SmallestInfiniteSet', ctor: [], methods: [['int', 'popSmallest', []], ['void', 'addBack', [['int', 'num']]]] },
+    tests: [
+      { in: [['SmallestInfiniteSet', 'addBack', 'popSmallest', 'popSmallest', 'popSmallest', 'addBack', 'popSmallest', 'popSmallest', 'popSmallest'], [[], [2], [], [], [], [1], [], [], []]], out: [null, null, 1, 2, 3, null, 1, 4, 5] },
+      { in: [['SmallestInfiniteSet', 'popSmallest', 'addBack', 'addBack', 'popSmallest', 'popSmallest'], [[], [], [1], [1], [], []]] },
+      { in: [['SmallestInfiniteSet', 'popSmallest', 'popSmallest', 'popSmallest', 'addBack', 'addBack', 'popSmallest', 'popSmallest', 'popSmallest'], [[], [], [], [], [3], [1], [], [], []]] },
+    ],
+    ref: `class SmallestInfiniteSet {
+    private int next = 1;
+    private final TreeSet<Integer> added = new TreeSet<>();
+    public SmallestInfiniteSet() {}
+    public int popSmallest() { return added.isEmpty() ? next++ : added.pollFirst(); }
+    public void addBack(int num) { if (num < next) added.add(num); }
+}`,
+  },
+  {
+    slug: 'seat-reservation-manager', title: 'Seat Reservation Manager', level: 'Medium',
+    summary: 'Seats 1 … n start unreserved. reserve() takes and returns the lowest-numbered unreserved seat; unreserve(seatNumber) frees a reserved seat.',
+    design: { cls: 'SeatManager', ctor: [['int', 'n']], methods: [['int', 'reserve', []], ['void', 'unreserve', [['int', 'seatNumber']]]] },
+    tests: [
+      { in: [['SeatManager', 'reserve', 'reserve', 'unreserve', 'reserve', 'reserve', 'reserve', 'reserve', 'unreserve'], [[5], [], [], [2], [], [], [], [], [5]]], out: [null, 1, 2, null, 2, 3, 4, 5, null] },
+      { in: [['SeatManager', 'reserve', 'unreserve', 'reserve'], [[1], [], [1], []]] },
+      { in: [['SeatManager', 'reserve', 'reserve', 'reserve', 'unreserve', 'unreserve', 'reserve', 'reserve', 'reserve'], [[4], [], [], [], [3], [1], [], [], []]] },
+    ],
+    ref: `class SeatManager {
+    private final PriorityQueue<Integer> returned = new PriorityQueue<>();
+    private int next = 1;
+    public SeatManager(int n) {}
+    public int reserve() { return returned.isEmpty() ? next++ : returned.poll(); }
+    public void unreserve(int seatNumber) { returned.add(seatNumber); }
+}`,
+  },
+  {
+    slug: 'stock-price-fluctuation', title: 'Stock Price Fluctuation', level: 'Medium',
+    summary: 'Records (timestamp, price) arrive out of order, and a later record for the same timestamp corrects the earlier one. Support update, current (price at the latest timestamp), maximum and minimum (over the corrected prices).',
+    design: { cls: 'StockPrice', ctor: [], methods: [['void', 'update', [['int', 'timestamp'], ['int', 'price']]], ['int', 'current', []], ['int', 'maximum', []], ['int', 'minimum', []]] },
+    tests: [
+      { in: [['StockPrice', 'update', 'update', 'current', 'maximum', 'update', 'maximum', 'update', 'minimum'], [[], [1, 10], [2, 5], [], [], [1, 3], [], [4, 2], []]], out: [null, null, null, 5, 10, null, 5, null, 2] },
+      { in: [['StockPrice', 'update', 'maximum', 'minimum', 'current', 'update', 'current', 'maximum', 'minimum'], [[], [5, 1000000000], [], [], [], [5, 1], [], [], []]] },
+      { in: [['StockPrice', 'update', 'update', 'update', 'update', 'update', 'maximum', 'minimum', 'current'], [[], [3, 9], [1, 8], [2, 7], [3, 1], [1, 2], [], [], []]] },
+    ],
+    ref: `class StockPrice {
+    private final Map<Integer, Integer> price = new HashMap<>();
+    private final PriorityQueue<int[]> maxH = new PriorityQueue<>((a, b) -> b[0] - a[0]);
+    private final PriorityQueue<int[]> minH = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+    private int latest = 0;
+    public StockPrice() {}
+    public void update(int timestamp, int p) {
+        price.put(timestamp, p);
+        latest = Math.max(latest, timestamp);
+        maxH.add(new int[] { p, timestamp });
+        minH.add(new int[] { p, timestamp });
+    }
+    public int current() { return price.get(latest); }
+    public int maximum() { return top(maxH); }
+    public int minimum() { return top(minH); }
+    private int top(PriorityQueue<int[]> h) {
+        while (price.get(h.peek()[1]) != h.peek()[0]) h.poll();
+        return h.peek()[0];
+    }
+}`,
+  },
+  {
+    slug: 'design-a-number-container-system', title: 'Design a Number Container System', level: 'Medium',
+    summary: 'change(index, number) stores number at index, replacing any number there. find(number) returns the smallest index currently holding number, or −1.',
+    design: { cls: 'NumberContainers', ctor: [], methods: [['void', 'change', [['int', 'index'], ['int', 'number']]], ['int', 'find', [['int', 'number']]]] },
+    tests: [
+      { in: [['NumberContainers', 'find', 'change', 'change', 'change', 'change', 'find', 'change', 'find'], [[], [10], [2, 10], [1, 10], [3, 10], [5, 10], [10], [1, 20], [10]]], out: [null, -1, null, null, null, null, 1, null, 2] },
+      { in: [['NumberContainers', 'change', 'change', 'find', 'change', 'find', 'find'], [[], [1, 5], [1, 5], [5], [1, 6], [5], [6]]] },
+      { in: [['NumberContainers', 'change', 'change', 'change', 'find', 'change', 'change', 'find'], [[], [1000000000, 7], [3, 7], [3, 8], [7], [1000000000, 8], [5, 7], [7]]] },
+    ],
+    ref: `class NumberContainers {
+    private final Map<Integer, Integer> at = new HashMap<>();
+    private final Map<Integer, PriorityQueue<Integer>> where = new HashMap<>();
+    public NumberContainers() {}
+    public void change(int index, int number) {
+        at.put(index, number);
+        where.computeIfAbsent(number, x -> new PriorityQueue<>()).add(index);
+    }
+    public int find(int number) {
+        PriorityQueue<Integer> h = where.get(number);
+        if (h == null) return -1;
+        while (!h.isEmpty() && at.get(h.peek()) != number) h.poll();
+        return h.isEmpty() ? -1 : h.peek();
+    }
+}`,
+  },
+  {
+    slug: 'design-a-food-rating-system', title: 'Design a Food Rating System', level: 'Medium',
+    summary: 'Given foods with their cuisines and ratings, support changeRating(food, newRating) and highestRated(cuisine): the highest-rated food of that cuisine, the lexicographically smaller name on a tie.',
+    design: { cls: 'FoodRatings', ctor: [['String[]', 'foods'], ['String[]', 'cuisines'], ['int[]', 'ratings']], methods: [['void', 'changeRating', [['String', 'food'], ['int', 'newRating']]], ['String', 'highestRated', [['String', 'cuisine']]]] },
+    tests: [
+      { in: [['FoodRatings', 'highestRated', 'highestRated', 'changeRating', 'highestRated', 'changeRating', 'highestRated'], [[['kimchi', 'miso', 'sushi', 'moussaka', 'ramen', 'bulgogi'], ['korean', 'japanese', 'japanese', 'greek', 'japanese', 'korean'], [9, 12, 8, 15, 14, 7]], ['korean'], ['japanese'], ['sushi', 16], ['japanese'], ['ramen', 16], ['japanese']]], out: [null, 'kimchi', 'ramen', null, 'sushi', null, 'ramen'] },
+      { in: [['FoodRatings', 'highestRated', 'changeRating', 'highestRated', 'changeRating', 'highestRated'], [[['a'], ['x'], [5]], ['x'], ['a', 1], ['x'], ['a', 100000000], ['x']]] },
+      { in: [['FoodRatings', 'highestRated', 'changeRating', 'highestRated', 'changeRating', 'highestRated'], [[['b', 'a', 'c'], ['x', 'x', 'y'], [3, 3, 9]], ['x'], ['a', 2], ['x'], ['b', 1], ['x']]] },
+    ],
+    ref: `class FoodRatings {
+    private record Entry(int rating, String food) {}
+    private final Map<String, Integer> rating = new HashMap<>();
+    private final Map<String, String> cuisineOf = new HashMap<>();
+    private final Map<String, PriorityQueue<Entry>> best = new HashMap<>();
+    public FoodRatings(String[] foods, String[] cuisines, int[] ratings) {
+        for (int i = 0; i < foods.length; i++) {
+            cuisineOf.put(foods[i], cuisines[i]);
+            best.computeIfAbsent(cuisines[i], c -> new PriorityQueue<>(
+                (a, b) -> a.rating() != b.rating() ? Integer.compare(b.rating(), a.rating()) : a.food().compareTo(b.food())));
+            changeRating(foods[i], ratings[i]);
+        }
+    }
+    public void changeRating(String food, int newRating) {
+        rating.put(food, newRating);
+        best.get(cuisineOf.get(food)).add(new Entry(newRating, food));
+    }
+    public String highestRated(String cuisine) {
+        PriorityQueue<Entry> h = best.get(cuisine);
+        while (h.peek().rating() != rating.get(h.peek().food())) h.poll();
+        return h.peek().food();
+    }
+}`,
+  },
+  {
+    slug: 'exam-room', title: 'Exam Room', level: 'Medium',
+    summary: 'An exam room has seats 0 … n − 1 in a row. seat() puts a student in the seat that maximises the distance to the closest student (lowest seat on a tie; seat 0 if the room is empty) and returns it. leave(p) frees seat p.',
+    design: { cls: 'ExamRoom', ctor: [['int', 'n']], methods: [['int', 'seat', []], ['void', 'leave', [['int', 'p']]]] },
+    tests: [
+      { in: [['ExamRoom', 'seat', 'seat', 'seat', 'seat', 'leave', 'seat'], [[10], [], [], [], [], [4], []]], out: [null, 0, 9, 4, 2, null, 5] },
+      { in: [['ExamRoom', 'seat', 'leave', 'seat'], [[1], [], [0], []]] },
+      { in: [['ExamRoom', 'seat', 'seat', 'seat', 'leave', 'leave', 'seat', 'seat'], [[1000000000], [], [], [], [0], [999999999], [], []]] },
+      { in: [['ExamRoom', 'seat', 'seat', 'seat', 'seat', 'leave', 'leave', 'seat'], [[4], [], [], [], [], [1], [3], []]] },
+    ],
+    ref: `class ExamRoom {
+    private final int n;
+    private final TreeSet<Integer> seated = new TreeSet<>();
+    public ExamRoom(int n) { this.n = n; }
+    public int seat() {
+        if (seated.isEmpty()) { seated.add(0); return 0; }
+        int bestSeat = 0, bestDist = seated.first();
+        Integer prev = null;
+        for (int s : seated) {
+            if (prev != null && (s - prev) / 2 > bestDist) { bestDist = (s - prev) / 2; bestSeat = prev + bestDist; }
+            prev = s;
+        }
+        if (n - 1 - seated.last() > bestDist) bestSeat = n - 1;
+        seated.add(bestSeat);
+        return bestSeat;
+    }
+    public void leave(int p) { seated.remove(p); }
+}`,
+  },
 ];

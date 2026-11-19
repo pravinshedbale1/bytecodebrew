@@ -249,4 +249,15 @@ export default {
   'count-subarrays-with-score-less-than-k': P('n = 100,000, all ones', 'int[] a0 = BCB.ints(100000, 1, 1); long a1 = 1000000000000000L;'),
   'sum-of-total-strength-of-wizards': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 1, 1000000000);'),
   'sum-of-distances-in-tree': DP('a tree of 30,000 nodes', 'int a0 = 30000; int[][] a1 = BCB.treeEdges(30000, 0);'),
+  // ---- min/max queues, heap design, 2294
+  'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': P('n = 100,000, one long valid window', 'int[] a0 = BCB.ints(100000, 1, 10); int a1 = 9;'),
+  'jump-game-vi': P('n = 100,000, k = 50,000', 'int[] a0 = BCB.ints(100000, -10000, 10000); int a1 = 50000;'),
+  'constrained-subsequence-sum': P('n = 100,000, k = 50,000', 'int[] a0 = BCB.ints(100000, -10000, 10000); int a1 = 50000;'),
+  'shortest-subarray-with-sum-at-least-k': P('n = 100,000', 'int[] a0 = BCB.ints(100000, -100000, 100000); int a1 = 1000000000;'),
+  'seat-reservation-manager': P('100,000 calls, n = 100,000', '', 'SeatManager s = new SeatManager(100000); long sum = 0; for (int i = 0; i < 50000; i++) sum += s.reserve(); for (int i = 0; i < 25000; i++) s.unreserve(2 * i + 1); for (int i = 0; i < 25000; i++) sum += s.reserve(); Object r = sum;'),
+  'stock-price-fluctuation': P('100,000 calls with corrections', '', 'StockPrice sp = new StockPrice(); long sum = 0; for (int i = 0; i < 50000; i++) sp.update(BCB.rnd(1, 20000), BCB.rnd(1, 1000000000)); for (int i = 0; i < 25000; i++) sum += sp.maximum() + sp.minimum(); Object r = sum;'),
+  'design-a-number-container-system': P('100,000 calls over 50,000 indexes', '', 'NumberContainers nc = new NumberContainers(); long sum = 0; for (int i = 0; i < 50000; i++) nc.change(BCB.rnd(1, 50000), BCB.rnd(1, 50)); for (int i = 0; i < 50000; i++) sum += nc.find(BCB.rnd(1, 60)); Object r = sum;'),
+  'design-a-food-rating-system': P('20,000 foods and 20,000 calls', '', 'String[] f = new String[20000], c = new String[20000]; int[] rt = new int[20000]; for (int i = 0; i < 20000; i++) { f[i] = "f" + i; c[i] = "c" + (i % 5); rt[i] = BCB.rnd(1, 100000000); } FoodRatings fr = new FoodRatings(f, c, rt); long sum = 0; for (int i = 0; i < 20000; i++) { if (i % 2 == 0) fr.changeRating(f[BCB.rnd(0, 19999)], BCB.rnd(1, 100000000)); else sum += fr.highestRated("c" + BCB.rnd(0, 4)).hashCode(); } Object r = sum;'),
+  'exam-room': P('10,000 calls, n = 10⁹', '', 'ExamRoom er = new ExamRoom(1000000000); long sum = 0; java.util.List<Integer> at = new java.util.ArrayList<>(); for (int i = 0; i < 7000; i++) { int p = er.seat(); at.add(p); sum += p; } for (int i = 0; i < 3000; i++) er.leave(at.remove(BCB.rnd(0, at.size() - 1))); Object r = sum;'),
+  'partition-array-such-that-maximum-difference-is-k': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 0, 100000); int a1 = 10;'),
 };

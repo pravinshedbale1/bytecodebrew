@@ -93,4 +93,44 @@ The array has \`n − k + 1\` windows. Aim for O(n) time.`,
       'Run "Largest Rectangle in Histogram" on each row\'s heights and keep the best area. O(rows × cols).',
     ],
   },
+  'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': {
+    statement: `Given an integer array \`nums\` and an integer \`limit\`, return the length of the longest non-empty contiguous subarray in which the absolute difference between any two elements is at most \`limit\`.`,
+    constraints: ['1 <= nums.length <= 1e5', '1 <= nums[i] <= 1e9', '0 <= limit <= 1e9'],
+    hints: [
+      '"Any two elements differ by at most limit" is the same as max − min ≤ limit. Shrinking a valid window keeps it valid: a sliding window.',
+      'The window needs its maximum and minimum while values enter on the right and leave on the left. A TreeMap of counts does it in O(log n) per step.',
+      'For O(n), keep a max queue and a min queue: a deque of decreasing values and a deque of increasing values. When nums[l] leaves the window, pop it from any deque whose front it is.',
+    ],
+  },
+  'jump-game-vi': {
+    statement: `You are given an integer array \`nums\` and an integer \`k\`. You start at index \`0\`. In one move you can jump from index \`i\` to any index in \`[i + 1, min(n − 1, i + k)]\`.
+
+Your score is the sum of \`nums[j]\` over every index \`j\` you visit, including index 0 and the last index. Return the maximum score you can get when you reach index \`n − 1\`.`,
+    constraints: ['1 <= nums.length, k <= 1e5', '-1e4 <= nums[i] <= 1e4'],
+    hints: [
+      'dp[i] = nums[i] + max(dp[i − k], …, dp[i − 1]). Computing that max by scanning is O(nk), up to 10¹⁰.',
+      'The k previous dp values form a window sliding to the right: you need a sliding-window maximum.',
+      'Keep a deque of indexes with decreasing dp values. Drop the front when it is more than k behind i, read dp at the front, then pop from the back every dp ≤ dp[i] before pushing i.',
+    ],
+  },
+  'constrained-subsequence-sum': {
+    statement: `Given an integer array \`nums\` and an integer \`k\`, return the maximum sum of a non-empty subsequence of \`nums\` such that for every two consecutive chosen indices \`i < j\`, \`j − i ≤ k\`.
+
+A subsequence keeps the original order but may skip elements.`,
+    constraints: ['1 <= k <= nums.length <= 1e5', '-1e4 <= nums[i] <= 1e4'],
+    hints: [
+      'Let dp[i] be the best sum of a valid subsequence that ends by picking index i. It either starts at i, or extends the best subsequence ending somewhere in i − k … i − 1.',
+      'So dp[i] = nums[i] + max(0, max(dp[i − k … i − 1])). The answer is the largest dp value.',
+      'The window maximum over the last k dp values is a sliding-window maximum: keep a deque of indexes with decreasing dp. O(n).',
+    ],
+  },
+  'shortest-subarray-with-sum-at-least-k': {
+    statement: `Given an integer array \`nums\` (which may contain negative numbers) and an integer \`k\`, return the length of the shortest non-empty contiguous subarray whose sum is at least \`k\`. If there is no such subarray, return \`-1\`.`,
+    constraints: ['1 <= nums.length <= 1e5', '-1e5 <= nums[i] <= 1e5', '1 <= k <= 1e9'],
+    hints: [
+      'With negative numbers the usual sliding window breaks: extending a window can lower its sum. Use prefix sums: the subarray [i, j) sums to p[j] − p[i].',
+      'For a fixed end j you want the latest start i with p[i] ≤ p[j] − k. Candidate starts with a larger prefix than a later start are useless: drop them, so the candidates have increasing prefix values.',
+      'Keep a deque of start indexes with increasing p. For each j: while p[j] − p[front] ≥ k, record j − front and pop the front (a later j could only be longer); then pop the back while p[back] ≥ p[j]; push j. Use 64-bit prefix sums.',
+    ],
+  },
 };

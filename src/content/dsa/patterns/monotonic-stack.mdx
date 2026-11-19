@@ -13,6 +13,8 @@ This lesson assumes you know how a stack and a deque work. If not, read [Stacks 
 - Sums or counts over **all subarrays** of their minimum or maximum.
 - "Smallest/largest number after removing k digits" — keep a **greedy increasing** sequence.
 - "Maximum (or minimum) of every window of size k" — the **monotonic deque**.
+- "Design a queue with getMax / getMin in O(1)", or a window that needs its **max and min** — a **min/max queue**.
+- A DP that takes the best of the **last k** states — a max queue over the DP values.
 
 </Callout>
 
@@ -196,6 +198,154 @@ Step through it: watch values leave from the back when a bigger one arrives, and
 
 <SlidingMaxViz examples={['mixed', 'falling', 'rising']} />
 
+## Min queue and max queue
+
+The deque in Sliding Window Maximum is really a **max queue**: a queue that can also tell you its largest value in O(1). The window is the queue: values join at the right and leave at the left. Interviewers also ask for it directly: *"Design a queue with push, pop and getMax, all O(1)."* (A min queue is the same with the comparisons flipped.)
+
+Next to the queue, keep a deque `best` of the values that could still become the maximum, in decreasing order:
+
+- **push x**: before adding `x` to the back of `best`, remove every value **smaller** than `x` from the back. Those values arrived earlier, so they leave the queue before `x` does; while `x` is in the queue they can never be the maximum. Throwing them out now is safe.
+- **pop**: the value leaving the queue is at the front of `best` only if it's the current maximum; remove it there too.
+- **max**: the front of `best`.
+
+Equal values stay (the comparison is strict), so popping one copy of the maximum doesn't lose the other.
+
+<MaxQueueViz examples={['max', 'min']} />
+
+```java
+class MaxQueue {
+    private final Deque<Integer> q = new ArrayDeque<>(), best = new ArrayDeque<>();   // best: decreasing
+
+    void push(int x) {
+        q.offerLast(x);
+        while (!best.isEmpty() && best.peekLast() < x) best.pollLast();   // can never be the max again
+        best.offerLast(x);
+    }
+
+    int pop() {
+        int x = q.pollFirst();
+        if (best.peekFirst() == x) best.pollFirst();                       // it was the max
+        return x;
+    }
+
+    int max() { return best.peekFirst(); }
+}
+```
+
+Each value enters `best` once and leaves at most once, so every operation is **O(1) amortised**.
+
+**The other classic answer: two stacks.** A [min stack](/dsa/patterns/design-data-structures) stores, with each entry, the min (or max) of everything below it. A queue can be built from two stacks (push onto `in`; pop from `out`, refilling it from `in` only when it's empty). Combine the two ideas: each stack knows its own max, so the queue's max is the larger of the two tops.
+
+```java
+class MaxQueueTwoStacks {
+    private final Deque<int[]> in = new ArrayDeque<>(), out = new ArrayDeque<>();   // {value, max of this stack so far}
+
+    private static void push(Deque<int[]> s, int x) { s.push(new int[] { x, s.isEmpty() ? x : Math.max(x, s.peek()[1]) }); }
+
+    void push(int x) { push(in, x); }
+
+    int pop() {
+        if (out.isEmpty()) while (!in.isEmpty()) push(out, in.pop()[0]);   // reverse: the oldest is now on top
+        return out.pop()[0];
+    }
+
+    int max() {
+        int m = Integer.MIN_VALUE;
+        if (!in.isEmpty()) m = in.peek()[1];
+        if (!out.isEmpty()) m = Math.max(m, out.peek()[1]);
+        return m;
+    }
+}
+```
+
+Both are O(1) amortised. The deque version is shorter; the two-stack version is what to reach for when an interviewer says "using only stacks". A heap would work too, but at O(log n) per operation, and removing the oldest element from a heap needs lazy deletion (see [Designing with a heap](/dsa/patterns/design-data-structures#designing-with-a-heap-lazy-deletion)).
+
+### Longest subarray with max − min ≤ limit (1438)
+
+> Return the length of the longest subarray in which every two elements differ by at most `limit`.
+
+"Every two elements differ by at most `limit`" means **max − min ≤ limit**. Shrinking a valid window keeps it valid, so this is a [sliding window](/dsa/patterns/sliding-window), and the window needs its max **and** its min at every step: a max queue and a min queue side by side. When the window gets too wide, move `l` forward; a value leaving the window also leaves a deque if it is at that deque's front.
+
+<LimitWindowViz examples={['lesson', 'tight']} />
+
+```java
+public int longestSubarray(int[] nums, int limit) {
+    Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();   // values: decreasing / increasing
+    int l = 0, best = 0;
+    for (int r = 0; r < nums.length; r++) {
+        while (!maxQ.isEmpty() && maxQ.peekLast() < nums[r]) maxQ.pollLast();
+        maxQ.offerLast(nums[r]);
+        while (!minQ.isEmpty() && minQ.peekLast() > nums[r]) minQ.pollLast();
+        minQ.offerLast(nums[r]);
+        while (maxQ.peekFirst() - minQ.peekFirst() > limit) {               // too wide: drop nums[l]
+            if (maxQ.peekFirst() == nums[l]) maxQ.pollFirst();
+            if (minQ.peekFirst() == nums[l]) minQ.pollFirst();
+            l++;
+        }
+        best = Math.max(best, r - l + 1);
+    }
+    return best;
+}
+```
+
+O(n). A `TreeMap<value, count>` of the window gives the same answer in O(n log n) and is a fine first answer in an interview.
+
+### A max queue over DP values: Jump Game VI (1696) and Constrained Subsequence Sum (1425)
+
+Some DPs take the best of the **last k** states: `dp[i] = nums[i] + max(dp[i − k … i − 1])`. Scanning the last k values is O(nk). The last k states are a sliding window, so a max queue of `dp` values makes each step O(1).
+
+```java
+public int maxResult(int[] nums, int k) {                    // 1696: best score reaching the last index
+    int n = nums.length;
+    int[] dp = new int[n];
+    dp[0] = nums[0];
+    Deque<Integer> dq = new ArrayDeque<>(List.of(0));        // indexes, dp decreasing
+    for (int i = 1; i < n; i++) {
+        if (dq.peekFirst() < i - k) dq.pollFirst();          // too far back to jump from
+        dp[i] = nums[i] + dp[dq.peekFirst()];
+        while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();
+        dq.offerLast(i);
+    }
+    return dp[n - 1];
+}
+
+public int constrainedSubsetSum(int[] nums, int k) {         // 1425: a subsequence may skip at most k − 1 elements
+    int n = nums.length, best = Integer.MIN_VALUE;
+    int[] dp = new int[n];                                   // best sum of a subsequence ending at i
+    Deque<Integer> dq = new ArrayDeque<>();
+    for (int i = 0; i < n; i++) {
+        if (!dq.isEmpty() && dq.peekFirst() < i - k) dq.pollFirst();
+        dp[i] = nums[i] + Math.max(0, dq.isEmpty() ? 0 : dp[dq.peekFirst()]);   // extend the best, or start here
+        while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();
+        dq.offerLast(i);
+        best = Math.max(best, dp[i]);
+    }
+    return best;
+}
+```
+
+### A min queue over prefix sums: Shortest Subarray with Sum at Least K (862)
+
+With negative numbers a plain sliding window fails: adding an element can **lower** the sum. Work with prefix sums `p` instead: subarray `[i, j)` has sum `p[j] − p[i]`, and we want the smallest `j − i` with `p[j] − p[i] ≥ k`. Keep a deque of candidate starts with **increasing** prefix values:
+
+- **From the front**: while `p[j] − p[front] ≥ k`, that start has found its shortest partner (any later `j` is longer), so record `j − front` and drop it.
+- **From the back**: if `p[back] ≥ p[j]`, start `j` is both later and smaller, so it is always at least as good; drop `back`.
+
+```java
+public int shortestSubarray(int[] nums, int k) {
+    int n = nums.length, best = n + 1;
+    long[] p = new long[n + 1];
+    for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];
+    Deque<Integer> dq = new ArrayDeque<>();                  // prefix indexes, p increasing
+    for (int j = 0; j <= n; j++) {
+        while (!dq.isEmpty() && p[j] - p[dq.peekFirst()] >= k) best = Math.min(best, j - dq.pollFirst());
+        while (!dq.isEmpty() && p[dq.peekLast()] >= p[j]) dq.pollLast();
+        dq.offerLast(j);
+    }
+    return best <= n ? best : -1;
+}
+```
+
 <Callout type="warning" title="Common mistakes">
 
 - **Pushing values instead of indexes** — you lose distances and can't tell when an element has left a window.
@@ -216,7 +366,11 @@ Step through it: watch values leave from the back when a bigger one arrives, and
 | 901 | [Online Stock Span](https://leetcode.com/problems/online-stock-span/) | Medium | Previous greater, streaming |
 | 402 | [Remove K Digits](https://leetcode.com/problems/remove-k-digits/) | Medium | Greedy increasing stack |
 | 907 | [Sum of Subarray Minimums](https://leetcode.com/problems/sum-of-subarray-minimums/) | Medium | Contribution counting |
+| 1438 | [Longest Continuous Subarray With Absolute Diff Less Than or Equal to Limit](https://leetcode.com/problems/longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit/) | Medium | A max queue and a min queue on one window |
+| 1696 | [Jump Game VI](https://leetcode.com/problems/jump-game-vi/) | Medium | Max queue over the last k DP values |
 | 239 | [Sliding Window Maximum](https://leetcode.com/problems/sliding-window-maximum/) | Hard | Monotonic deque |
+| 1425 | [Constrained Subsequence Sum](https://leetcode.com/problems/constrained-subsequence-sum/) | Hard | Max queue over DP, or start fresh |
+| 862 | [Shortest Subarray with Sum at Least K](https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/) | Hard | Increasing deque of prefix sums |
 | 84 | [Largest Rectangle in Histogram](https://leetcode.com/problems/largest-rectangle-in-histogram/) | Hard | Both boundaries from one pop |
 | 85 | [Maximal Rectangle](https://leetcode.com/problems/maximal-rectangle/) | Hard | Histogram per row |
 

@@ -27,6 +27,7 @@ import * as dp from '../src/components/mdx/viz/models/dp.js';
 import * as sp from '../src/components/mdx/viz/models/special.js';
 import * as adv from '../src/components/mdx/viz/models/advanced.js';
 import * as ct from '../src/components/mdx/viz/models/contribution.js';
+import * as qu from '../src/components/mdx/viz/models/queues.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -765,6 +766,46 @@ function common(name, steps, code, kinds) {
     ok(back.input && back.input.n === input.n, 'edges: random input parses back');
   }
   ok(ct.edgesModel(ct.EDGES.fuel.input).at(-1).answer === '7', 'edges: LeetCode 2477 example is 7');
+}
+
+// ---------------------------------------------------------------- min / max queue, 1438, lazy heaps, 2294
+{
+  const run = (name, steps, code, kinds, want) => {
+    common(name, steps, code, kinds);
+    ok(steps.at(-1).answer === want, `${name}: answer ${steps.at(-1).answer} vs ${want}`);
+  };
+  const Q = (input) => {
+    const steps = qu.maxQueue(input);
+    run(`maxQueue ${JSON.stringify(input)}`, steps, qu.maxQueueCode(input.mode), ['start', 'push', 'pop', 'read', 'done'], `[${qu.maxQueueAnswer(input).join(', ')}]`);
+    // best is always monotonic and holds only values still in the queue
+    for (const st of steps) {
+      const ids = new Set(st.q.map((x) => x.id));
+      st.best.forEach((x, k) => { ok(ids.has(x.id), 'maxQueue: best only holds queued values'); if (k) ok(input.mode === 'max' ? st.best[k - 1].v >= x.v : st.best[k - 1].v <= x.v, 'maxQueue: best is monotonic'); });
+    }
+    const back = qu.parseMaxQueue({ ops: qu.maxQueueText(input.ops) }, input);
+    ok(back.input && JSON.stringify(back.input.ops) === JSON.stringify(input.ops), 'maxQueue: ops text parses back');
+  };
+  for (const e of Object.values(qu.MAX_QUEUE)) Q(e.input);
+  for (const mode of ['max', 'min']) for (let t = 0; t < 1500; t++) Q(qu.randomMaxQueue({ mode }, rand));
+
+  const L = (input) => run(`limitWindow ${JSON.stringify(input)}`, qu.limitWindow(input), qu.limitWindowCode, ['start', 'grow', 'shrink', 'best', 'done'], `${qu.limitWindowAnswer(input)}`);
+  for (const e of Object.values(qu.LIMIT_WINDOW)) L(e.input);
+  for (let t = 0; t < 2000; t++) L(qu.randomLimitWindow({}, rand));
+  ok(qu.limitWindow({ nums: [8, 2, 4, 7], limit: 4 }).at(-1).answer === '2', 'limitWindow: LeetCode 1438 example is 2');
+
+  const H = (input) => {
+    run(`lazyHeap ${JSON.stringify(input)}`, qu.lazyHeap(input), qu.lazyHeapCode, ['start', 'update', 'clean', 'read', 'done'], `[${qu.lazyHeapAnswer(input).join(', ')}]`);
+    const back = qu.parseLazyHeap({ ops: qu.lazyHeapText(input.ops) });
+    ok(back.input && JSON.stringify(back.input.ops) === JSON.stringify(input.ops), 'lazyHeap: ops text parses back');
+  };
+  for (const e of Object.values(qu.LAZY_HEAP)) H(e.input);
+  for (let t = 0; t < 2000; t++) H(qu.randomLazyHeap({}, rand));
+  ok(qu.lazyHeap(qu.LAZY_HEAP.lesson.input).at(-1).answer === '[5, 10, 5, 2]', 'lazyHeap: LeetCode 2034 example');
+
+  const P = (input) => run(`partitionK ${JSON.stringify(input)}`, qu.partitionK(input), qu.partitionKCode, ['start', 'join', 'cut', 'done'], `${qu.partitionKAnswer(input)}`);
+  for (const e of Object.values(qu.PARTITION_K)) P(e.input);
+  for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
+  ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
 }
 
 // ---------------------------------------------------------------- design, matrices and advanced topics

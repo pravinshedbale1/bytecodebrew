@@ -88,6 +88,10 @@ const RobberTreeViz = lazyViz(() => import('./viz/DpViz'), 'RobberTreeViz');
 const GreedyViz = lazyViz(() => import('./viz/SpecialViz'), 'GreedyViz');
 const TrieViz = lazyViz(() => import('./viz/SpecialViz'), 'TrieViz');
 const BitsViz = lazyViz(() => import('./viz/SpecialViz'), 'BitsViz');
+const MaxQueueViz = lazyViz(() => import('./viz/QueueViz'), 'MaxQueueViz');
+const LimitWindowViz = lazyViz(() => import('./viz/QueueViz'), 'LimitWindowViz');
+const LazyHeapViz = lazyViz(() => import('./viz/QueueViz'), 'LazyHeapViz');
+const PartitionKViz = lazyViz(() => import('./viz/QueueViz'), 'PartitionKViz');
 const SpanViz = lazyViz(() => import('./viz/ContributionViz'), 'SpanViz');
 const BitContribViz = lazyViz(() => import('./viz/ContributionViz'), 'BitContribViz');
 const SortedContribViz = lazyViz(() => import('./viz/ContributionViz'), 'SortedContribViz');
@@ -292,6 +296,10 @@ export const mdxComponents = {
   GreedyViz,
   TrieViz,
   BitsViz,
+  MaxQueueViz,
+  LimitWindowViz,
+  LazyHeapViz,
+  PartitionKViz,
   SpanViz,
   BitContribViz,
   SortedContribViz,

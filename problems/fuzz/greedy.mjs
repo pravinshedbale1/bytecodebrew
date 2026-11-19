@@ -45,4 +45,5 @@ export default {
     const lo = g.int(1, n - 1), hi = g.int(lo, n - 1);
     return [s, lo, hi];
   },
+  'partition-array-such-that-maximum-difference-is-k': (g) => [g.ints(g.len(1, 1e5, 25), 0, g.pick([1e5, 10, 0])), g.pick([0, 1, g.int(0, 10), 1e5])],
 };

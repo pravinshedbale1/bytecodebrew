@@ -16,4 +16,16 @@ export default {
   'sliding-window-maximum': (g) => { const a = g.ints(g.len(1, 1e5, 25), -1e4, 1e4); return [a, g.pick([1, a.length, g.int(1, a.length)])]; },
   'largest-rectangle-in-histogram': (g) => [g.ints(g.len(1, 1e5, 30), 0, g.pick([1e4, 5, 1]))],
   'maximal-rectangle': (g) => { const m = g.len(1, 200, 8), n = g.len(1, 200, 8); const p = g.pick([0.5, 0.8, 0.1, 1]); return [g.grid(m, n, () => (g.rand() < p ? '1' : '0'))]; },
+  'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': (g) => {
+    const a = g.ints(g.len(1, 1e5, 25), 1, g.pick([1e9, 10, 3]));
+    const spread = Math.max(...a) - Math.min(...a);
+    return [a, g.pick([0, 1, g.int(0, spread), spread, 1e9])];
+  },
+  'jump-game-vi': (g) => { const a = g.ints(g.len(1, 1e5, 25), -1e4, g.pick([1e4, 3, -1])); return [a, g.pick([1, 2, a.length, g.int(1, a.length), 1e5])]; },
+  'constrained-subsequence-sum': (g) => { const a = g.ints(g.len(1, 1e5, 25), -1e4, g.pick([1e4, 3, -1])); return [a, g.pick([1, a.length, g.int(1, a.length)])]; },
+  'shortest-subarray-with-sum-at-least-k': (g) => {
+    const a = g.ints(g.len(1, 1e5, 25), -1e5, g.pick([1e5, 10, -1]));
+    const pos = a.filter((v) => v > 0).reduce((s, v) => s + v, 0);
+    return [a, g.pick([1, g.int(1, Math.max(1, pos)), Math.max(1, pos), pos + 1, 1e9])];
+  },
 };

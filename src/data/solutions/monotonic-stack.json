@@ -442,5 +442,192 @@
     }
    }
   ]
+ },
+ "longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit": {
+  "pattern": "Sliding window with a max queue and a min queue (monotonic deques)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every start, running min and max",
+    "idea": "Fix the start, extend the end while tracking the running minimum and maximum, and stop when they differ by more than limit.",
+    "steps": [
+     "For each start `l`, set `mn = mx = nums[l]`.",
+     "Extend `r`, updating `mn` and `mx`; stop when `mx − mn > limit`, otherwise update the best length."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "With a large limit every start walks to the end: 5 × 10⁹ steps for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int longestSubarray(int[] nums, int limit) {\n        int best = 0;\n        for (int l = 0; l < nums.length; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < nums.length; r++) {\n                mn = Math.min(mn, nums[r]);\n                mx = Math.max(mx, nums[r]);\n                if (mx - mn > limit) break;\n                best = Math.max(best, r - l + 1);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestSubarray(vector<int>& nums, int limit) {\n        int best = 0, n = nums.size();\n        for (int l = 0; l < n; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < n; r++) {\n                mn = min(mn, nums[r]);\n                mx = max(mx, nums[r]);\n                if (mx - mn > limit) break;\n                best = max(best, r - l + 1);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestSubarray(self, nums: List[int], limit: int) -> int:\n        best = 0\n        for l in range(len(nums)):\n            mn = mx = nums[l]\n            for r in range(l, len(nums)):\n                mn, mx = min(mn, nums[r]), max(mx, nums[r])\n                if mx - mn > limit:\n                    break\n                best = max(best, r - l + 1)\n        return best",
+     "javascript": "var longestSubarray = function(nums, limit) {\n    let best = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let mn = nums[l], mx = nums[l];\n        for (let r = l; r < nums.length; r++) {\n            mn = Math.min(mn, nums[r]);\n            mx = Math.max(mx, nums[r]);\n            if (mx - mn > limit) break;\n            best = Math.max(best, r - l + 1);\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Better",
+    "name": "Sliding window with two heaps",
+    "idea": "Slide a window; a max-heap and a min-heap of (value, index) give its max and min. Entries whose index has left the window are discarded when they reach the top (lazy deletion).",
+    "steps": [
+     "Push `(nums[r], r)` onto both heaps.",
+     "While `max − min > limit`: move `l` forward, then pop heap tops whose index is `< l`.",
+     "Update the best with `r − l + 1`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(n)",
+    "why": "Correct and fast enough, but every push and pop costs O(log n); the deques do the same job in O(1).",
+    "code": {
+     "java": "class Solution {\n    public int longestSubarray(int[] nums, int limit) {\n        PriorityQueue<int[]> maxH = new PriorityQueue<>((a, b) -> Integer.compare(b[0], a[0]));\n        PriorityQueue<int[]> minH = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\n        int l = 0, best = 0;\n        for (int r = 0; r < nums.length; r++) {\n            maxH.add(new int[] { nums[r], r });\n            minH.add(new int[] { nums[r], r });\n            while (maxH.peek()[0] - minH.peek()[0] > limit) {\n                l++;\n                while (maxH.peek()[1] < l) maxH.poll();   // left the window\n                while (minH.peek()[1] < l) minH.poll();\n            }\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestSubarray(vector<int>& nums, int limit) {\n        priority_queue<pair<int, int>> maxH;\n        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> minH;\n        int l = 0, best = 0;\n        for (int r = 0; r < (int) nums.size(); r++) {\n            maxH.push({nums[r], r});\n            minH.push({nums[r], r});\n            while (maxH.top().first - minH.top().first > limit) {\n                l++;\n                while (maxH.top().second < l) maxH.pop();\n                while (minH.top().second < l) minH.pop();\n            }\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestSubarray(self, nums: List[int], limit: int) -> int:\n        max_h, min_h = [], []\n        l = best = 0\n        for r, x in enumerate(nums):\n            heappush(max_h, (-x, r))\n            heappush(min_h, (x, r))\n            while -max_h[0][0] - min_h[0][0] > limit:\n                l += 1\n                while max_h[0][1] < l:\n                    heappop(max_h)\n                while min_h[0][1] < l:\n                    heappop(min_h)\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var longestSubarray = function(nums, limit) {\n    const maxH = new PriorityQueue((a, b) => b[0] - a[0]);\n    const minH = new PriorityQueue((a, b) => a[0] - b[0]);\n    let l = 0, best = 0;\n    for (let r = 0; r < nums.length; r++) {\n        maxH.enqueue([nums[r], r]);\n        minH.enqueue([nums[r], r]);\n        while (maxH.front()[0] - minH.front()[0] > limit) {\n            l++;\n            while (maxH.front()[1] < l) maxH.dequeue();\n            while (minH.front()[1] < l) minH.dequeue();\n        }\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Max queue + min queue (two monotonic deques)",
+    "idea": "Keep a deque of decreasing values (front = window max) and one of increasing values (front = window min). A value leaving on the left also leaves any deque whose front it is.",
+    "steps": [
+     "For each `r`, pop smaller values from the back of `maxQ` and larger values from the back of `minQ`, then push `nums[r]` onto both.",
+     "While `maxQ.front − minQ.front > limit`: if `nums[l]` is a front, pop it; `l++`.",
+     "Update the best with `r − l + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Every value enters and leaves each deque at most once, and the window only moves forward.",
+    "code": {
+     "java": "class Solution {\n    public int longestSubarray(int[] nums, int limit) {\n        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();   // values: decreasing / increasing\n        int l = 0, best = 0;\n        for (int r = 0; r < nums.length; r++) {\n            while (!maxQ.isEmpty() && maxQ.peekLast() < nums[r]) maxQ.pollLast();\n            maxQ.offerLast(nums[r]);\n            while (!minQ.isEmpty() && minQ.peekLast() > nums[r]) minQ.pollLast();\n            minQ.offerLast(nums[r]);\n            while (maxQ.peekFirst() - minQ.peekFirst() > limit) {               // too wide: drop nums[l]\n                if (maxQ.peekFirst() == nums[l]) maxQ.pollFirst();\n                if (minQ.peekFirst() == nums[l]) minQ.pollFirst();\n                l++;\n            }\n            best = Math.max(best, r - l + 1);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int longestSubarray(vector<int>& nums, int limit) {\n        deque<int> maxQ, minQ;\n        int l = 0, best = 0;\n        for (int r = 0; r < (int) nums.size(); r++) {\n            while (!maxQ.empty() && maxQ.back() < nums[r]) maxQ.pop_back();\n            maxQ.push_back(nums[r]);\n            while (!minQ.empty() && minQ.back() > nums[r]) minQ.pop_back();\n            minQ.push_back(nums[r]);\n            while (maxQ.front() - minQ.front() > limit) {\n                if (maxQ.front() == nums[l]) maxQ.pop_front();\n                if (minQ.front() == nums[l]) minQ.pop_front();\n                l++;\n            }\n            best = max(best, r - l + 1);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def longestSubarray(self, nums: List[int], limit: int) -> int:\n        max_q, min_q = deque(), deque()\n        l = best = 0\n        for r, x in enumerate(nums):\n            while max_q and max_q[-1] < x:\n                max_q.pop()\n            max_q.append(x)\n            while min_q and min_q[-1] > x:\n                min_q.pop()\n            min_q.append(x)\n            while max_q[0] - min_q[0] > limit:\n                if max_q[0] == nums[l]:\n                    max_q.popleft()\n                if min_q[0] == nums[l]:\n                    min_q.popleft()\n                l += 1\n            best = max(best, r - l + 1)\n        return best",
+     "javascript": "var longestSubarray = function(nums, limit) {\n    // arrays with a head pointer act as deques\n    const maxQ = [], minQ = [];\n    let mh = 0, nh = 0, l = 0, best = 0;\n    for (let r = 0; r < nums.length; r++) {\n        while (maxQ.length > mh && maxQ[maxQ.length - 1] < nums[r]) maxQ.pop();\n        maxQ.push(nums[r]);\n        while (minQ.length > nh && minQ[minQ.length - 1] > nums[r]) minQ.pop();\n        minQ.push(nums[r]);\n        while (maxQ[mh] - minQ[nh] > limit) {\n            if (maxQ[mh] === nums[l]) mh++;\n            if (minQ[nh] === nums[l]) nh++;\n            l++;\n        }\n        best = Math.max(best, r - l + 1);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "jump-game-vi": {
+  "pattern": "DP over the last k states with a max queue (monotonic deque)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "DP, scanning the last k",
+    "idea": "dp[i] = nums[i] + max(dp[i − k … i − 1]); compute each max with a loop.",
+    "steps": [
+     "`dp[0] = nums[0]`.",
+     "For each `i`, scan `dp[max(0, i − k) … i − 1]` for the maximum and add `nums[i]`."
+    ],
+    "time": "O(n · k)",
+    "space": "O(n)",
+    "why": "n = k = 10⁵ gives about 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public int maxResult(int[] nums, int k) {\n        int n = nums.length;\n        int[] dp = new int[n];\n        dp[0] = nums[0];\n        for (int i = 1; i < n; i++) {\n            int best = Integer.MIN_VALUE;\n            for (int j = Math.max(0, i - k); j < i; j++) best = Math.max(best, dp[j]);\n            dp[i] = nums[i] + best;\n        }\n        return dp[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxResult(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> dp(n);\n        dp[0] = nums[0];\n        for (int i = 1; i < n; i++) {\n            int best = INT_MIN;\n            for (int j = max(0, i - k); j < i; j++) best = max(best, dp[j]);\n            dp[i] = nums[i] + best;\n        }\n        return dp[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def maxResult(self, nums: List[int], k: int) -> int:\n        dp = [0] * len(nums)\n        dp[0] = nums[0]\n        for i in range(1, len(nums)):\n            dp[i] = nums[i] + max(dp[max(0, i - k):i])\n        return dp[-1]",
+     "javascript": "var maxResult = function(nums, k) {\n    const n = nums.length, dp = new Array(n);\n    dp[0] = nums[0];\n    for (let i = 1; i < n; i++) {\n        let best = -Infinity;\n        for (let j = Math.max(0, i - k); j < i; j++) best = Math.max(best, dp[j]);\n        dp[i] = nums[i] + best;\n    }\n    return dp[n - 1];\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DP + max deque over the window",
+    "idea": "The last k dp values are a sliding window, so a deque of indexes with decreasing dp gives their maximum in O(1).",
+    "steps": [
+     "Start the deque with index 0.",
+     "For each `i`: drop the front if it is more than `k` behind; `dp[i] = nums[i] + dp[front]`.",
+     "Pop indexes with `dp ≤ dp[i]` from the back, then push `i`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index is pushed and popped at most once.",
+    "code": {
+     "java": "class Solution {\n    public int maxResult(int[] nums, int k) {\n        int n = nums.length;\n        int[] dp = new int[n];\n        dp[0] = nums[0];\n        Deque<Integer> dq = new ArrayDeque<>(List.of(0));          // indexes, dp decreasing\n        for (int i = 1; i < n; i++) {\n            if (dq.peekFirst() < i - k) dq.pollFirst();             // too far back to jump from\n            dp[i] = nums[i] + dp[dq.peekFirst()];\n            while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();\n            dq.offerLast(i);\n        }\n        return dp[n - 1];\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int maxResult(vector<int>& nums, int k) {\n        int n = nums.size();\n        vector<int> dp(n);\n        dp[0] = nums[0];\n        deque<int> dq{0};\n        for (int i = 1; i < n; i++) {\n            if (dq.front() < i - k) dq.pop_front();\n            dp[i] = nums[i] + dp[dq.front()];\n            while (!dq.empty() && dp[dq.back()] <= dp[i]) dq.pop_back();\n            dq.push_back(i);\n        }\n        return dp[n - 1];\n    }\n};",
+     "python": "class Solution:\n    def maxResult(self, nums: List[int], k: int) -> int:\n        dp = [0] * len(nums)\n        dp[0] = nums[0]\n        dq = deque([0])\n        for i in range(1, len(nums)):\n            if dq[0] < i - k:\n                dq.popleft()\n            dp[i] = nums[i] + dp[dq[0]]\n            while dq and dp[dq[-1]] <= dp[i]:\n                dq.pop()\n            dq.append(i)\n        return dp[-1]",
+     "javascript": "var maxResult = function(nums, k) {\n    const n = nums.length, dp = new Array(n), dq = [0];\n    dp[0] = nums[0];\n    let head = 0;\n    for (let i = 1; i < n; i++) {\n        if (dq[head] < i - k) head++;\n        dp[i] = nums[i] + dp[dq[head]];\n        while (dq.length > head && dp[dq[dq.length - 1]] <= dp[i]) dq.pop();\n        dq.push(i);\n    }\n    return dp[n - 1];\n};"
+    }
+   }
+  ]
+ },
+ "constrained-subsequence-sum": {
+  "pattern": "DP over the last k states with a max queue (monotonic deque)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "DP, scanning the last k",
+    "idea": "dp[i] = nums[i] + max(0, max(dp[i − k … i − 1])): extend the best subsequence ending in range, or start at i.",
+    "steps": [
+     "For each `i`, scan `dp[max(0, i − k) … i − 1]` for the maximum.",
+     "`dp[i] = nums[i] + max(0, that max)`; the answer is the largest `dp`."
+    ],
+    "time": "O(n · k)",
+    "space": "O(n)",
+    "why": "n = k = 10⁵ gives about 5 × 10⁹ steps.",
+    "code": {
+     "java": "class Solution {\n    public int constrainedSubsetSum(int[] nums, int k) {\n        int n = nums.length, best = Integer.MIN_VALUE;\n        int[] dp = new int[n];\n        for (int i = 0; i < n; i++) {\n            int prev = 0;\n            for (int j = Math.max(0, i - k); j < i; j++) prev = Math.max(prev, dp[j]);\n            dp[i] = nums[i] + prev;\n            best = Math.max(best, dp[i]);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int constrainedSubsetSum(vector<int>& nums, int k) {\n        int n = nums.size(), best = INT_MIN;\n        vector<int> dp(n);\n        for (int i = 0; i < n; i++) {\n            int prev = 0;\n            for (int j = max(0, i - k); j < i; j++) prev = max(prev, dp[j]);\n            dp[i] = nums[i] + prev;\n            best = max(best, dp[i]);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def constrainedSubsetSum(self, nums: List[int], k: int) -> int:\n        dp = []\n        for i, x in enumerate(nums):\n            dp.append(x + max([0] + dp[max(0, i - k):i]))\n        return max(dp)",
+     "javascript": "var constrainedSubsetSum = function(nums, k) {\n    const n = nums.length, dp = new Array(n);\n    let best = -Infinity;\n    for (let i = 0; i < n; i++) {\n        let prev = 0;\n        for (let j = Math.max(0, i - k); j < i; j++) prev = Math.max(prev, dp[j]);\n        dp[i] = nums[i] + prev;\n        best = Math.max(best, dp[i]);\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "DP + max deque over the window",
+    "idea": "The max of the last k dp values comes from a deque of indexes with decreasing dp, so each step is O(1).",
+    "steps": [
+     "For each `i`: drop the front if it is more than `k` behind.",
+     "`dp[i] = nums[i] + max(0, dp[front])` (0 if the deque is empty).",
+     "Pop indexes with `dp ≤ dp[i]` from the back, push `i`, and track the best."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index is pushed and popped at most once.",
+    "code": {
+     "java": "class Solution {\n    public int constrainedSubsetSum(int[] nums, int k) {\n        int n = nums.length, best = Integer.MIN_VALUE;\n        int[] dp = new int[n];                                   // best sum of a subsequence ending at i\n        Deque<Integer> dq = new ArrayDeque<>();                  // indexes, dp decreasing\n        for (int i = 0; i < n; i++) {\n            if (!dq.isEmpty() && dq.peekFirst() < i - k) dq.pollFirst();\n            dp[i] = nums[i] + Math.max(0, dq.isEmpty() ? 0 : dp[dq.peekFirst()]);   // extend the best, or start here\n            while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();\n            dq.offerLast(i);\n            best = Math.max(best, dp[i]);\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int constrainedSubsetSum(vector<int>& nums, int k) {\n        int n = nums.size(), best = INT_MIN;\n        vector<int> dp(n);\n        deque<int> dq;\n        for (int i = 0; i < n; i++) {\n            if (!dq.empty() && dq.front() < i - k) dq.pop_front();\n            dp[i] = nums[i] + max(0, dq.empty() ? 0 : dp[dq.front()]);\n            while (!dq.empty() && dp[dq.back()] <= dp[i]) dq.pop_back();\n            dq.push_back(i);\n            best = max(best, dp[i]);\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def constrainedSubsetSum(self, nums: List[int], k: int) -> int:\n        dp, dq, best = [0] * len(nums), deque(), -inf\n        for i, x in enumerate(nums):\n            if dq and dq[0] < i - k:\n                dq.popleft()\n            dp[i] = x + max(0, dp[dq[0]] if dq else 0)\n            while dq and dp[dq[-1]] <= dp[i]:\n                dq.pop()\n            dq.append(i)\n            best = max(best, dp[i])\n        return best",
+     "javascript": "var constrainedSubsetSum = function(nums, k) {\n    const n = nums.length, dp = new Array(n), dq = [];\n    let head = 0, best = -Infinity;\n    for (let i = 0; i < n; i++) {\n        if (dq.length > head && dq[head] < i - k) head++;\n        dp[i] = nums[i] + Math.max(0, dq.length > head ? dp[dq[head]] : 0);\n        while (dq.length > head && dp[dq[dq.length - 1]] <= dp[i]) dq.pop();\n        dq.push(i);\n        best = Math.max(best, dp[i]);\n    }\n    return best;\n};"
+    }
+   }
+  ]
+ },
+ "shortest-subarray-with-sum-at-least-k": {
+  "pattern": "Monotonic deque over prefix sums (a min queue of candidate starts)",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Every start, running sum",
+    "idea": "For every start, extend the end with a running sum and record the first end that reaches k.",
+    "steps": [
+     "For each start `l`, keep a running sum while extending `r`.",
+     "The first `r` with sum `≥ k` gives a candidate length `r − l + 1`; stop there."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "5 × 10⁹ steps for n = 10⁵. A plain sliding window is no fix: with negatives, extending can lower the sum.",
+    "code": {
+     "java": "class Solution {\n    public int shortestSubarray(int[] nums, int k) {\n        int best = Integer.MAX_VALUE;\n        for (int l = 0; l < nums.length; l++) {\n            long sum = 0;\n            for (int r = l; r < nums.length; r++) {\n                sum += nums[r];\n                if (sum >= k) { best = Math.min(best, r - l + 1); break; }\n            }\n        }\n        return best == Integer.MAX_VALUE ? -1 : best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int shortestSubarray(vector<int>& nums, int k) {\n        int best = INT_MAX, n = nums.size();\n        for (int l = 0; l < n; l++) {\n            long long sum = 0;\n            for (int r = l; r < n; r++) {\n                sum += nums[r];\n                if (sum >= k) { best = min(best, r - l + 1); break; }\n            }\n        }\n        return best == INT_MAX ? -1 : best;\n    }\n};",
+     "python": "class Solution:\n    def shortestSubarray(self, nums: List[int], k: int) -> int:\n        best = inf\n        for l in range(len(nums)):\n            s = 0\n            for r in range(l, len(nums)):\n                s += nums[r]\n                if s >= k:\n                    best = min(best, r - l + 1)\n                    break\n        return -1 if best == inf else best",
+     "javascript": "var shortestSubarray = function(nums, k) {\n    let best = Infinity;\n    for (let l = 0; l < nums.length; l++) {\n        let sum = 0;\n        for (let r = l; r < nums.length; r++) {\n            sum += nums[r];\n            if (sum >= k) { best = Math.min(best, r - l + 1); break; }\n        }\n    }\n    return best === Infinity ? -1 : best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Increasing deque of prefix sums",
+    "idea": "Subarray [i, j) sums to p[j] − p[i]. Keep candidate starts with increasing p: pop the front once it pairs with j (its shortest partner), and pop the back when p[j] is no larger (j is a later, better start).",
+    "steps": [
+     "Build 64-bit prefix sums `p` (length n + 1).",
+     "For each `j`: while `p[j] − p[front] ≥ k`, record `j − front` and pop the front.",
+     "While `p[back] ≥ p[j]`, pop the back; push `j`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each prefix index enters and leaves the deque at most once, and each pop is justified: a start can never do better later.",
+    "code": {
+     "java": "class Solution {\n    public int shortestSubarray(int[] nums, int k) {\n        int n = nums.length, best = n + 1;\n        long[] p = new long[n + 1];\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        Deque<Integer> dq = new ArrayDeque<>();                  // prefix indexes, p increasing\n        for (int j = 0; j <= n; j++) {\n            while (!dq.isEmpty() && p[j] - p[dq.peekFirst()] >= k) best = Math.min(best, j - dq.pollFirst());\n            while (!dq.isEmpty() && p[dq.peekLast()] >= p[j]) dq.pollLast();\n            dq.offerLast(j);\n        }\n        return best <= n ? best : -1;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int shortestSubarray(vector<int>& nums, int k) {\n        int n = nums.size(), best = n + 1;\n        vector<long long> p(n + 1, 0);\n        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n        deque<int> dq;\n        for (int j = 0; j <= n; j++) {\n            while (!dq.empty() && p[j] - p[dq.front()] >= k) { best = min(best, j - dq.front()); dq.pop_front(); }\n            while (!dq.empty() && p[dq.back()] >= p[j]) dq.pop_back();\n            dq.push_back(j);\n        }\n        return best <= n ? best : -1;\n    }\n};",
+     "python": "class Solution:\n    def shortestSubarray(self, nums: List[int], k: int) -> int:\n        n = len(nums)\n        p = [0] * (n + 1)\n        for i, x in enumerate(nums):\n            p[i + 1] = p[i] + x\n        best, dq = n + 1, deque()\n        for j in range(n + 1):\n            while dq and p[j] - p[dq[0]] >= k:\n                best = min(best, j - dq.popleft())\n            while dq and p[dq[-1]] >= p[j]:\n                dq.pop()\n            dq.append(j)\n        return best if best <= n else -1",
+     "javascript": "var shortestSubarray = function(nums, k) {\n    const n = nums.length, p = new Array(n + 1).fill(0), dq = [];\n    for (let i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];\n    let head = 0, best = n + 1;\n    for (let j = 0; j <= n; j++) {\n        while (dq.length > head && p[j] - p[dq[head]] >= k) best = Math.min(best, j - dq[head++]);\n        while (dq.length > head && p[dq[dq.length - 1]] >= p[j]) dq.pop();\n        dq.push(j);\n    }\n    return best <= n ? best : -1;\n};"
+    }
+   }
+  ]
  }
 }

@@ -728,5 +728,46 @@
     }
    }
   ]
+ },
+ "partition-array-such-that-maximum-difference-is-k": {
+  "pattern": "Greedy after sorting: the smallest value opens a group that takes everything within k",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Peel off one group at a time",
+    "idea": "Repeatedly take the smallest remaining value and remove every remaining value within k of it, scanning the whole array each round.",
+    "steps": [
+     "While values remain: find the smallest remaining `m`.",
+     "Remove every remaining value `≤ m + k`; count one group."
+    ],
+    "time": "O(n²)",
+    "space": "O(n)",
+    "why": "With k = 0 and distinct values every round removes one value: about 5 × 10⁹ steps for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public int partitionArray(int[] nums, int k) {\n        boolean[] used = new boolean[nums.length];\n        int groups = 0, left = nums.length;\n        while (left > 0) {\n            int m = Integer.MAX_VALUE;\n            for (int i = 0; i < nums.length; i++) if (!used[i]) m = Math.min(m, nums[i]);\n            for (int i = 0; i < nums.length; i++) if (!used[i] && nums[i] <= m + k) { used[i] = true; left--; }\n            groups++;\n        }\n        return groups;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int partitionArray(vector<int>& nums, int k) {\n        int n = nums.size(), groups = 0, left = n;\n        vector<bool> used(n, false);\n        while (left > 0) {\n            int m = INT_MAX;\n            for (int i = 0; i < n; i++) if (!used[i]) m = min(m, nums[i]);\n            for (int i = 0; i < n; i++) if (!used[i] && nums[i] <= m + k) { used[i] = true; left--; }\n            groups++;\n        }\n        return groups;\n    }\n};",
+     "python": "class Solution:\n    def partitionArray(self, nums: List[int], k: int) -> int:\n        rest, groups = list(nums), 0\n        while rest:\n            m = min(rest)\n            rest = [x for x in rest if x > m + k]\n            groups += 1\n        return groups",
+     "javascript": "var partitionArray = function(nums, k) {\n    let rest = nums.slice(), groups = 0;\n    while (rest.length) {\n        const m = Math.min(...rest);\n        rest = rest.filter((x) => x > m + k);\n        groups++;\n    }\n    return groups;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sort, then one pass",
+    "idea": "After sorting, walk left to right keeping the smallest value of the open group; open a new group when the current value is more than k above it.",
+    "steps": [
+     "Sort `nums`; `groups = 1`, `start = nums[0]`.",
+     "For each `x`: if `x − start > k`, `groups++` and `start = x`."
+    ],
+    "time": "O(n log n)",
+    "space": "O(1) extra",
+    "why": "Exchange argument: the group holding the smallest value may as well take everything within k of it; anything left out would need a later group anyway.",
+    "code": {
+     "java": "class Solution {\n    public int partitionArray(int[] nums, int k) {\n        Arrays.sort(nums);\n        int groups = 1, start = nums[0];                  // smallest value of the open group\n        for (int x : nums)\n            if (x - start > k) { groups++; start = x; }   // x can't join: it opens a new group\n        return groups;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int partitionArray(vector<int>& nums, int k) {\n        sort(nums.begin(), nums.end());\n        int groups = 1, start = nums[0];\n        for (int x : nums)\n            if (x - start > k) { groups++; start = x; }\n        return groups;\n    }\n};",
+     "python": "class Solution:\n    def partitionArray(self, nums: List[int], k: int) -> int:\n        nums.sort()\n        groups, start = 1, nums[0]\n        for x in nums:\n            if x - start > k:\n                groups += 1\n                start = x\n        return groups",
+     "javascript": "var partitionArray = function(nums, k) {\n    nums.sort((a, b) => a - b);\n    let groups = 1, start = nums[0];\n    for (const x of nums)\n        if (x - start > k) { groups++; start = x; }\n    return groups;\n};"
+    }
+   }
+  ]
  }
 }

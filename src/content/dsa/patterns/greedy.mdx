@@ -105,6 +105,24 @@ static int numRescueBoats(int[] people, int limit) {
 
 Exchange argument: if the heaviest person is paired with someone else in an optimal plan, swapping that partner for the lightest person keeps both boats valid (the lightest fits wherever the other did).
 
+### Partition array so that max − min ≤ k in each group (2294)
+
+> Split `nums` into the fewest groups (any subsequences) such that, in every group, the largest and smallest values differ by at most `k`.
+
+Order inside a group doesn't matter, so **sort**. The smallest value has to go somewhere, and its group can reach up to `smallest + k`. Putting **everything** up to that point in the same group is never worse: anything left out has a value at least as big, so it would need a later group anyway. Then the next value starts a new group, and the argument repeats.
+
+<PartitionKViz examples={['lesson', 'zero']} />
+
+```java
+public int partitionArray(int[] nums, int k) {
+    Arrays.sort(nums);
+    int groups = 1, start = nums[0];                  // smallest value of the open group
+    for (int x : nums)
+        if (x - start > k) { groups++; start = x; }   // x can't join: it opens a new group
+    return groups;
+}
+```
+
 (Interval greedies — keep the earliest-ending, minimum arrows — follow the same "sort, then one pass" shape; see [Intervals](/dsa/patterns/intervals).)
 
 ## Shape 3: a running total that resets
@@ -209,6 +227,7 @@ static int candy(int[] r) {
 | 134 | [Gas Station](https://leetcode.com/problems/gas-station/) | Medium | Reset the start |
 | 763 | [Partition Labels](https://leetcode.com/problems/partition-labels/) | Medium | Last occurrences |
 | 881 | [Boats to Save People](https://leetcode.com/problems/boats-to-save-people/) | Medium | Pair heaviest with lightest |
+| 2294 | [Partition Array Such That Maximum Difference Is K](https://leetcode.com/problems/partition-array-such-that-maximum-difference-is-k/) | Medium | Sort; a new group when the gap exceeds k |
 | 1029 | [Two City Scheduling](https://leetcode.com/problems/two-city-scheduling/) | Medium | Sort by difference |
 | 1899 | [Merge Triplets to Form Target Triplet](https://leetcode.com/problems/merge-triplets-to-form-target-triplet/) | Medium | Filter out overshoots, cover each position |
 | 678 | [Valid Parenthesis String](https://leetcode.com/problems/valid-parenthesis-string/) | Medium | Track a range of open counts |

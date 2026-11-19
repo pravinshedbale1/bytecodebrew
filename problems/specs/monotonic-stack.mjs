@@ -224,4 +224,119 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit', title: 'Longest Continuous Subarray With Absolute Diff Less Than or Equal to Limit', level: 'Medium',
+    summary: 'Return the length of the longest non-empty subarray in which the absolute difference between any two elements is at most limit.',
+    method: 'longestSubarray', params: [['int[]', 'nums'], ['int', 'limit']], returns: 'int',
+    tests: [
+      { in: [[8, 2, 4, 7], 4], out: 2 },
+      { in: [[10, 1, 2, 4, 7, 2], 5], out: 4 },
+      { in: [[4, 2, 2, 2, 4, 4, 2, 2], 0], out: 3 },
+      { in: [[5], 0] },
+      { in: [[1, 1000000000], 999999999] },
+      { in: [[1, 5, 6, 7, 8, 10, 6, 5, 6], 4] },
+    ],
+    ref: `class Solution {
+    public int longestSubarray(int[] nums, int limit) {
+        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();
+        int l = 0, best = 0;
+        for (int r = 0; r < nums.length; r++) {
+            while (!maxQ.isEmpty() && maxQ.peekLast() < nums[r]) maxQ.pollLast();
+            maxQ.offerLast(nums[r]);
+            while (!minQ.isEmpty() && minQ.peekLast() > nums[r]) minQ.pollLast();
+            minQ.offerLast(nums[r]);
+            while (maxQ.peekFirst() - minQ.peekFirst() > limit) {
+                if (maxQ.peekFirst() == nums[l]) maxQ.pollFirst();
+                if (minQ.peekFirst() == nums[l]) minQ.pollFirst();
+                l++;
+            }
+            best = Math.max(best, r - l + 1);
+        }
+        return best;
+    }
+}`,
+  },
+  {
+    slug: 'jump-game-vi', title: 'Jump Game VI', level: 'Medium',
+    summary: 'Start at index 0; from index i you may jump to any of i + 1 … i + k (inside the array). Your score is the sum of nums over every index you land on, including the first and last. Return the maximum score for reaching the last index.',
+    method: 'maxResult', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[1, -1, -2, 4, -7, 3], 2], out: 7 },
+      { in: [[10, -5, -2, 4, 0, 3], 3], out: 17 },
+      { in: [[1, -5, -20, 4, -1, 3, -6, -3], 2], out: 0 },
+      { in: [[-7], 1] },
+      { in: [[5, -10000, -10000, -10000, 5], 1] },
+      { in: [[5, -10000, -10000, -10000, 5], 4] },
+    ],
+    ref: `class Solution {
+    public int maxResult(int[] nums, int k) {
+        int n = nums.length;
+        int[] dp = new int[n];
+        dp[0] = nums[0];
+        Deque<Integer> dq = new ArrayDeque<>(List.of(0));
+        for (int i = 1; i < n; i++) {
+            if (dq.peekFirst() < i - k) dq.pollFirst();
+            dp[i] = nums[i] + dp[dq.peekFirst()];
+            while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();
+            dq.offerLast(i);
+        }
+        return dp[n - 1];
+    }
+}`,
+  },
+  {
+    slug: 'constrained-subsequence-sum', title: 'Constrained Subsequence Sum', level: 'Hard',
+    summary: 'Pick a non-empty subsequence of nums such that any two consecutive picked indices i < j satisfy j − i ≤ k. Return the largest possible sum.',
+    method: 'constrainedSubsetSum', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[10, 2, -10, 5, 20], 2], out: 37 },
+      { in: [[-1, -2, -3], 1], out: -1 },
+      { in: [[10, -2, -10, -5, 20], 2], out: 23 },
+      { in: [[-5], 1] },
+      { in: [[3, -1, -1, -1, 3], 3] },
+      { in: [[3, -1, -1, -1, 3], 4] },
+    ],
+    ref: `class Solution {
+    public int constrainedSubsetSum(int[] nums, int k) {
+        int n = nums.length, best = Integer.MIN_VALUE;
+        int[] dp = new int[n];
+        Deque<Integer> dq = new ArrayDeque<>();
+        for (int i = 0; i < n; i++) {
+            if (!dq.isEmpty() && dq.peekFirst() < i - k) dq.pollFirst();
+            dp[i] = nums[i] + Math.max(0, dq.isEmpty() ? 0 : dp[dq.peekFirst()]);
+            while (!dq.isEmpty() && dp[dq.peekLast()] <= dp[i]) dq.pollLast();
+            dq.offerLast(i);
+            best = Math.max(best, dp[i]);
+        }
+        return best;
+    }
+}`,
+  },
+  {
+    slug: 'shortest-subarray-with-sum-at-least-k', title: 'Shortest Subarray with Sum at Least K', level: 'Hard',
+    summary: 'Return the length of the shortest non-empty subarray of nums (which may contain negatives) whose sum is at least k, or −1 if there is none.',
+    method: 'shortestSubarray', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[1], 1], out: 1 },
+      { in: [[1, 2], 4], out: -1 },
+      { in: [[2, -1, 2], 3], out: 3 },
+      { in: [[84, -37, 32, 40, 95], 167] },
+      { in: [[-100000, -100000], 1] },
+      { in: [[17, 85, 93, -45, -21], 150] },
+    ],
+    ref: `class Solution {
+    public int shortestSubarray(int[] nums, int k) {
+        int n = nums.length, best = n + 1;
+        long[] p = new long[n + 1];
+        for (int i = 0; i < n; i++) p[i + 1] = p[i] + nums[i];
+        Deque<Integer> dq = new ArrayDeque<>();
+        for (int j = 0; j <= n; j++) {
+            while (!dq.isEmpty() && p[j] - p[dq.peekFirst()] >= k) best = Math.min(best, j - dq.pollFirst());
+            while (!dq.isEmpty() && p[dq.peekLast()] >= p[j]) dq.pollLast();
+            dq.offerLast(j);
+        }
+        return best <= n ? best : -1;
+    }
+}`,
+  },
 ];

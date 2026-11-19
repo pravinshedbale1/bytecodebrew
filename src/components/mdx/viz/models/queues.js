@@ -1,0 +1,444 @@
+/**
+ * Models for QueueViz.jsx (pure, Node-safe; checked by scripts/viz-check.mjs against brute force):
+ *   maxQueue     a queue that answers max (or min) in O(1): the queue plus a monotonic deque beside it
+ *   limitWindow  1438: the longest window whose max − min ≤ limit, with a max-deque and a min-deque
+ *   lazyHeap     2034 Stock Price Fluctuation: heaps with lazy deletion (stale entries skipped on read)
+ *   partitionK   2294: sort, then open a new group when a value is more than k above the group's first
+ */
+import { list, parseInt1, parseInts, plural, rng } from './util.js';
+
+// ---------------------------------------------------------------- max (or min) queue
+
+export const MAX_QUEUE = {
+  max: { label: 'Max queue', input: { mode: 'max', ops: [['push', 3], ['push', 1], ['push', 4], ['max'], ['push', 2], ['pop'], ['max'], ['pop'], ['max'], ['push', 5], ['max']] } },
+  min: { label: 'Min queue', input: { mode: 'min', ops: [['push', 4], ['push', 2], ['push', 5], ['min'], ['pop'], ['min'], ['pop'], ['push', 1], ['min']] } },
+};
+
+export const maxQueueCode = (mode) => {
+  const cmp = mode === 'max' ? '<' : '>';
+  return [
+    ['fields', 'Deque<Integer> q, best;          // best: ' + (mode === 'max' ? 'decreasing' : 'increasing')],
+    ['push', 'void push(int x) {'],
+    ['push', '    q.offerLast(x);'],
+    ['push', `    while (!best.isEmpty() && best.peekLast() ${cmp} x) best.pollLast();`],
+    ['push', '    best.offerLast(x);'],
+    ['push', '}'],
+    ['pop', 'int pop() {'],
+    ['pop', '    int x = q.pollFirst();'],
+    ['pop', '    if (best.peekFirst() == x) best.pollFirst();'],
+    ['pop', '    return x;'],
+    ['pop', '}'],
+    ['read', `int ${mode}() { return best.peekFirst(); }`],
+  ];
+};
+
+const beatsQ = (mode, a, b) => (mode === 'max' ? a > b : a < b);
+
+export function maxQueueAnswer({ mode, ops }) {
+  const q = [], out = [];
+  for (const [op, v] of ops) {
+    if (op === 'push') q.push(v);
+    else if (op === 'pop') q.shift();
+    else out.push((mode === 'max' ? Math.max : Math.min)(...q));
+  }
+  return out;
+}
+
+export function maxQueue(input) {
+  const { mode, ops } = input;
+  const q = [], best = [];   // items: { v, id }
+  const out = [];
+  const steps = [];
+  let id = 0;
+  const word = mode === 'max' ? 'maximum' : 'minimum';
+  const smaller = mode === 'max' ? 'smaller' : 'larger';
+  const snap = (x) => steps.push({ mode, q: q.map((it) => ({ ...it })), best: best.map((it) => ({ ...it })), out: [...out], ...x });
+  snap({
+    kind: 'start', op: null, lines: ['fields'],
+    title: `A queue that knows its ${word} in O(1)`,
+    text: `Scanning the queue for the ${word} is O(n). Keep a second deque, best, next to it: the values that could still become the ${word} later, in ${mode === 'max' ? 'decreasing' : 'increasing'} order. Its front is always the answer. A value can be thrown out of best as soon as a ${mode === 'max' ? 'bigger' : 'smaller'} value arrives behind it: the newcomer will stay in the queue at least as long, so the older value can never be the ${word} again.`,
+    calc: ['q = [], best = []'],
+  });
+  for (const [op, v] of ops) {
+    if (op === 'push') {
+      const item = { v, id: id++ };
+      q.push(item);
+      const dropped = [];
+      while (best.length && beatsQ(mode, v, best.at(-1).v)) dropped.push(best.pop().v);
+      best.push(item);
+      snap({
+        kind: 'push', op: `push(${v})`, focus: item.id, dropped, lines: ['push'],
+        title: dropped.length ? `push(${v}): ${list(dropped)} leave best` : `push(${v})`,
+        text: dropped.length
+          ? `${v} joins the back of the queue. In best, ${dropped.join(', ')} ${dropped.length === 1 ? 'is' : 'are'} ${smaller} than ${v} and arrived earlier, so ${dropped.length === 1 ? 'it' : 'they'} will leave the queue before ${v} does: ${dropped.length === 1 ? 'it' : 'they'} can never be the ${word} again. Drop ${dropped.length === 1 ? 'it' : 'them'} from the back of best, then add ${v}.`
+          : `${v} joins the back of the queue and the back of best. Nothing in best is ${smaller} than ${v}, so everything there is still a candidate.`,
+        calc: [`q = ${list(q.map((x) => x.v))}`, `best = ${list(best.map((x) => x.v))}`],
+      });
+    } else if (op === 'pop') {
+      const gone = q.shift();
+      const wasBest = best.length && best[0].id === gone.id;
+      if (wasBest) best.shift();
+      snap({
+        kind: 'pop', op: 'pop()', gone: gone.v, lines: ['pop'],
+        title: `pop() → ${gone.v}${wasBest ? `, and best loses it too` : ''}`,
+        text: wasBest
+          ? `${gone.v} leaves the front of the queue. It is also at the front of best (it was the current ${word}), so remove it there too; the next value in best takes over.`
+          : `${gone.v} leaves the front of the queue. It isn't in best any more (a ${mode === 'max' ? 'bigger' : 'smaller'} value pushed later already removed it), so best doesn't change.`,
+        calc: [`q = ${list(q.map((x) => x.v))}`, `best = ${list(best.map((x) => x.v))}`],
+      });
+    } else {
+      out.push(best[0].v);
+      snap({
+        kind: 'read', op: `${mode}()`, lines: ['read'],
+        title: `${mode}() → ${best[0].v}`,
+        text: `The front of best is the ${word} of everything in the queue: O(1), no scan.`,
+        calc: [`${mode} of ${list(q.map((x) => x.v))} = ${best[0].v}`],
+      });
+    }
+  }
+  snap({
+    kind: 'done', op: null, lines: [], answer: list(out),
+    title: `Answers: ${list(out)}`,
+    text: 'Every value is added to best once and removed at most once, so each operation is O(1) amortised. The same structure is the monotonic deque inside Sliding Window Maximum: the window is just a queue.',
+    calc: [`answers = ${list(out)}`],
+  });
+  return steps;
+}
+
+export const maxQueueText = (ops) => ops.map(([op, v]) => (op === 'push' ? `push ${v}` : op)).join(', ');
+
+export function parseMaxQueue(values, input) {
+  const parts = String(values.ops ?? '').toLowerCase().split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean);
+  const ops = [];
+  let size = 0;
+  for (const t of parts) {
+    let m;
+    if ((m = /^push\s*\(?\s*(-?\d+)\s*\)?$/.exec(t))) { const v = Number(m[1]); if (Math.abs(v) > 99) return { error: 'Keep pushed values between −99 and 99.' }; ops.push(['push', v]); size++; }
+    else if (/^pop\s*(\(\))?$/.test(t)) { if (!size) return { error: 'pop on an empty queue: push something first.' }; ops.push(['pop']); size--; }
+    else if (/^(max|min)\s*(\(\))?$/.test(t)) { if (!size) return { error: `${input.mode} on an empty queue: push something first.` }; ops.push([input.mode]); }
+    else return { error: `Couldn't read "${t}". Use push 3, pop, ${input.mode}.` };
+  }
+  if (!ops.length || ops.length > 14) return { error: 'Give 1 to 14 operations.' };
+  return { input: { mode: input.mode, ops } };
+}
+
+export function randomMaxQueue(input, rand = Math.random) {
+  const g = rng(rand);
+  const ops = [];
+  let size = 0;
+  while (ops.length < g.int(8, 12)) {
+    const r = g.int(0, 9);
+    if (r < 5 || size === 0) { ops.push(['push', g.int(1, 9)]); size++; }
+    else if (r < 7) { ops.push(['pop']); size--; }
+    else ops.push([input.mode]);
+  }
+  if (size) ops.push([input.mode]); else ops.push(['push', g.int(1, 9)], [input.mode]);
+  return { mode: input.mode, ops };
+}
+
+// ---------------------------------------------------------------- 1438: window with max − min ≤ limit
+
+export const LIMIT_WINDOW = {
+  lesson: { label: 'nums = [10,1,2,4,7,2], limit 5', input: { nums: [10, 1, 2, 4, 7, 2], limit: 5 } },
+  tight: { label: 'limit 0: equal runs', input: { nums: [4, 2, 2, 2, 4, 4, 2, 2], limit: 0 } },
+};
+
+export const limitWindowCode = [
+  ['grow', 'for (int r = 0; r < n; r++) {   // add a[r] to both deques'],
+  ['maxdq', '    while (!maxQ.isEmpty() && maxQ.peekLast() < a[r]) maxQ.pollLast();'],
+  ['maxdq', '    maxQ.offerLast(a[r]);'],
+  ['mindq', '    while (!minQ.isEmpty() && minQ.peekLast() > a[r]) minQ.pollLast();'],
+  ['mindq', '    minQ.offerLast(a[r]);'],
+  ['shrink', '    while (maxQ.peekFirst() - minQ.peekFirst() > limit) {'],
+  ['shrink', '        if (maxQ.peekFirst() == a[l]) maxQ.pollFirst();'],
+  ['shrink', '        if (minQ.peekFirst() == a[l]) minQ.pollFirst();'],
+  ['shrink', '        l++;'],
+  ['shrink', '    }'],
+  ['best', '    best = Math.max(best, r - l + 1);'],
+  ['end', '}'],
+];
+
+export function limitWindowAnswer({ nums: a, limit }) {
+  let best = 0;
+  for (let l = 0; l < a.length; l++) for (let r = l; r < a.length; r++) {
+    const part = a.slice(l, r + 1);
+    if (Math.max(...part) - Math.min(...part) <= limit) best = Math.max(best, r - l + 1);
+  }
+  return best;
+}
+
+export function limitWindow(input) {
+  const { nums: a, limit } = input;
+  const n = a.length;
+  const maxQ = [], minQ = [];   // indexes
+  const steps = [];
+  let l = 0, best = 0, bestAt = null;
+  const snap = (x) => steps.push({ l, maxQ: [...maxQ], minQ: [...minQ], best, bestAt, ...x });
+  snap({
+    kind: 'start', r: null, lines: [],
+    title: `Longest window of ${list(a)} with max − min ≤ ${limit}`,
+    text: 'A window is fine when its largest and smallest values are close enough, and shrinking a fine window keeps it fine: a sliding window. The hard part is knowing the window\'s max and min as values arrive on the right and leave on the left. That\'s exactly a max queue plus a min queue: two monotonic deques.',
+    calc: ['maxQ = [], minQ = []'],
+  });
+  for (let r = 0; r < n; r++) {
+    while (maxQ.length && a[maxQ.at(-1)] < a[r]) maxQ.pop();
+    maxQ.push(r);
+    while (minQ.length && a[minQ.at(-1)] > a[r]) minQ.pop();
+    minQ.push(r);
+    const mx = a[maxQ[0]], mn = a[minQ[0]];
+    snap({
+      kind: 'grow', r, lines: ['grow', 'maxdq', 'mindq'],
+      title: `Add a[${r}] = ${a[r]}: max ${mx}, min ${mn}`,
+      text: `${a[r]} joins both deques; values it beats are dropped from their backs (they can't be the max or min while ${a[r]} is in the window). The fronts give the window's max = ${mx} and min = ${mn}: ${mx} − ${mn} = ${mx - mn} ${mx - mn > limit ? `> ${limit}, too wide` : `≤ ${limit}, fine`}.`,
+      calc: [`window [${l}, ${r}]`, `max − min = ${mx} − ${mn} = ${mx - mn}`],
+    });
+    if (mx - mn > limit) {
+      const from = l;
+      while (a[maxQ[0]] - a[minQ[0]] > limit) {
+        if (maxQ[0] === l) maxQ.shift();
+        if (minQ[0] === l) minQ.shift();
+        l++;
+      }
+      snap({
+        kind: 'shrink', r, from, lines: ['shrink'],
+        title: `Too wide: move l from ${from} to ${l}`,
+        text: `Drop values from the left. When a dropped index is at the front of a deque, it leaves that deque too, and the next value becomes the max or min. Stop when max − min = ${a[maxQ[0]]} − ${a[minQ[0]]} = ${a[maxQ[0]] - a[minQ[0]]} ≤ ${limit}.`,
+        calc: [`window [${l}, ${r}]`, `max − min = ${a[maxQ[0]] - a[minQ[0]]}`],
+      });
+    }
+    if (r - l + 1 > best) {
+      best = r - l + 1;
+      bestAt = [l, r];
+      snap({
+        kind: 'best', r, lines: ['best'],
+        title: `New best: [${l}, ${r}], length ${best}`,
+        text: `Window ${list(a.slice(l, r + 1))} has max − min ≤ ${limit} and is the longest so far.`,
+        calc: [`best = ${r} − ${l} + 1 = ${best}`],
+      });
+    }
+  }
+  snap({
+    kind: 'done', r: null, lines: ['end'], answer: `${best}`,
+    title: `Longest: ${best}`,
+    text: `Each index enters and leaves each deque at most once: O(n). (A TreeMap or two heaps of the window also work, at O(n log n).) The check: trying every subarray also gives ${limitWindowAnswer(input)}.`,
+    calc: [`best = ${best}`],
+  });
+  return steps;
+}
+
+export function parseLimitWindow(values) {
+  const r = parseInts(values.nums, { min: 1, max: 30, minLen: 1, maxLen: 10, name: 'nums' });
+  if (r.error) return r;
+  const k = parseInt1(values.limit, { min: 0, max: 30, name: 'limit' });
+  if (k.error) return k;
+  return { input: { nums: r.arr, limit: k.v } };
+}
+
+export function randomLimitWindow(input, rand = Math.random) {
+  const g = rng(rand);
+  return { nums: Array.from({ length: g.int(5, 9) }, () => g.int(1, 12)), limit: g.int(0, 6) };
+}
+
+// ---------------------------------------------------------------- lazy deletion: Stock Price Fluctuation
+
+export const LAZY_HEAP = {
+  lesson: { label: 'Stock price: corrections', input: { ops: [['update', 1, 10], ['update', 2, 5], ['current'], ['maximum'], ['update', 1, 3], ['maximum'], ['update', 4, 2], ['minimum']] } },
+  stale: { label: 'Several stale tops', input: { ops: [['update', 1, 9], ['update', 2, 8], ['update', 3, 7], ['update', 1, 1], ['update', 2, 2], ['maximum'], ['minimum']] } },
+};
+
+export const lazyHeapCode = [
+  ['fields', 'Map<Integer, Integer> price;              // the truth'],
+  ['fields', 'PriorityQueue<int[]> maxH, minH;          // {price, timestamp}, never deleted from'],
+  ['update', 'void update(int t, int p) {'],
+  ['update', '    price.put(t, p);  latest = Math.max(latest, t);'],
+  ['update', '    maxH.add(new int[] {p, t});  minH.add(new int[] {p, t});'],
+  ['update', '}'],
+  ['clean', 'int maximum() {                           // (minimum: the same with minH)'],
+  ['clean', '    while (price.get(maxH.peek()[1]) != maxH.peek()[0]) maxH.poll();   // stale'],
+  ['read', '    return maxH.peek()[0];'],
+  ['read', '}'],
+  ['current', 'int current() { return price.get(latest); }'],
+];
+
+export function lazyHeapAnswer({ ops }) {
+  const price = new Map();
+  let latest = 0;
+  const out = [];
+  for (const [op, t, p] of ops) {
+    if (op === 'update') { price.set(t, p); latest = Math.max(latest, t); }
+    else if (op === 'current') out.push(price.get(latest));
+    else out.push((op === 'maximum' ? Math.max : Math.min)(...price.values()));
+  }
+  return out;
+}
+
+const heapOrder = (h, max) => [...h].sort((x, y) => (max ? y.p - x.p : x.p - y.p) || x.id - y.id);
+
+export function lazyHeap(input) {
+  const { ops } = input;
+  const price = new Map();
+  let maxH = [], minH = [];   // { p, t, id }
+  let latest = 0, id = 0;
+  const out = [];
+  const steps = [];
+  const snap = (x) => steps.push({
+    price: [...price.entries()].sort((a, b) => a[0] - b[0]),
+    maxH: heapOrder(maxH, true).map((e) => ({ ...e, stale: price.get(e.t) !== e.p })),
+    minH: heapOrder(minH, false).map((e) => ({ ...e, stale: price.get(e.t) !== e.p })),
+    out: [...out], latest, ...x,
+  });
+  snap({
+    kind: 'start', op: null, lines: ['fields'],
+    title: 'Prices arrive out of order, and old ones get corrected',
+    text: 'A heap answers "largest price" in O(1), but a correction would mean deleting an old entry from the middle of the heap, which Java\'s PriorityQueue does in O(n). Lazy deletion: never delete. Push the new entry, leave the old one in the heap, and when a stale entry reaches the top, throw it away then. An entry is stale when the map says that timestamp now has a different price.',
+    calc: ['price = {}, maxH = [], minH = []'],
+  });
+  for (const [op, t, p] of ops) {
+    if (op === 'update') {
+      const old = price.get(t);
+      price.set(t, p);
+      latest = Math.max(latest, t);
+      const e = { p, t, id: id++ };
+      maxH.push(e); minH.push({ ...e });
+      snap({
+        kind: 'update', op: `update(${t}, ${p})`, lines: ['update'],
+        title: old === undefined ? `update(${t}, ${p})` : `update(${t}, ${p}): corrects ${old}`,
+        text: old === undefined
+          ? `Record price ${p} at time ${t}, and push (${p}, t${t}) onto both heaps.`
+          : `Time ${t} already had price ${old}. Overwrite it in the map and push (${p}, t${t}). The old (${old}, t${t}) entries stay in the heaps but are now stale (crossed out): the map no longer agrees with them.`,
+        calc: [`price[${t}] = ${p}`, `latest = ${latest}`],
+      });
+    } else if (op === 'current') {
+      out.push(price.get(latest));
+      snap({ kind: 'read', op: 'current()', which: null, lines: ['current'], title: `current() → ${price.get(latest)}`, text: `The latest timestamp seen is ${latest}; the map gives its price.`, calc: [`price[${latest}] = ${price.get(latest)}`] });
+    } else {
+      const max = op === 'maximum';
+      const h = max ? maxH : minH;
+      const sorted = heapOrder(h, max);
+      const dropped = [];
+      while (price.get(sorted[0].t) !== sorted[0].p) dropped.push(sorted.shift());
+      if (max) maxH = sorted; else minH = sorted;
+      if (dropped.length) {
+        snap({
+          kind: 'clean', op: `${op}()`, which: max ? 'max' : 'min', dropped: dropped.map((d) => `(${d.p}, t${d.t})`), lines: ['clean'],
+          title: `${op}(): pop ${plural(dropped.length, 'stale entry', 'stale entries')} off the top`,
+          text: `The top ${dropped.map((d) => `(${d.p}, t${d.t})`).join(', ')} ${dropped.length === 1 ? 'is' : 'are'} out of date: the map says ${dropped.map((d) => `t${d.t} is now ${price.get(d.t)}`).join(', ')}. Pop until the top agrees with the map. Each stale entry is popped once in its life, so this is O(log n) amortised.`,
+          calc: dropped.map((d) => `price[${d.t}] = ${price.get(d.t)} ≠ ${d.p}`),
+        });
+      }
+      out.push(sorted[0].p);
+      snap({
+        kind: 'read', op: `${op}()`, which: max ? 'max' : 'min', lines: ['read'],
+        title: `${op}() → ${sorted[0].p}`,
+        text: `The top (${sorted[0].p}, t${sorted[0].t}) matches the map, so it is the real ${op}.`,
+        calc: [`${op} = ${sorted[0].p}`],
+      });
+    }
+  }
+  snap({
+    kind: 'done', op: null, lines: [], answer: list(out),
+    title: `Answers: ${list(out)}`,
+    text: `Every entry is pushed once and popped at most once: O(log n) amortised per call. The check: computing each answer straight from the map gives ${list(lazyHeapAnswer(input))}. The same trick runs Number Container System, Food Rating System and Design Twitter-style feeds.`,
+    calc: [`answers = ${list(out)}`],
+  });
+  return steps;
+}
+
+export const lazyHeapText = (ops) => ops.map(([op, t, p]) => (op === 'update' ? `update ${t} ${p}` : op)).join(', ');
+
+export function parseLazyHeap(values) {
+  const parts = String(values.ops ?? '').toLowerCase().split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean);
+  const ops = [];
+  let any = false;
+  for (const t of parts) {
+    let m;
+    if ((m = /^update\s*\(?\s*(\d+)\s*[ ,]\s*(\d+)\s*\)?$/.exec(t))) {
+      const ts = Number(m[1]), p = Number(m[2]);
+      if (ts < 1 || ts > 20 || p < 1 || p > 99) return { error: 'Use timestamps 1 to 20 and prices 1 to 99.' };
+      ops.push(['update', ts, p]); any = true;
+    } else if (/^(current|maximum|minimum|max|min)\s*(\(\))?$/.test(t)) {
+      if (!any) return { error: 'Call update before current, maximum or minimum.' };
+      const w = t.replace(/[()\s]/g, '');
+      ops.push([w === 'max' ? 'maximum' : w === 'min' ? 'minimum' : w]);
+    } else return { error: `Couldn't read "${t}". Use update 1 10, current, maximum, minimum.` };
+  }
+  if (!ops.length || ops.length > 12) return { error: 'Give 1 to 12 operations.' };
+  return { input: { ops } };
+}
+
+export function randomLazyHeap(input, rand = Math.random) {
+  const g = rng(rand);
+  const ops = [];
+  const used = [];
+  while (ops.length < g.int(7, 10)) {
+    if (!used.length || g.bool(0.6)) { const t = used.length && g.bool(0.5) ? g.pick(used) : g.int(1, 6); used.push(t); ops.push(['update', t, g.int(1, 20)]); }
+    else ops.push([g.pick(['current', 'maximum', 'minimum'])]);
+  }
+  ops.push([g.pick(['maximum', 'minimum'])]);
+  return { ops };
+}
+
+// ---------------------------------------------------------------- 2294: partition with max − min ≤ k
+
+export const PARTITION_K = {
+  lesson: { label: 'nums = [3,6,1,2,5], k = 2', input: { nums: [3, 6, 1, 2, 5], k: 2 } },
+  zero: { label: 'k = 0', input: { nums: [2, 2, 4, 5], k: 0 } },
+};
+
+export const partitionKCode = [
+  ['sort', 'Arrays.sort(nums);'],
+  ['open', 'int groups = 1, start = nums[0];          // the smallest value of the open group'],
+  ['loop', 'for (int x : nums)'],
+  ['cut', '    if (x - start > k) { groups++; start = x; }   // x can\'t join: open a new group'],
+  ['end', 'return groups;'],
+];
+
+/** Minimum groups by brute force: DP over the sorted array (an optimal grouping is contiguous after sorting). */
+export function partitionKAnswer({ nums, k }) {
+  const a = [...nums].sort((x, y) => x - y);
+  const n = a.length;
+  const dp = Array(n + 1).fill(Infinity);
+  dp[0] = 0;
+  for (let i = 1; i <= n; i++) for (let j = 0; j < i; j++) if (a[i - 1] - a[j] <= k) dp[i] = Math.min(dp[i], dp[j] + 1);
+  return dp[n];
+}
+
+export function partitionK(input) {
+  const { k } = input;
+  const a = [...input.nums].sort((x, y) => x - y);
+  const steps = [];
+  const groups = [];
+  let start = 0;
+  steps.push({
+    kind: 'start', a, i: null, groups: [], lines: ['sort'],
+    title: `Fewest groups with max − min ≤ ${k}`,
+    text: `Groups are subsequences, so order doesn't matter: sort. Now look at the smallest value. It has to be in some group, and that group can hold everything up to smallest + ${k}. Taking all of those is never worse than taking fewer (anything left out would need its own group anyway). Then repeat from the next value.`,
+    calc: [`sorted: ${list(a)}`],
+  });
+  groups.push([0, 0]);
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] - a[start] > k) {
+      start = i;
+      groups.push([i, i]);
+      steps.push({ kind: 'cut', a, i, groups: groups.map((g) => [...g]), lines: ['loop', 'cut'], title: `${a[i]} − ${a[groups.at(-2)[0]]} > ${k}: new group`, text: `${a[i]} is more than ${k} above the group's smallest value ${a[groups.at(-2)[0]]}, so it can't join. It starts group ${groups.length}, with ${a[i]} as its smallest value.`, calc: [`${a[i]} − ${a[groups.at(-2)[0]]} = ${a[i] - a[groups.at(-2)[0]]} > ${k}`, `groups = ${groups.length}`] });
+    } else {
+      groups.at(-1)[1] = i;
+      steps.push({ kind: 'join', a, i, groups: groups.map((g) => [...g]), lines: ['loop'], title: `${a[i]} joins group ${groups.length}`, text: i === start ? `${a[i]} opens group ${groups.length}: everything up to ${a[i]} + ${k} = ${a[i] + k} can join it.` : `${a[i]} − ${a[start]} = ${a[i] - a[start]} ≤ ${k}, so ${a[i]} fits in the open group.`, calc: [`${a[i]} − ${a[start]} = ${a[i] - a[start]} ≤ ${k}`] });
+    }
+  }
+  steps.push({ kind: 'done', a, i: null, groups: groups.map((g) => [...g]), lines: ['end'], answer: `${groups.length}`, title: `${plural(groups.length, 'group')}`, text: `O(n log n) for the sort, then one pass. The check: trying every way to split the sorted array also needs ${partitionKAnswer(input)}.`, calc: [`groups = ${groups.length}`] });
+  return steps;
+}
+
+export function parsePartitionK(values) {
+  const r = parseInts(values.nums, { min: 0, max: 50, minLen: 1, maxLen: 10, name: 'nums' });
+  if (r.error) return r;
+  const k = parseInt1(values.k, { min: 0, max: 50, name: 'k' });
+  if (k.error) return k;
+  return { input: { nums: r.arr, k: k.v } };
+}
+
+export function randomPartitionK(input, rand = Math.random) {
+  const g = rng(rand);
+  return { nums: Array.from({ length: g.int(4, 9) }, () => g.int(0, 15)), k: g.int(0, 4) };
+}

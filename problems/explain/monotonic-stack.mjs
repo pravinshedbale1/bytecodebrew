@@ -28,4 +28,16 @@ export default {
     explain: 'Rows 1 and 2, columns 2 to 4, are all `1`s: a 2 × 3 rectangle of area 6. Nothing larger fits, so the answer is 6.',
     more: 'Treat each row as the floor of a histogram whose bar heights count the consecutive `1`s above, and apply the largest-rectangle-in-histogram method row by row.',
   },
+  'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': {
+    explain: 'The subarrays of [8,2,4,7] with max − min ≤ 4 are the four single elements, [2,4] and [4,7]. Every longer one contains values more than 4 apart (for example [2,4,7] has 7 − 2 = 5), so the answer is `2`.',
+  },
+  'jump-game-vi': {
+    explain: 'With k = 2, jump 0 → 1 → 3 → 5, landing on 1, −1, 4 and 3: the score is `7`. Landing on −2 or −7 instead would only lower it.',
+  },
+  'constrained-subsequence-sum': {
+    explain: 'Pick 10, 2, 5 and 20 (indices 0, 1, 3, 4): consecutive picks are at most 2 apart, and skipping −10 is allowed because 1 → 3 is a gap of 2. The sum is `37`.',
+  },
+  'shortest-subarray-with-sum-at-least-k': {
+    explain: 'The only subarray of [1] is [1], and its sum 1 is at least k = 1, so the shortest length is `1`.',
+  },
 };

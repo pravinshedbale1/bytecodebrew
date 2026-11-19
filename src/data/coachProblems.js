@@ -80,6 +80,19 @@ export default {
   'binary-search-tree-iterator': ['1', 'O(1) amortised per call, O(h) space'],
   'recover-binary-search-tree': ['n', 'O(n)'],
 
+  // ---- min/max queues, heap design, 2294
+  'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': ['n', 'O(n) with a max deque and a min deque'],
+  'jump-game-vi': ['n', 'O(n): DP with a max deque over the last k values'],
+  'constrained-subsequence-sum': ['n', 'O(n): DP with a max deque over the last k values'],
+  'shortest-subarray-with-sum-at-least-k': ['n', 'O(n): increasing deque of prefix sums'],
+  'smallest-number-in-infinite-set': ['logn', 'O(log n) per call'],
+  'seat-reservation-manager': ['logn', 'O(log n) per call'],
+  'stock-price-fluctuation': ['logn', 'O(log n) amortised per call (lazy deletion)'],
+  'design-a-number-container-system': ['logn', 'O(log n) amortised per call (lazy deletion)'],
+  'design-a-food-rating-system': ['logn', 'O(log n) amortised per call (lazy deletion)'],
+  'exam-room': [null, 'O(k) per seat with a sorted set, or O(log k) with a heap of gaps'],
+  'partition-array-such-that-maximum-difference-is-k': ['nlogn', 'O(n log n) for the sort'],
+
   // ---- contribution technique
   'sum-of-all-odd-length-subarrays': ['n', 'O(n), O(1) space'],
   'number-of-zero-filled-subarrays': ['n', 'O(n), O(1) space'],

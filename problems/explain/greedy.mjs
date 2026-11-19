@@ -50,4 +50,7 @@ export default {
   'jump-game-vii': {
     explain: 'From index 0, jump 3 to index 3 (a "0"), then jump 2 to index 5, the last index. The answer is `true`.',
   },
+  'partition-array-such-that-maximum-difference-is-k': {
+    explain: 'Sorted: [1,2,3,5,6]. The first group takes 1, 2 and 3 (all within 2 of 1). 5 is more than 2 above 1, so it starts a second group, which also takes 6. `2` groups.',
+  },
 };

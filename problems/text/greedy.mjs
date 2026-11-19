@@ -174,4 +174,15 @@ Return \`true\` if you can reach index \`s.length − 1\`, and \`false\` otherwi
       'Alternatively, BFS while remembering the farthest index already scheduled, so each index is examined only once.',
     ],
   },
+  'partition-array-such-that-maximum-difference-is-k': {
+    statement: `You are given an integer array \`nums\` and an integer \`k\`. Split \`nums\` into one or more subsequences so that every element is in exactly one of them, and in each subsequence the difference between its maximum and minimum is at most \`k\`.
+
+Return the minimum number of subsequences needed.`,
+    constraints: ['1 <= nums.length <= 1e5', '0 <= nums[i] <= 1e5', '0 <= k <= 1e5'],
+    hints: [
+      'The order inside a subsequence doesn\'t matter, only which values it holds. Sort.',
+      'The smallest value must be in some group, and that group can hold anything up to smallest + k. Taking all of them is never worse.',
+      'Walk the sorted array: keep the smallest value of the open group, and start a new group when the current value is more than k above it.',
+    ],
+  },
 };

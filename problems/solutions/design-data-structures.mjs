@@ -3838,4 +3838,1053 @@ FreqStack.prototype.pop = function() {
       },
     ],
   },
+
+  'smallest-number-in-infinite-set': {
+    pattern: 'Counter for "everything from next on" + a sorted set (or heap + set) of added-back numbers',
+    approaches: [
+      {
+        level: 'Brute force', name: 'A presence array',
+        idea: 'Only numbers up to about 1001 can ever be touched (1000 calls, values ≤ 1000), so keep a boolean array and scan it for the first number present.',
+        steps: [
+          'Mark `present[1 … 1001]` true.',
+          '`popSmallest` scans for the first true entry and clears it; `addBack` sets it again.',
+        ],
+        time: 'O(V) per pop', space: 'O(V)',
+        why: 'Fine here because the numbers stay below 1001, but it depends on that small bound and scans on every pop.',
+        code: {
+          java: r`class SmallestInfiniteSet {
+    private final boolean[] present = new boolean[1002];
+
+    public SmallestInfiniteSet() { Arrays.fill(present, true); }
+
+    public int popSmallest() {
+        int x = 1;
+        while (!present[x]) x++;
+        present[x] = false;
+        return x;
+    }
+
+    public void addBack(int num) { present[num] = true; }
+}`,
+          cpp: r`class SmallestInfiniteSet {
+    vector<bool> present;
+public:
+    SmallestInfiniteSet() : present(1002, true) {}
+
+    int popSmallest() {
+        int x = 1;
+        while (!present[x]) x++;
+        present[x] = false;
+        return x;
+    }
+
+    void addBack(int num) { present[num] = true; }
+};`,
+          python: r`class SmallestInfiniteSet:
+    def __init__(self):
+        self.present = [True] * 1002
+
+    def popSmallest(self) -> int:
+        x = 1
+        while not self.present[x]:
+            x += 1
+        self.present[x] = False
+        return x
+
+    def addBack(self, num: int) -> None:
+        self.present[num] = True`,
+          javascript: r`var SmallestInfiniteSet = function() {
+    this.present = new Array(1002).fill(true);
+};
+
+SmallestInfiniteSet.prototype.popSmallest = function() {
+    let x = 1;
+    while (!this.present[x]) x++;
+    this.present[x] = false;
+    return x;
+};
+
+SmallestInfiniteSet.prototype.addBack = function(num) {
+    this.present[num] = true;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Counter + set of added-back numbers',
+        idea: 'Every number ≥ next is in the set, so only numbers added back below next need storing, in a structure that ignores duplicates and gives the smallest.',
+        steps: [
+          '`popSmallest`: if the added-back set is non-empty, remove and return its smallest; otherwise return `next++`.',
+          '`addBack(x)`: if `x < next`, add it to the set (a repeat does nothing).',
+        ],
+        time: 'O(log n) per call', space: 'O(n)',
+        why: 'Independent of any bound on the values, and the infinite tail costs one integer.',
+        code: {
+          java: r`class SmallestInfiniteSet {
+    private int next = 1;                                     // every number ≥ next is in the set
+    private final TreeSet<Integer> added = new TreeSet<>();   // numbers < next that were added back
+
+    public SmallestInfiniteSet() {}
+    public int popSmallest() { return added.isEmpty() ? next++ : added.pollFirst(); }
+    public void addBack(int num) { if (num < next) added.add(num); }
+}`,
+          cpp: r`class SmallestInfiniteSet {
+    int next = 1;
+    set<int> added;
+public:
+    SmallestInfiniteSet() {}
+
+    int popSmallest() {
+        if (added.empty()) return next++;
+        int x = *added.begin();
+        added.erase(added.begin());
+        return x;
+    }
+
+    void addBack(int num) { if (num < next) added.insert(num); }
+};`,
+          python: r`class SmallestInfiniteSet:
+    def __init__(self):
+        self.next = 1
+        self.heap, self.inside = [], set()   # added-back numbers below next
+
+    def popSmallest(self) -> int:
+        if self.heap:
+            x = heappop(self.heap)
+            self.inside.remove(x)
+            return x
+        self.next += 1
+        return self.next - 1
+
+    def addBack(self, num: int) -> None:
+        if num < self.next and num not in self.inside:
+            self.inside.add(num)
+            heappush(self.heap, num)`,
+          javascript: r`var SmallestInfiniteSet = function() {
+    this.next = 1;
+    this.heap = new MinPriorityQueue();
+    this.inside = new Set();
+};
+
+SmallestInfiniteSet.prototype.popSmallest = function() {
+    if (this.heap.size() > 0) {
+        const x = this.heap.dequeue();
+        this.inside.delete(x);
+        return x;
+    }
+    return this.next++;
+};
+
+SmallestInfiniteSet.prototype.addBack = function(num) {
+    if (num < this.next && !this.inside.has(num)) {
+        this.inside.add(num);
+        this.heap.enqueue(num);
+    }
+};`,
+        },
+      },
+    ],
+  },
+
+  'seat-reservation-manager': {
+    pattern: 'Counter + min-heap of returned seats',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Scan for the first free seat',
+        idea: 'Keep a reserved flag per seat and scan from seat 1 on every reserve.',
+        steps: [
+          '`reserve`: find the lowest seat with `taken[s] == false`, mark it.',
+          '`unreserve`: clear the flag.',
+        ],
+        time: 'O(n) per reserve', space: 'O(n)',
+        why: 'With n = 10⁵ and half the seats taken, each reserve scans tens of thousands of seats: billions of steps over 10⁵ calls.',
+        code: {
+          java: r`class SeatManager {
+    private final boolean[] taken;
+    public SeatManager(int n) { taken = new boolean[n + 1]; }
+    public int reserve() {
+        int s = 1;
+        while (taken[s]) s++;
+        taken[s] = true;
+        return s;
+    }
+    public void unreserve(int seatNumber) { taken[seatNumber] = false; }
+}`,
+          cpp: r`class SeatManager {
+    vector<bool> taken;
+public:
+    SeatManager(int n) : taken(n + 1, false) {}
+    int reserve() {
+        int s = 1;
+        while (taken[s]) s++;
+        taken[s] = true;
+        return s;
+    }
+    void unreserve(int seatNumber) { taken[seatNumber] = false; }
+};`,
+          python: r`class SeatManager:
+    def __init__(self, n: int):
+        self.taken = [False] * (n + 1)
+
+    def reserve(self) -> int:
+        s = 1
+        while self.taken[s]:
+            s += 1
+        self.taken[s] = True
+        return s
+
+    def unreserve(self, seatNumber: int) -> None:
+        self.taken[seatNumber] = False`,
+          javascript: r`var SeatManager = function(n) {
+    this.taken = new Array(n + 1).fill(false);
+};
+
+SeatManager.prototype.reserve = function() {
+    let s = 1;
+    while (this.taken[s]) s++;
+    this.taken[s] = true;
+    return s;
+};
+
+SeatManager.prototype.unreserve = function(seatNumber) {
+    this.taken[seatNumber] = false;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Counter + heap of returned seats',
+        idea: 'Seats from next upwards have never been reserved, so they need no storage. Only returned seats go in a min-heap.',
+        steps: [
+          '`reserve`: pop the heap if it is non-empty, else return `next++`.',
+          '`unreserve(s)`: push `s` onto the heap.',
+        ],
+        time: 'O(log n) per call', space: 'O(n)',
+        why: 'No O(n) setup and no scanning; the heap only ever holds seats that came back.',
+        code: {
+          java: r`class SeatManager {
+    private final PriorityQueue<Integer> returned = new PriorityQueue<>();   // freed seats below next
+    private int next = 1;                                                  // seats ≥ next were never reserved
+
+    public SeatManager(int n) {}
+    public int reserve() { return returned.isEmpty() ? next++ : returned.poll(); }
+    public void unreserve(int seatNumber) { returned.add(seatNumber); }
+}`,
+          cpp: r`class SeatManager {
+    priority_queue<int, vector<int>, greater<>> returned;
+    int next = 1;
+public:
+    SeatManager(int n) {}
+    int reserve() {
+        if (returned.empty()) return next++;
+        int s = returned.top();
+        returned.pop();
+        return s;
+    }
+    void unreserve(int seatNumber) { returned.push(seatNumber); }
+};`,
+          python: r`class SeatManager:
+    def __init__(self, n: int):
+        self.returned, self.next = [], 1
+
+    def reserve(self) -> int:
+        if self.returned:
+            return heappop(self.returned)
+        self.next += 1
+        return self.next - 1
+
+    def unreserve(self, seatNumber: int) -> None:
+        heappush(self.returned, seatNumber)`,
+          javascript: r`var SeatManager = function(n) {
+    this.returned = new MinPriorityQueue();
+    this.next = 1;
+};
+
+SeatManager.prototype.reserve = function() {
+    return this.returned.size() > 0 ? this.returned.dequeue() : this.next++;
+};
+
+SeatManager.prototype.unreserve = function(seatNumber) {
+    this.returned.enqueue(seatNumber);
+};`,
+        },
+      },
+    ],
+  },
+
+  'stock-price-fluctuation': {
+    pattern: 'Hash map as the truth + two heaps with lazy deletion',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Map, scanned for max and min',
+        idea: 'Store timestamp → price; maximum and minimum scan every stored price.',
+        steps: [
+          '`update` writes the map and tracks the latest timestamp.',
+          '`maximum` / `minimum` loop over all prices.',
+        ],
+        time: 'O(n) per max/min', space: 'O(n)',
+        why: 'With tens of thousands of timestamps and as many queries, that is around 10⁹ steps.',
+        code: {
+          java: r`class StockPrice {
+    private final Map<Integer, Integer> price = new HashMap<>();
+    private int latest = 0;
+    public StockPrice() {}
+    public void update(int timestamp, int p) { price.put(timestamp, p); latest = Math.max(latest, timestamp); }
+    public int current() { return price.get(latest); }
+    public int maximum() { return Collections.max(price.values()); }
+    public int minimum() { return Collections.min(price.values()); }
+}`,
+          cpp: r`class StockPrice {
+    unordered_map<int, int> price;
+    int latest = 0;
+public:
+    StockPrice() {}
+    void update(int timestamp, int p) { price[timestamp] = p; latest = max(latest, timestamp); }
+    int current() { return price[latest]; }
+    int maximum() { int m = INT_MIN; for (auto& [t, p] : price) m = max(m, p); return m; }
+    int minimum() { int m = INT_MAX; for (auto& [t, p] : price) m = min(m, p); return m; }
+};`,
+          python: r`class StockPrice:
+    def __init__(self):
+        self.price, self.latest = {}, 0
+
+    def update(self, timestamp: int, price: int) -> None:
+        self.price[timestamp] = price
+        self.latest = max(self.latest, timestamp)
+
+    def current(self) -> int:
+        return self.price[self.latest]
+
+    def maximum(self) -> int:
+        return max(self.price.values())
+
+    def minimum(self) -> int:
+        return min(self.price.values())`,
+          javascript: r`var StockPrice = function() {
+    this.price = new Map();
+    this.latest = 0;
+};
+
+StockPrice.prototype.update = function(timestamp, price) {
+    this.price.set(timestamp, price);
+    this.latest = Math.max(this.latest, timestamp);
+};
+
+StockPrice.prototype.current = function() { return this.price.get(this.latest); };
+
+StockPrice.prototype.maximum = function() {
+    let m = -Infinity;
+    for (const p of this.price.values()) m = Math.max(m, p);
+    return m;
+};
+
+StockPrice.prototype.minimum = function() {
+    let m = Infinity;
+    for (const p of this.price.values()) m = Math.min(m, p);
+    return m;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two heaps with lazy deletion',
+        idea: 'Push (price, timestamp) on every update and never delete. When reading the top, pop entries the map disagrees with (that timestamp was corrected).',
+        steps: [
+          '`update`: write the map, update `latest`, push onto a max-heap and a min-heap.',
+          '`maximum`: while the max-heap\'s top `(p, t)` has `price[t] != p`, pop it; return the top. Same for `minimum`.',
+        ],
+        time: 'O(log n) amortised per call', space: 'O(n)',
+        why: 'Each entry is pushed once and popped at most once, so the cleaning work is paid for by the updates.',
+        code: {
+          java: r`class StockPrice {
+    private final Map<Integer, Integer> price = new HashMap<>();                              // the truth
+    private final PriorityQueue<int[]> maxH = new PriorityQueue<>((a, b) -> b[0] - a[0]);   // {price, timestamp}
+    private final PriorityQueue<int[]> minH = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+    private int latest = 0;
+
+    public StockPrice() {}
+
+    public void update(int timestamp, int p) {
+        price.put(timestamp, p);
+        latest = Math.max(latest, timestamp);
+        maxH.add(new int[] { p, timestamp });         // the old entry for this timestamp just goes stale
+        minH.add(new int[] { p, timestamp });
+    }
+
+    public int current() { return price.get(latest); }
+    public int maximum() { return top(maxH); }
+    public int minimum() { return top(minH); }
+
+    private int top(PriorityQueue<int[]> h) {
+        while (price.get(h.peek()[1]) != h.peek()[0]) h.poll();   // stale: that timestamp was corrected
+        return h.peek()[0];
+    }
+}`,
+          cpp: r`class StockPrice {
+    unordered_map<int, int> price;
+    priority_queue<pair<int, int>> maxH;                                         // {price, timestamp}
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> minH;
+    int latest = 0;
+public:
+    StockPrice() {}
+    void update(int timestamp, int p) {
+        price[timestamp] = p;
+        latest = max(latest, timestamp);
+        maxH.push({p, timestamp});
+        minH.push({p, timestamp});
+    }
+    int current() { return price[latest]; }
+    int maximum() {
+        while (price[maxH.top().second] != maxH.top().first) maxH.pop();
+        return maxH.top().first;
+    }
+    int minimum() {
+        while (price[minH.top().second] != minH.top().first) minH.pop();
+        return minH.top().first;
+    }
+};`,
+          python: r`class StockPrice:
+    def __init__(self):
+        self.price, self.latest = {}, 0
+        self.max_h, self.min_h = [], []
+
+    def update(self, timestamp: int, price: int) -> None:
+        self.price[timestamp] = price
+        self.latest = max(self.latest, timestamp)
+        heappush(self.max_h, (-price, timestamp))
+        heappush(self.min_h, (price, timestamp))
+
+    def current(self) -> int:
+        return self.price[self.latest]
+
+    def maximum(self) -> int:
+        while self.price[self.max_h[0][1]] != -self.max_h[0][0]:
+            heappop(self.max_h)
+        return -self.max_h[0][0]
+
+    def minimum(self) -> int:
+        while self.price[self.min_h[0][1]] != self.min_h[0][0]:
+            heappop(self.min_h)
+        return self.min_h[0][0]`,
+          javascript: r`var StockPrice = function() {
+    this.price = new Map();
+    this.latest = 0;
+    this.maxH = new PriorityQueue((a, b) => b[0] - a[0]);
+    this.minH = new PriorityQueue((a, b) => a[0] - b[0]);
+};
+
+StockPrice.prototype.update = function(timestamp, price) {
+    this.price.set(timestamp, price);
+    this.latest = Math.max(this.latest, timestamp);
+    this.maxH.enqueue([price, timestamp]);
+    this.minH.enqueue([price, timestamp]);
+};
+
+StockPrice.prototype.current = function() { return this.price.get(this.latest); };
+
+StockPrice.prototype.maximum = function() {
+    while (this.price.get(this.maxH.front()[1]) !== this.maxH.front()[0]) this.maxH.dequeue();
+    return this.maxH.front()[0];
+};
+
+StockPrice.prototype.minimum = function() {
+    while (this.price.get(this.minH.front()[1]) !== this.minH.front()[0]) this.minH.dequeue();
+    return this.minH.front()[0];
+};`,
+        },
+      },
+    ],
+  },
+
+  'design-a-number-container-system': {
+    pattern: 'Hash map as the truth + a lazy min-heap of indexes per number',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Scan every container',
+        idea: 'Keep index → number; find scans all containers for the smallest index holding the number.',
+        steps: [
+          '`change` writes the map.',
+          '`find` loops over every entry and keeps the smallest matching index.',
+        ],
+        time: 'O(n) per find', space: 'O(n)',
+        why: 'With 5 × 10⁴ containers and as many finds, that is billions of steps.',
+        code: {
+          java: r`class NumberContainers {
+    private final Map<Integer, Integer> at = new HashMap<>();
+    public NumberContainers() {}
+    public void change(int index, int number) { at.put(index, number); }
+    public int find(int number) {
+        int best = -1;
+        for (var e : at.entrySet())
+            if (e.getValue() == number && (best == -1 || e.getKey() < best)) best = e.getKey();
+        return best;
+    }
+}`,
+          cpp: r`class NumberContainers {
+    unordered_map<int, int> at;
+public:
+    NumberContainers() {}
+    void change(int index, int number) { at[index] = number; }
+    int find(int number) {
+        int best = -1;
+        for (auto& [i, x] : at) if (x == number && (best == -1 || i < best)) best = i;
+        return best;
+    }
+};`,
+          python: r`class NumberContainers:
+    def __init__(self):
+        self.at = {}
+
+    def change(self, index: int, number: int) -> None:
+        self.at[index] = number
+
+    def find(self, number: int) -> int:
+        return min((i for i, x in self.at.items() if x == number), default=-1)`,
+          javascript: r`var NumberContainers = function() {
+    this.at = new Map();
+};
+
+NumberContainers.prototype.change = function(index, number) {
+    this.at.set(index, number);
+};
+
+NumberContainers.prototype.find = function(number) {
+    let best = -1;
+    for (const [i, x] of this.at) if (x === number && (best === -1 || i < best)) best = i;
+    return best;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Lazy min-heap per number',
+        idea: 'Push the index onto its number\'s heap on every change and never delete. In find, pop indexes whose container now holds something else.',
+        steps: [
+          '`change(i, x)`: `at[i] = x`; push `i` onto `where[x]`.',
+          '`find(x)`: pop the top of `where[x]` while `at[top] != x`; return the top, or −1 if the heap is empty.',
+        ],
+        time: 'O(log n) amortised per call', space: 'O(n)',
+        why: 'Each pushed index is popped at most once, so the cleaning is paid for by the changes.',
+        code: {
+          java: r`class NumberContainers {
+    private final Map<Integer, Integer> at = new HashMap<>();                     // index → number
+    private final Map<Integer, PriorityQueue<Integer>> where = new HashMap<>();   // number → indexes (some stale)
+
+    public NumberContainers() {}
+
+    public void change(int index, int number) {
+        at.put(index, number);
+        where.computeIfAbsent(number, x -> new PriorityQueue<>()).add(index);
+    }
+
+    public int find(int number) {
+        PriorityQueue<Integer> h = where.get(number);
+        if (h == null) return -1;
+        while (!h.isEmpty() && at.get(h.peek()) != number) h.poll();   // that index holds something else now
+        return h.isEmpty() ? -1 : h.peek();
+    }
+}`,
+          cpp: r`class NumberContainers {
+    unordered_map<int, int> at;
+    unordered_map<int, priority_queue<int, vector<int>, greater<>>> where;
+public:
+    NumberContainers() {}
+    void change(int index, int number) {
+        at[index] = number;
+        where[number].push(index);
+    }
+    int find(int number) {
+        auto it = where.find(number);
+        if (it == where.end()) return -1;
+        auto& h = it->second;
+        while (!h.empty() && at[h.top()] != number) h.pop();
+        return h.empty() ? -1 : h.top();
+    }
+};`,
+          python: r`class NumberContainers:
+    def __init__(self):
+        self.at = {}
+        self.where = defaultdict(list)
+
+    def change(self, index: int, number: int) -> None:
+        self.at[index] = number
+        heappush(self.where[number], index)
+
+    def find(self, number: int) -> int:
+        h = self.where.get(number)
+        if not h:
+            return -1
+        while h and self.at[h[0]] != number:
+            heappop(h)
+        return h[0] if h else -1`,
+          javascript: r`var NumberContainers = function() {
+    this.at = new Map();
+    this.where = new Map();
+};
+
+NumberContainers.prototype.change = function(index, number) {
+    this.at.set(index, number);
+    if (!this.where.has(number)) this.where.set(number, new MinPriorityQueue());
+    this.where.get(number).enqueue(index);
+};
+
+NumberContainers.prototype.find = function(number) {
+    const h = this.where.get(number);
+    if (!h) return -1;
+    while (h.size() > 0 && this.at.get(h.front()) !== number) h.dequeue();
+    return h.size() > 0 ? h.front() : -1;
+};`,
+        },
+      },
+    ],
+  },
+
+  'design-a-food-rating-system': {
+    pattern: 'Maps as the truth + a lazy heap per cuisine (rating, then name)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Scan the cuisine\'s foods',
+        idea: 'Keep each food\'s rating and the list of foods per cuisine; highestRated scans that list.',
+        steps: [
+          '`changeRating` updates the food\'s rating.',
+          '`highestRated` loops over the cuisine\'s foods, keeping the best rating (smaller name on a tie).',
+        ],
+        time: 'O(n) per query', space: 'O(n)',
+        why: 'A cuisine can hold all 2 × 10⁴ foods, and there can be 10⁴ queries: 2 × 10⁸ comparisons, plus string compares.',
+        code: {
+          java: r`class FoodRatings {
+    private final Map<String, Integer> rating = new HashMap<>();
+    private final Map<String, List<String>> foodsOf = new HashMap<>();
+
+    public FoodRatings(String[] foods, String[] cuisines, int[] ratings) {
+        for (int i = 0; i < foods.length; i++) {
+            rating.put(foods[i], ratings[i]);
+            foodsOf.computeIfAbsent(cuisines[i], c -> new ArrayList<>()).add(foods[i]);
+        }
+    }
+
+    public void changeRating(String food, int newRating) { rating.put(food, newRating); }
+
+    public String highestRated(String cuisine) {
+        String best = null;
+        for (String f : foodsOf.get(cuisine)) {
+            int r = rating.get(f);
+            if (best == null || r > rating.get(best) || (r == rating.get(best) && f.compareTo(best) < 0)) best = f;
+        }
+        return best;
+    }
+}`,
+          cpp: r`class FoodRatings {
+    unordered_map<string, int> rating;
+    unordered_map<string, vector<string>> foodsOf;
+public:
+    FoodRatings(vector<string>& foods, vector<string>& cuisines, vector<int>& ratings) {
+        for (int i = 0; i < (int) foods.size(); i++) {
+            rating[foods[i]] = ratings[i];
+            foodsOf[cuisines[i]].push_back(foods[i]);
+        }
+    }
+    void changeRating(string food, int newRating) { rating[food] = newRating; }
+    string highestRated(string cuisine) {
+        string best;
+        for (auto& f : foodsOf[cuisine])
+            if (best.empty() || rating[f] > rating[best] || (rating[f] == rating[best] && f < best)) best = f;
+        return best;
+    }
+};`,
+          python: r`class FoodRatings:
+    def __init__(self, foods: List[str], cuisines: List[str], ratings: List[int]):
+        self.rating = dict(zip(foods, ratings))
+        self.foods_of = defaultdict(list)
+        for f, c in zip(foods, cuisines):
+            self.foods_of[c].append(f)
+
+    def changeRating(self, food: str, newRating: int) -> None:
+        self.rating[food] = newRating
+
+    def highestRated(self, cuisine: str) -> str:
+        return min(self.foods_of[cuisine], key=lambda f: (-self.rating[f], f))`,
+          javascript: r`var FoodRatings = function(foods, cuisines, ratings) {
+    this.rating = new Map();
+    this.foodsOf = new Map();
+    foods.forEach((f, i) => {
+        this.rating.set(f, ratings[i]);
+        if (!this.foodsOf.has(cuisines[i])) this.foodsOf.set(cuisines[i], []);
+        this.foodsOf.get(cuisines[i]).push(f);
+    });
+};
+
+FoodRatings.prototype.changeRating = function(food, newRating) {
+    this.rating.set(food, newRating);
+};
+
+FoodRatings.prototype.highestRated = function(cuisine) {
+    let best = null;
+    for (const f of this.foodsOf.get(cuisine)) {
+        const r = this.rating.get(f), b = best === null ? -1 : this.rating.get(best);
+        if (best === null || r > b || (r === b && f < best)) best = f;
+    }
+    return best;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Lazy heap per cuisine',
+        idea: 'Each cuisine has a heap ordered by rating (high first), then name (small first). Push a new entry on every rating change; in highestRated, pop entries whose rating isn\'t the food\'s current one.',
+        steps: [
+          'Maps `food → rating` and `food → cuisine` are the truth.',
+          '`changeRating`: update the map and push `(newRating, food)` onto the cuisine\'s heap.',
+          '`highestRated`: pop stale tops, then return the top\'s food.',
+        ],
+        time: 'O(log n) amortised per call', space: 'O(n + calls)',
+        why: 'Every entry is pushed once and popped at most once. (A TreeSet per cuisine with remove-then-add is the eager alternative, also O(log n).)',
+        code: {
+          java: r`class FoodRatings {
+    private record Entry(int rating, String food) {}
+    private final Map<String, Integer> rating = new HashMap<>();
+    private final Map<String, String> cuisineOf = new HashMap<>();
+    private final Map<String, PriorityQueue<Entry>> best = new HashMap<>();
+
+    public FoodRatings(String[] foods, String[] cuisines, int[] ratings) {
+        for (int i = 0; i < foods.length; i++) {
+            cuisineOf.put(foods[i], cuisines[i]);
+            best.computeIfAbsent(cuisines[i], c -> new PriorityQueue<>(
+                (a, b) -> a.rating() != b.rating() ? Integer.compare(b.rating(), a.rating()) : a.food().compareTo(b.food())));
+            changeRating(foods[i], ratings[i]);
+        }
+    }
+
+    public void changeRating(String food, int newRating) {
+        rating.put(food, newRating);
+        best.get(cuisineOf.get(food)).add(new Entry(newRating, food));
+    }
+
+    public String highestRated(String cuisine) {
+        PriorityQueue<Entry> h = best.get(cuisine);
+        while (h.peek().rating() != rating.get(h.peek().food())) h.poll();   // an old rating
+        return h.peek().food();
+    }
+}`,
+          cpp: r`class FoodRatings {
+    struct Worse {   // true when a should sit below b in the heap
+        bool operator()(const pair<int, string>& a, const pair<int, string>& b) const {
+            return a.first != b.first ? a.first < b.first : a.second > b.second;
+        }
+    };
+    unordered_map<string, int> rating;
+    unordered_map<string, string> cuisineOf;
+    unordered_map<string, priority_queue<pair<int, string>, vector<pair<int, string>>, Worse>> best;
+public:
+    FoodRatings(vector<string>& foods, vector<string>& cuisines, vector<int>& ratings) {
+        for (int i = 0; i < (int) foods.size(); i++) {
+            cuisineOf[foods[i]] = cuisines[i];
+            changeRating(foods[i], ratings[i]);
+        }
+    }
+    void changeRating(string food, int newRating) {
+        rating[food] = newRating;
+        best[cuisineOf[food]].push({newRating, food});
+    }
+    string highestRated(string cuisine) {
+        auto& h = best[cuisine];
+        while (h.top().first != rating[h.top().second]) h.pop();
+        return h.top().second;
+    }
+};`,
+          python: r`class FoodRatings:
+    def __init__(self, foods: List[str], cuisines: List[str], ratings: List[int]):
+        self.rating, self.cuisine_of = {}, {}
+        self.best = defaultdict(list)          # cuisine → heap of (−rating, food)
+        for f, c, r in zip(foods, cuisines, ratings):
+            self.cuisine_of[f] = c
+            self.changeRating(f, r)
+
+    def changeRating(self, food: str, newRating: int) -> None:
+        self.rating[food] = newRating
+        heappush(self.best[self.cuisine_of[food]], (-newRating, food))
+
+    def highestRated(self, cuisine: str) -> str:
+        h = self.best[cuisine]
+        while -h[0][0] != self.rating[h[0][1]]:
+            heappop(h)
+        return h[0][1]`,
+          javascript: r`var FoodRatings = function(foods, cuisines, ratings) {
+    this.rating = new Map();
+    this.cuisineOf = new Map();
+    this.best = new Map();
+    foods.forEach((f, i) => {
+        this.cuisineOf.set(f, cuisines[i]);
+        if (!this.best.has(cuisines[i]))
+            this.best.set(cuisines[i], new PriorityQueue((a, b) => b[0] - a[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)));
+        this.changeRating(f, ratings[i]);
+    });
+};
+
+FoodRatings.prototype.changeRating = function(food, newRating) {
+    this.rating.set(food, newRating);
+    this.best.get(this.cuisineOf.get(food)).enqueue([newRating, food]);
+};
+
+FoodRatings.prototype.highestRated = function(cuisine) {
+    const h = this.best.get(cuisine);
+    while (h.front()[0] !== this.rating.get(h.front()[1])) h.dequeue();
+    return h.front()[1];
+};`,
+        },
+      },
+    ],
+  },
+
+  'exam-room': {
+    pattern: 'Sorted set of seated students, or a heap of gaps with lazy deletion',
+    approaches: [
+      {
+        level: 'Better', name: 'Sorted set, scanned on each seat',
+        idea: 'Store only the occupied seats, sorted. The best seat is 0, n − 1, or the middle of the widest gap, so one pass over the seats finds it.',
+        steps: [
+          'Empty room: sit at 0.',
+          'Otherwise start with seat 0 (distance = first student); for each neighbouring pair (s, t) the middle gives distance (t − s) / 2; seat n − 1 gives n − 1 − last. Keep the strictly better ones so ties go to the lower seat.',
+          '`leave` removes the seat from the set.',
+        ],
+        time: 'O(k) per seat for k students', space: 'O(k)',
+        why: 'Simple and accepted on LeetCode for 10⁴ calls, but each seat walks the whole set.',
+        code: {
+          java: r`class ExamRoom {
+    private final int n;
+    private final TreeSet<Integer> seated = new TreeSet<>();
+
+    public ExamRoom(int n) { this.n = n; }
+
+    public int seat() {
+        if (seated.isEmpty()) { seated.add(0); return 0; }
+        int bestSeat = 0, bestDist = seated.first();         // seat 0: the distance to the first student
+        Integer prev = null;
+        for (int s : seated) {
+            if (prev != null && (s - prev) / 2 > bestDist) { bestDist = (s - prev) / 2; bestSeat = prev + bestDist; }
+            prev = s;
+        }
+        if (n - 1 - seated.last() > bestDist) bestSeat = n - 1;   // seat n − 1
+        seated.add(bestSeat);
+        return bestSeat;
+    }
+
+    public void leave(int p) { seated.remove(p); }
+}`,
+          cpp: r`class ExamRoom {
+    int n;
+    set<int> seated;
+public:
+    ExamRoom(int n) : n(n) {}
+    int seat() {
+        if (seated.empty()) { seated.insert(0); return 0; }
+        int bestSeat = 0, bestDist = *seated.begin(), prev = -1;
+        for (int s : seated) {
+            if (prev >= 0 && (s - prev) / 2 > bestDist) { bestDist = (s - prev) / 2; bestSeat = prev + bestDist; }
+            prev = s;
+        }
+        if (n - 1 - *seated.rbegin() > bestDist) bestSeat = n - 1;
+        seated.insert(bestSeat);
+        return bestSeat;
+    }
+    void leave(int p) { seated.erase(p); }
+};`,
+          python: r`class ExamRoom:
+    def __init__(self, n: int):
+        self.n, self.seated = n, []          # sorted list of occupied seats
+
+    def seat(self) -> int:
+        if not self.seated:
+            self.seated.append(0)
+            return 0
+        best_seat, best_dist = 0, self.seated[0]
+        for s, t in zip(self.seated, self.seated[1:]):
+            if (t - s) // 2 > best_dist:
+                best_dist, best_seat = (t - s) // 2, s + (t - s) // 2
+        if self.n - 1 - self.seated[-1] > best_dist:
+            best_seat = self.n - 1
+        insort(self.seated, best_seat)
+        return best_seat
+
+    def leave(self, p: int) -> None:
+        self.seated.remove(p)`,
+          javascript: r`var ExamRoom = function(n) {
+    this.n = n;
+    this.seated = [];   // sorted
+};
+
+ExamRoom.prototype.seat = function() {
+    const s = this.seated;
+    if (!s.length) { s.push(0); return 0; }
+    let bestSeat = 0, bestDist = s[0];
+    for (let k = 1; k < s.length; k++) {
+        const d = Math.floor((s[k] - s[k - 1]) / 2);
+        if (d > bestDist) { bestDist = d; bestSeat = s[k - 1] + d; }
+    }
+    if (this.n - 1 - s[s.length - 1] > bestDist) bestSeat = this.n - 1;
+    let pos = 0;
+    while (pos < s.length && s[pos] < bestSeat) pos++;
+    s.splice(pos, 0, bestSeat);
+    return bestSeat;
+};
+
+ExamRoom.prototype.leave = function(p) {
+    this.seated.splice(this.seated.indexOf(p), 1);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Heap of gaps with lazy deletion',
+        idea: 'Keep every gap (a, b) between neighbouring students (with sentinels −1 and n) in a heap ordered by the distance its best seat gives, then by that seat. Neighbour maps tell whether a gap still exists.',
+        steps: [
+          'A gap\'s seat is 0 if a = −1, n − 1 if b = n, else a + (b − a) / 2; its distance is b, n − 1 − a, or (b − a) / 2.',
+          '`seat`: pop gaps whose neighbours have changed (stale), take the top, sit at its seat, and push the two new gaps.',
+          '`leave(p)`: join p\'s neighbours a and b and push the merged gap (a, b); the two old gaps go stale.',
+        ],
+        time: 'O(log k) amortised per call', space: 'O(k + calls)',
+        why: 'Each gap is pushed once and popped at most once, so no call walks the whole room.',
+        code: {
+          java: r`class ExamRoom {
+    private final int n;
+    private final Map<Integer, Integer> left = new HashMap<>(), right = new HashMap<>();   // neighbours, with −1 and n
+    private final PriorityQueue<int[]> gaps;
+
+    public ExamRoom(int n) {
+        this.n = n;
+        gaps = new PriorityQueue<>((x, y) -> dist(x) != dist(y) ? Integer.compare(dist(y), dist(x)) : Integer.compare(spot(x), spot(y)));
+        right.put(-1, n);
+        left.put(n, -1);
+        gaps.add(new int[] { -1, n });
+    }
+
+    private int dist(int[] g) { return g[0] == -1 ? g[1] : g[1] == n ? n - 1 - g[0] : (g[1] - g[0]) / 2; }
+    private int spot(int[] g) { return g[0] == -1 ? 0 : g[1] == n ? n - 1 : g[0] + (g[1] - g[0]) / 2; }
+    private void add(int a, int b) { if (b - a > 1) gaps.add(new int[] { a, b }); }   // only gaps with a free seat
+
+    public int seat() {
+        while (!Objects.equals(right.get(gaps.peek()[0]), gaps.peek()[1])) gaps.poll();   // stale gap
+        int[] g = gaps.poll();
+        int p = spot(g);
+        right.put(g[0], p); left.put(p, g[0]);
+        right.put(p, g[1]); left.put(g[1], p);
+        add(g[0], p);
+        add(p, g[1]);
+        return p;
+    }
+
+    public void leave(int p) {
+        int a = left.remove(p), b = right.remove(p);
+        right.put(a, b);
+        left.put(b, a);
+        add(a, b);
+    }
+}`,
+          cpp: r`class ExamRoom {
+    int n;
+    unordered_map<int, int> lft, rgt;
+    int dist(pair<int, int> g) const { return g.first == -1 ? g.second : g.second == n ? n - 1 - g.first : (g.second - g.first) / 2; }
+    int spot(pair<int, int> g) const { return g.first == -1 ? 0 : g.second == n ? n - 1 : g.first + (g.second - g.first) / 2; }
+    struct Cmp {
+        const ExamRoom* r;
+        bool operator()(const pair<int, int>& x, const pair<int, int>& y) const {   // true: x below y
+            int dx = r->dist(x), dy = r->dist(y);
+            return dx != dy ? dx < dy : r->spot(x) > r->spot(y);
+        }
+    };
+    priority_queue<pair<int, int>, vector<pair<int, int>>, Cmp> gaps;
+    void add(int a, int b) { if (b - a > 1) gaps.push({a, b}); }
+public:
+    ExamRoom(int n) : n(n), gaps(Cmp{this}) {
+        rgt[-1] = n;
+        lft[n] = -1;
+        gaps.push({-1, n});
+    }
+    int seat() {
+        while (true) {
+            auto g = gaps.top();
+            auto it = rgt.find(g.first);
+            if (it != rgt.end() && it->second == g.second) break;
+            gaps.pop();
+        }
+        auto g = gaps.top();
+        gaps.pop();
+        int p = spot(g);
+        rgt[g.first] = p; lft[p] = g.first;
+        rgt[p] = g.second; lft[g.second] = p;
+        add(g.first, p);
+        add(p, g.second);
+        return p;
+    }
+    void leave(int p) {
+        int a = lft[p], b = rgt[p];
+        lft.erase(p);
+        rgt.erase(p);
+        rgt[a] = b;
+        lft[b] = a;
+        add(a, b);
+    }
+};`,
+          python: r`class ExamRoom:
+    def __init__(self, n: int):
+        self.n = n
+        self.left, self.right = {n: -1}, {-1: n}
+        self.gaps = []
+        self._add(-1, n)
+
+    def _dist(self, a, b):
+        return b if a == -1 else self.n - 1 - a if b == self.n else (b - a) // 2
+
+    def _spot(self, a, b):
+        return 0 if a == -1 else self.n - 1 if b == self.n else a + (b - a) // 2
+
+    def _add(self, a, b):
+        if b - a > 1:
+            heappush(self.gaps, (-self._dist(a, b), self._spot(a, b), a, b))
+
+    def seat(self) -> int:
+        while self.right.get(self.gaps[0][2]) != self.gaps[0][3]:
+            heappop(self.gaps)
+        _, p, a, b = heappop(self.gaps)
+        self.right[a], self.left[p], self.right[p], self.left[b] = p, a, b, p
+        self._add(a, p)
+        self._add(p, b)
+        return p
+
+    def leave(self, p: int) -> None:
+        a, b = self.left.pop(p), self.right.pop(p)
+        self.right[a], self.left[b] = b, a
+        self._add(a, b)`,
+          javascript: r`var ExamRoom = function(n) {
+    this.n = n;
+    this.left = new Map([[n, -1]]);
+    this.right = new Map([[-1, n]]);
+    this.gaps = new PriorityQueue((x, y) => y[0] - x[0] || x[1] - y[1]);   // [distance, seat, a, b]
+    this.add(-1, n);
+};
+
+ExamRoom.prototype.add = function(a, b) {
+    if (b - a <= 1) return;
+    const n = this.n;
+    const dist = a === -1 ? b : b === n ? n - 1 - a : Math.floor((b - a) / 2);
+    const spot = a === -1 ? 0 : b === n ? n - 1 : a + Math.floor((b - a) / 2);
+    this.gaps.enqueue([dist, spot, a, b]);
+};
+
+ExamRoom.prototype.seat = function() {
+    while (this.right.get(this.gaps.front()[2]) !== this.gaps.front()[3]) this.gaps.dequeue();
+    const [, p, a, b] = this.gaps.dequeue();
+    this.right.set(a, p); this.left.set(p, a);
+    this.right.set(p, b); this.left.set(b, p);
+    this.add(a, p);
+    this.add(p, b);
+    return p;
+};
+
+ExamRoom.prototype.leave = function(p) {
+    const a = this.left.get(p), b = this.right.get(p);
+    this.left.delete(p);
+    this.right.delete(p);
+    this.right.set(a, b);
+    this.left.set(b, a);
+    this.add(a, b);
+};`,
+        },
+      },
+    ],
+  },
 };

@@ -329,4 +329,26 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'partition-array-such-that-maximum-difference-is-k', title: 'Partition Array Such That Maximum Difference Is K', level: 'Medium',
+    summary: 'Split nums into the fewest subsequences (every element in exactly one) such that in each, the maximum minus the minimum is at most k. Return that number.',
+    method: 'partitionArray', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[3, 6, 1, 2, 5], 2], out: 2 },
+      { in: [[1, 2, 3], 1], out: 2 },
+      { in: [[2, 2, 4, 5], 0], out: 3 },
+      { in: [[0], 0] },
+      { in: [[100000, 0], 100000] },
+      { in: [[7, 7, 7, 7], 0] },
+    ],
+    ref: `class Solution {
+    public int partitionArray(int[] nums, int k) {
+        Arrays.sort(nums);
+        int groups = 1, start = nums[0];
+        for (int x : nums)
+            if (x - start > k) { groups++; start = x; }
+        return groups;
+    }
+}`,
+  },
 ];

@@ -50,4 +50,22 @@ export default {
   'maximum-frequency-stack': {
     explain: 'After the pushes, 5 appears three times and 7 twice. The first pop returns 5. Now 5 and 7 tie at two copies, and 7 was pushed more recently, so 7 comes next, then 5. Finally 5, 7 and 4 all appear once and 4 is nearest the top. Output: `[null,null,null,null,null,null,null,5,7,5,4]`.',
   },
+  'smallest-number-in-infinite-set': {
+    explain: 'addBack(2) does nothing (2 is already in the set). The pops return 1, 2 and 3. addBack(1) puts 1 back, so the next pop returns 1, then 4 and 5: `[null, null, 1, 2, 3, null, 1, 4, 5]`.',
+  },
+  'seat-reservation-manager': {
+    explain: 'Seats 1 and 2 are reserved, then 2 is freed. The next reserve takes the lowest free seat, 2 again, then 3, 4 and 5. Finally 5 is freed: `[null, 1, 2, null, 2, 3, 4, 5, null]`.',
+  },
+  'stock-price-fluctuation': {
+    explain: 'After prices 10 (t1) and 5 (t2), current is 5 (t2 is latest) and maximum is 10. Correcting t1 to 3 makes the maximum 5. Adding 2 at t4 makes the minimum 2: `[null, null, null, 5, 10, null, 5, null, 2]`.',
+  },
+  'design-a-number-container-system': {
+    explain: '10 isn\'t anywhere at first, so find(10) is −1. After 10 is placed at indexes 2, 1, 3 and 5, the smallest is 1. Index 1 then changes to 20, so the smallest index holding 10 becomes 2: `[null, -1, null, null, null, null, 1, null, 2]`.',
+  },
+  'design-a-food-rating-system': {
+    explain: 'Korean: kimchi (9) beats bulgogi (7). Japanese: ramen (14) is highest. Sushi goes to 16 and wins. Ramen then also goes to 16: on a tie, "ramen" comes before "sushi" alphabetically, so ramen wins: `[null, "kimchi", "ramen", null, "sushi", null, "ramen"]`.',
+  },
+  'exam-room': {
+    explain: 'The first student sits at 0 and the second at 9 (as far from 0 as possible). The third takes 4, the middle of 0 … 9 (distance 4, lowest on the tie with 5). The fourth takes 2. After 4 leaves, the widest gap is 2 … 9 and its middle is 5: `[null, 0, 9, 4, 2, null, 5]`.',
+  },
 };

@@ -253,4 +253,90 @@ Every \`pop\` call is made on a non-empty stack.`,
       'pop takes from the stack of the highest frequency, decreases that value\'s count, and drops the stack when it becomes empty. Both operations are O(1).',
     ],
   },
+  'smallest-number-in-infinite-set': {
+    statement: `You have a set that starts out containing every positive integer \`[1, 2, 3, …]\`. Implement \`SmallestInfiniteSet\`:
+
+- \`SmallestInfiniteSet()\` creates the set.
+- \`int popSmallest()\` removes the smallest integer in the set and returns it.
+- \`void addBack(int num)\` adds \`num\` back into the set, if it isn't in the set already.`,
+    constraints: ['1 <= num <= 1000', 'At most 1000 calls in total to popSmallest and addBack'],
+    hints: [
+      'You can\'t store infinitely many numbers. What do the numbers in the set look like if nothing has been added back?',
+      'They are exactly "next and everything after it" for a counter next. Only numbers added back below next need storing.',
+      'Keep next plus a sorted set (or a min-heap and a hash set) of added-back numbers smaller than next. popSmallest takes from that set first; addBack ignores numbers ≥ next and duplicates.',
+    ],
+  },
+  'seat-reservation-manager': {
+    statement: `A theatre has \`n\` seats numbered \`1\` to \`n\`, all unreserved at the start. Implement \`SeatManager\`:
+
+- \`SeatManager(int n)\` sets up the \`n\` seats.
+- \`int reserve()\` reserves the lowest-numbered unreserved seat and returns its number.
+- \`void unreserve(int seatNumber)\` makes a reserved seat unreserved again.
+
+Every \`reserve\` call has at least one free seat, and every \`unreserve\` call is for a reserved seat.`,
+    constraints: ['1 <= n <= 1e5', '1 <= seatNumber <= n', 'At most 1e5 calls in total to reserve and unreserve'],
+    hints: [
+      'A min-heap of all free seats works, but building it costs O(n log n) (or O(n) with heapify) before the first call.',
+      'Until a seat comes back, the free seats are just "next, next + 1, …". Keep a counter for those.',
+      'Keep next and a min-heap of returned seats only: reserve pops the heap if it isn\'t empty, otherwise hands out next++.',
+    ],
+  },
+  'stock-price-fluctuation': {
+    statement: `A stream of records arrives, each with a \`timestamp\` and the stock's \`price\` at that time. Records may arrive out of order, and a record for a timestamp seen before **corrects** the earlier price.
+
+Implement \`StockPrice\`:
+
+- \`void update(int timestamp, int price)\` records (or corrects) the price at \`timestamp\`.
+- \`int current()\` returns the price at the latest timestamp seen so far.
+- \`int maximum()\` returns the highest price over all timestamps, using the corrected prices.
+- \`int minimum()\` returns the lowest price, likewise.
+
+\`current\`, \`maximum\` and \`minimum\` are only called after at least one \`update\`.`,
+    constraints: ['1 <= timestamp, price <= 1e9', 'At most 1e5 calls in total'],
+    hints: [
+      'A hash map timestamp → price handles corrections and current (track the latest timestamp). The hard part is maximum and minimum after corrections.',
+      'A heap gives the max quickly, but removing the corrected (old) entry from the middle of a heap is O(n).',
+      'Lazy deletion: push (price, timestamp) on every update and never delete. In maximum, pop the top while the map says that timestamp now has a different price. Same for a min-heap.',
+    ],
+  },
+  'design-a-number-container-system': {
+    statement: `Design a system of numbered containers that can:
+
+- \`void change(int index, int number)\` put \`number\` in the container at \`index\`, replacing whatever number was there.
+- \`int find(int number)\` return the smallest index whose container holds \`number\`, or \`-1\` if no container holds it.`,
+    constraints: ['1 <= index, number <= 1e9', 'At most 1e5 calls in total to change and find'],
+    hints: [
+      'Keep index → number in a hash map: that is the truth about every container.',
+      'For find you need, per number, the smallest index holding it, while indexes keep changing number.',
+      'Give each number a min-heap of indexes and push on every change. In find, pop indexes whose container now holds a different number (lazy deletion), then read the top.',
+    ],
+  },
+  'design-a-food-rating-system': {
+    statement: `You are given parallel arrays \`foods\`, \`cuisines\` and \`ratings\`: food \`foods[i]\` belongs to cuisine \`cuisines[i]\` and has rating \`ratings[i]\`. Implement \`FoodRatings\`:
+
+- \`FoodRatings(String[] foods, String[] cuisines, int[] ratings)\` sets up the system.
+- \`void changeRating(String food, int newRating)\` changes the rating of \`food\`.
+- \`String highestRated(String cuisine)\` returns the name of the highest-rated food of that cuisine. On a tie, return the lexicographically smaller name.`,
+    constraints: ['1 <= n <= 2e4', 'n == foods.length', 'n == cuisines.length', 'n == ratings.length', '1 <= foods[i].length, cuisines[i].length <= 10', '1 <= ratings[i] <= 1e8', 'All food names are distinct', 'At most 2e4 calls in total to changeRating and highestRated'],
+    hints: [
+      'Maps food → rating and food → cuisine handle changeRating. highestRated needs the best food per cuisine as ratings change.',
+      'A heap per cuisine, ordered by rating (high first) and then name (small first), gives the best food, but removing the old rating is O(n).',
+      'Lazy deletion: push a new (rating, food) entry on every change; in highestRated pop entries whose rating no longer matches the food\'s current rating. A TreeSet per cuisine, with remove-then-add on each change, also works.',
+    ],
+  },
+  'exam-room': {
+    statement: `An exam room has \`n\` seats in a row, numbered \`0\` to \`n − 1\`. When a student enters, they sit in the seat that maximises the distance to the closest other student. If several seats tie, they take the lowest-numbered one. If the room is empty, they sit at seat \`0\`.
+
+Implement \`ExamRoom\`:
+
+- \`ExamRoom(int n)\` sets up the room.
+- \`int seat()\` seats the next student and returns their seat.
+- \`void leave(int p)\` the student at seat \`p\` leaves (there is always a student at \`p\`).`,
+    constraints: ['1 <= n <= 1e9', 'At most 1e4 calls in total to seat and leave'],
+    hints: [
+      'n can be 10⁹, so store only the occupied seats, sorted (a TreeSet).',
+      'The best seat is seat 0 (distance to the first student), seat n − 1 (distance from the last), or the middle of a gap between neighbours s < t (distance (t − s) / 2, at s + (t − s) / 2).',
+      'Scan the sorted seats once per seat() call, keeping the best by distance and then by seat number: O(k) per call. For O(log n), keep the gaps in a heap with lazy deletion.',
+    ],
+  },
 };

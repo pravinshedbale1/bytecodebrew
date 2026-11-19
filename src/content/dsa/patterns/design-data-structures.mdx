@@ -289,6 +289,160 @@ static class NestedIterator implements Iterator<Integer> {
 
 `hasNext()` does the work and must be **safe to call twice**: it only searches when nothing is buffered. Empty inner lists such as `[[], [[]]]` are the classic test, and the loop skips them naturally.
 
+## Designing with a heap: lazy deletion
+
+Many design questions boil down to *"keep giving me the smallest (or largest) thing, while things keep changing"*: the lowest free seat, the highest-rated dish, the smallest index holding a number, the max price after corrections. A heap (`PriorityQueue`) answers "smallest" in O(1) and adds in O(log n). The trouble is **changing or deleting** something that isn't on top: `PriorityQueue.remove(x)` searches the whole heap, O(n).
+
+Three ways around it:
+
+1. **Lazy deletion.** Keep a map as the source of truth. On every change, update the map and push a **new** heap entry; leave the old entry where it is. When you read the top, first pop entries that disagree with the map ("stale"). Every entry is pushed once and popped at most once, so it's **O(log n) amortised** per operation.
+2. **A sorted set** (`TreeSet` / `TreeMap`) instead of a heap: `remove(x)` is O(log n), and `first()` / `last()` give the min and max. Good when values are unique, or when you need both ends or neighbours (Exam Room).
+3. **Don't store what you can compute.** If most of the items are "everything from `next` upwards", keep only a counter for them and a small heap for the exceptions (Seat Reservation Manager, Smallest Number in Infinite Set).
+
+<LazyHeapViz examples={['lesson', 'stale']} />
+
+### Stock Price Fluctuation (2034): lazy deletion
+
+Prices arrive with timestamps, out of order, and a later record can **correct** an earlier timestamp. `current` needs the latest timestamp's price; `maximum` and `minimum` need the extremes over the corrected prices.
+
+```java
+class StockPrice {
+    private final Map<Integer, Integer> price = new HashMap<>();                              // the truth
+    private final PriorityQueue<int[]> maxH = new PriorityQueue<>((a, b) -> b[0] - a[0]);   // {price, timestamp}
+    private final PriorityQueue<int[]> minH = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+    private int latest = 0;
+
+    public void update(int timestamp, int p) {
+        price.put(timestamp, p);
+        latest = Math.max(latest, timestamp);
+        maxH.add(new int[] { p, timestamp });         // the old entry for this timestamp just goes stale
+        minH.add(new int[] { p, timestamp });
+    }
+
+    public int current() { return price.get(latest); }
+    public int maximum() { return top(maxH); }
+    public int minimum() { return top(minH); }
+
+    private int top(PriorityQueue<int[]> h) {
+        while (price.get(h.peek()[1]) != h.peek()[0]) h.poll();   // stale: that timestamp was corrected
+        return h.peek()[0];
+    }
+}
+```
+
+### Design a Number Container System (2349): a lazy heap per key
+
+`change(index, number)` puts `number` at `index` (replacing what was there); `find(number)` returns the smallest index holding `number`. Keep `index → number` as the truth and a min-heap of indexes per number. An index in `number`'s heap is stale if that index now holds something else.
+
+```java
+class NumberContainers {
+    private final Map<Integer, Integer> at = new HashMap<>();                     // index → number
+    private final Map<Integer, PriorityQueue<Integer>> where = new HashMap<>();   // number → indexes (some stale)
+
+    public void change(int index, int number) {
+        at.put(index, number);
+        where.computeIfAbsent(number, x -> new PriorityQueue<>()).add(index);
+    }
+
+    public int find(int number) {
+        PriorityQueue<Integer> h = where.get(number);
+        if (h == null) return -1;
+        while (!h.isEmpty() && at.get(h.peek()) != number) h.poll();   // that index holds something else now
+        return h.isEmpty() ? -1 : h.peek();
+    }
+}
+```
+
+### Design a Food Rating System (2353): a heap per group, with tie-breaks
+
+`highestRated(cuisine)` returns the best-rated food of that cuisine (alphabetically first on a tie), and ratings change. Same recipe: a map `food → rating` is the truth, and each cuisine has a heap ordered by rating, then name. An entry is stale when its rating isn't the food's current rating.
+
+```java
+class FoodRatings {
+    private record Entry(int rating, String food) {}
+    private final Map<String, Integer> rating = new HashMap<>();
+    private final Map<String, String> cuisineOf = new HashMap<>();
+    private final Map<String, PriorityQueue<Entry>> best = new HashMap<>();
+
+    public FoodRatings(String[] foods, String[] cuisines, int[] ratings) {
+        for (int i = 0; i < foods.length; i++) {
+            cuisineOf.put(foods[i], cuisines[i]);
+            best.computeIfAbsent(cuisines[i], c -> new PriorityQueue<>(
+                (a, b) -> a.rating() != b.rating() ? Integer.compare(b.rating(), a.rating()) : a.food().compareTo(b.food())));
+            changeRating(foods[i], ratings[i]);
+        }
+    }
+
+    public void changeRating(String food, int newRating) {
+        rating.put(food, newRating);
+        best.get(cuisineOf.get(food)).add(new Entry(newRating, food));
+    }
+
+    public String highestRated(String cuisine) {
+        PriorityQueue<Entry> h = best.get(cuisine);
+        while (h.peek().rating() != rating.get(h.peek().food())) h.poll();   // an old rating
+        return h.peek().food();
+    }
+}
+```
+
+### Seat Reservation Manager (1845) and Smallest Number in Infinite Set (2336): a counter plus a heap
+
+Seats `1 … n` start free, and `reserve` must hand out the **lowest** free seat. Putting all n seats in a heap up front costs O(n log n) (or O(n) with heapify). But until a seat is returned, the free seats are exactly "`next` and everything after it". So keep a counter `next` and a min-heap holding only the seats that were **given back**.
+
+```java
+class SeatManager {
+    private final PriorityQueue<Integer> returned = new PriorityQueue<>();   // freed seats below next
+    private int next = 1;                                                  // seats ≥ next were never reserved
+
+    public SeatManager(int n) {}
+    public int reserve() { return returned.isEmpty() ? next++ : returned.poll(); }
+    public void unreserve(int seatNumber) { returned.add(seatNumber); }
+}
+```
+
+Smallest Number in Infinite Set is the same design, with one catch: `addBack(x)` may add a number that is **already** in the set. Use a structure that ignores duplicates: a `TreeSet`, or a heap plus a `HashSet` of what's in it.
+
+```java
+class SmallestInfiniteSet {
+    private int next = 1;                                     // every number ≥ next is in the set
+    private final TreeSet<Integer> added = new TreeSet<>();   // numbers < next that were added back
+
+    public int popSmallest() { return added.isEmpty() ? next++ : added.pollFirst(); }
+    public void addBack(int num) { if (num < next) added.add(num); }   // ≥ next is already in; the set ignores repeats
+}
+```
+
+### Exam Room (855): a sorted set of who's seated
+
+A student takes the seat that **maximises the distance** to the nearest student (lowest seat on a tie); students also leave. With up to 10⁹ seats you store only the seated positions, in a `TreeSet`. The best seat is either seat 0, seat n − 1, or the middle of the widest gap between two neighbours, so one pass over the sorted positions finds it.
+
+```java
+class ExamRoom {
+    private final int n;
+    private final TreeSet<Integer> seated = new TreeSet<>();
+
+    public ExamRoom(int n) { this.n = n; }
+
+    public int seat() {
+        if (seated.isEmpty()) { seated.add(0); return 0; }
+        int bestSeat = 0, bestDist = seated.first();         // seat 0: the distance to the first student
+        Integer prev = null;
+        for (int s : seated) {
+            if (prev != null && (s - prev) / 2 > bestDist) { bestDist = (s - prev) / 2; bestSeat = prev + bestDist; }
+            prev = s;
+        }
+        if (n - 1 - seated.last() > bestDist) bestSeat = n - 1;   // seat n − 1
+        seated.add(bestSeat);
+        return bestSeat;
+    }
+
+    public void leave(int p) { seated.remove(p); }
+}
+```
+
+`seat` is O(k) for k seated students, fine for 10⁴ calls. The O(log n) version keeps the **gaps** in a heap (widest first, then lowest seat) with lazy deletion: `leave` merges two gaps into one, and the two old gaps go stale. The Solution tab has it.
+
 ## Design problems at a glance
 
 | Problem | Structures | Key trick |
@@ -300,6 +454,9 @@ static class NestedIterator implements Iterator<Integer> {
 | Min stack | Stack of (value, min so far) | Each entry remembers the min below it ([Stack Patterns](/dsa/patterns/stack-patterns)) |
 | Queue with two stacks | In-stack + out-stack | Refill out only when empty: amortised O(1) |
 | Running median | Max-heap + min-heap | Balance sizes ([Heaps](/dsa/patterns/heap-patterns)) |
+| Min / max with updates | Heap + map of current values | Lazy deletion: skip stale tops |
+| Lowest free seat / number | Counter + heap of returned ones | Don't store "everything from next on" |
+| Max / min queue | Queue + monotonic deque | Drop values a newer one beats ([Monotonic Stack](/dsa/patterns/monotonic-stack#min-queue-and-max-queue)) |
 | Iterators | One-element buffer or stack of iterators | Compute lazily; `hasNext` is idempotent |
 
 <Callout type="warning" title="Common mistakes">
@@ -310,6 +467,8 @@ static class NestedIterator implements Iterator<Integer> {
 - **Removing from the middle of an ArrayList** (O(n)) instead of swapping with the last.
 - **`hasNext()` with side effects** that break when it's called twice.
 - **Capacity 0** in caches: `put` must do nothing.
+- **`PriorityQueue.remove(x)` in a loop**: it's O(n). Use lazy deletion or a `TreeSet`.
+- **Comparing boxed `Integer`s with `==`**: `map.get(a) == map.get(b)` compares references and fails above 127. Unbox one side (compare with an `int`) or use `.equals`.
 
 </Callout>
 
@@ -331,6 +490,12 @@ static class NestedIterator implements Iterator<Integer> {
 | 355 | [Design Twitter](https://leetcode.com/problems/design-twitter/) | Medium | Maps + k-way merge with a heap |
 | 622 | [Design Circular Queue](https://leetcode.com/problems/design-circular-queue/) | Medium | Ring buffer: head + size |
 | 2013 | [Detect Squares](https://leetcode.com/problems/detect-squares/) | Medium | Point counts; enumerate the diagonal |
+| 2336 | [Smallest Number in Infinite Set](https://leetcode.com/problems/smallest-number-in-infinite-set/) | Medium | Counter + set of added-back numbers |
+| 1845 | [Seat Reservation Manager](https://leetcode.com/problems/seat-reservation-manager/) | Medium | Counter + min-heap of returned seats |
+| 2034 | [Stock Price Fluctuation](https://leetcode.com/problems/stock-price-fluctuation/) | Medium | Two heaps with lazy deletion |
+| 2349 | [Design a Number Container System](https://leetcode.com/problems/design-a-number-container-system/) | Medium | A lazy min-heap per number |
+| 2353 | [Design a Food Rating System](https://leetcode.com/problems/design-a-food-rating-system/) | Medium | A lazy heap per cuisine, ties by name |
+| 855 | [Exam Room](https://leetcode.com/problems/exam-room/) | Medium | Sorted set of seats (or a heap of gaps) |
 | 460 | [LFU Cache](https://leetcode.com/problems/lfu-cache/) | Hard | Frequency buckets + minFreq |
 | 381 | [Insert Delete GetRandom O(1) – Duplicates allowed](https://leetcode.com/problems/insert-delete-getrandom-o1-duplicates-allowed/) | Hard | Value → set of indexes |
 | 895 | [Maximum Frequency Stack](https://leetcode.com/problems/maximum-frequency-stack/) | Hard | A stack per frequency level |

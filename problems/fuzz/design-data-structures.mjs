@@ -140,4 +140,67 @@ export default {
       return ['pop', []];
     });
   },
+  'smallest-number-in-infinite-set': (g) => seq(g, 'SmallestInfiniteSet', [], g.len(1, 1000, 40), () => (g.bool(0.55) ? ['popSmallest', []] : ['addBack', [g.pick([1, 2, g.int(1, 10), g.int(1, 1000)])]])),
+  'seat-reservation-manager': (g) => {
+    const n = g.pick([1, 2, g.int(1, 10), 1e5]);
+    const taken = new Set();
+    let next = 1;
+    const free = [];
+    return seq(g, 'SeatManager', [n], g.len(1, 1e5, 40), () => {
+      if (taken.size < n && (taken.size === 0 || g.bool(0.6))) {
+        free.sort((x, y) => x - y);
+        const s = free.length ? free.shift() : next++;
+        taken.add(s);
+        return ['reserve', []];
+      }
+      if (!taken.size) return null;
+      const s = g.pick([...taken]);
+      taken.delete(s); free.push(s);
+      return ['unreserve', [s]];
+    });
+  },
+  'stock-price-fluctuation': (g) => {
+    let any = false;
+    const ts = () => g.pick([1, 2, 3, g.int(1, 6), g.int(1, 1e9)]);
+    return seq(g, 'StockPrice', [], g.len(1, 1e5, 40), () => {
+      if (!any || g.bool(0.5)) { any = true; return ['update', [ts(), g.val(1, 1e9)]]; }
+      return [g.pick(['current', 'maximum', 'minimum']), []];
+    });
+  },
+  'design-a-number-container-system': (g) => {
+    const idx = keyPool(g, 1, 1e9), num = keyPool(g, 1, 1e9);
+    return seq(g, 'NumberContainers', [], g.len(1, 1e5, 40), () => (g.bool(0.55) ? ['change', [idx(), num()]] : ['find', [num()]]));
+  },
+  'design-a-food-rating-system': (g) => {
+    const n = g.len(1, 2e4, 8);
+    const foods = [];
+    while (foods.length < n) { const f = g.str(g.int(1, 4), 'abcz'); if (!foods.includes(f)) foods.push(f); }
+    const kinds = Array.from({ length: g.int(1, 3) }, (_, k) => ['x', 'yy', 'korean'][k]);
+    const cuisines = foods.map(() => g.pick(kinds));
+    const ratings = foods.map(() => g.pick([1, 5, g.int(1, 5), 1e8]));
+    return seq(g, 'FoodRatings', [foods, cuisines, ratings], g.len(1, 2e4, 30), () => (g.bool(0.5)
+      ? ['changeRating', [g.pick(foods), g.pick([1, 5, g.int(1, 6), 1e8])]]
+      : ['highestRated', [g.pick(cuisines)]]));
+  },
+  'exam-room': (g) => {
+    const n = g.pick([1, 2, 3, g.int(1, 12), 1e9]);
+    const seated = [];
+    return seq(g, 'ExamRoom', [n], g.len(1, 1e4, 30), () => {
+      if (seated.length < n && (seated.length === 0 || g.bool(0.65))) {
+        // simulate seat() to know who sits where
+        const s = [...seated].sort((x, y) => x - y);
+        let best = 0;
+        if (s.length) {
+          let dist = s[0];
+          for (let k = 1; k < s.length; k++) { const d = Math.floor((s[k] - s[k - 1]) / 2); if (d > dist) { dist = d; best = s[k - 1] + d; } }
+          if (n - 1 - s.at(-1) > dist) best = n - 1;
+        }
+        seated.push(best);
+        return ['seat', []];
+      }
+      if (!seated.length) return null;
+      const p = seated.splice(g.int(0, seated.length - 1), 1)[0];
+      return ['leave', [p]];
+    });
+  },
 };
