@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { PremiumHint, VizHead } from '../mdx/VizFrame';
 import { usePremium } from '../../hooks/useAccess';
 import { PREMIUM_CONTENT } from '../../config/access';
 import { PremiumNotice } from '../access/PremiumGate';
@@ -16,10 +16,7 @@ export function lazySim(load, name, title, blurb) {
     if (PREMIUM_CONTENT.simulators && !premium) {
       return (
         <section className={styles.frame} aria-label={`${title} (premium)`}>
-          <header className={styles.head}>
-            <span className={styles.title}><SlidersHorizontal size={14} aria-hidden="true" /> {title}</span>
-            <span className={styles.badge}>Interactive · Premium</span>
-          </header>
+          <VizHead as="header" title={title}><PremiumHint /></VizHead>
           <div className={styles.body} style={{ paddingTop: 0 }}>
             <PremiumNotice compact feature="Interactive simulation" blurb={blurb} />
           </div>

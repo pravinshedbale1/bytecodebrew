@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MousePointerClick, Shuffle, Undo2 } from 'lucide-react';
-import { VizControls } from '../VizStepper';
+import { Shuffle, Undo2 } from 'lucide-react';
+import { StepDock, STEP_HINT, stepKeys, VizHead } from '../VizFrame';
 import styles from './StepViz.module.css';
 
 /**
@@ -46,7 +46,7 @@ export function Key({ tone = 'neutral', shape = 'pill', children }) {
   return <span className={`${styles.key} ${styles[`key_${shape}`]} ${styles[`k_${tone}`]}`}>{children}</span>;
 }
 
-function Run({ spec, steps, input }) {
+function Run({ spec, steps, input, keysRef }) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
   const last = steps.length - 1;
@@ -80,14 +80,11 @@ function Run({ spec, steps, input }) {
   const stats = spec.stats?.(f, input) ?? [];
   const { Stage } = spec;
 
-  const onKey = (e) => {
-    if (e.target !== e.currentTarget) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); s.next(); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); s.prev(); }
-  };
+  const onKey = stepKeys(s);
+  keysRef.current = onKey;   // the whole frame steps with the arrow keys, not just this part
 
   return (
-    <div className={styles.run} role="group" tabIndex={0} onKeyDown={onKey} aria-label="Step-through. Use the left and right arrow keys to step.">
+    <div className={styles.run} role="group" tabIndex={0} aria-label="Step-through. Use the left and right arrow keys to step.">
       <div className={styles.scroller} ref={stageRef}>
         <Stage step={f} input={input} width={width} link={shown.link} seq={shown.seq} jump={shown.jump} />
       </div>
@@ -124,9 +121,7 @@ function Run({ spec, steps, input }) {
       </div>
 
       {/* sticks to the bottom of the screen while any part of the visual is in view */}
-      <div className={styles.dock} data-sticky-dock>
-        <VizControls s={s} count={steps.length} />
-      </div>
+      <StepDock s={s} count={steps.length} />
     </div>
   );
 }
@@ -138,6 +133,7 @@ export function StepViz({ spec, examples, title }) {
   const [values, setValues] = useState(() => spec.values?.(first.input) ?? {});
   const [error, setError] = useState('');
   const steps = useMemo(() => spec.simulate(run.input), [spec, run]);
+  const keysRef = useRef(null);
 
   const start = (patch) => setRun((r) => ({ ...r, ...patch, id: r.id + 1 }));
   const pick = (key) => {
@@ -161,11 +157,8 @@ export function StepViz({ spec, examples, title }) {
   };
 
   return (
-    <figure className={styles.frame}>
-      <figcaption className={styles.head}>
-        <span className={styles.title}><MousePointerClick size={14} aria-hidden="true" /> {title ?? spec.title}</span>
-        <span className={styles.hintKeys}>Step with ‹ › or the arrow keys</span>
-      </figcaption>
+    <figure className={styles.frame} onKeyDown={(e) => keysRef.current?.(e)}>
+      <VizHead as="figcaption" title={title ?? spec.title} hint={STEP_HINT} />
 
       {keys.length > 1 && (
         <div className={styles.examples} role="radiogroup" aria-label="Example">
@@ -183,7 +176,7 @@ export function StepViz({ spec, examples, title }) {
         <span className={styles.rule}>{spec.rule(run.input)}</span>
       </p>
 
-      <Run key={run.id} spec={spec} steps={steps} input={run.input} />
+      <Run key={run.id} spec={spec} steps={steps} input={run.input} keysRef={keysRef} />
 
       {spec.fields && (
       <details className={styles.own}>

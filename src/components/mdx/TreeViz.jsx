@@ -1,6 +1,7 @@
 import styles from './ArrayViz.module.css';
 import t from './TreeViz.module.css';
-import { useStepper, VizState, VizControls } from './VizStepper';
+import { useStepper, VizState } from './VizStepper';
+import { PlayerFrame } from './VizFrame';
 
 /**
  * Step-through visualiser for trees (binary trees, tries, recursion trees).
@@ -71,8 +72,7 @@ export function TreeViz({ title, tree, frames }) {
   const ptrsAt = (id) => Object.entries(f.pointers ?? {}).filter(([, v]) => v === id).map(([k]) => k);
 
   return (
-    <figure className={styles.viz}>
-      {title && <figcaption className={styles.title}>{title}</figcaption>}
+    <PlayerFrame title={title} s={s} count={frames.length}>
       <div className={styles.scroller}>
         <svg className={t.svg} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title ?? 'tree'}>
           {edges.map(([a, b]) => (
@@ -107,7 +107,6 @@ export function TreeViz({ title, tree, frames }) {
         </svg>
       </div>
       <VizState f={f} />
-      <VizControls s={s} count={frames.length} />
-    </figure>
+    </PlayerFrame>
   );
 }

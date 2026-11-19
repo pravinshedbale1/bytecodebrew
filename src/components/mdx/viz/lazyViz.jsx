@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { MousePointerClick } from 'lucide-react';
+import { PremiumHint, VizHead } from '../VizFrame';
 import { usePremium } from '../../../hooks/useAccess';
 import { PREMIUM_CONTENT } from '../../../config/access';
 import { PremiumNotice } from '../../access/PremiumGate';
@@ -17,10 +17,7 @@ export function lazyViz(load, name, { premium, title, blurb } = {}) {
     if (premium && PREMIUM_CONTENT[premium] && !isPremium) {
       return (
         <section className={styles.frame} aria-label={`${props.title ?? title} (premium)`}>
-          <header className={styles.head}>
-            <span className={styles.title}><MousePointerClick size={14} aria-hidden="true" /> {props.title ?? title}</span>
-            <span className={styles.badge}>Step-through · Premium</span>
-          </header>
+          <VizHead as="header" title={props.title ?? title}><PremiumHint /></VizHead>
           <div className={styles.body} style={{ paddingTop: 0 }}>
             <PremiumNotice compact feature="Interactive step-through" blurb={blurb} />
           </div>

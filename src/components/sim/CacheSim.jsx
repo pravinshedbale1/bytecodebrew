@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { SimFrame, Choice, Stat } from './SimFrame';
-import { useStepper, VizControls } from '../mdx/VizStepper';
+import { useStepper } from '../mdx/VizStepper';
 import { pct } from './simKit';
 import styles from './Sim.module.css';
 
@@ -59,6 +59,8 @@ export function CacheSim() {
   return (
     <SimFrame
       title="Cache eviction policies"
+      s={s}
+      count={seq.length}
       hint="The same sequence of requests goes to three caches of the same size. Each row lists the cache contents with the next item to be evicted first. Step through and see which policy keeps the right items."
       footer={
         <div className={styles.stats}>
@@ -105,7 +107,6 @@ export function CacheSim() {
           })}
         </tbody>
       </table></div>
-      <VizControls s={s} count={seq.length} />
     </SimFrame>
   );
 }

@@ -1,6 +1,7 @@
 import styles from './ArrayViz.module.css';
 import g from './GraphViz.module.css';
-import { useStepper, VizState, VizControls } from './VizStepper';
+import { useStepper, VizState } from './VizStepper';
+import { PlayerFrame } from './VizFrame';
 
 /**
  * Step-through visualiser for anything drawn as nodes and arrows: graphs, linked lists, hash-table chains.
@@ -62,8 +63,7 @@ export function GraphViz({ title, nodes, edges, frames, directed: directedProp =
   const twoWay = (e) => directed && visibleEdges.some((o) => o.from === e.to && o.to === e.from);
 
   return (
-    <figure className={styles.viz}>
-      {title && <figcaption className={styles.title}>{title}</figcaption>}
+    <PlayerFrame title={title} s={s} count={frames.length}>
       <div className={styles.scroller}>
         <svg className={g.svg} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title ?? 'graph'}>
           <defs>
@@ -127,7 +127,6 @@ export function GraphViz({ title, nodes, edges, frames, directed: directedProp =
         </svg>
       </div>
       <VizState f={f} />
-      <VizControls s={s} count={frames.length} />
-    </figure>
+    </PlayerFrame>
   );
 }

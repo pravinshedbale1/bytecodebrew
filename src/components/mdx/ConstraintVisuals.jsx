@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { SIM_HINT, VizHead } from './VizFrame';
 import styles from './ConstraintVisuals.module.css';
 
 /**
@@ -37,10 +37,7 @@ export function fmt(n) {
 function Frame({ title, badge, hint, children, footer }) {
   return (
     <section className={styles.frame} aria-label={title}>
-      <header className={styles.head}>
-        <span className={styles.title}><SlidersHorizontal size={14} aria-hidden="true" /> {title}</span>
-        {badge && <span className={styles.badge}>{badge}</span>}
-      </header>
+      <VizHead as="header" title={title} hint={badge} />
       {hint && <p className={styles.hint}>{hint}</p>}
       <div className={styles.body}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}
@@ -164,7 +161,7 @@ export function ComplexityRuler() {
   return (
     <Frame
       title="How far does each complexity reach?"
-      badge="Interactive"
+      badge={SIM_HINT}
       hint="Each bar shows the range of n a complexity can handle in about a second. Pick the largest n from the problem's constraints: the line shows which bars still reach it. The slowest one that reaches it is usually what the problem setter intended."
       footer={<p>For n = <strong>{sizeLabel}</strong>, the slowest complexity that still fits is <strong className={styles.mono}>{best.name}</strong>, which points to {best.uses}. Anything slower times out; anything faster also passes.</p>}
     >
@@ -254,7 +251,7 @@ export function ModClock({ m = 7 }) {
   return (
     <Frame
       title={`Modulo is a clock with ${m} positions`}
-      badge="Interactive"
+      badge={SIM_HINT}
       hint={`Start at 0 and walk a steps (backwards when a is negative). Where you stop is a mod ${m}. Every value, however big, lands on one of only ${m} positions, which is why taking a modulo keeps numbers small.`}
       footer={
         <p>

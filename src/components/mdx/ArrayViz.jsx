@@ -1,5 +1,6 @@
 import styles from './ArrayViz.module.css';
-import { useStepper, VizState, VizControls } from './VizStepper';
+import { useStepper, VizState } from './VizStepper';
+import { PlayerFrame } from './VizFrame';
 
 /**
  * Step-through visualiser for array algorithms.
@@ -43,8 +44,7 @@ export function ArrayViz({ frames, title }) {
   const inWindow = (idx) => f.window && idx >= f.window[0] && idx <= f.window[1];
 
   return (
-    <figure className={styles.viz}>
-      {title && <figcaption className={styles.title}>{title}</figcaption>}
+    <PlayerFrame title={title} s={s} count={frames.length}>
 
       {f.grid ? <Grid f={f} /> : (
       <div className={styles.scroller}>
@@ -73,7 +73,6 @@ export function ArrayViz({ frames, title }) {
       )}
 
       <VizState f={f} />
-      <VizControls s={s} count={frames.length} />
-    </figure>
+    </PlayerFrame>
   );
 }

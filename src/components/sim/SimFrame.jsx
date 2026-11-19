@@ -1,17 +1,24 @@
-import { SlidersHorizontal } from 'lucide-react';
+import { SIM_HINT, STEP_HINT, StepDock, stepKeys, VizHead } from '../mdx/VizFrame';
 import styles from './Sim.module.css';
 
-/** The frame every simulator shares: a title bar, a short "what to try" line, the body and optional stats. */
-export function SimFrame({ title, hint, children, footer }) {
+/**
+ * The frame every simulator shares: the shared title bar (VizFrame), a short "what to try" line, the
+ * body and optional stats. A simulator that steps through a sequence passes its stepper (`s`, `count`):
+ * it then gets the same docked controls and arrow keys as every other step-through.
+ */
+export function SimFrame({ title, hint, children, footer, s, count }) {
   return (
-    <section className={styles.frame} aria-label={title}>
-      <header className={styles.head}>
-        <span className={styles.title}><SlidersHorizontal size={14} aria-hidden="true" /> {title}</span>
-        <span className={styles.badge}>Interactive</span>
-      </header>
+    <section
+      className={styles.frame}
+      aria-label={s ? `${title}. Use the left and right arrow keys to step.` : title}
+      tabIndex={s ? 0 : undefined}
+      onKeyDown={s ? stepKeys(s) : undefined}
+    >
+      <VizHead as="header" title={title} hint={s ? STEP_HINT : SIM_HINT} />
       {hint && <p className={styles.hint}>{hint}</p>}
       <div className={styles.body}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}
+      {s && <StepDock s={s} count={count} />}
     </section>
   );
 }

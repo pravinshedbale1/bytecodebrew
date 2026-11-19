@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Footprints, X, Lock } from 'lucide-react';
+import { Play, X, Lock } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { PREMIUM_CONTENT } from '../../config/access';
 import { PremiumNotice } from '../access/PremiumGate';
-import { useStepper, VizControls } from './VizStepper';
+import { useStepper } from './VizStepper';
+import { StepDock, STEP_HINT, stepKeys, VizHead, vizHint } from './VizFrame';
 import styles from './FlowSteps.module.css';
 
 const nodeIdOf = (g) => /flowchart-(.+)-\d+$/.exec(g.id)?.[1];
@@ -65,28 +66,49 @@ export function FlowSteps({ steps, title = 'Walk through the flow', children }) 
   );
 }
 
-/** The frame both step-throughs share: title bar with controls, the diagram, and the current step's text. */
+/**
+ * The frame both diagram step-throughs share. It matches the algorithm step-throughs (StepViz): same
+ * header, the same "Step with ‹ › or the arrow keys" hint, and the same controls docked at the bottom.
+ * The one difference is that a diagram starts as the whole picture and the walkthrough is opt-in.
+ */
 function StepFrame({ title, count, active, setActive, s, box, text, children }) {
   const premium = usePremium();
   const locked = PREMIUM_CONTENT.diagramSteps && !premium;
   const [askedLocked, setAskedLocked] = useState(false);
+  const wrap = useRef(null);
+
+  const start = () => {
+    if (locked) { setAskedLocked((v) => !v); return; }
+    setActive(true);
+    requestAnimationFrame(() => wrap.current?.focus({ preventScroll: true }));
+  };
+  const stop = () => { setActive(false); s.restart(); };
+  const keys = stepKeys(s, { onEscape: stop });
+  const onKey = (e) => { if (active) keys(e); };
+
   return (
-    <div className={`${styles.wrap} ${active ? styles.active : ''}`}>
-      <div className={styles.bar}>
-        <span className={styles.title}><Footprints size={14} aria-hidden="true" /> {title}</span>
+    <div
+      ref={wrap}
+      className={`${styles.wrap} ${active ? styles.active : ''}`}
+      tabIndex={active ? 0 : undefined}
+      onKeyDown={onKey}
+      role={active ? 'group' : undefined}
+      aria-label={active ? `${title}. Use the left and right arrow keys to step.` : undefined}
+    >
+      <VizHead title={title}>
         {active ? (
           <span className={styles.right}>
-            <VizControls s={s} count={count} />
-            <button type="button" className={styles.close} onClick={() => { setActive(false); s.restart(); }} aria-label="Show the whole diagram">
+            <span className={vizHint}>{STEP_HINT}</span>
+            <button type="button" className={styles.close} onClick={stop} aria-label="Stop and show the whole diagram" title="Show the whole diagram">
               <X size={15} />
             </button>
           </span>
         ) : (
-          <button type="button" className={styles.start} onClick={() => (locked ? setAskedLocked((v) => !v) : setActive(true))} aria-expanded={locked ? askedLocked : undefined}>
-            {locked && <Lock size={12} aria-hidden="true" />} Step through it ({count} steps)
+          <button type="button" className={styles.start} onClick={start} aria-expanded={locked ? askedLocked : undefined}>
+            {locked ? <Lock size={12} aria-hidden="true" /> : <Play size={12} aria-hidden="true" />} Step through it ({count} steps)
           </button>
         )}
-      </div>
+      </VizHead>
       {locked && askedLocked && (
         <div className={styles.lockedNote}>
           <PremiumNotice compact feature="Step-through diagrams" blurb={`Walk this diagram one step at a time (${count} steps), with the active part lit up and each step explained.`} />
@@ -94,10 +116,13 @@ function StepFrame({ title, count, active, setActive, s, box, text, children }) 
       )}
       <div ref={box}>{children}</div>
       {active && (
-        <p className={styles.text} aria-live="polite">
-          <span className={styles.num}>{s.i + 1}</span>
-          <span>{text}</span>
-        </p>
+        <>
+          <p className={styles.text} aria-live="polite">
+            <span className={styles.num}>{s.i + 1}</span>
+            <span>{text}</span>
+          </p>
+          <StepDock s={s} count={count} />
+        </>
       )}
     </div>
   );
