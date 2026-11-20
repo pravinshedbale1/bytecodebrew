@@ -8,4 +8,5 @@ export const COMPLETE = [
   'sliding-window',
   'prefix-sums',
   'intervals',
+  'binary-search',
 ];
