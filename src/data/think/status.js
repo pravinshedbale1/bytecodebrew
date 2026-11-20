@@ -4,4 +4,5 @@
  */
 export const COMPLETE = [
   'hashing',
+  'two-pointers',
 ];
