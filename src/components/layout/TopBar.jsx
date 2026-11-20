@@ -14,6 +14,7 @@ const PAGE_CRUMBS = {
   review: 'Review',
   mock: 'Mock interview',
   playground: 'Code playground',
+  think: 'Practice thinking',
   cheatsheet: 'Cheat sheet',
   solve: 'Solve',
   problems: 'Problems',

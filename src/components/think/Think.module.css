@@ -1,0 +1,146 @@
+/* Practice thinking: the stage-by-stage walkthrough (Walkthrough.jsx) and its sketches (Sketch.jsx). */
+
+.stages { display: grid; gap: var(--space-4); }
+
+.stage {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-4) var(--space-5);
+  min-width: 0;
+}
+.later { opacity: 0.5; padding-block: var(--space-3); }
+.next { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+
+.stageHead { display: flex; align-items: center; gap: 8px; color: var(--color-accent); }
+.stageHead h2 { margin: 0; font-size: var(--text-base); font-weight: 650; color: var(--color-text); }
+.num {
+  display: inline-grid; place-items: center; flex: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--color-accent); color: var(--color-accent-contrast);
+  font-size: 12px; font-weight: 700;
+}
+.later .num { background: var(--color-surface-muted); color: var(--color-text-muted); }
+.stage > :not(header) { margin-top: var(--space-3); }
+.stage p { line-height: 1.65; }
+
+.ask {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-accent-soft);
+}
+.ask p { margin: 0; display: flex; gap: 8px; align-items: baseline; }
+.ask svg { color: var(--color-accent); flex: none; transform: translateY(2px); }
+
+.reveal, .solveBtn {
+  font: inherit; font-size: var(--text-sm); font-weight: 600;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  border: 1px solid var(--color-accent); background: var(--color-accent); color: var(--color-accent-contrast);
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.reveal:hover, .solveBtn:hover { background: var(--color-accent-hover); }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); justify-content: flex-end; }
+.linkBtn {
+  font: inherit; font-size: var(--text-sm); background: none; border: 0; padding: 0;
+  color: var(--color-text-muted); cursor: pointer; display: inline-flex; gap: 4px; align-items: center;
+}
+.linkBtn:hover { color: var(--color-accent); }
+
+/* ---- read */
+
+.statement p, .statement ul { margin: 0 0 var(--space-2); }
+.statement code, .clues code, .stage code { font-family: var(--font-mono); font-size: 0.9em; }
+.example { color: var(--color-text-muted); font-size: var(--text-sm); }
+.clue {
+  background: var(--color-warn-soft); color: inherit;
+  border-bottom: 2px solid var(--color-warn); border-radius: 3px; padding: 0 2px;
+}
+.clue sup { font-size: 10px; font-weight: 700; color: var(--color-warn); margin-left: 2px; }
+.clues { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
+.clues li { display: flex; gap: 10px; align-items: baseline; }
+.clues q { font-weight: 600; }
+.clueNo {
+  flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-warn-soft); color: var(--color-warn); font-size: 11px; font-weight: 700;
+}
+
+/* ---- budget */
+
+.budget { border-collapse: collapse; font-size: var(--text-sm); margin: var(--space-2) 0; }
+.budget th, .budget td { padding: 4px 14px 4px 0; text-align: left; }
+.budget th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-subtle); font-weight: 600; }
+.v_ok { color: var(--color-success); font-weight: 600; }
+.v_warn { color: var(--color-warn); font-weight: 600; }
+.v_bad { color: var(--color-danger); font-weight: 600; }
+
+/* ---- observe, brute, pattern, watch */
+
+.observations { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-4); }
+.observations h3 { margin: 0 0 4px; font-size: var(--text-base); }
+.observations p { margin: 0; }
+.brute p { margin: 0 0 var(--space-2); }
+.waste { padding: var(--space-2) var(--space-3); border-left: 3px solid var(--color-danger); background: var(--color-danger-soft); border-radius: 4px; }
+.pick { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--color-success); background: var(--color-success-soft); }
+.pick p { margin: 0 0 var(--space-2); }
+.pickName { font-weight: 700; font-size: var(--text-lg); }
+.notTitle { margin: var(--space-4) 0 var(--space-2); font-size: 11px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-muted); }
+.nots, .edges { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.nots b { margin-right: 4px; }
+
+.frames { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.frameTitle { font-weight: 650; font-family: var(--font-mono); }
+.frames p { margin: 0 0 var(--space-2); }
+.frameNav { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
+.frameNav button {
+  width: 34px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 16px;
+}
+.frameNav button:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- sketches */
+
+.sketch { margin: var(--space-2) 0 0; min-width: 0; }
+.sketchRow + .sketchRow { margin-top: 4px; }
+.sketchScroll { overflow-x: auto; }
+.rowLabel { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-subtle); }
+.caption { margin-top: 2px; font-size: 12px; color: var(--color-text-muted); }
+
+.grid { display: grid; gap: 4px; grid-auto-rows: 40px; }
+.gcell {
+  display: grid; place-items: center; border-radius: 6px; border: 1px solid var(--color-border-strong);
+  background: var(--color-surface); font-family: var(--font-mono); font-weight: 650; font-size: 14px;
+}
+.g_empty { background: var(--color-surface-muted); border-style: dashed; border-color: var(--color-border); }
+.g_wall { background: var(--color-text-subtle); }
+.g_fresh { background: var(--color-warn-soft); border-color: var(--color-warn); }
+.g_rotten { background: var(--color-danger-soft); border-color: var(--color-danger); color: var(--color-danger); }
+.g_ring { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); }
+.g_cur { box-shadow: 0 0 0 3px var(--color-warn-soft); border-color: var(--color-warn); }
+.g_hit { background: var(--color-success-soft); border-color: var(--color-success); }
+
+/* ---- index page */
+
+.howList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.howList li { display: flex; gap: 10px; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.howList svg { color: var(--color-accent); flex: none; margin-top: 3px; }
+.howList b { display: block; }
+.howList span { font-size: var(--text-sm); color: var(--color-text-muted); }
+.problems { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.problems a {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);
+  color: var(--color-text); text-decoration: none;
+}
+.problems a:hover { border-color: var(--color-accent); }
+.problems .grow { flex: 1; font-weight: 600; }
+.lvl { font-size: 12px; font-weight: 600; }
+.lvl_Easy { color: var(--color-success); }
+.lvl_Medium { color: var(--color-warn); }
+.lvl_Hard { color: var(--color-danger); }
+.tagFree, .tagLock { font-size: 11px; padding: 1px 8px; border-radius: var(--radius-full); display: inline-flex; gap: 4px; align-items: center; }
+.tagFree { background: var(--color-success-soft); color: var(--color-success); }
+.tagLock { background: var(--color-surface-muted); color: var(--color-text-muted); }
+.topLinks { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); font-size: var(--text-sm); }
+
+/* grid and flex children may shrink, so wide sketches scroll inside instead of widening the page */
+.observations > li, .frames, .sketchRow, .stage > * { min-width: 0; }

@@ -221,6 +221,7 @@ const FIXED = [
   ['/problems', 'Problems', '448 interview problems by pattern, with tests in Java, C++, Python and JavaScript, hints and worked solutions.', false],
   ['/companies', 'Companies', 'How the best-paying tech companies in India interview software engineers.', false],
   ['/companies/ai-assisted-round', 'The AI-assisted debugging round', 'What the AI-assisted coding round looks like and how to practise it.', false],
+  ['/think', 'Practice thinking', 'Go from a problem statement to the right pattern: clues, time budget, observations, brute force, the pattern and why not its look-alikes, step by step.', false],
   ['/mock', 'Mock interview', 'Timed DSA, system design, LLD and behavioral mock interviews.', false],
   ['/runway', 'Runway', 'A day-by-day interview plan that re-plans itself around what you did.', false],
   ['/climb', 'Climb', 'Rated problem solving: problems picked at your level, against the clock.', false],

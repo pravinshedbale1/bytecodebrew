@@ -14,6 +14,8 @@ const DashboardPage = named(() => import('./pages/DashboardPage'), 'DashboardPag
 const ReviewPage = named(() => import('./pages/ReviewPage'), 'ReviewPage');
 const MockPage = named(() => import('./pages/MockPage'), 'MockPage');
 const PlaygroundPage = named(() => import('./pages/PlaygroundPage'), 'PlaygroundPage');
+const ThinkIndexPage = named(() => import('./pages/ThinkPage'), 'ThinkIndexPage');
+const ThinkProblemPage = named(() => import('./pages/ThinkPage'), 'ThinkProblemPage');
 const CheatSheetPage = named(() => import('./pages/CheatSheetPage'), 'CheatSheetPage');
 const SolvePage = named(() => import('./pages/SolvePage'), 'SolvePage');
 const ProblemsPage = named(() => import('./pages/ProblemsPage'), 'ProblemsPage');
@@ -47,6 +49,8 @@ export function App() {
         <Route path="review" element={page(<ReviewPage />)} />
         <Route path="mock" element={page(<MockPage />)} />
         <Route path="playground" element={page(<PlaygroundPage />)} />
+        <Route path="think" element={page(<ThinkIndexPage />)} />
+        <Route path="think/:slug" element={page(<ThinkProblemPage />)} />
         <Route path="cheatsheet/:trackId/:courseId" element={page(<CheatSheetPage />)} />
         <Route path="solve/:slug" element={page(<SolvePage />)} />
         <Route path="problems" element={page(<ProblemsPage />)} />

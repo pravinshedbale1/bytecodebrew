@@ -126,9 +126,14 @@ function Run({ spec, steps, input, keysRef }) {
   );
 }
 
-export function StepViz({ spec, examples, title }) {
-  const keys = examples?.length ? examples : Object.keys(spec.examples).slice(0, 1);
-  const first = spec.examples[keys[0]];
+/**
+ * `examples` picks preset examples by key; `inputs` ([{ label, input }]) runs the engine on inputs of
+ * your own instead (Practice thinking runs it on a problem's own example).
+ */
+export function StepViz({ spec, examples, title, inputs }) {
+  const exMap = inputs?.length ? Object.fromEntries(inputs.map((x, k) => [`in${k}`, x])) : spec.examples;
+  const keys = inputs?.length ? Object.keys(exMap) : examples?.length ? examples : Object.keys(spec.examples).slice(0, 1);
+  const first = exMap[keys[0]];
   const [run, setRun] = useState({ id: 0, example: keys[0], input: first.input, own: false });
   const [values, setValues] = useState(() => spec.values?.(first.input) ?? {});
   const [error, setError] = useState('');
@@ -137,7 +142,7 @@ export function StepViz({ spec, examples, title }) {
 
   const start = (patch) => setRun((r) => ({ ...r, ...patch, id: r.id + 1 }));
   const pick = (key) => {
-    const input = spec.examples[key].input;
+    const input = exMap[key].input;
     setError('');
     setValues(spec.values?.(input) ?? {});
     start({ example: key, input, own: false });
@@ -164,7 +169,7 @@ export function StepViz({ spec, examples, title }) {
         <div className={styles.examples} role="radiogroup" aria-label="Example">
           {keys.map((key) => (
             <button key={key} type="button" role="radio" aria-checked={!run.own && run.example === key} className={styles.opt} onClick={() => pick(key)}>
-              {spec.examples[key].label}
+              {exMap[key].label}
             </button>
           ))}
         </div>

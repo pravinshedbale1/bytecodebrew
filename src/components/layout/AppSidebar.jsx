@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Mountain } from 'lucide-react';
+import { Home, ChevronDown, ArrowLeft, X, LayoutDashboard, PlaneTakeoff, Sunrise, Building2, Layers, Timer, Code2, ListChecks, Mountain, Lightbulb } from 'lucide-react';
 import { usePremium } from '../../hooks/useAccess';
 import { tracks, trackIsActive, getCourse, getCourseLessons, courseStats } from '../../curriculum';
 import { parsePath } from '../../lib/route';
@@ -143,6 +143,7 @@ function GlobalNav({ activeTrackId }) {
 
 const PRACTICE_LINKS = [
   { to: '/problems', label: 'Problems', icon: ListChecks },
+  { to: '/think', label: 'Practice thinking', icon: Lightbulb },
   { to: '/review', label: 'Review', icon: Layers },
   { to: '/mock', label: 'Mock interview', icon: Timer },
   { to: '/playground', label: 'Code playground', icon: Code2 },
