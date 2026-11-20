@@ -6,4 +6,5 @@ export const COMPLETE = [
   'hashing',
   'two-pointers',
   'sliding-window',
+  'prefix-sums',
 ];
