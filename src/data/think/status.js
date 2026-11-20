@@ -7,4 +7,5 @@ export const COMPLETE = [
   'two-pointers',
   'sliding-window',
   'prefix-sums',
+  'intervals',
 ];
