@@ -5,7 +5,8 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { PremiumNotice } from '../components/access/PremiumGate';
 import { usePremium } from '../hooks/useAccess';
 import { loadProblem } from '../lib/judge/problems';
-import { THINK_INDEX } from '../data/thinkIndex';
+import { PATTERN_ORDER, THINK_INDEX } from '../data/thinkIndex';
+import { loadThink } from '../data/think';
 import { Walkthrough } from '../components/think/Walkthrough';
 import page from './Page.module.css';
 import styles from '../components/think/Think.module.css';
@@ -40,18 +41,29 @@ export function ThinkIndexPage() {
         </ol>
       </section>
       <section className={page.section}>
-        <h2 className={page.sectionTitle}>Problems</h2>
-        <ul className={styles.problems}>
-          {Object.entries(THINK_INDEX).map(([slug, p]) => (
-            <li key={slug}>
-              <Link to={`/think/${slug}`}>
-                <span className={styles.grow}>{p.title}</span>
-                <span className={`${styles.lvl} ${styles[`lvl_${p.level}`]}`}>{p.level}</span>
-                {p.free ? <span className={styles.tagFree}>Free</span> : !premium && <span className={styles.tagLock}><Lock size={11} aria-hidden="true" /> Premium</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <h2 className={page.sectionTitle}>By pattern · {Object.keys(THINK_INDEX).length} of {PATTERN_ORDER.reduce((s, r) => s + r[3], 0)} problems so far</h2>
+        {PATTERN_ORDER.filter(([, , done]) => done > 0).map(([lesson, name, done, total]) => (
+          <div key={lesson} className={styles.patternGroup}>
+            <h3 className={styles.patternHead}>
+              <Link to={`/dsa/patterns/${lesson}`}>{name}</Link>
+              <span className={done === total ? styles.countDone : styles.count}>{done === total ? `all ${total}` : `${done} of ${total}`}</span>
+            </h3>
+            <ul className={styles.problems}>
+              {Object.entries(THINK_INDEX).filter(([, p]) => p.lesson === lesson).map(([slug, p]) => (
+                <li key={slug}>
+                  <Link to={`/think/${slug}`}>
+                    <span className={styles.grow}>{p.title}</span>
+                    <span className={`${styles.lvl} ${styles[`lvl_${p.level}`]}`}>{p.level}</span>
+                    {p.free ? <span className={styles.tagFree}>Free</span> : !premium && <span className={styles.tagLock}><Lock size={11} aria-hidden="true" /> Premium</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        {PATTERN_ORDER.some(([, , done]) => done === 0) && (
+          <p className={styles.coming}>Coming next: {PATTERN_ORDER.filter(([, , done]) => done === 0).map(([, name]) => name).join(' · ')}</p>
+        )}
       </section>
     </PageLayout>
   );
@@ -67,7 +79,7 @@ export function ThinkProblemPage() {
   useEffect(() => {
     if (!meta) return undefined;
     let live = true;
-    Promise.all([loadProblem(slug), import('../data/think.js')]).then(([p, m]) => { if (live) { setProblem(p); setThink(m.THINK[slug]); } });
+    Promise.all([loadProblem(slug), loadThink(meta.lesson, slug)]).then(([p, t]) => { if (live) { setProblem(p); setThink(t); } });
     return () => { live = false; };
   }, [slug, meta]);
 
@@ -89,7 +101,7 @@ export function ThinkProblemPage() {
           <a href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noopener noreferrer">LeetCode</a>
         </div>
       </header>
-      {locked && <PremiumNotice feature="Practice thinking walkthroughs" blurb="Every problem taken from the statement to the pattern, one step at a time: clues, time budget, observations with sketches, brute force, the pattern and why not its look-alikes, then the idea running on the example. Two Easy walkthroughs are free." />}
+      {locked && <PremiumNotice feature="Practice thinking walkthroughs" blurb="Every problem taken from the statement to the pattern, one step at a time: clues, time budget, observations with sketches, brute force, the pattern and why not its look-alikes, then the idea running on the example. One walkthrough per pattern is free." />}
       {!locked && (problem && think ? <Walkthrough problem={problem} think={think} lesson={{ anchor: problem.anchor }} /> : <p aria-busy="true">Loading…</p>)}
     </PageLayout>
   );

@@ -11,7 +11,7 @@ import styles from './Think.module.css';
  * One problem, thought through like an ideal problem solver. The statement stays on top; the six stages
  * are closed headers (each showing the question to think about) that open with a click.
  * `problem` is the solver's problem data (statement, constraints, tests); `think` is its entry in
- * src/data/think.js.
+ * src/data/think/<lesson>.js.
  */
 const STAGES = [
   { id: 'read', icon: BookOpen, title: 'Read for clues', ask: 'Read the statement and the example. Which words hint at how to solve it?' },
@@ -211,7 +211,7 @@ function Frames({ frames }) {
     <div className={styles.frames}>
       <p className={styles.frameTitle}>{f.title}</p>
       <p><Inline text={f.text} /></p>
-      <Sketch sketch={f.sketch} />
+      {f.sketch && <Sketch sketch={f.sketch} />}
       <div className={styles.frameNav}>
         <button type="button" onClick={() => setI((x) => Math.max(0, x - 1))} disabled={i === 0} aria-label="Previous step">‹</button>
         <span>Step {i + 1} / {frames.length}</span>

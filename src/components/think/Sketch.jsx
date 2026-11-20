@@ -3,7 +3,7 @@ import { ArrayStrip, Stage, pitchFor } from '../mdx/viz/prims';
 import styles from './Think.module.css';
 
 /**
- * A small annotated picture of an example, drawn from data (see src/data/think.js):
+ * A small annotated picture of an example, drawn from data (see src/data/think/index.js):
  *   { kind: 'array', rows: [{ label?, items, marks?, bands?, tags? }], caption? }
  *   { kind: 'grid', grid, marks?, labels?, caption? }
  */
