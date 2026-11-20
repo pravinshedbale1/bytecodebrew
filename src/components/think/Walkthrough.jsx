@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, Eye, Gauge, Lightbulb, Play, RotateCcw, Search, Shapes, Swords } from 'lucide-react';
+import { BookOpen, ChevronDown, Eye, Gauge, Play, RotateCcw, Search, Shapes, Swords } from 'lucide-react';
 import { Inline } from '../solve/Inline';
 import { mdxComponents } from '../mdx/components';
 import { PATTERNS } from '../../lib/coach/patterns';
@@ -8,7 +8,8 @@ import { Sketch } from './Sketch';
 import styles from './Think.module.css';
 
 /**
- * One problem, thought through like an ideal problem solver: six stages, revealed one at a time.
+ * One problem, thought through like an ideal problem solver. The statement stays on top; the six stages
+ * are closed headers (each showing the question to think about) that open with a click.
  * `problem` is the solver's problem data (statement, constraints, tests); `think` is its entry in
  * src/data/think.js.
  */
@@ -22,43 +23,50 @@ const STAGES = [
 ];
 
 const storeKey = (slug) => `bcb.think.${slug}`;
-const readShown = (slug) => { try { return Number(localStorage.getItem(storeKey(slug))) || 0; } catch { return 0; } };
-const writeShown = (slug, n) => { try { localStorage.setItem(storeKey(slug), String(n)); } catch { /* private mode: fine */ } };
+/** Which stages are open, remembered per problem (a convenience: it may come back empty). */
+const readOpen = (slug) => {
+  try { const v = JSON.parse(localStorage.getItem(storeKey(slug)) ?? '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
+};
+const writeOpen = (slug, set) => { try { localStorage.setItem(storeKey(slug), JSON.stringify([...set])); } catch { /* private mode: fine */ } };
 
 export function Walkthrough({ problem, think, lesson }) {
   const slug = problem.slug;
-  const [shown, setShown] = useState(() => readShown(slug));   // how many stages are revealed
-  useEffect(() => { writeShown(slug, shown); }, [slug, shown]);
-  const reveal = () => setShown((n) => Math.min(STAGES.length, n + 1));
+  const [open, setOpen] = useState(() => readOpen(slug));
+  useEffect(() => { writeOpen(slug, open); }, [slug, open]);
+  const toggle = (id) => setOpen((o) => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const all = open.size === STAGES.length;
 
   return (
     <div className={styles.stages}>
+      <section className={styles.problemCard} aria-label="The problem">
+        <Statement problem={problem} clues={open.has('read') ? think.read : []} />
+      </section>
+      <div className={styles.controls}>
+        <span className={styles.controlsHint}>Try each step yourself, then open it.</span>
+        <button type="button" className={styles.linkBtn} onClick={() => setOpen(all ? new Set() : new Set(STAGES.map((s) => s.id)))}>
+          {all ? <><RotateCcw size={13} aria-hidden="true" /> Close all</> : 'Open all'}
+        </button>
+      </div>
       {STAGES.map((st, k) => {
-        const open = k < shown;
-        const next = k === shown;
+        const isOpen = open.has(st.id);
         const Icon = st.icon;
         return (
-          <section key={st.id} className={`${styles.stage} ${open ? styles.open : next ? styles.next : styles.later}`} aria-label={st.title}>
-            <header className={styles.stageHead}>
+          <section key={st.id} className={`${styles.stage} ${isOpen ? styles.open : ''}`} aria-label={st.title}>
+            <button type="button" className={styles.stageHead} onClick={() => toggle(st.id)} aria-expanded={isOpen}>
               <span className={styles.num}>{k + 1}</span>
               <Icon size={16} aria-hidden="true" />
-              <h2>{st.title}</h2>
-            </header>
-            {(open || next) && k === 0 && <Statement problem={problem} clues={open ? think.read : []} />}
-            {next && (
-              <div className={styles.ask}>
-                <p><Lightbulb size={14} aria-hidden="true" /> {st.ask}</p>
-                <button type="button" className={styles.reveal} onClick={reveal}>Think, then reveal</button>
-              </div>
-            )}
-            {open && <StageBody id={st.id} think={think} problem={problem} lesson={lesson} />}
+              <span className={styles.headText}>
+                <span className={styles.headTitle}>{st.title}</span>
+                {!isOpen && <span className={styles.headAsk}>{st.ask}</span>}
+              </span>
+              <ChevronDown size={16} className={styles.chev} aria-hidden="true" />
+            </button>
+            {isOpen && <div className={styles.body}><StageBody id={st.id} think={think} problem={problem} lesson={lesson} /></div>}
           </section>
         );
       })}
       <div className={styles.controls}>
-        {shown < STAGES.length && <button type="button" className={styles.linkBtn} onClick={() => setShown(STAGES.length)}>Show everything</button>}
-        {shown > 0 && <button type="button" className={styles.linkBtn} onClick={() => setShown(0)}><RotateCcw size={13} aria-hidden="true" /> Start over</button>}
-        {shown === STAGES.length && <Link to={`/solve/${slug}`} className={styles.solveBtn}><Play size={14} aria-hidden="true" /> Now solve it</Link>}
+        <Link to={`/solve/${slug}`} className={styles.solveBtn}><Play size={14} aria-hidden="true" /> Now solve it</Link>
       </div>
     </div>
   );
