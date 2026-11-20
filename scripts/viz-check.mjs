@@ -28,6 +28,7 @@ import * as sp from '../src/components/mdx/viz/models/special.js';
 import * as adv from '../src/components/mdx/viz/models/advanced.js';
 import * as ct from '../src/components/mdx/viz/models/contribution.js';
 import * as qu from '../src/components/mdx/viz/models/queues.js';
+import * as sd from '../src/components/mdx/viz/models/sides.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -461,6 +462,23 @@ function common(name, steps, code, kinds) {
     for (let t = 0; t < 1500; t++) runMo(stk.randomMono({ mode }, rand).a);
   }
 
+  // the template one comparison at a time: answers match brute force, one comparison per step, stack stays monotonic
+  const runSide = (input) => {
+    const steps = stk.stackSide(input);
+    const name = `stackSide ${JSON.stringify(input)}`;
+    common(name, steps, stk.stackSideCode(input), ['start', 'arrive', 'pop', 'stop', 'push', 'done']);
+    ok(steps.at(-1).answer === `[${stk.stackSideAnswer(input).join(', ')}]`, `${name}: answers`);
+    const dec = input.want === 'ng' || input.want === 'pg';
+    const strict = input.want === 'pg' || input.want === 'ps';
+    for (const x of steps) ok(x.st.every((k, j) => j === 0 || (dec ? (strict ? input.a[k] < input.a[x.st[j - 1]] : input.a[k] <= input.a[x.st[j - 1]]) : (strict ? input.a[k] > input.a[x.st[j - 1]] : input.a[k] >= input.a[x.st[j - 1]]))), `${name}: the stack stays monotonic`);
+    const pushes = steps.filter((x) => x.kind === 'push').length, popsN = steps.filter((x) => x.kind === 'pop').length;
+    ok(pushes === input.a.length && popsN <= pushes, `${name}: each index pushed once, popped at most once`);
+  };
+  for (const e of Object.values(stk.STACK_SIDE)) runSide(e.input);
+  for (const e of Object.values(stk.STACK_SIDE)) for (let t = 0; t < 1500; t++) runSide(stk.randomStackSide(e.input, rand));
+  ok(stk.stackSide(stk.STACK_SIDE.temps.input).at(-1).answer === '[1, 1, 4, 2, 1, 1, 0]', 'stackSide: daily temperatures example');
+  ok(stk.parseStackSide({ a: '3, 3' }, stk.STACK_SIDE.values.input).error, 'stackSide: duplicate values rejected when pushing values');
+
   const runHi = (h) => {
     const steps = stk.histogram({ h });
     common(`histogram ${h}`, steps, stk.histogramCode, ['start', 'push', 'pop', 'done']);
@@ -806,6 +824,72 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- structures beside the input (SideViz)
+{
+  const run = (name, steps, code, kinds, want) => {
+    common(name, steps, code, kinds);
+    ok(steps.at(-1).answer === want, `${name}: answer ${steps.at(-1).answer} vs ${want}`);
+  };
+  // deque: answers, the deque stays monotonic and inside the window
+  const D = (input) => {
+    const steps = sd.dequeSide(input);
+    const name = `dequeSide ${JSON.stringify(input)}`;
+    run(name, steps, sd.dequeSideCode(input.mode), ['start', 'arrive', 'popback', 'keep', 'push', 'dropfront', 'record', 'done'], `[${sd.dequeSideAnswer(input).join(', ')}]`);
+    for (const x of steps) {
+      ok(x.dq.every((j, t) => t === 0 || (input.mode === 'max' ? input.a[j] < input.a[x.dq[t - 1]] : input.a[j] > input.a[x.dq[t - 1]])), `${name}: deque is strictly monotonic`);
+      if (x.kind === 'record') ok(x.dq[0] > x.i - input.k, `${name}: front is inside the window when recorded`);
+    }
+  };
+  for (const e of Object.values(sd.DEQUE_SIDE)) D(e.input);
+  for (const e of Object.values(sd.DEQUE_SIDE)) for (let t = 0; t < 1500; t++) D(sd.randomDequeSide(e.input, rand));
+  ok(sd.dequeSide(sd.DEQUE_SIDE.max.input).at(-1).answer === '[3, 3, 5, 5, 6, 7]', 'dequeSide: LeetCode 239 example');
+
+  // window + counts
+  const C = (input) => {
+    const steps = sd.windowCounts(input);
+    const want = sd.windowCountsAnswer(input);
+    run(`windowCounts ${JSON.stringify(input)}`, steps, sd.windowCountsCode(input.mode), ['start', 'add', 'shrink', 'record', 'slide', 'match', 'done'], input.mode === 'unique' ? `${want}` : `[${want.join(', ')}]`);
+    for (const x of steps) if (x.r !== null && x.kind !== 'start') {
+      const win = input.s.slice(x.l, x.r + 1);
+      for (const [c, v] of Object.entries(x.count)) ok(v === win.split('').filter((y) => y === c).length, `windowCounts ${JSON.stringify(input)}: counts match the window`);
+    }
+  };
+  for (const e of Object.values(sd.WINDOW_COUNTS)) C(e.input);
+  for (const e of Object.values(sd.WINDOW_COUNTS)) for (let t = 0; t < 1500; t++) C(sd.randomWindowCounts(e.input, rand));
+  ok(sd.windowCounts(sd.WINDOW_COUNTS.unique.input).at(-1).answer === '3' && sd.windowCounts(sd.WINDOW_COUNTS.anagram.input).at(-1).answer === '[0, 6]', 'windowCounts: LeetCode 3 and 438 examples');
+
+  // BFS: answer, each cell enters the queue at most once
+  const B = (input) => {
+    const steps = sd.bfsQueue(input);
+    run(`bfsQueue ${JSON.stringify(input)}`, steps, sd.bfsQueueCode, ['start', 'pop', 'skip', 'push', 'found', 'done'], `${sd.bfsQueueAnswer(input)}`);
+    const pushed = steps.filter((x) => x.kind === 'push' || x.kind === 'found').map((x) => `${x.v}`);
+    ok(new Set(pushed).size === pushed.length, 'bfsQueue: no cell is pushed twice');
+  };
+  for (const e of Object.values(sd.BFS_QUEUE)) B(e.input);
+  for (let t = 0; t < 2000; t++) B(sd.randomBfsQueue({}, rand));
+  B({ grid: [[1, 0], [0, 0]] });
+
+  // recursion: result, depth never exceeds n, every call pushed once
+  for (const fn of ['fact', 'fib']) for (let n = 1; n <= (fn === 'fib' ? 5 : 6); n++) {
+    const input = { fn, n };
+    const steps = sd.callStack(input);
+    run(`callStack ${fn}(${n})`, steps, sd.callStackCode(fn), ['start', 'call', 'wait', 'base', 'return', 'done'], `${sd.callStackAnswer(input)}`);
+    ok(Math.max(...steps.map((x) => x.stack.length)) <= n, `callStack ${fn}(${n}): depth ≤ n`);
+    ok(steps.filter((x) => x.kind === 'call').length === Object.keys(sd.callTreeOf(input).nodes).length, `callStack ${fn}(${n}): one call per tree node`);
+  }
+
+  // stack / queue on arrays
+  const S = (input) => {
+    const steps = sd.stackQueue(input);
+    run(`stackQueue ${JSON.stringify(input)}`, steps, sd.stackQueueCode(input.mode), ['start', 'add', 'remove', 'peek', 'done'], `[${sd.stackQueueAnswer(input).join(', ')}]`);
+    for (const x of steps) for (const it of x.items) ok(x.arr[it.slot] === it.v, 'stackQueue: items sit in their array slots');
+    const back = sd.parseStackQueue({ ops: sd.stackQueueText(input.ops) }, input);
+    ok(back.input && JSON.stringify(back.input.ops) === JSON.stringify(input.ops), 'stackQueue: ops text parses back');
+  };
+  for (const e of Object.values(sd.STACK_QUEUE)) S(e.input);
+  for (const e of Object.values(sd.STACK_QUEUE)) for (let t = 0; t < 1500; t++) S(sd.randomStackQueue(e.input, rand));
 }
 
 // ---------------------------------------------------------------- 1944 visible people, 2444 fixed bounds, 995 k-bit flips

@@ -1,10 +1,12 @@
 import { StepViz, Key } from './StepViz';
 import { Arcs, ArrayStrip, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
 import styles from './StacksViz.module.css';
+import { CmpCard } from './sideKit';
 import {
   ASTEROIDS, BRACKETS, HISTOGRAM, MONO, SLIDE, asteroidCode, asteroids, brackets, bracketsCode, histogram, histogramCode, mono, monoCode,
   parseAsteroids, parseBrackets, parseHistogram, parseMono, parseSlide, randomAsteroids, randomBrackets, randomHistogram, randomMono,
   randomSlide, slide, slideCode,
+  STACK_SIDE, parseStackSide, randomStackSide, stackSide, stackSideCode,
 } from './models/stacks';
 
 /**
@@ -14,6 +16,7 @@ import {
  *   <NextGreaterViz />   bars wait on a stack until a bigger (or smaller, or warmer) one answers them
  *   <HistogramViz />     an increasing stack; each pop draws the rectangle that bar can make
  *   <SlidingMaxViz />    a decreasing deque whose front is the window's maximum
+ *   <StackSideViz />     the template one comparison at a time: the array, and the stack drawn beside it
  */
 
 const list = (a) => `[${a.join(', ')}]`;
@@ -383,4 +386,115 @@ const slideSpec = {
 
 export function SlidingMaxViz(props) {
   return <StepViz spec={slideSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- the template, one comparison at a time
+
+const SIDE_PLATE = 34;
+const SIDE_SYM = { ng: '<', ns: '>', pg: '<=', ps: '>=' };
+
+function StackSideStage({ step: f, input, width, seq, jump }) {
+  const a = input.a;
+  const n = a.length;
+  const plateW = 140;
+  const narrow = width < 520;                    // phones: the stack goes under the array instead of beside it
+  const pitch = pitchFor(narrow ? width - 8 : width - plateW - 60, n, 32, 54);
+  const arrW = n * pitch;
+  const y1 = 40, y2 = y1 + 46 + 66;
+  const arrBottom = y2 + 46;
+  const W = narrow ? Math.max(arrW, plateW + 8) : arrW + 48 + plateW;
+  const px = narrow ? 0 : arrW + 48;
+  const stackTop = narrow ? arrBottom + 34 : 0;  // where the stack's label sits
+  const deepest = Math.max(2, ...stackSide(input).map((x) => x.st.length));
+  const towerTop = stackTop + 84;
+  const towerH = (deepest + 1) * (SIDE_PLATE + 4);
+  const height = Math.max(towerTop + towerH + 24, arrBottom + 30);
+  const onStack = new Set(f.st);
+  const tags = {};
+  if (f.i !== null) tags[f.i] = [{ label: 'i', tone: 'accent' }];
+  if (f.cmp) tags[f.cmp.j] = [...(tags[f.cmp.j] ?? []), { label: 'top', tone: 'warn' }];
+  const fresh = f.kind === 'pop' ? f.popped : f.kind === 'stop' && !['ng', 'ns'].includes(input.want) ? f.i : null;
+  const plateText = (j) => (input.store === 'value' ? [String(a[j]), `from i = ${j}`] : [String(j), `a[${j}] = ${a[j]}`]);
+  const sym = SIDE_SYM[input.want];
+  const x = f.i !== null ? a[f.i] : null;
+  return (
+    <Stage width={W} height={height} jump={jump} label={`a = ${list(a)}`}>
+      <RowLabel x={0} y={8}>array</RowLabel>
+      <ArrayStrip
+        items={a} y={y1} pitch={pitch} tags={tags}
+        cls={(k) => [
+          k === f.i && 'cur',
+          f.cmp && k === f.cmp.j && 'target',
+          onStack.has(k) && k !== f.i && !(f.cmp && k === f.cmp.j) && 'kept',
+          f.i !== null && k > f.i && 'dim',
+        ].filter(Boolean).join(' ')}
+      />
+      <RowLabel x={0} y={y2 - 26}>{input.dist ? 'answer: days until warmer' : 'answer'}</RowLabel>
+      <ArrayStrip
+        items={f.ans.map((v, k) => ({ v: v === null ? '·' : v, id: k }))} y={y2} pitch={pitch} index={false}
+        cls={(k) => (k === fresh ? 'hit' : f.ans[k] === null ? 'dim' : '')}
+      />
+      <RowLabel x={px} y={stackTop + 8}>stack ({input.store === 'value' ? 'values' : 'indexes'}), top ↑</RowLabel>
+      {f.i !== null && (f.kind === 'pop' || f.kind === 'stop') && (
+        <CmpCard
+          style={{ position: 'absolute', left: px, top: stackTop + 24, width: plateW }}
+          tone={f.cmp?.ok ? 'yes' : 'no'}
+          q={f.cmp ? `${a[f.cmp.j]} ${sym} ${x}?` : 'stack empty'}
+          a={f.cmp ? (f.cmp.ok ? 'yes → pop' : 'no → stop') : 'stop'}
+        />
+      )}
+      {f.kind === 'push' && <CmpCard style={{ position: 'absolute', left: px, top: stackTop + 24, width: plateW }} tone="info" q={`push ${input.store === 'value' ? a[f.pushed] : f.pushed}`} a={input.store === 'value' ? 'the value' : `the index (a[${f.pushed}] = ${a[f.pushed]})`} />}
+      <div className={styles.tower} style={{ left: px, top: towerTop, width: plateW, height: towerH }}>
+        {f.popped !== null && (
+          <span key={`out${seq}`} className={`${styles.plate} ${styles.plateLeave} ${styles.plateGood}`} style={{ bottom: f.st.length * (SIDE_PLATE + 4), height: SIDE_PLATE }}>
+            <b>{plateText(f.popped)[0]}</b><small>{plateText(f.popped)[1]}</small>
+          </span>
+        )}
+        {f.st.map((j, k) => (
+          <span
+            key={j}
+            className={[styles.plate, k === f.st.length - 1 && styles.plateTop, f.pushed === j && styles.plateNew, f.cmp && f.cmp.j === j && styles.plateCmp].filter(Boolean).join(' ')}
+            style={{ bottom: k * (SIDE_PLATE + 4), height: SIDE_PLATE }}
+          >
+            <b>{plateText(j)[0]}</b><small>{plateText(j)[1]}</small>
+          </span>
+        ))}
+        {f.st.length === 0 && f.popped === null && <span className={styles.emptyPile}>empty</span>}
+      </div>
+    </Stage>
+  );
+}
+
+const SIDE_RULE = {
+  ng: 'pop while top < a[i]: a[i] is their next greater',
+  ns: 'pop while top > a[i]: a[i] is their next smaller',
+  pg: 'pop while top <= a[i]; what is left on top is the previous greater',
+  ps: 'pop while top >= a[i]; what is left on top is the previous smaller',
+};
+
+const stackSideSpec = {
+  title: 'The template, one comparison at a time',
+  examples: STACK_SIDE,
+  simulate: stackSide,
+  code: (input) => stackSideCode(input),
+  kinds: { start: ['Start', 'neutral'], arrive: ['Arrive', 'neutral'], pop: ['Compare: pop', 'success'], stop: ['Compare: stop', 'warn'], push: ['Push', 'accent'], done: ['Answers', 'success'] },
+  describe: (input) => `${input.dist ? 'temperatures' : 'a'} = ${list(input.a)}`,
+  rule: (input) => SIDE_RULE[input.want],
+  stats: (f) => [['stack size', f.st.length]],
+  legend: () => [
+    [<Key shape="box" tone="accent">i</Key>, 'the new element'],
+    [<Key shape="box" tone="warn">top</Key>, 'the top of the stack it is compared with'],
+    [<Key shape="box" tone="success">·</Key>, 'answer just written'],
+  ],
+  fields: (input) => [{ name: 'a', label: input.dist ? 'temperatures (30 to 99)' : 'a (0 to 99)', placeholder: input.dist ? 'e.g. 73, 74, 75, 71' : 'e.g. 2, 1, 2, 4, 3' }],
+  values: (input) => ({ a: input.a.join(', ') }),
+  parse: parseStackSide,
+  random: (input) => randomStackSide(input),
+  hint: (input) => `Between 2 and 9 numbers${input.store === 'value' ? ', all different' : ''}.`,
+  delay: (f) => (f.kind === 'arrive' ? 1400 : 2000),
+  Stage: StackSideStage,
+};
+
+export function StackSideViz(props) {
+  return <StepViz spec={stackSideSpec} {...props} />;
 }

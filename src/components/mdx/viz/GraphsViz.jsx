@@ -1,5 +1,6 @@
 import { StepViz, Key } from './StepViz';
 import { ArrayStrip, Chips, RowLabel, Stage, pitchFor } from './prims';
+import { Lane } from './sideKit';
 import styles from './GraphsViz.module.css';
 import {
   DIJKSTRA, GRID_BFS, ISLANDS, TOPO, UNION_FIND, dijkstra, dijkstraCode, edgesText, gridBfs, gridBfsCode, gridText, islands, islandsCode,
@@ -20,7 +21,7 @@ const ISLAND_TONES = ['accent', 'note', 'interview', 'warn', 'success'];
 
 // ---------------------------------------------------------------- grids
 
-function GridCells({ grid, width, cell: cellFn }) {
+export function GridCells({ grid, width, cell: cellFn }) {
   const R = grid.length, C = grid[0].length;
   const size = Math.max(30, Math.min(52, Math.floor((width - 8) / C)));
   return (
@@ -204,7 +205,7 @@ function TopoStage({ step: f, input, width }) {
           </div>
         ))}
       </div>
-      <Chips label="queue (ready)" chips={f.queue.map((u) => ({ key: u, text: String(u), tone: 'accent', isNew: f.fresh?.includes(u) }))} empty="empty" />
+      <Lane label="queue: courses ready to take (first in, first out)" items={f.queue.map((u) => ({ id: u, main: String(u), sub: 'in-degree 0', isNew: f.fresh?.includes(u) }))} />
       <Chips label="order" chips={f.order.map((u, k) => ({ key: u, text: String(u), tone: 'success', isNew: k === f.order.length - 1 && f.kind === 'take' }))} empty="none yet" />
     </div>
   );

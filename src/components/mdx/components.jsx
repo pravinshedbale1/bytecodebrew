@@ -66,6 +66,12 @@ const BucketViz = lazyViz(() => import('./viz/SortingViz'), 'BucketViz');
 const BracketsViz = lazyViz(() => import('./viz/StacksViz'), 'BracketsViz');
 const AsteroidViz = lazyViz(() => import('./viz/StacksViz'), 'AsteroidViz');
 const NextGreaterViz = lazyViz(() => import('./viz/StacksViz'), 'NextGreaterViz');
+const StackSideViz = lazyViz(() => import('./viz/StacksViz'), 'StackSideViz');
+const DequeSideViz = lazyViz(() => import('./viz/SideViz'), 'DequeSideViz');
+const WindowCountsViz = lazyViz(() => import('./viz/SideViz'), 'WindowCountsViz');
+const BfsQueueViz = lazyViz(() => import('./viz/SideViz'), 'BfsQueueViz');
+const CallStackViz = lazyViz(() => import('./viz/SideViz'), 'CallStackViz');
+const StackQueueViz = lazyViz(() => import('./viz/SideViz'), 'StackQueueViz');
 const HistogramViz = lazyViz(() => import('./viz/StacksViz'), 'HistogramViz');
 const SlidingMaxViz = lazyViz(() => import('./viz/StacksViz'), 'SlidingMaxViz');
 const TopKViz = lazyViz(() => import('./viz/HeapsViz'), 'TopKViz');
@@ -277,6 +283,12 @@ export const mdxComponents = {
   BracketsViz,
   AsteroidViz,
   NextGreaterViz,
+  StackSideViz,
+  DequeSideViz,
+  WindowCountsViz,
+  BfsQueueViz,
+  CallStackViz,
+  StackQueueViz,
   HistogramViz,
   SlidingMaxViz,
   TopKViz,

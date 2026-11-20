@@ -46,6 +46,10 @@ sequenceDiagram
   A-->>M: 10
 ```
 
+Step through it with the call stack drawn as a pile of frames, beside the tree of calls. Each frame keeps its own `n` and its own local variables; only the top frame runs, and the ones below are paused, waiting for an answer. Factorial makes a chain (one call per step); fib makes a tree, and the stack only ever holds one path of it.
+
+<CallStackViz examples={['fact', 'fib']} />
+
 Two consequences:
 
 - Every waiting call uses memory, so recursion depth `d` costs **O(d) space**.

@@ -55,6 +55,15 @@ static int[] nextGreater(int[] a) {
 
 For **previous** greater/smaller, use the same loop: after popping, the element left on top of the stack *is* the previous one (or none if empty). Or scan right to left.
 
+Step through the template **one comparison at a time**, with the stack drawn beside the array. Each step compares the new element `a[i]` with the top of the stack and either pops (the comparison holds) or stops (it doesn't). The examples cover all four variants, and show the difference between pushing **indexes** (the usual choice: the value is one lookup away, and the index gives distances like "days until warmer") and pushing **values** (fine when you only need the value, as in Next Greater Element I, where values are distinct).
+
+<StackSideViz examples={['ng', 'values', 'temps', 'ns', 'pg', 'ps']} />
+
+Two things to notice as you step:
+
+- **Why stopping early is safe.** When the top doesn't satisfy the comparison, nothing below it can either: the stack is monotonic, so everything below the top is even further away from qualifying.
+- **Next vs previous.** For *next*, the answer is written when an element is **popped** (the newcomer answers it). For *previous*, the answer is read **after** the pops, from whatever is left on top.
+
 ## Worked problems
 
 ### Daily temperatures — distance instead of value
@@ -224,6 +233,10 @@ static int[] maxSlidingWindow(int[] a, int k) {
 Step through it: watch values leave from the back when a bigger one arrives, and from the front when they slide out of the window.
 
 <SlidingMaxViz examples={['mixed', 'falling', 'rising']} />
+
+The same algorithm one comparison at a time, with the deque drawn as a lane (front on the left, back on the right). Each step makes exactly one decision: pop the back, stop, push, drop the expired front, or read the answer.
+
+<DequeSideViz examples={['max', 'min']} />
 
 ## Min queue and max queue
 

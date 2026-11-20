@@ -1,6 +1,6 @@
 /**
  * Stack and monotonic-stack step-throughs (models for <BracketsViz>, <AsteroidViz>, <NextGreaterViz>,
- * <HistogramViz> and <SlidingMaxViz>). Pure, so scripts/viz-check.mjs can test them.
+ * <HistogramViz>, <SlidingMaxViz> and <StackSideViz>). Pure, so scripts/viz-check.mjs can test them.
  */
 import { list, parseInt1, parseInts, plural, q, rng } from './util.js';
 
@@ -505,4 +505,163 @@ export function randomSlide(rand = Math.random) {
   const g = rng(rand);
   const a = Array.from({ length: g.int(6, 10) }, () => g.int(-5, 12));
   return { a, k: g.int(2, 4) };
+}
+
+// ---------------------------------------------------------------- the template, one comparison at a time
+
+/**
+ * The monotonic-stack template with the stack drawn beside the array, one comparison per step.
+ *   want:  'ng' next greater · 'ns' next smaller · 'pg' previous greater · 'ps' previous smaller
+ *   store: 'index' (push i) or 'value' (push a[i]; values must be distinct)
+ *   dist:  record i − j (days until warmer) instead of the value
+ */
+export const STACK_SIDE = {
+  ng: { label: 'Next greater · push indexes', input: { a: [2, 1, 2, 4, 3], want: 'ng', store: 'index' } },
+  values: { label: 'Next greater · push values', input: { a: [1, 3, 4, 2], want: 'ng', store: 'value' } },
+  temps: { label: 'Days until warmer', input: { a: [73, 74, 75, 71, 69, 72, 76], want: 'ng', store: 'index', dist: true } },
+  ns: { label: 'Next smaller', input: { a: [4, 8, 5, 2, 25], want: 'ns', store: 'index' } },
+  pg: { label: 'Previous greater', input: { a: [3, 7, 1, 7, 8, 4], want: 'pg', store: 'index' } },
+  ps: { label: 'Previous smaller', input: { a: [5, 2, 6, 3, 8], want: 'ps', store: 'index' } },
+};
+
+const isNext = (want) => want === 'ng' || want === 'ns';
+/** pop while this holds for (top value, current value) */
+const POP = {
+  ng: [(t, x) => t < x, '<'],
+  ns: [(t, x) => t > x, '>'],
+  pg: [(t, x) => t <= x, '<='],
+  ps: [(t, x) => t >= x, '>='],
+};
+const NOUN = { ng: 'next greater', ns: 'next smaller', pg: 'previous greater', ps: 'previous smaller' };
+
+export function stackSideCode({ want, store, dist }) {
+  const [, op] = POP[want];
+  const top = store === 'value' ? 'st.peek()' : 'a[st.peek()]';
+  const lines = [
+    ['loop', 'for (int i = 0; i < n; i++) {'],
+    ['cmp', `    while (!st.isEmpty() && ${top} ${op} a[i])`],
+  ];
+  if (isNext(want)) {
+    if (store === 'value') lines.push(['pop', `        next.put(st.pop(), a[i]);          // a[i] answers the popped value`]);
+    else if (dist) lines.push(['pop', '        { int j = st.pop(); ans[j] = i - j; }   // days waited']);
+    else lines.push(['pop', '        ans[st.pop()] = a[i];             // a[i] answers the popped index']);
+  } else {
+    lines.push(['pop', '        st.pop();                         // can never be an answer again']);
+    lines.push(['answer', `    ans[i] = st.isEmpty() ? -1 : ${top};   // what is left on top`]);
+  }
+  lines.push(['push', store === 'value' ? '    st.push(a[i]);                        // push the value itself' : '    st.push(i);                           // push the index: a[i] is one lookup away']);
+  lines.push(['end', '}']);
+  return lines;
+}
+
+/** Brute force: the answer for every index. */
+export function stackSideAnswer({ a, want, dist }) {
+  const [better] = POP[want];   // better(t, x): x beats t; for "previous", the answer must beat x strictly
+  return a.map((x, i) => {
+    if (isNext(want)) {
+      for (let j = i + 1; j < a.length; j++) if (better(x, a[j])) return dist ? j - i : a[j];
+      return dist ? 0 : -1;
+    }
+    for (let j = i - 1; j >= 0; j--) if (!better(a[j], x)) return a[j];
+    return -1;
+  });
+}
+
+export function stackSide(input) {
+  const { a, want, store, dist } = input;
+  const [pops, op] = POP[want];
+  const n = a.length;
+  const next = isNext(want);
+  const st = [];   // indexes (shown as indexes or values)
+  const ans = new Array(n).fill(null);
+  const steps = [];
+  const item = (j) => (store === 'value' ? `${a[j]}` : `${j}`);
+  const desc = want === 'ng' || want === 'pg' ? 'decreasing' : 'increasing';
+  const snap = (x) => steps.push({ st: [...st], ans: [...ans], i: null, cmp: null, popped: null, pushed: null, ...x });
+  snap({
+    kind: 'start', lines: [],
+    title: `${NOUN[want][0].toUpperCase()}${NOUN[want].slice(1)} for ${list(a)}`,
+    text: next
+      ? `Walk left to right. The stack holds the elements still waiting for their ${NOUN[want]}. Each new element is compared with the top of the stack: if it ${want === 'ng' ? 'beats (is greater than)' : 'undercuts (is smaller than)'} the top, it is the top's answer, so pop it and compare again.`
+      : `Walk left to right. For each element, pop everything on the stack that can't be its ${NOUN[want]}; what is left on top is the answer. Popped elements are hidden behind the new one, so nobody further right needs them.`,
+    calc: [`stack = []  (it will stay ${desc} from bottom to top)`, store === 'value' ? 'pushing values: fine because they are distinct' : 'pushing indexes: the value is a[i], and the index gives distances'],
+  });
+  for (let i = 0; i < n; i++) {
+    const x = a[i];
+    snap({
+      kind: 'arrive', i, lines: ['loop'],
+      title: `a[${i}] = ${x} arrives`,
+      text: st.length
+        ? `Compare it with the top of the stack, ${store === 'value' ? `the value ${a[st.at(-1)]}` : `index ${st.at(-1)} (a[${st.at(-1)}] = ${a[st.at(-1)]})`}. We pop while top ${op} ${x}.`
+        : `The stack is empty, so there is nothing to compare with.`,
+      calc: [`x = a[${i}] = ${x}`, `stack (bottom → top) = ${list(st.map(item))}`],
+    });
+    let hadPops = false;
+    while (st.length && pops(a[st.at(-1)], x)) {
+      const j = st.pop();
+      hadPops = true;
+      if (next) ans[j] = dist ? i - j : x;
+      snap({
+        kind: 'pop', i, cmp: { j, ok: true }, popped: j, lines: ['cmp', 'pop'],
+        title: `${a[j]} ${op} ${x}: pop ${store === 'value' ? a[j] : `index ${j}`}`,
+        text: next
+          ? `${x} is the first element to the right of index ${j} that is ${want === 'ng' ? 'greater' : 'smaller'} than ${a[j]}, so it is index ${j}'s answer${dist ? `: ${i} − ${j} = ${i - j} days` : ''}. Index ${j} is done waiting.`
+          : `${a[j]} ${op} ${x}, so ${a[j]} can't be the ${NOUN[want]} of ${x}. It can't be one for anything further right either: ${x} stands in front of it and is at least as ${want === 'pg' ? 'big' : 'small'}.`,
+        calc: [`top ${a[j]} ${op} ${x}? yes → pop`, ...(next ? [store === 'value' ? `next[${a[j]}] = ${x}` : dist ? `ans[${j}] = ${i} − ${j} = ${i - j}` : `ans[${j}] = ${x}`] : [])],
+      });
+    }
+    if (st.length) {
+      const j = st.at(-1);
+      if (!next) ans[i] = a[j];
+      snap({
+        kind: 'stop', i, cmp: { j, ok: false }, lines: next ? ['cmp'] : ['cmp', 'answer'],
+        title: `${a[j]} ${op} ${x}? No: stop${next ? '' : `, answer ${a[j]}`}`,
+        text: next
+          ? `${x} doesn't answer ${a[j]}. Everything below the top is even ${want === 'ng' ? 'bigger' : 'smaller'} (the stack is ${desc}), so it can't answer them either: stop comparing.`
+          : `${a[j]} is the nearest element to the left that is ${want === 'pg' ? 'greater' : 'smaller'} than ${x}: that is index ${i}'s answer.`,
+        calc: [`top ${a[j]} ${op} ${x}? no → stop`, ...(next ? [] : [`ans[${i}] = ${a[j]}`])],
+      });
+    } else if (hadPops || !next) {
+      if (!next) ans[i] = -1;
+      snap({
+        kind: 'stop', i, cmp: null, lines: next ? ['cmp'] : ['cmp', 'answer'],
+        title: `Stack empty: stop${next ? '' : ', answer −1'}`,
+        text: next ? `Nothing left to compare with.` : `Nothing to the left is ${want === 'pg' ? 'greater' : 'smaller'} than ${x}: index ${i} has no ${NOUN[want]}.`,
+        calc: ['stack is empty', ...(next ? [] : [`ans[${i}] = -1`])],
+      });
+    }
+    st.push(i);
+    snap({
+      kind: 'push', i, pushed: i, lines: ['push'],
+      title: `Push ${store === 'value' ? x : `index ${i}`}`,
+      text: next
+        ? `Index ${i} now waits for its own ${NOUN[want]}. ${store === 'value' ? `We push the value ${x} itself, and record answers by value.` : `We push the index ${i}, not ${x}: a[${i}] gives the value back, and the index ${dist ? 'gives the number of days' : 'says where to write the answer'}.`}`
+        : `${x} may be the ${NOUN[want]} of someone further right, so it goes on the stack. ${store === 'value' ? '' : `We push the index ${i}; a[${i}] = ${x} is one lookup away.`}`,
+      calc: [`stack = ${list(st.map(item))}`],
+    });
+  }
+  const left = [...st];
+  if (next) for (const j of st) ans[j] = dist ? 0 : -1;
+  const out = ans;
+  snap({
+    kind: 'done', lines: ['end'], answer: list(out), left,
+    title: `Answers: ${list(out)}`,
+    text: `${next && left.length ? `Still on the stack: ${list(left.map(item))}. Nothing to their right ever answered them, so they get ${dist ? '0' : '−1'}. ` : ''}Each index was pushed once and popped at most once, so all the comparisons together are O(n). The check: comparing every pair directly gives ${list(stackSideAnswer(input))}.`,
+    calc: [`ans = ${list(out)}`],
+  });
+  return steps;
+}
+
+export function parseStackSide(values, input) {
+  const r = parseInts(values.a, { min: input.dist ? 30 : 0, max: 99, minLen: 2, maxLen: 9, name: input.dist ? 'temperatures' : 'a' });
+  if (r.error) return r;
+  if (input.store === 'value' && new Set(r.arr).size !== r.arr.length) return { error: 'This example pushes values, so they must be distinct.' };
+  return { input: { ...input, a: r.arr } };
+}
+
+export function randomStackSide(input, rand = Math.random) {
+  const g = rng(rand);
+  const n = g.int(5, 8);
+  if (input.store === 'value') return { ...input, a: g.shuffle(Array.from({ length: 20 }, (_, k) => k + 1)).slice(0, n) };
+  return { ...input, a: Array.from({ length: n }, () => (input.dist ? g.int(65, 80) : g.int(1, 9))) };
 }

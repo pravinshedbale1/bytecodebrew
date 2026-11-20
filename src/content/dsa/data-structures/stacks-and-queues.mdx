@@ -28,6 +28,10 @@ Stacks and queues are arrays or lists with a **rule about which element leaves n
   { arr: ["F", "·", "C", "D", "E"], pointers: { head: 2, next: 1 }, highlight: [], done: [1], vars: { size: 4 }, note: "The queue holds C, D, E, F in order even though they are not left-to-right in memory. When size reaches capacity, a real implementation copies into a bigger array, unwrapping it oldest-first." }
 ]} />
 
+Step through both with the structure drawn the way you picture it (a pile of plates, a line of people) and the array that actually stores it underneath. A stack only ever touches its top; a queue adds at the back and removes at the front, and its indexes wrap around the array.
+
+<StackQueueViz examples={['stack', 'queue']} />
+
 ## How they work
 
 **Stack on an array.** The top is the **end** of the array. `push` writes at `size` and increments it; `pop` decrements `size` and returns that element. Nothing shifts, so both are O(1):

@@ -100,6 +100,10 @@ static int lengthOfLongestSubstring(String s) {
 }
 ```
 
+Step through it with the count table drawn beside the string: every add and every remove changes one count, and the window is valid exactly while no count is above 1.
+
+<WindowCountsViz examples={['unique']} />
+
 ### Minimum size subarray sum (shortest)
 
 > Positive integers. Find the shortest subarray with sum ≥ target.
@@ -160,6 +164,10 @@ static List<Integer> findAnagrams(String s, String p) {
 ```
 
 Comparing two 26-element arrays is O(26), so the whole thing is O(26·n) = O(n).
+
+Watch the two rows of the table: what the window **has** and what `p` **needs**. Each slide changes one count up and one count down; the window is an anagram exactly when the rows agree.
+
+<WindowCountsViz examples={['anagram']} />
 
 ### Minimum window substring (hard, shortest)
 

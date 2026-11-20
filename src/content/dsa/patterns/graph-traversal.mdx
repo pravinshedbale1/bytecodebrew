@@ -118,6 +118,10 @@ Step through it ring by ring: every cell in a ring is the same number of steps f
 
 <GridBfsViz examples={['path']} />
 
+The view above shows whole rings at a time. Below is the same search one neighbour at a time, with the queue drawn beside the grid: take the front cell, then for each neighbour decide **wall**, **already seen**, or **new: mark it and add it to the back**. Marking a cell when it is *added*, not when it is taken out, is what stops it from entering the queue twice.
+
+<BfsQueueViz examples={['path', 'walled']} />
+
 ## Multi-source BFS: many starting points at once
 
 When something spreads from **several** sources simultaneously, put **all of them** in the queue before starting. BFS levels then measure the distance from the *nearest* source.
