@@ -46,4 +46,8 @@ export default {
     return [s, lo, hi];
   },
   'partition-array-such-that-maximum-difference-is-k': (g) => [g.ints(g.len(1, 1e5, 25), 0, g.pick([1e5, 10, 0])), g.pick([0, 1, g.int(0, 10), 1e5])],
+  'orderly-queue': (g) => {
+    const s = g.str(g.len(1, 1000, 30), g.pick(['abcdefghijklmnopqrstuvwxyz', 'ab', 'abc']));
+    return [s, g.pick([1, 1, 2, g.int(1, s.length), s.length].filter((k) => k <= s.length))];
+  },
 };

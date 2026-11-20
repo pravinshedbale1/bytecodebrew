@@ -26,4 +26,14 @@ export default {
     const arr = g.ints(n, -1e4, 1e4, { sorted: 'asc' });
     return [arr, g.pick([1, n, g.int(1, n)]), g.pick([-1e4, 1e4, g.pick(arr), Math.min(1e4, g.pick(arr) + 1), g.int(-1e4, 1e4)])];
   },
+  // ---- flip windows
+  'minimum-operations-to-make-binary-array-elements-equal-to-one-i': (g) => {
+    const p = g.pick([0.5, 0.1, 0.9]);
+    return [Array.from({ length: g.len(3, 1e5, 30) }, () => (g.bool(p) ? 1 : 0))];
+  },
+  'minimum-number-of-k-consecutive-bit-flips': (g) => {
+    const p = g.pick([0.5, 0.2, 0.8]);
+    const a = Array.from({ length: g.len(1, 1e5, 30) }, () => (g.bool(p) ? 1 : 0));
+    return [a, g.pick([1, 2, 3, g.int(1, a.length), a.length].filter((k) => k <= a.length))];
+  },
 };

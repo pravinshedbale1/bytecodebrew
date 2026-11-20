@@ -23,7 +23,7 @@ let failures = 0;
 const check = (ok, msg) => { if (!ok) { failures += 1; console.log(`✗ ${msg}`); } };
 
 // ---- the browser's catalogue (src/lib/coach/catalog.js), from the lesson ladders
-const ROW = /^\|\s*(\d+)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
+const ROW = /^\|\s*(\d+|—)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
 const lessons = new Set(Object.values(index));
 const order = dsa.courses.find((c) => c.id === 'patterns').modules.flatMap((m) => m.lessons.map((l) => l.id)).filter((id) => lessons.has(id));
 const catalog = { order, byPattern: {}, problems: {} };

@@ -260,4 +260,11 @@ export default {
   'design-a-food-rating-system': P('20,000 foods and 20,000 calls', '', 'String[] f = new String[20000], c = new String[20000]; int[] rt = new int[20000]; for (int i = 0; i < 20000; i++) { f[i] = "f" + i; c[i] = "c" + (i % 5); rt[i] = BCB.rnd(1, 100000000); } FoodRatings fr = new FoodRatings(f, c, rt); long sum = 0; for (int i = 0; i < 20000; i++) { if (i % 2 == 0) fr.changeRating(f[BCB.rnd(0, 19999)], BCB.rnd(1, 100000000)); else sum += fr.highestRated("c" + BCB.rnd(0, 4)).hashCode(); } Object r = sum;'),
   'exam-room': P('10,000 calls, n = 10⁹', '', 'ExamRoom er = new ExamRoom(1000000000); long sum = 0; java.util.List<Integer> at = new java.util.ArrayList<>(); for (int i = 0; i < 7000; i++) { int p = er.seat(); at.add(p); sum += p; } for (int i = 0; i < 3000; i++) er.leave(at.remove(BCB.rnd(0, at.size() - 1))); Object r = sum;'),
   'partition-array-such-that-maximum-difference-is-k': P('n = 100,000', 'int[] a0 = BCB.ints(100000, 0, 100000); int a1 = 10;'),
+  // ---- queue problems batch
+  'number-of-visible-people-in-a-queue': P('n = 100,000, a random order of 1 … n', 'int[] a0 = BCB.perm(100000, 1);'),
+  'continuous-subarrays': P('n = 100,000, values 1 … 4', 'int[] a0 = BCB.ints(100000, 1, 4);'),
+  'count-subarrays-with-fixed-bounds': P('n = 100,000, values 1 … 5', 'int[] a0 = BCB.ints(100000, 1, 5); int a1 = 1; int a2 = 5;'),
+  'count-subarrays-with-cost-less-than-or-equal-to-k': P('n = 100,000, k = 10¹⁵', 'int[] a0 = BCB.ints(100000, 1, 1000000000); long a1 = 1000000000000000L;'),
+  'count-prime-gap-balanced-subarrays': P('n = 50,000 small values, k = 50,000', 'int[] a0 = BCB.ints(50000, 1, 13); int a1 = 50000;'),
+  'minimum-number-of-k-consecutive-bit-flips': P('n = 100,000, k = 50,000', 'int[] a0 = BCB.ints(100000, 0, 1); int a1 = 50000;'),
 };

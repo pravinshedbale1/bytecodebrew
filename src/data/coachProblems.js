@@ -80,6 +80,24 @@ export default {
   'binary-search-tree-iterator': ['1', 'O(1) amortised per call, O(h) space'],
   'recover-binary-search-tree': ['n', 'O(n)'],
 
+  // ---- queue design, queue simulations, flip windows
+  'number-of-recent-calls': ['1', 'O(1) amortised per ping with a queue'],
+  'time-needed-to-buy-tickets': ['n', 'O(n): min(tickets[i], tickets[k]) per person'],
+  'number-of-students-unable-to-eat-lunch': ['n', 'O(n): count preferences, walk the sandwiches'],
+  'number-of-people-aware-of-a-secret': ['n', 'O(n): DP with a running window of sharers'],
+  'design-front-middle-back-queue': ['1', 'O(1) per call with two balanced deques'],
+  'design-most-recently-used-queue': ['logn', 'O(log n) per fetch with a Fenwick tree (O(n) list passes too)'],
+  'design-ride-sharing-system': ['1', 'O(1) amortised per call: queues + lazy deletion of cancelled riders'],
+  'design-bounded-blocking-queue': ['1', 'O(1) per call: one lock, two conditions'],
+  'number-of-visible-people-in-a-queue': ['n', 'O(n) with a decreasing stack from the right'],
+  'continuous-subarrays': ['n', 'O(n): sliding window with a max and a min deque'],
+  'count-subarrays-with-fixed-bounds': ['n', 'O(n), O(1) space: last bad, last minK, last maxK'],
+  'count-subarrays-with-cost-less-than-or-equal-to-k': ['n', 'O(n): sliding window with a max and a min deque'],
+  'count-prime-gap-balanced-subarrays': ['n', 'O(n) after a sieve: window over primes with two deques'],
+  'minimum-operations-to-make-binary-array-elements-equal-to-one-i': ['n', 'O(n): forced greedy, left to right'],
+  'minimum-number-of-k-consecutive-bit-flips': ['n', 'O(n): greedy with a running count of active flips'],
+  'orderly-queue': ['n2', 'O(n²) for k = 1 (all rotations); a sort for k ≥ 2'],
+
   // ---- min/max queues, heap design, 2294
   'longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit': ['n', 'O(n) with a max deque and a min deque'],
   'jump-game-vi': ['n', 'O(n): DP with a max deque over the last k values'],

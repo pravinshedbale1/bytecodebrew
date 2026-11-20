@@ -339,4 +339,161 @@ export default [
     }
 }`,
   },
+  // ---- visible people, counting windows with a min and max queue
+  {
+    slug: 'number-of-visible-people-in-a-queue', title: 'Number of Visible People in a Queue', level: 'Hard',
+    summary: 'People of distinct heights stand in a line facing right. Person i can see person j > i if everyone between them is shorter than both. Return, for each person, how many people they can see.',
+    method: 'canSeePersonsCount', params: [['int[]', 'heights']], returns: 'int[]',
+    tests: [
+      { in: [[10, 6, 8, 5, 11, 9]], out: [3, 1, 2, 1, 1, 0] },
+      { in: [[5, 1, 2, 3, 10]], out: [4, 1, 1, 1, 0] },
+      { in: [[7]] },
+      { in: [[1, 2, 3, 4, 5]] },
+      { in: [[5, 4, 3, 2, 1]] },
+    ],
+    ref: `class Solution {
+    public int[] canSeePersonsCount(int[] heights) {
+        int n = heights.length;
+        int[] ans = new int[n];
+        Deque<Integer> st = new ArrayDeque<>();          // heights to the right, decreasing from the top down
+        for (int i = n - 1; i >= 0; i--) {
+            while (!st.isEmpty() && st.peek() < heights[i]) { st.pop(); ans[i]++; }
+            if (!st.isEmpty()) ans[i]++;                  // the first taller person is visible too
+            st.push(heights[i]);
+        }
+        return ans;
+    }
+}`,
+  },
+  {
+    slug: 'continuous-subarrays', title: 'Continuous Subarrays', level: 'Medium',
+    summary: 'Count the subarrays in which every two elements differ by at most 2.',
+    method: 'continuousSubarrays', params: [['int[]', 'nums']], returns: 'long',
+    tests: [
+      { in: [[5, 4, 2, 4]], out: 8 },
+      { in: [[1, 2, 3]], out: 6 },
+      { in: [[1]] },
+      { in: [[1, 1000000000, 1, 1000000000]] },
+      { in: [[3, 3, 3, 3, 3]] },
+    ],
+    ref: `class Solution {
+    public long continuousSubarrays(int[] nums) {
+        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();
+        long count = 0;
+        for (int l = 0, r = 0; r < nums.length; r++) {
+            while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= nums[r]) maxQ.pollLast();
+            maxQ.offerLast(r);
+            while (!minQ.isEmpty() && nums[minQ.peekLast()] >= nums[r]) minQ.pollLast();
+            minQ.offerLast(r);
+            while (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()] > 2) {
+                l++;
+                if (maxQ.peekFirst() < l) maxQ.pollFirst();
+                if (minQ.peekFirst() < l) minQ.pollFirst();
+            }
+            count += r - l + 1;
+        }
+        return count;
+    }
+}`,
+  },
+  {
+    slug: 'count-subarrays-with-fixed-bounds', title: 'Count Subarrays With Fixed Bounds', level: 'Hard',
+    summary: 'Count the subarrays whose minimum is exactly minK and whose maximum is exactly maxK.',
+    method: 'countSubarrays', params: [['int[]', 'nums'], ['int', 'minK'], ['int', 'maxK']], returns: 'long',
+    tests: [
+      { in: [[1, 3, 5, 2, 7, 5], 1, 5], out: 2 },
+      { in: [[1, 1, 1, 1], 1, 1], out: 10 },
+      { in: [[2, 2], 1, 3] },
+      { in: [[5, 1], 1, 5] },
+      { in: [[1, 5, 1, 5, 9, 5, 1], 1, 5] },
+      { in: [[3, 2, 4], 3, 2] },
+    ],
+    ref: `class Solution {
+    public long countSubarrays(int[] nums, int minK, int maxK) {
+        long count = 0;
+        int bad = -1, lastMin = -1, lastMax = -1;   // last index outside [minK, maxK], of minK, of maxK
+        for (int i = 0; i < nums.length; i++) {
+            if (nums[i] < minK || nums[i] > maxK) bad = i;
+            if (nums[i] == minK) lastMin = i;
+            if (nums[i] == maxK) lastMax = i;
+            count += Math.max(0, Math.min(lastMin, lastMax) - bad);
+        }
+        return count;
+    }
+}`,
+  },
+  {
+    slug: 'count-subarrays-with-cost-less-than-or-equal-to-k', title: 'Count Subarrays With Cost Less Than or Equal to K', level: 'Medium',
+    summary: 'The cost of a subarray is (its maximum − its minimum) × its length. Count the subarrays whose cost is at most k.',
+    method: 'countSubarrays', params: [['int[]', 'nums'], ['long', 'k']], returns: 'long',
+    tests: [
+      { in: [[1, 3, 2], 4] },
+      { in: [[5, 5, 5, 5], 0] },
+      { in: [[1, 1000000000], 0] },
+      { in: [[1, 1000000000], 1999999998] },
+      { in: [[4, 2, 7, 1, 3], 10] },
+    ],
+    ref: `class Solution {
+    public long countSubarrays(int[] nums, long k) {
+        // Shrinking a subarray never raises its cost (the spread and the length both stay or drop), so for
+        // each end r the valid starts form a range [l, r] and l only moves right: a sliding window.
+        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();
+        long count = 0;
+        for (int l = 0, r = 0; r < nums.length; r++) {
+            while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= nums[r]) maxQ.pollLast();
+            maxQ.offerLast(r);
+            while (!minQ.isEmpty() && nums[minQ.peekLast()] >= nums[r]) minQ.pollLast();
+            minQ.offerLast(r);
+            while ((long) (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()]) * (r - l + 1) > k) {
+                l++;
+                if (maxQ.peekFirst() < l) maxQ.pollFirst();
+                if (minQ.peekFirst() < l) minQ.pollFirst();
+            }
+            count += r - l + 1;
+        }
+        return count;
+    }
+}`,
+  },
+  {
+    slug: 'count-prime-gap-balanced-subarrays', title: 'Count Prime-Gap Balanced Subarrays', level: 'Medium',
+    summary: 'A subarray is prime-gap balanced if it contains at least two prime numbers and its largest and smallest primes differ by at most k. Count these subarrays.',
+    method: 'primeSubarray', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[1, 2, 3], 1], out: 2 },
+      { in: [[2, 3, 5, 7], 3], out: 4 },
+      { in: [[1], 0] },
+      { in: [[4, 6, 8, 9], 100] },
+      { in: [[2, 2, 2], 0] },
+      { in: [[2, 50, 3, 1, 47, 4], 45] },
+    ],
+    ref: `class Solution {
+    public int primeSubarray(int[] nums, int k) {
+        int max = 0;
+        for (int x : nums) max = Math.max(max, x);
+        boolean[] composite = new boolean[max + 1];
+        for (int i = 2; (long) i * i <= max; i++)
+            if (!composite[i]) for (int j = i * i; j <= max; j += i) composite[j] = true;
+        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();   // indexes of primes in the window
+        int count = 0, last = -1, prev = -1;                                    // the two latest prime indexes
+        for (int l = 0, r = 0; r < nums.length; r++) {
+            int x = nums[r];
+            if (x >= 2 && !composite[x]) {
+                prev = last; last = r;
+                while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= x) maxQ.pollLast();
+                maxQ.offerLast(r);
+                while (!minQ.isEmpty() && nums[minQ.peekLast()] >= x) minQ.pollLast();
+                minQ.offerLast(r);
+                while (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()] > k) {
+                    l++;
+                    if (maxQ.peekFirst() < l) maxQ.pollFirst();
+                    if (minQ.peekFirst() < l) minQ.pollFirst();
+                }
+            }
+            if (prev >= l) count += prev - l + 1;   // starts l … prev keep both of the latest two primes
+        }
+        return count;
+    }
+}`,
+  },
 ];

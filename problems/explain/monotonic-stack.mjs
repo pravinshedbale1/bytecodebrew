@@ -40,4 +40,20 @@ export default {
   'shortest-subarray-with-sum-at-least-k': {
     explain: 'The only subarray of [1] is [1], and its sum 1 is at least k = 1, so the shortest length is `1`.',
   },
+  // ---- visible people, counting windows with a min and max queue
+  'number-of-visible-people-in-a-queue': {
+    explain: 'Person 0 (height 10) sees 6, then 8 (taller than 6), then 11, the first person taller than 10, after which nobody is visible; 5 is hidden by 8. Person 1 (6) sees only 8. Person 2 (8) sees 5 and 11. Person 3 sees 11, person 4 sees 9, and person 5 sees nobody: `[3,1,2,1,1,0]`.',
+  },
+  'continuous-subarrays': {
+    explain: 'All 4 single elements count. Of length 2: [5,4], [4,2] and [2,4] (each pair differs by at most 2). Of length 3, [4,2,4] counts but [5,4,2] does not (5 − 2 = 3), and the whole array does not either. Total 4 + 3 + 1 = `8`.',
+  },
+  'count-subarrays-with-fixed-bounds': {
+    explain: 'The 7 can\'t be in any valid subarray, so look inside [1,3,5,2]. A subarray needs both a 1 (min) and a 5 (max): [1,3,5] and [1,3,5,2] are the only ones, so the answer is `2`.',
+  },
+  'count-subarrays-with-cost-less-than-or-equal-to-k': {
+    explain: 'The three single elements cost 0. [1,3] costs (3 − 1) × 2 = 4 and [3,2] costs 1 × 2 = 2, both at most 4. [1,3,2] costs 2 × 3 = 6, too much. So `5` subarrays.',
+  },
+  'count-prime-gap-balanced-subarrays': {
+    explain: 'The primes are 2 and 3, and 3 − 2 = 1 ≤ k. A balanced subarray must contain both: [2,3] and [1,2,3]. Subarrays with a single prime don\'t count, so the answer is `2`.',
+  },
 };

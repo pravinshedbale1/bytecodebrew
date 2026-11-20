@@ -339,4 +339,114 @@ Implement \`ExamRoom\`:
       'Scan the sorted seats once per seat() call, keeping the best by distance and then by seat number: O(k) per call. For O(log n), keep the gaps in a heap with lazy deletion.',
     ],
   },
+  // ---- queue design and queue simulations
+  'number-of-recent-calls': {
+    statement: `Implement \`RecentCounter\`, which counts requests in a sliding time window:
+
+- \`RecentCounter()\` starts with no requests,
+- \`int ping(int t)\` records a new request at time \`t\` (in milliseconds) and returns the number of requests, including this one, made in the inclusive range \`[t − 3000, t]\`.
+
+Every call to \`ping\` uses a strictly larger \`t\` than the call before it.`,
+    constraints: ['1 ≤ t ≤ 10⁹', 't is strictly increasing across calls', 'At most 10⁴ calls to ping'],
+    hints: [
+      'Times only grow, so once a request falls out of the window it never comes back in.',
+      'Keep the times in a queue: append t, then remove from the front while the front is older than t − 3000. The answer is the queue size.',
+    ],
+  },
+  'time-needed-to-buy-tickets': {
+    statement: `There are \`n\` people in a line; person \`i\` (0-indexed, \`i = 0\` at the front) wants to buy \`tickets[i]\` tickets. Buying one ticket takes exactly one second, and a person can buy only one ticket at a time: after buying, they go to the back of the line (instantly) if they still need more tickets, or leave the line if they are done.
+
+Return the number of seconds until the person at position \`k\` has bought all their tickets.`,
+    constraints: ['1 <= tickets.length <= 100', '1 <= tickets[i] <= 100', '0 <= k <= tickets.length - 1'],
+    hints: [
+      'Simulating the queue works (at most 100 × 100 seconds), but you can count directly.',
+      'Person k needs tickets[k] rounds. Everyone in front of k (and k) buys in each of those rounds, but never more than their own tickets: min(tickets[i], tickets[k]).',
+      'People behind k only get tickets[k] − 1 rounds before k finishes: min(tickets[i], tickets[k] − 1).',
+    ],
+  },
+  'number-of-students-unable-to-eat-lunch': {
+    statement: `The cafeteria offers circular (\`0\`) and square (\`1\`) sandwiches. Students stand in a queue; \`students[j]\` is the type the \`j\`-th student (from the front) prefers. The sandwiches are in a stack; \`sandwiches[i]\` is the \`i\`-th sandwich from the top. There are as many sandwiches as students.
+
+Repeatedly: if the student at the front prefers the sandwich on top, they take it and leave; otherwise they go to the end of the queue. This stops when no student in the queue wants the top sandwich. Return the number of students who cannot eat.`,
+    constraints: ['1 <= students.length <= 100', 'sandwiches.length == students.length', '0 <= students[i] <= 1', '0 <= sandwiches[i] <= 1'],
+    hints: [
+      'The order of the queue never matters: a student who doesn\'t match just walks to the back, so the top sandwich is eventually taken if anyone wants it.',
+      'Count how many students want each type. Go through the sandwiches from the top; the first one nobody wants stops everything, and every remaining student is left hungry.',
+    ],
+  },
+  'number-of-people-aware-of-a-secret': {
+    statement: `On day \`1\`, one person discovers a secret.
+
+Each person shares the secret with one new person every day, starting \`delay\` days after the day they discovered it. Each person forgets the secret \`forget\` days after discovering it, and cannot share it on that day or any later day.
+
+Given \`n\`, return the number of people who know the secret at the end of day \`n\`. The answer may be large, so return it modulo \`10⁹ + 7\`.`,
+    constraints: ['2 <= n <= 1000', '1 ≤ delay < forget ≤ n'],
+    hints: [
+      'Track people by the day they learned the secret: learned[d]. Someone who learned on day d shares on days d + delay … d + forget − 1.',
+      'So learned[d] = the sum of learned[j] for j from d − forget + 1 to d − delay. Keep that sum as a running window: add learned[d − delay] and remove learned[d − forget] each day.',
+      'At the end, the people who still remember are those who learned in the last forget days: sum learned[n − forget + 1 … n].',
+    ],
+  },
+  'design-front-middle-back-queue': {
+    statement: `Design a queue that supports \`push\` and \`pop\` at the front, the middle and the back:
+
+- \`FrontMiddleBackQueue()\` creates an empty queue,
+- \`void pushFront(int val)\`, \`void pushMiddle(int val)\` and \`void pushBack(int val)\` add \`val\` at the front, middle or back,
+- \`int popFront()\`, \`int popMiddle()\` and \`int popBack()\` remove and return the front, middle or back element, or return \`-1\` if the queue is empty.
+
+When there are two middle positions, use the one closer to the front. For example, pushing \`6\` into the middle of \`[1, 2, 3, 4, 5]\` gives \`[1, 2, 6, 3, 4, 5]\`, and popping the middle of \`[1, 2, 3, 4, 5, 6]\` returns \`3\`.`,
+    constraints: ['1 ≤ val ≤ 10⁹', 'At most 1000 calls in total'],
+    hints: [
+      'A single array or list works with O(n) inserts at the middle; with 1000 calls that is fine. Can you make every operation O(1)?',
+      'Split the queue into two deques, a left half and a right half, and keep right.size() equal to left.size() or left.size() + 1.',
+      'Then the middle is always at the boundary: pushMiddle adds to the end of left or the front of right, and popMiddle takes from whichever side owns the middle. Rebalance after every front/back push or pop.',
+    ],
+  },
+  'design-most-recently-used-queue': {
+    statement: `Design a queue that moves the most recently used element to the end:
+
+- \`MRUQueue(int n)\` creates the queue \`[1, 2, 3, …, n]\`,
+- \`int fetch(int k)\` moves the \`k\`-th element (1-indexed) to the end of the queue and returns it.`,
+    constraints: ['1 ≤ n ≤ 2000', '1 ≤ k ≤ n', 'At most 2000 calls to fetch'],
+    hints: [
+      'A list with remove(k − 1) and add is O(n) per fetch, which passes these limits. The follow-up asks for better.',
+      'Square-root decomposition: split the queue into blocks of about √n elements; finding the k-th element skips whole blocks, so a fetch costs O(√n).',
+      'Or give every element a position that only grows: positions 1 … n + calls, and a Fenwick tree marking which positions are occupied. The k-th occupied position is found by binary lifting in O(log n); fetching clears it and writes the element at the next free position at the end.',
+    ],
+  },
+  'design-ride-sharing-system': {
+    statement: `Design a system that matches riders with drivers in arrival order:
+
+- \`RideSharingSystem()\` starts with no riders and no drivers,
+- \`void addRider(int riderId)\` adds a rider who starts waiting for a ride,
+- \`void addDriver(int driverId)\` adds a driver who starts waiting for a rider,
+- \`int[] matchDriverWithRider()\` matches the driver who has waited longest with the rider who has waited longest, removes both, and returns \`[driverId, riderId]\`; if there is no waiting rider or no waiting driver, it returns \`[-1, -1]\`,
+- \`void cancelRider(int riderId)\` removes the rider if they are still waiting; otherwise it does nothing.
+
+Every \`riderId\` is added at most once, and so is every \`driverId\`.`,
+    constraints: ['1 ≤ riderId, driverId ≤ 1000', 'At most 1000 calls in total'],
+    hints: [
+      'Two first-come-first-served lines: a queue of riders and a queue of drivers.',
+      'Removing a cancelled rider from the middle of a queue is O(n). Instead, keep a set of riders still waiting and remove the id from it on cancel.',
+      'When matching, first pop riders from the front of the queue that are no longer in the set (lazy deletion), then match the two fronts.',
+    ],
+  },
+  'design-bounded-blocking-queue': {
+    statement: `Implement a thread-safe bounded blocking queue:
+
+- \`BoundedBlockingQueue(int capacity)\` creates a queue that holds at most \`capacity\` elements,
+- \`void enqueue(int element)\` adds \`element\` at the back; if the queue is full, the calling thread waits until there is room,
+- \`int dequeue()\` removes and returns the front element; if the queue is empty, the calling thread waits until there is an element,
+- \`int size()\` returns the number of elements in the queue.
+
+Your implementation will be called from several producer and consumer threads at once. Don't use a built-in blocking queue.
+
+**Judged here on one thread:** the tests check the queue's behaviour and capacity, and never call \`enqueue\` on a full queue or \`dequeue\` on an empty one (that would wait forever). Write it as you would for the concurrent version. (In Java, add \`throws InterruptedException\` to \`enqueue\` and \`dequeue\` if you call \`await()\` or \`wait()\`.)`,
+    constraints: ['1 ≤ capacity ≤ 30', '0 ≤ element ≤ 20', 'At most 1000 calls in total'],
+    hints: [
+      'Every method touches shared state, so every method must hold the same lock.',
+      'Waiting must release the lock, or no other thread could ever make room. Use condition variables: Java\'s Condition (lock.newCondition()), C++\'s condition_variable, Python\'s threading.Condition.',
+      'Use two conditions, notFull and notEmpty. Wait in a while loop (wake-ups can be spurious or stolen): enqueue waits while full, then signals notEmpty; dequeue waits while empty, then signals notFull.',
+    ],
+  },
 };

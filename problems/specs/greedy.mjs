@@ -351,4 +351,31 @@ export default [
     }
 }`,
   },
+  {
+    slug: 'orderly-queue', title: 'Orderly Queue', level: 'Hard',
+    summary: 'In one move, take one of the first k letters of s and append it to the end. Return the lexicographically smallest string reachable with any number of moves.',
+    method: 'orderlyQueue', params: [['String', 's'], ['int', 'k']], returns: 'String',
+    tests: [
+      { in: ['cba', 1], out: 'acb' },
+      { in: ['baaca', 3], out: 'aaabc' },
+      { in: ['z', 1] },
+      { in: ['abab', 1] },
+      { in: ['dcba', 2] },
+    ],
+    ref: `class Solution {
+    public String orderlyQueue(String s, int k) {
+        if (k >= 2) {                       // any two neighbours can be swapped, so every order is reachable
+            char[] c = s.toCharArray();
+            Arrays.sort(c);
+            return new String(c);
+        }
+        String best = s;                    // k = 1: only rotations
+        for (int i = 1; i < s.length(); i++) {
+            String r = s.substring(i) + s.substring(0, i);
+            if (r.compareTo(best) < 0) best = r;
+        }
+        return best;
+    }
+}`,
+  },
 ];

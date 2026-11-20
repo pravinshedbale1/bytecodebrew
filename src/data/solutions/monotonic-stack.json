@@ -629,5 +629,218 @@
     }
    }
   ]
+ },
+ "number-of-visible-people-in-a-queue": {
+  "pattern": "Monotonic stack from the right: each pop is one person you can see",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Look right from every person",
+    "idea": "From person i, walk right keeping the tallest height seen so far. Person j is visible if they are taller than everyone in between; stop at the first person taller than i.",
+    "steps": [
+     "For each `i`, set `tallest = 0` (the tallest between i and j).",
+     "For `j = i + 1 …`: if `heights[j] > tallest`, person j is visible (they are also shorter than i, or the first taller one). Update `tallest`.",
+     "Stop as soon as `heights[j] > heights[i]`: that person blocks everyone after."
+    ],
+    "time": "O(n²)",
+    "space": "O(1) extra",
+    "why": "An increasing line makes every person scan to the end of the array.",
+    "code": {
+     "java": "class Solution {\n    public int[] canSeePersonsCount(int[] heights) {\n        int n = heights.length;\n        int[] ans = new int[n];\n        for (int i = 0; i < n; i++) {\n            int tallest = 0;\n            for (int j = i + 1; j < n; j++) {\n                if (heights[j] > tallest) { ans[i]++; tallest = heights[j]; }\n                if (heights[j] > heights[i]) break;\n            }\n        }\n        return ans;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> canSeePersonsCount(vector<int>& heights) {\n        int n = heights.size();\n        vector<int> ans(n, 0);\n        for (int i = 0; i < n; i++) {\n            int tallest = 0;\n            for (int j = i + 1; j < n; j++) {\n                if (heights[j] > tallest) { ans[i]++; tallest = heights[j]; }\n                if (heights[j] > heights[i]) break;\n            }\n        }\n        return ans;\n    }\n};",
+     "python": "class Solution:\n    def canSeePersonsCount(self, heights: List[int]) -> List[int]:\n        n = len(heights)\n        ans = [0] * n\n        for i in range(n):\n            tallest = 0\n            for j in range(i + 1, n):\n                if heights[j] > tallest:\n                    ans[i] += 1\n                    tallest = heights[j]\n                if heights[j] > heights[i]:\n                    break\n        return ans",
+     "javascript": "var canSeePersonsCount = function(heights) {\n    const n = heights.length, ans = new Array(n).fill(0);\n    for (let i = 0; i < n; i++) {\n        let tallest = 0;\n        for (let j = i + 1; j < n; j++) {\n            if (heights[j] > tallest) { ans[i]++; tallest = heights[j]; }\n            if (heights[j] > heights[i]) break;\n        }\n    }\n    return ans;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Decreasing stack, scanned from the right",
+    "idea": "Scan from the right with a stack of people who could still be seen from further left (decreasing from bottom to top). Everyone person i pops is visible to i, and hidden from everyone left of i.",
+    "steps": [
+     "For `i` from `n − 1` down to 0:",
+     "Pop every height smaller than `heights[i]`, adding 1 per pop.",
+     "If the stack is not empty, its top is the first taller person: add 1.",
+     "Push `heights[i]`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each height is pushed and popped at most once. Popped people are hidden behind i from the left, so they can be forgotten.",
+    "code": {
+     "java": "class Solution {\n    public int[] canSeePersonsCount(int[] heights) {\n        int n = heights.length;\n        int[] ans = new int[n];\n        Deque<Integer> st = new ArrayDeque<>();\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.isEmpty() && st.peek() < heights[i]) { st.pop(); ans[i]++; }\n            if (!st.isEmpty()) ans[i]++;\n            st.push(heights[i]);\n        }\n        return ans;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    vector<int> canSeePersonsCount(vector<int>& heights) {\n        int n = heights.size();\n        vector<int> ans(n, 0), st;\n        for (int i = n - 1; i >= 0; i--) {\n            while (!st.empty() && st.back() < heights[i]) { st.pop_back(); ans[i]++; }\n            if (!st.empty()) ans[i]++;\n            st.push_back(heights[i]);\n        }\n        return ans;\n    }\n};",
+     "python": "class Solution:\n    def canSeePersonsCount(self, heights: List[int]) -> List[int]:\n        ans = [0] * len(heights)\n        st = []\n        for i in range(len(heights) - 1, -1, -1):\n            while st and st[-1] < heights[i]:\n                st.pop()\n                ans[i] += 1\n            if st:\n                ans[i] += 1\n            st.append(heights[i])\n        return ans",
+     "javascript": "var canSeePersonsCount = function(heights) {\n    const n = heights.length, ans = new Array(n).fill(0), st = [];\n    for (let i = n - 1; i >= 0; i--) {\n        while (st.length && st[st.length - 1] < heights[i]) { st.pop(); ans[i]++; }\n        if (st.length) ans[i]++;\n        st.push(heights[i]);\n    }\n    return ans;\n};"
+    }
+   }
+  ]
+ },
+ "continuous-subarrays": {
+  "pattern": "Sliding window counting subarrays, with a max queue and a min queue",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "Fix the start, extend the end while tracking the running min and max, and stop when they differ by more than 2.",
+    "steps": [
+     "For each `l`, set `mn = mx = nums[l]`.",
+     "For `r = l …`: update `mn` and `mx`; if `mx − mn > 2`, stop; otherwise count one subarray."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "An array of equal values makes every start walk to the end: 5 × 10⁹ steps for n = 10⁵.",
+    "code": {
+     "java": "class Solution {\n    public long continuousSubarrays(int[] nums) {\n        long count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < nums.length; r++) {\n                mn = Math.min(mn, nums[r]);\n                mx = Math.max(mx, nums[r]);\n                if (mx - mn > 2) break;\n                count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long continuousSubarrays(vector<int>& nums) {\n        long long count = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < n; r++) {\n                mn = min(mn, nums[r]);\n                mx = max(mx, nums[r]);\n                if (mx - mn > 2) break;\n                count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def continuousSubarrays(self, nums: List[int]) -> int:\n        count = 0\n        for l in range(len(nums)):\n            mn = mx = nums[l]\n            for r in range(l, len(nums)):\n                mn, mx = min(mn, nums[r]), max(mx, nums[r])\n                if mx - mn > 2:\n                    break\n                count += 1\n        return count",
+     "javascript": "var continuousSubarrays = function(nums) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let mn = nums[l], mx = nums[l];\n        for (let r = l; r < nums.length; r++) {\n            mn = Math.min(mn, nums[r]);\n            mx = Math.max(mx, nums[r]);\n            if (mx - mn > 2) break;\n            count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window with two monotonic deques",
+    "idea": "A sub-window of a continuous window is continuous, so for each end r the valid starts are a range [l, r]. Keep the window's max and min with a max queue and a min queue.",
+    "steps": [
+     "Push `r` onto both deques, popping from the back values that can never be the max (≤ nums[r]) or the min (≥ nums[r]).",
+     "While `max − min > 2`, advance `l` and drop deque fronts that are now left of `l`.",
+     "Add `r − l + 1`: every subarray ending at r that starts in [l, r]."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "Each index enters and leaves each deque at most once, and l only moves right. The count can reach n(n + 1)/2 ≈ 5 × 10⁹: use 64 bits.",
+    "code": {
+     "java": "class Solution {\n    public long continuousSubarrays(int[] nums) {\n        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();\n        long count = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= nums[r]) maxQ.pollLast();\n            maxQ.offerLast(r);\n            while (!minQ.isEmpty() && nums[minQ.peekLast()] >= nums[r]) minQ.pollLast();\n            minQ.offerLast(r);\n            while (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()] > 2) {\n                l++;\n                if (maxQ.peekFirst() < l) maxQ.pollFirst();\n                if (minQ.peekFirst() < l) minQ.pollFirst();\n            }\n            count += r - l + 1;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long continuousSubarrays(vector<int>& nums) {\n        deque<int> maxQ, minQ;\n        long long count = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            while (!maxQ.empty() && nums[maxQ.back()] <= nums[r]) maxQ.pop_back();\n            maxQ.push_back(r);\n            while (!minQ.empty() && nums[minQ.back()] >= nums[r]) minQ.pop_back();\n            minQ.push_back(r);\n            while (nums[maxQ.front()] - nums[minQ.front()] > 2) {\n                l++;\n                if (maxQ.front() < l) maxQ.pop_front();\n                if (minQ.front() < l) minQ.pop_front();\n            }\n            count += r - l + 1;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def continuousSubarrays(self, nums: List[int]) -> int:\n        max_q, min_q = deque(), deque()\n        count = l = 0\n        for r, x in enumerate(nums):\n            while max_q and nums[max_q[-1]] <= x:\n                max_q.pop()\n            max_q.append(r)\n            while min_q and nums[min_q[-1]] >= x:\n                min_q.pop()\n            min_q.append(r)\n            while nums[max_q[0]] - nums[min_q[0]] > 2:\n                l += 1\n                if max_q[0] < l:\n                    max_q.popleft()\n                if min_q[0] < l:\n                    min_q.popleft()\n            count += r - l + 1\n        return count",
+     "javascript": "var continuousSubarrays = function(nums) {\n    // deques as arrays with head indexes (indexes are only ever added at the back)\n    const maxQ = [], minQ = [];\n    let mh = 0, nh = 0, l = 0, count = 0;\n    for (let r = 0; r < nums.length; r++) {\n        while (maxQ.length > mh && nums[maxQ[maxQ.length - 1]] <= nums[r]) maxQ.pop();\n        maxQ.push(r);\n        while (minQ.length > nh && nums[minQ[minQ.length - 1]] >= nums[r]) minQ.pop();\n        minQ.push(r);\n        while (nums[maxQ[mh]] - nums[minQ[nh]] > 2) {\n            l++;\n            if (maxQ[mh] < l) mh++;\n            if (minQ[nh] < l) nh++;\n        }\n        count += r - l + 1;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "count-subarrays-with-fixed-bounds": {
+  "pattern": "One pass remembering the last bad index, the last minK and the last maxK",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "Fix the start and extend the end, tracking the min and max. A value outside [minK, maxK] ends the extension.",
+    "steps": [
+     "For each `l`, extend `r` while `minK ≤ nums[r] ≤ maxK`, tracking whether minK and maxK have appeared.",
+     "Count `[l, r]` whenever both have appeared."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "Long runs of in-range values make each start walk far.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, int minK, int maxK) {\n        long count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            boolean seenMin = false, seenMax = false;\n            for (int r = l; r < nums.length && nums[r] >= minK && nums[r] <= maxK; r++) {\n                if (nums[r] == minK) seenMin = true;\n                if (nums[r] == maxK) seenMax = true;\n                if (seenMin && seenMax) count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, int minK, int maxK) {\n        long long count = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++) {\n            bool seenMin = false, seenMax = false;\n            for (int r = l; r < n && nums[r] >= minK && nums[r] <= maxK; r++) {\n                if (nums[r] == minK) seenMin = true;\n                if (nums[r] == maxK) seenMax = true;\n                if (seenMin && seenMax) count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], minK: int, maxK: int) -> int:\n        count = 0\n        for l in range(len(nums)):\n            seen_min = seen_max = False\n            for r in range(l, len(nums)):\n                if not minK <= nums[r] <= maxK:\n                    break\n                seen_min |= nums[r] == minK\n                seen_max |= nums[r] == maxK\n                if seen_min and seen_max:\n                    count += 1\n        return count",
+     "javascript": "var countSubarrays = function(nums, minK, maxK) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let seenMin = false, seenMax = false;\n        for (let r = l; r < nums.length && nums[r] >= minK && nums[r] <= maxK; r++) {\n            if (nums[r] === minK) seenMin = true;\n            if (nums[r] === maxK) seenMax = true;\n            if (seenMin && seenMax) count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Last positions: bad, minK, maxK",
+    "idea": "For a fixed end r, a start works if there is no bad value in between and both a minK and a maxK appear. That is every start from `bad + 1` up to `min(lastMin, lastMax)`.",
+    "steps": [
+     "Keep `bad`, `lastMin` and `lastMax`, all starting at −1.",
+     "At each r, update whichever applies: a value outside [minK, maxK] sets `bad`; minK sets `lastMin`; maxK sets `lastMax`.",
+     "Add `max(0, min(lastMin, lastMax) − bad)`."
+    ],
+    "time": "O(n)",
+    "space": "O(1)",
+    "why": "No window needs to move: the three positions say exactly which starts are valid. If minK > maxK, every value is bad (or one of them can never appear), so nothing is counted.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, int minK, int maxK) {\n        long count = 0;\n        int bad = -1, lastMin = -1, lastMax = -1;\n        for (int i = 0; i < nums.length; i++) {\n            if (nums[i] < minK || nums[i] > maxK) bad = i;\n            if (nums[i] == minK) lastMin = i;\n            if (nums[i] == maxK) lastMax = i;\n            count += Math.max(0, Math.min(lastMin, lastMax) - bad);\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, int minK, int maxK) {\n        long long count = 0;\n        int bad = -1, lastMin = -1, lastMax = -1;\n        for (int i = 0; i < (int) nums.size(); i++) {\n            if (nums[i] < minK || nums[i] > maxK) bad = i;\n            if (nums[i] == minK) lastMin = i;\n            if (nums[i] == maxK) lastMax = i;\n            count += max(0, min(lastMin, lastMax) - bad);\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], minK: int, maxK: int) -> int:\n        count = 0\n        bad = last_min = last_max = -1\n        for i, x in enumerate(nums):\n            if x < minK or x > maxK:\n                bad = i\n            if x == minK:\n                last_min = i\n            if x == maxK:\n                last_max = i\n            count += max(0, min(last_min, last_max) - bad)\n        return count",
+     "javascript": "var countSubarrays = function(nums, minK, maxK) {\n    let count = 0, bad = -1, lastMin = -1, lastMax = -1;\n    for (let i = 0; i < nums.length; i++) {\n        if (nums[i] < minK || nums[i] > maxK) bad = i;\n        if (nums[i] === minK) lastMin = i;\n        if (nums[i] === maxK) lastMax = i;\n        count += Math.max(0, Math.min(lastMin, lastMax) - bad);\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "count-subarrays-with-cost-less-than-or-equal-to-k": {
+  "pattern": "Monotone cost → sliding window counting, with a max queue and a min queue",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "Fix the start and extend the end, tracking the running min and max. The cost only grows as the subarray grows, so stop at the first one over k.",
+    "steps": [
+     "For each `l`, track `mn` and `mx` while extending `r`.",
+     "If `(mx − mn) × (r − l + 1) > k`, stop; otherwise count one subarray."
+    ],
+    "time": "O(n²)",
+    "space": "O(1)",
+    "why": "With a large k every start walks to the end. Compute the cost in 64 bits: it can reach 10¹⁴.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, long k) {\n        long count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < nums.length; r++) {\n                mn = Math.min(mn, nums[r]);\n                mx = Math.max(mx, nums[r]);\n                if ((long) (mx - mn) * (r - l + 1) > k) break;\n                count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, long long k) {\n        long long count = 0;\n        int n = nums.size();\n        for (int l = 0; l < n; l++) {\n            int mn = nums[l], mx = nums[l];\n            for (int r = l; r < n; r++) {\n                mn = min(mn, nums[r]);\n                mx = max(mx, nums[r]);\n                if ((long long) (mx - mn) * (r - l + 1) > k) break;\n                count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        count = 0\n        for l in range(len(nums)):\n            mn = mx = nums[l]\n            for r in range(l, len(nums)):\n                mn, mx = min(mn, nums[r]), max(mx, nums[r])\n                if (mx - mn) * (r - l + 1) > k:\n                    break\n                count += 1\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let mn = nums[l], mx = nums[l];\n        for (let r = l; r < nums.length; r++) {\n            mn = Math.min(mn, nums[r]);\n            mx = Math.max(mx, nums[r]);\n            if ((mx - mn) * (r - l + 1) > k) break;\n            count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window with two monotonic deques",
+    "idea": "Shrinking a subarray never raises its cost: the spread can only stay or drop, and so does the length. So the valid starts for each end r form a range [l, r], and l only moves right.",
+    "steps": [
+     "Push `r` onto the max queue and the min queue (popping dominated indexes from the back).",
+     "While `(max − min) × (r − l + 1) > k`, advance `l` and drop deque fronts left of `l`.",
+     "Add `r − l + 1`."
+    ],
+    "time": "O(n)",
+    "space": "O(n)",
+    "why": "The same window as Continuous Subarrays, with a different validity test. The key is to check that the condition is monotone before reaching for a sliding window.",
+    "code": {
+     "java": "class Solution {\n    public long countSubarrays(int[] nums, long k) {\n        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();\n        long count = 0;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= nums[r]) maxQ.pollLast();\n            maxQ.offerLast(r);\n            while (!minQ.isEmpty() && nums[minQ.peekLast()] >= nums[r]) minQ.pollLast();\n            minQ.offerLast(r);\n            while ((long) (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()]) * (r - l + 1) > k) {\n                l++;\n                if (maxQ.peekFirst() < l) maxQ.pollFirst();\n                if (minQ.peekFirst() < l) minQ.pollFirst();\n            }\n            count += r - l + 1;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    long long countSubarrays(vector<int>& nums, long long k) {\n        deque<int> maxQ, minQ;\n        long long count = 0;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            while (!maxQ.empty() && nums[maxQ.back()] <= nums[r]) maxQ.pop_back();\n            maxQ.push_back(r);\n            while (!minQ.empty() && nums[minQ.back()] >= nums[r]) minQ.pop_back();\n            minQ.push_back(r);\n            while ((long long) (nums[maxQ.front()] - nums[minQ.front()]) * (r - l + 1) > k) {\n                l++;\n                if (maxQ.front() < l) maxQ.pop_front();\n                if (minQ.front() < l) minQ.pop_front();\n            }\n            count += r - l + 1;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def countSubarrays(self, nums: List[int], k: int) -> int:\n        max_q, min_q = deque(), deque()\n        count = l = 0\n        for r, x in enumerate(nums):\n            while max_q and nums[max_q[-1]] <= x:\n                max_q.pop()\n            max_q.append(r)\n            while min_q and nums[min_q[-1]] >= x:\n                min_q.pop()\n            min_q.append(r)\n            while (nums[max_q[0]] - nums[min_q[0]]) * (r - l + 1) > k:\n                l += 1\n                if max_q[0] < l:\n                    max_q.popleft()\n                if min_q[0] < l:\n                    min_q.popleft()\n            count += r - l + 1\n        return count",
+     "javascript": "var countSubarrays = function(nums, k) {\n    const maxQ = [], minQ = [];\n    let mh = 0, nh = 0, l = 0, count = 0;\n    for (let r = 0; r < nums.length; r++) {\n        while (maxQ.length > mh && nums[maxQ[maxQ.length - 1]] <= nums[r]) maxQ.pop();\n        maxQ.push(r);\n        while (minQ.length > nh && nums[minQ[minQ.length - 1]] >= nums[r]) minQ.pop();\n        minQ.push(r);\n        while ((nums[maxQ[mh]] - nums[minQ[nh]]) * (r - l + 1) > k) {\n            l++;\n            if (maxQ[mh] < l) mh++;\n            if (minQ[nh] < l) nh++;\n        }\n        count += r - l + 1;\n    }\n    return count;\n};"
+    }
+   }
+  ]
+ },
+ "count-prime-gap-balanced-subarrays": {
+  "pattern": "Sieve, then a sliding window over the primes with a max queue and a min queue",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Extend from every start",
+    "idea": "Sieve the primes. For each start, extend the end while tracking the number of primes and the smallest and largest prime; stop once the prime spread exceeds k.",
+    "steps": [
+     "Mark primes up to `max(nums)` with a sieve.",
+     "For each `l`, extend `r`; for a prime, update `count`, `lo` and `hi`. If `hi − lo > k`, stop.",
+     "Count `[l, r]` whenever it holds at least two primes."
+    ],
+    "time": "O(n² + M log log M)",
+    "space": "O(M), M = max(nums)",
+    "why": "Each start may extend to the end of the array.",
+    "code": {
+     "java": "class Solution {\n    public int primeSubarray(int[] nums, int k) {\n        int max = 0;\n        for (int x : nums) max = Math.max(max, x);\n        boolean[] composite = new boolean[max + 1];\n        for (int i = 2; (long) i * i <= max; i++)\n            if (!composite[i]) for (int j = i * i; j <= max; j += i) composite[j] = true;\n        int count = 0;\n        for (int l = 0; l < nums.length; l++) {\n            int primes = 0, lo = Integer.MAX_VALUE, hi = 0;\n            for (int r = l; r < nums.length; r++) {\n                if (nums[r] >= 2 && !composite[nums[r]]) {\n                    primes++;\n                    lo = Math.min(lo, nums[r]);\n                    hi = Math.max(hi, nums[r]);\n                    if (hi - lo > k) break;\n                }\n                if (primes >= 2) count++;\n            }\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int primeSubarray(vector<int>& nums, int k) {\n        int mx = *max_element(nums.begin(), nums.end());\n        vector<bool> composite(mx + 1, false);\n        for (long long i = 2; i * i <= mx; i++)\n            if (!composite[i]) for (long long j = i * i; j <= mx; j += i) composite[j] = true;\n        int count = 0, n = nums.size();\n        for (int l = 0; l < n; l++) {\n            int primes = 0, lo = INT_MAX, hi = 0;\n            for (int r = l; r < n; r++) {\n                if (nums[r] >= 2 && !composite[nums[r]]) {\n                    primes++;\n                    lo = min(lo, nums[r]);\n                    hi = max(hi, nums[r]);\n                    if (hi - lo > k) break;\n                }\n                if (primes >= 2) count++;\n            }\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def primeSubarray(self, nums: List[int], k: int) -> int:\n        m = max(nums)\n        is_prime = [False, False] + [True] * (m - 1)\n        for i in range(2, isqrt(m) + 1):\n            if is_prime[i]:\n                for j in range(i * i, m + 1, i):\n                    is_prime[j] = False\n        count = 0\n        for l in range(len(nums)):\n            primes, lo, hi = 0, inf, 0\n            for r in range(l, len(nums)):\n                if is_prime[nums[r]]:\n                    primes += 1\n                    lo, hi = min(lo, nums[r]), max(hi, nums[r])\n                    if hi - lo > k:\n                        break\n                if primes >= 2:\n                    count += 1\n        return count",
+     "javascript": "var primeSubarray = function(nums, k) {\n    const m = Math.max(...nums);\n    const composite = new Uint8Array(m + 1);\n    for (let i = 2; i * i <= m; i++)\n        if (!composite[i]) for (let j = i * i; j <= m; j += i) composite[j] = 1;\n    const isPrime = (x) => x >= 2 && !composite[x];\n    let count = 0;\n    for (let l = 0; l < nums.length; l++) {\n        let primes = 0, lo = Infinity, hi = 0;\n        for (let r = l; r < nums.length; r++) {\n            if (isPrime(nums[r])) {\n                primes++;\n                lo = Math.min(lo, nums[r]);\n                hi = Math.max(hi, nums[r]);\n                if (hi - lo > k) break;\n            }\n            if (primes >= 2) count++;\n        }\n    }\n    return count;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Sliding window over the primes",
+    "idea": "For a fixed end r, extending the start to the left only adds primes, so the prime spread only grows. The starts that keep it ≤ k form a range [l, r]; l is moved by a max queue and a min queue that hold only prime indexes. The start must also keep the two latest primes.",
+    "steps": [
+     "Sieve the primes up to `max(nums)`.",
+     "At a prime `r`: shift `last` to `prev` and set `last = r`; push r onto both deques; while the deques' max − min > k, advance `l` and drop fronts left of `l`.",
+     "For every r (prime or not), the valid starts are `l … prev` (the second-latest prime): add `prev − l + 1` when `prev ≥ l`."
+    ],
+    "time": "O(n + M log log M)",
+    "space": "O(n + M)",
+    "why": "Non-primes never change the spread, so the window only moves at primes. The count of starts needs two conditions at once: spread ≤ k (gives the lower end l) and two primes (gives the upper end prev).",
+    "code": {
+     "java": "class Solution {\n    public int primeSubarray(int[] nums, int k) {\n        int max = 0;\n        for (int x : nums) max = Math.max(max, x);\n        boolean[] composite = new boolean[max + 1];\n        for (int i = 2; (long) i * i <= max; i++)\n            if (!composite[i]) for (int j = i * i; j <= max; j += i) composite[j] = true;\n        Deque<Integer> maxQ = new ArrayDeque<>(), minQ = new ArrayDeque<>();\n        int count = 0, last = -1, prev = -1;\n        for (int l = 0, r = 0; r < nums.length; r++) {\n            int x = nums[r];\n            if (x >= 2 && !composite[x]) {\n                prev = last; last = r;\n                while (!maxQ.isEmpty() && nums[maxQ.peekLast()] <= x) maxQ.pollLast();\n                maxQ.offerLast(r);\n                while (!minQ.isEmpty() && nums[minQ.peekLast()] >= x) minQ.pollLast();\n                minQ.offerLast(r);\n                while (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()] > k) {\n                    l++;\n                    if (maxQ.peekFirst() < l) maxQ.pollFirst();\n                    if (minQ.peekFirst() < l) minQ.pollFirst();\n                }\n            }\n            if (prev >= l) count += prev - l + 1;\n        }\n        return count;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    int primeSubarray(vector<int>& nums, int k) {\n        int mx = *max_element(nums.begin(), nums.end());\n        vector<bool> composite(mx + 1, false);\n        for (long long i = 2; i * i <= mx; i++)\n            if (!composite[i]) for (long long j = i * i; j <= mx; j += i) composite[j] = true;\n        deque<int> maxQ, minQ;\n        int count = 0, last = -1, prev = -1;\n        for (int l = 0, r = 0; r < (int) nums.size(); r++) {\n            int x = nums[r];\n            if (x >= 2 && !composite[x]) {\n                prev = last; last = r;\n                while (!maxQ.empty() && nums[maxQ.back()] <= x) maxQ.pop_back();\n                maxQ.push_back(r);\n                while (!minQ.empty() && nums[minQ.back()] >= x) minQ.pop_back();\n                minQ.push_back(r);\n                while (nums[maxQ.front()] - nums[minQ.front()] > k) {\n                    l++;\n                    if (maxQ.front() < l) maxQ.pop_front();\n                    if (minQ.front() < l) minQ.pop_front();\n                }\n            }\n            if (prev >= l) count += prev - l + 1;\n        }\n        return count;\n    }\n};",
+     "python": "class Solution:\n    def primeSubarray(self, nums: List[int], k: int) -> int:\n        m = max(nums)\n        is_prime = [False, False] + [True] * (m - 1)\n        for i in range(2, isqrt(m) + 1):\n            if is_prime[i]:\n                for j in range(i * i, m + 1, i):\n                    is_prime[j] = False\n        max_q, min_q = deque(), deque()\n        count = l = 0\n        last = prev = -1\n        for r, x in enumerate(nums):\n            if is_prime[x]:\n                prev, last = last, r\n                while max_q and nums[max_q[-1]] <= x:\n                    max_q.pop()\n                max_q.append(r)\n                while min_q and nums[min_q[-1]] >= x:\n                    min_q.pop()\n                min_q.append(r)\n                while nums[max_q[0]] - nums[min_q[0]] > k:\n                    l += 1\n                    if max_q[0] < l:\n                        max_q.popleft()\n                    if min_q[0] < l:\n                        min_q.popleft()\n            if prev >= l:\n                count += prev - l + 1\n        return count",
+     "javascript": "var primeSubarray = function(nums, k) {\n    const m = Math.max(...nums);\n    const composite = new Uint8Array(m + 1);\n    for (let i = 2; i * i <= m; i++)\n        if (!composite[i]) for (let j = i * i; j <= m; j += i) composite[j] = 1;\n    const maxQ = [], minQ = [];\n    let mh = 0, nh = 0, l = 0, count = 0, last = -1, prev = -1;\n    for (let r = 0; r < nums.length; r++) {\n        const x = nums[r];\n        if (x >= 2 && !composite[x]) {\n            prev = last; last = r;\n            while (maxQ.length > mh && nums[maxQ[maxQ.length - 1]] <= x) maxQ.pop();\n            maxQ.push(r);\n            while (minQ.length > nh && nums[minQ[minQ.length - 1]] >= x) minQ.pop();\n            minQ.push(r);\n            while (nums[maxQ[mh]] - nums[minQ[nh]] > k) {\n                l++;\n                if (maxQ[mh] < l) mh++;\n                if (minQ[nh] < l) nh++;\n            }\n        }\n        if (prev >= l) count += prev - l + 1;\n    }\n    return count;\n};"
+    }
+   }
+  ]
  }
 }

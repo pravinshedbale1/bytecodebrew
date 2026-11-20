@@ -185,4 +185,15 @@ Return the minimum number of subsequences needed.`,
       'Walk the sorted array: keep the smallest value of the open group, and start a new group when the current value is more than k above it.',
     ],
   },
+  'orderly-queue': {
+    statement: `You are given a string \`s\` and an integer \`k\`. In one move, you may choose one of the first \`k\` letters of \`s\` and move it to the end of the string.
+
+Return the lexicographically smallest string you can obtain after any number of moves.`,
+    constraints: ['1 <= k <= s.length', 's.length <= 1000', 's consists of lowercase English letters'],
+    hints: [
+      'With k = 1 you can only move the first letter to the end, so you only ever get rotations of s. Try all of them.',
+      'With k = 2, think about what two moves can do: they can swap two neighbouring letters (while the rest of the string rotates around).',
+      'Swapping neighbours lets you bubble-sort, so for any k ≥ 2 every arrangement is reachable and the answer is simply s sorted.',
+    ],
+  },
 };

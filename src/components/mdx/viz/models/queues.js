@@ -4,6 +4,9 @@
  *   limitWindow  1438: the longest window whose max − min ≤ limit, with a max-deque and a min-deque
  *   lazyHeap     2034 Stock Price Fluctuation: heaps with lazy deletion (stale entries skipped on read)
  *   partitionK   2294: sort, then open a new group when a value is more than k above the group's first
+ *   visiblePeople 1944: a decreasing stack from the right; each pop is a person you can see
+ *   fixedBounds  2444: last bad index, last minK, last maxK give the valid starts
+ *   flipWindow   995: forced greedy with a running count of the flips covering i
  */
 import { list, parseInt1, parseInts, plural, rng } from './util.js';
 
@@ -441,4 +444,243 @@ export function parsePartitionK(values) {
 export function randomPartitionK(input, rand = Math.random) {
   const g = rng(rand);
   return { nums: Array.from({ length: g.int(4, 9) }, () => g.int(0, 15)), k: g.int(0, 4) };
+}
+
+// ---------------------------------------------------------------- 1944: visible people (count the pops)
+
+export const VISIBLE_PEOPLE = {
+  lesson: { label: '[10,6,8,5,11,9]', input: { heights: [10, 6, 8, 5, 11, 9] } },
+  rising: { label: '[5,1,2,3,10]: a staircase', input: { heights: [5, 1, 2, 3, 10] } },
+};
+
+export const visiblePeopleCode = [
+  ['loop', 'for (int i = n - 1; i >= 0; i--) {'],
+  ['pop', '    while (!st.isEmpty() && st.peek() < h[i]) { st.pop(); ans[i]++; }'],
+  ['taller', '    if (!st.isEmpty()) ans[i]++;            // the first taller person'],
+  ['push', '    st.push(h[i]);'],
+  ['end', '}'],
+];
+
+export function visiblePeopleAnswer({ heights: h }) {
+  return h.map((x, i) => {
+    let c = 0;
+    for (let j = i + 1; j < h.length; j++) {
+      const between = h.slice(i + 1, j);
+      if (between.every((b) => b < Math.min(x, h[j]))) c++;
+    }
+    return c;
+  });
+}
+
+export function visiblePeople(input) {
+  const h = input.heights;
+  const n = h.length;
+  const st = [];   // indexes, heights decreasing from bottom to top
+  const ans = new Array(n).fill(null);
+  const steps = [];
+  const snap = (x) => steps.push({ st: [...st], ans: [...ans], ...x });
+  snap({
+    kind: 'start', i: null, seen: [], taller: null, lines: [],
+    title: `Who can each person in ${list(h)} see?`,
+    text: 'Scan from the right. The stack holds the people who could still be seen from further left; their heights decrease from the bottom to the top. Everyone a person pops is someone they see, and someone nobody further left can see past them.',
+    calc: ['stack = []'],
+  });
+  for (let i = n - 1; i >= 0; i--) {
+    const seen = [];
+    while (st.length && h[st.at(-1)] < h[i]) seen.push(st.pop());
+    const taller = st.length ? st.at(-1) : null;
+    ans[i] = seen.length + (taller !== null ? 1 : 0);
+    st.push(i);
+    const who = [...seen.map((j) => `${h[j]}`), ...(taller !== null ? [`${h[taller]}`] : [])];
+    snap({
+      kind: 'person', i, seen, taller, lines: ['loop', 'pop', 'taller', 'push'],
+      title: `Person ${i} (height ${h[i]}) sees ${plural(ans[i], 'person', 'people')}`,
+      text: seen.length
+        ? `Pop ${seen.map((j) => h[j]).join(', ')}: each is shorter than ${h[i]}, so ${h[i]} sees them, and they are hidden from everyone further left. ${taller !== null ? `Then ${h[taller]} is the first person taller than ${h[i]}: visible too, and it blocks the rest.` : `Nobody taller is left on the stack, so that is everyone.`}`
+        : taller !== null ? `The top of the stack, ${h[taller]}, is already taller than ${h[i]}: that is the only person ${h[i]} sees.` : `Nobody stands to the right of ${h[i]} on the stack: they see nobody.`,
+      calc: [`sees ${who.length ? who.join(', ') : 'nobody'}`, `answer[${i}] = ${seen.length} pops${taller !== null ? ' + 1' : ''} = ${ans[i]}`],
+    });
+  }
+  snap({
+    kind: 'done', i: null, seen: [], taller: null, lines: ['end'], answer: list(ans),
+    title: `Answer: ${list(ans)}`,
+    text: `Each person is pushed once and popped at most once: O(n). The check: comparing every pair directly also gives ${list(visiblePeopleAnswer(input))}.`,
+    calc: [`answer = ${list(ans)}`],
+  });
+  return steps;
+}
+
+export function parseVisiblePeople(values) {
+  const r = parseInts(values.heights, { min: 1, max: 30, minLen: 1, maxLen: 9, name: 'heights' });
+  if (r.error) return r;
+  if (new Set(r.arr).size !== r.arr.length) return { error: 'heights must be distinct.' };
+  return { input: { heights: r.arr } };
+}
+
+export function randomVisiblePeople(input, rand = Math.random) {
+  const g = rng(rand);
+  return { heights: g.shuffle(Array.from({ length: 20 }, (_, k) => k + 1)).slice(0, g.int(5, 9)) };
+}
+
+// ---------------------------------------------------------------- 2444: fixed bounds (three positions)
+
+export const FIXED_BOUNDS = {
+  lesson: { label: '[1,3,5,2,7,5], min 1, max 5', input: { nums: [1, 3, 5, 2, 7, 5], minK: 1, maxK: 5 } },
+  ones: { label: 'minK = maxK = 1', input: { nums: [1, 1, 1, 1], minK: 1, maxK: 1 } },
+};
+
+export const fixedBoundsCode = [
+  ['loop', 'for (int i = 0; i < n; i++) {'],
+  ['bad', '    if (a[i] < minK || a[i] > maxK) bad = i;'],
+  ['mins', '    if (a[i] == minK) lastMin = i;'],
+  ['mins', '    if (a[i] == maxK) lastMax = i;'],
+  ['count', '    count += Math.max(0, Math.min(lastMin, lastMax) - bad);'],
+  ['end', '}'],
+];
+
+export function fixedBoundsAnswer({ nums: a, minK, maxK }) {
+  let c = 0;
+  for (let l = 0; l < a.length; l++) for (let r = l; r < a.length; r++) {
+    const part = a.slice(l, r + 1);
+    if (Math.min(...part) === minK && Math.max(...part) === maxK) c++;
+  }
+  return c;
+}
+
+export function fixedBounds(input) {
+  const { nums: a, minK, maxK } = input;
+  let bad = -1, lastMin = -1, lastMax = -1, count = 0;
+  const steps = [];
+  const snap = (x) => steps.push({ bad, lastMin, lastMax, count, ...x });
+  snap({
+    kind: 'start', i: null, add: 0, lines: [],
+    title: `Subarrays of ${list(a)} with min ${minK} and max ${maxK}`,
+    text: `Fix the end i. A start works if nothing between it and i is outside [${minK}, ${maxK}], and the subarray contains a ${minK} and a ${maxK}. Three positions say exactly which starts those are: the last bad index, the last ${minK} and the last ${maxK}.`,
+    calc: ['bad = −1, lastMin = −1, lastMax = −1'],
+  });
+  for (let i = 0; i < a.length; i++) {
+    const notes = [];
+    if (a[i] < minK || a[i] > maxK) { bad = i; notes.push(`${a[i]} is outside [${minK}, ${maxK}]: bad = ${i}`); }
+    if (a[i] === minK) { lastMin = i; notes.push(`lastMin = ${i}`); }
+    if (a[i] === maxK) { lastMax = i; notes.push(`lastMax = ${i}`); }
+    const hi = Math.min(lastMin, lastMax);
+    const add = Math.max(0, hi - bad);
+    count += add;
+    snap({
+      kind: add ? 'count' : 'none', i, add, lines: ['loop', 'bad', 'mins', 'count'],
+      title: add ? `End ${i}: ${plural(add, 'valid start')}` : `End ${i}: no valid start`,
+      text: `${notes.length ? `${notes.join('; ')}. ` : ''}${add
+        ? `Starts ${bad + 1} … ${hi} keep every value in range and include both a ${minK} and a ${maxK}.`
+        : hi < 0 ? `No ${lastMin < 0 ? minK : maxK} has appeared yet, so no subarray ending here can work.` : `The last bad value at ${bad} comes after the last ${lastMin < lastMax ? minK : maxK} at ${hi}: any start that includes both also includes the bad value.`}`,
+      calc: [`min(lastMin, lastMax) − bad = min(${lastMin}, ${lastMax}) − (${bad}) = ${hi - bad}`, `count += ${add} → ${count}`],
+    });
+  }
+  snap({
+    kind: 'done', i: null, add: 0, lines: ['end'], answer: `${count}`,
+    title: `Answer: ${count}`,
+    text: `One pass, O(1) space. The check: testing every subarray also gives ${fixedBoundsAnswer(input)}.`,
+    calc: [`count = ${count}`],
+  });
+  return steps;
+}
+
+export function parseFixedBounds(values) {
+  const r = parseInts(values.nums, { min: 1, max: 9, minLen: 2, maxLen: 10, name: 'nums' });
+  if (r.error) return r;
+  const lo = parseInt1(values.minK, { min: 1, max: 9, name: 'minK' });
+  if (lo.error) return lo;
+  const hi = parseInt1(values.maxK, { min: 1, max: 9, name: 'maxK' });
+  if (hi.error) return hi;
+  return { input: { nums: r.arr, minK: lo.v, maxK: hi.v } };
+}
+
+export function randomFixedBounds(input, rand = Math.random) {
+  const g = rng(rand);
+  const nums = Array.from({ length: g.int(6, 10) }, () => g.int(1, 6));
+  const minK = g.int(1, 3);
+  return { nums, minK, maxK: g.int(minK, 5) };
+}
+
+// ---------------------------------------------------------------- 995: k consecutive bit flips
+
+export const FLIP_WINDOW = {
+  lesson: { label: '[0,0,0,1,0,1,1,0], k = 3', input: { nums: [0, 0, 0, 1, 0, 1, 1, 0], k: 3 } },
+  fail: { label: '[1,1,0], k = 2: impossible', input: { nums: [1, 1, 0], k: 2 } },
+};
+
+export const flipWindowCode = [
+  ['loop', 'for (int i = 0; i < n; i++) {'],
+  ['expire', '    active -= endsAt[i];                 // flips that stopped covering i'],
+  ['test', '    if ((a[i] + active) % 2 == 0) {      // the bit is 0 right now'],
+  ['fail', '        if (i + k > n) return -1;'],
+  ['flip', '        flips++; active++; endsAt[i + k]++;'],
+  ['test', '    }'],
+  ['end', '}'],
+];
+
+export function flipWindowAnswer({ nums, k }) {
+  const a = [...nums];
+  let flips = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === 1) continue;
+    if (i + k > a.length) return -1;
+    for (let j = i; j < i + k; j++) a[j] ^= 1;
+    flips++;
+  }
+  return flips;
+}
+
+export function flipWindow(input) {
+  const { nums: a, k } = input;
+  const n = a.length;
+  const endsAt = new Array(n + 1).fill(0);
+  const starts = [];
+  let flips = 0, active = 0;
+  const steps = [];
+  const now = () => a.map((v, j) => (v + starts.filter((s) => s <= j && j < s + k).length) % 2);
+  const snap = (x) => steps.push({ starts: [...starts], now: now(), active, flips, ...x });
+  snap({
+    kind: 'start', i: null, lines: [],
+    title: `Flip ${list(a)} to all ones, k = ${k}`,
+    text: `The leftmost 0 can only be fixed by a flip that starts exactly there, so every choice is forced. Instead of flipping ${k} cells each time, count how many flips cover the current index (active): the bit is the original if that count is even, flipped if it is odd.`,
+    calc: ['active = 0, flips = 0'],
+  });
+  for (let i = 0; i < n; i++) {
+    const expired = endsAt[i];
+    active -= expired;
+    const bit = (a[i] + active) % 2;
+    const pre = `${expired ? `${plural(expired, 'flip')} stopped covering index ${i}. ` : ''}`;
+    if (bit === 1) {
+      snap({ kind: 'ok', i, lines: ['loop', 'expire', 'test'], title: `Index ${i} is already 1`, text: `${pre}a[${i}] = ${a[i]} and ${active} active ${active === 1 ? 'flip covers' : 'flips cover'} it: (${a[i]} + ${active}) is odd, so the bit is 1. Move on.`, calc: [`(${a[i]} + ${active}) % 2 = 1`] });
+      continue;
+    }
+    if (i + k > n) {
+      snap({ kind: 'fail', i, lines: ['loop', 'expire', 'test', 'fail'], answer: '-1', title: `Index ${i} is 0, but a flip would run past the end`, text: `${pre}The bit at ${i} is 0 and only a flip starting at ${i} could fix it, but [${i}, ${i + k - 1}] doesn't fit in ${n} cells. Impossible: −1.`, calc: [`${i} + ${k} = ${i + k} > ${n}`] });
+      return steps;
+    }
+    flips++; active++; endsAt[i + k]++;
+    starts.push(i);
+    snap({ kind: 'flip', i, lines: ['loop', 'expire', 'test', 'flip'], title: `Index ${i} is 0: flip [${i}, ${i + k - 1}]`, text: `${pre}(${a[i]} + ${active - 1}) is even, so the bit is 0. Start a flip here; it covers ${i} … ${i + k - 1}, so it stops counting at index ${i + k}.`, calc: [`flips = ${flips}, active = ${active}`, `endsAt[${i + k}]++`] });
+  }
+  snap({
+    kind: 'done', i: null, lines: ['end'], answer: `${flips}`,
+    title: `Answer: ${flips}`,
+    text: `Every index was 1 by the time the scan passed it. O(n) instead of O(nk). The check: flipping the cells for real gives ${flipWindowAnswer(input)}.`,
+    calc: [`flips = ${flips}`],
+  });
+  return steps;
+}
+
+export function parseFlipWindow(values) {
+  const r = parseInts(values.nums, { min: 0, max: 1, minLen: 1, maxLen: 12, name: 'nums' });
+  if (r.error) return r;
+  const k = parseInt1(values.k, { min: 1, max: r.arr.length, name: 'k' });
+  if (k.error) return k;
+  return { input: { nums: r.arr, k: k.v } };
+}
+
+export function randomFlipWindow(input, rand = Math.random) {
+  const g = rng(rand);
+  const nums = Array.from({ length: g.int(5, 10) }, () => (g.bool(0.55) ? 1 : 0));
+  return { nums, k: g.int(1, 4) };
 }

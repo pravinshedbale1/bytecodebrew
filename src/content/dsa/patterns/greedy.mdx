@@ -195,6 +195,35 @@ static int candy(int[] r) {
 }
 ```
 
+## Shape 5: what can the moves reach?
+
+Some problems give you a move and ask for the best result after **any number of moves**. Before searching, work out which configurations the move can reach at all. Often it is "only a few" or "all of them", and the answer is then a one-liner.
+
+### Orderly Queue (899)
+
+> In one move, take one of the first `k` letters of `s` and append it to the end. Return the lexicographically smallest string you can reach. `"cba"`, k = 1 → `"acb"`; `"baaca"`, k = 3 → `"aaabc"`.
+
+- **k = 1**: the only move is "first letter to the end", a rotation. The reachable strings are exactly the n rotations: try them all, O(n²).
+- **k ≥ 2**: you can **swap any two neighbouring letters**. Rotate until the pair `a b` is at the front, move `b` to the end (allowed, it is among the first 2), then keep moving the front letter to the end until the string has come round: the result is the original with `a` and `b` swapped. Adjacent swaps are enough to bubble-sort, so **every** permutation is reachable, and the answer is `s` sorted.
+
+```java
+public String orderlyQueue(String s, int k) {
+    if (k >= 2) {                              // any order is reachable
+        char[] c = s.toCharArray();
+        Arrays.sort(c);
+        return new String(c);
+    }
+    String best = s;                           // k = 1: only rotations
+    for (int i = 1; i < s.length(); i++) {
+        String r = s.substring(i) + s.substring(0, i);
+        if (r.compareTo(best) < 0) best = r;
+    }
+    return best;
+}
+```
+
+The way to find this in an interview: brute-force the reachable strings for a tiny input (a BFS over strings), notice that for k = 2 it reaches all of them, and then prove it with the swap.
+
 ## When greedy fails
 
 | Problem | Tempting greedy | Why it fails | Use |
@@ -234,6 +263,7 @@ static int candy(int[] r) {
 | 846 | [Hand of Straights](https://leetcode.com/problems/hand-of-straights/) | Medium | The smallest card must start a group |
 | 649 | [Dota2 Senate](https://leetcode.com/problems/dota2-senate/) | Medium | Greedy bans with two queues |
 | 1871 | [Jump Game VII](https://leetcode.com/problems/jump-game-vii/) | Medium | Sliding count over a reachability DP |
+| 899 | [Orderly Queue](https://leetcode.com/problems/orderly-queue/) | Hard | k = 1: rotations; k ≥ 2: neighbour swaps, so sort |
 | 135 | [Candy](https://leetcode.com/problems/candy/) | Hard | Two passes |
 
 ## Interview questions

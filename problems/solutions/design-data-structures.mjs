@@ -4887,4 +4887,1269 @@ ExamRoom.prototype.leave = function(p) {
       },
     ],
   },
+  // ---- queue design and queue simulations
+  'number-of-recent-calls': {
+    pattern: 'Queue of timestamps: append on the right, expire from the left',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Keep every ping, count the recent ones',
+        idea: 'Store all ping times and, on each ping, count how many are at least `t − 3000`.',
+        steps: [
+          'Append `t` to a list.',
+          'Scan the whole list and count the times `x` with `x ≥ t − 3000`.',
+        ],
+        time: 'O(n) per ping', space: 'O(n)',
+        why: 'Every ping rescans all earlier pings, even the ones that expired long ago: O(n²) over n pings.',
+        code: {
+          java: r`class RecentCounter {
+    private final List<Integer> times = new ArrayList<>();
+    public RecentCounter() {}
+    public int ping(int t) {
+        times.add(t);
+        int c = 0;
+        for (int x : times) if (x >= t - 3000) c++;
+        return c;
+    }
+}`,
+          cpp: r`class RecentCounter {
+    vector<int> times;
+public:
+    RecentCounter() {}
+    int ping(int t) {
+        times.push_back(t);
+        int c = 0;
+        for (int x : times) if (x >= t - 3000) c++;
+        return c;
+    }
+};`,
+          python: r`class RecentCounter:
+    def __init__(self):
+        self.times = []
+
+    def ping(self, t: int) -> int:
+        self.times.append(t)
+        return sum(1 for x in self.times if x >= t - 3000)`,
+          javascript: r`var RecentCounter = function() {
+    this.times = [];
+};
+
+RecentCounter.prototype.ping = function(t) {
+    this.times.push(t);
+    let c = 0;
+    for (const x of this.times) if (x >= t - 3000) c++;
+    return c;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Queue with expiry',
+        idea: 'Times only grow, so a ping that leaves the window never returns. Keep the pings in a queue and drop expired ones from the front.',
+        steps: [
+          'Append `t` to the back of the queue.',
+          'While the front is smaller than `t − 3000`, remove it.',
+          'Return the queue size.',
+        ],
+        time: 'O(1) amortised per ping', space: 'O(w), w = pings in the window (at most 3001)',
+        why: 'Each ping is added once and removed at most once, so the total work over all pings is O(n).',
+        code: {
+          java: r`class RecentCounter {
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    public RecentCounter() {}
+    public int ping(int t) {
+        q.offerLast(t);
+        while (q.peekFirst() < t - 3000) q.pollFirst();
+        return q.size();
+    }
+}`,
+          cpp: r`class RecentCounter {
+    queue<int> q;
+public:
+    RecentCounter() {}
+    int ping(int t) {
+        q.push(t);
+        while (q.front() < t - 3000) q.pop();
+        return q.size();
+    }
+};`,
+          python: r`class RecentCounter:
+    def __init__(self):
+        self.q = deque()
+
+    def ping(self, t: int) -> int:
+        self.q.append(t)
+        while self.q[0] < t - 3000:
+            self.q.popleft()
+        return len(self.q)`,
+          javascript: r`var RecentCounter = function() {
+    this.q = [];
+    this.head = 0;   // index of the front; earlier entries have expired
+};
+
+RecentCounter.prototype.ping = function(t) {
+    this.q.push(t);
+    while (this.q[this.head] < t - 3000) this.head++;
+    return this.q.length - this.head;
+};`,
+        },
+      },
+    ],
+  },
+  'time-needed-to-buy-tickets': {
+    pattern: 'Count each person\'s purchases directly instead of simulating the queue',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Simulate the line',
+        idea: 'Run the queue second by second: the front person buys one ticket and goes to the back if they need more.',
+        steps: [
+          'Put indexes `0 … n − 1` in a queue and copy `tickets`.',
+          'Each second, pop the front `i`, decrement its count and add one second.',
+          'If `i` is done and `i == k`, return the time; if `i` still needs tickets, push it back.',
+        ],
+        time: 'O(n · m), m = max(tickets)', space: 'O(n)',
+        why: 'Fine for n, m ≤ 100 (at most 10⁴ seconds), but it does one step per ticket sold.',
+        code: {
+          java: r`class Solution {
+    public int timeRequiredToBuy(int[] tickets, int k) {
+        int[] left = tickets.clone();
+        ArrayDeque<Integer> q = new ArrayDeque<>();
+        for (int i = 0; i < left.length; i++) q.offerLast(i);
+        int t = 0;
+        while (true) {
+            int i = q.pollFirst();
+            left[i]--;
+            t++;
+            if (left[i] > 0) q.offerLast(i);
+            else if (i == k) return t;
+        }
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int timeRequiredToBuy(vector<int>& tickets, int k) {
+        vector<int> left = tickets;
+        deque<int> q;
+        for (int i = 0; i < (int) left.size(); i++) q.push_back(i);
+        int t = 0;
+        while (true) {
+            int i = q.front(); q.pop_front();
+            left[i]--;
+            t++;
+            if (left[i] > 0) q.push_back(i);
+            else if (i == k) return t;
+        }
+    }
+};`,
+          python: r`class Solution:
+    def timeRequiredToBuy(self, tickets: List[int], k: int) -> int:
+        left = tickets[:]
+        q = deque(range(len(left)))
+        t = 0
+        while True:
+            i = q.popleft()
+            left[i] -= 1
+            t += 1
+            if left[i] > 0:
+                q.append(i)
+            elif i == k:
+                return t`,
+          javascript: r`var timeRequiredToBuy = function(tickets, k) {
+    const left = tickets.slice();
+    const q = [];
+    for (let i = 0; i < left.length; i++) q.push(i);
+    let t = 0;
+    for (let head = 0; ; head++) {
+        const i = q[head];
+        left[i]--;
+        t++;
+        if (left[i] > 0) q.push(i);
+        else if (i === k) return t;
+    }
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Count each person\'s tickets',
+        idea: 'Person k finishes after `tickets[k]` rounds. Everyone at or before k buys in each of those rounds (up to their own need); everyone after k gets one round fewer.',
+        steps: [
+          'For `i ≤ k`, add `min(tickets[i], tickets[k])`.',
+          'For `i > k`, add `min(tickets[i], tickets[k] − 1)`.',
+          'The sum is the time, since each ticket bought takes one second.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'The simulation only matters for how many tickets each person buys before k is done, and that is a min per person.',
+        code: {
+          java: r`class Solution {
+    public int timeRequiredToBuy(int[] tickets, int k) {
+        int t = 0;
+        for (int i = 0; i < tickets.length; i++)
+            t += Math.min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
+        return t;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int timeRequiredToBuy(vector<int>& tickets, int k) {
+        int t = 0;
+        for (int i = 0; i < (int) tickets.size(); i++)
+            t += min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
+        return t;
+    }
+};`,
+          python: r`class Solution:
+    def timeRequiredToBuy(self, tickets: List[int], k: int) -> int:
+        return sum(min(x, tickets[k] if i <= k else tickets[k] - 1) for i, x in enumerate(tickets))`,
+          javascript: r`var timeRequiredToBuy = function(tickets, k) {
+    let t = 0;
+    for (let i = 0; i < tickets.length; i++)
+        t += Math.min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
+    return t;
+};`,
+        },
+      },
+    ],
+  },
+  'number-of-students-unable-to-eat-lunch': {
+    pattern: 'The queue order doesn\'t matter: count preferences, walk the stack',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Simulate the queue',
+        idea: 'Run the process: the front student eats if they match, otherwise moves to the back. Stop after a full pass in which nobody ate.',
+        steps: [
+          'Keep the students in a queue and an index `top` into the sandwiches.',
+          'If the front matches `sandwiches[top]`, remove it and advance `top`, resetting a refusal counter; otherwise rotate it to the back and count a refusal.',
+          'When the refusals equal the queue size, everybody refused: return the queue size.',
+        ],
+        time: 'O(n²)', space: 'O(n)',
+        why: 'Each sandwich may need a full rotation of the queue before someone takes it.',
+        code: {
+          java: r`class Solution {
+    public int countStudents(int[] students, int[] sandwiches) {
+        ArrayDeque<Integer> q = new ArrayDeque<>();
+        for (int s : students) q.offerLast(s);
+        int top = 0, refused = 0;
+        while (!q.isEmpty() && refused < q.size()) {
+            int s = q.pollFirst();
+            if (s == sandwiches[top]) { top++; refused = 0; }
+            else { q.offerLast(s); refused++; }
+        }
+        return q.size();
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int countStudents(vector<int>& students, vector<int>& sandwiches) {
+        deque<int> q(students.begin(), students.end());
+        int top = 0, refused = 0;
+        while (!q.empty() && refused < (int) q.size()) {
+            int s = q.front(); q.pop_front();
+            if (s == sandwiches[top]) { top++; refused = 0; }
+            else { q.push_back(s); refused++; }
+        }
+        return q.size();
+    }
+};`,
+          python: r`class Solution:
+    def countStudents(self, students: List[int], sandwiches: List[int]) -> int:
+        q = deque(students)
+        top = refused = 0
+        while q and refused < len(q):
+            s = q.popleft()
+            if s == sandwiches[top]:
+                top += 1
+                refused = 0
+            else:
+                q.append(s)
+                refused += 1
+        return len(q)`,
+          javascript: r`var countStudents = function(students, sandwiches) {
+    const q = students.slice();
+    let top = 0, refused = 0;
+    while (q.length && refused < q.length) {
+        const s = q.shift();
+        if (s === sandwiches[top]) { top++; refused = 0; }
+        else { q.push(s); refused++; }
+    }
+    return q.length;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Count who wants what',
+        idea: 'A student who doesn\'t match just walks to the back, so the top sandwich is taken as long as anybody wants it. Only the counts matter.',
+        steps: [
+          'Count the students who want `0` and who want `1`.',
+          'Go through the sandwiches from the top: if nobody wants this type, the remaining `n − i` students can\'t eat; otherwise decrement that count.',
+          'If every sandwich is taken, return `0`.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'The rotation only changes who takes a sandwich, not whether someone does, so it never needs simulating.',
+        code: {
+          java: r`class Solution {
+    public int countStudents(int[] students, int[] sandwiches) {
+        int[] want = new int[2];
+        for (int s : students) want[s]++;
+        for (int i = 0; i < sandwiches.length; i++) {
+            if (want[sandwiches[i]] == 0) return sandwiches.length - i;
+            want[sandwiches[i]]--;
+        }
+        return 0;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int countStudents(vector<int>& students, vector<int>& sandwiches) {
+        int want[2] = {0, 0};
+        for (int s : students) want[s]++;
+        for (int i = 0; i < (int) sandwiches.size(); i++) {
+            if (want[sandwiches[i]] == 0) return sandwiches.size() - i;
+            want[sandwiches[i]]--;
+        }
+        return 0;
+    }
+};`,
+          python: r`class Solution:
+    def countStudents(self, students: List[int], sandwiches: List[int]) -> int:
+        want = [students.count(0), students.count(1)]
+        for i, s in enumerate(sandwiches):
+            if want[s] == 0:
+                return len(sandwiches) - i
+            want[s] -= 1
+        return 0`,
+          javascript: r`var countStudents = function(students, sandwiches) {
+    const want = [0, 0];
+    for (const s of students) want[s]++;
+    for (let i = 0; i < sandwiches.length; i++) {
+        if (want[sandwiches[i]] === 0) return sandwiches.length - i;
+        want[sandwiches[i]]--;
+    }
+    return 0;
+};`,
+        },
+      },
+    ],
+  },
+  'number-of-people-aware-of-a-secret': {
+    pattern: 'DP over the day people learn it, with a sliding window of active sharers',
+    approaches: [
+      {
+        level: 'Better', name: 'DP, summing the sharers each day',
+        idea: 'Let `learned[d]` be how many people learn the secret on day d. The people learning on day d are told by everyone who learned it between `d − forget + 1` and `d − delay`.',
+        steps: [
+          '`learned[1] = 1`.',
+          'For each day `d` from 2 to n, sum `learned[j]` for `j` from `max(1, d − forget + 1)` to `d − delay`.',
+          'The answer is the sum of `learned[d]` over the last `forget` days, `n − forget + 1 … n`, modulo 10⁹ + 7.',
+        ],
+        time: 'O(n · forget)', space: 'O(n)',
+        why: 'Each day re-adds a window of up to forget − delay values that barely changed from the day before.',
+        code: {
+          java: r`class Solution {
+    public int peopleAwareOfSecret(int n, int delay, int forget) {
+        final long MOD = 1_000_000_007L;
+        long[] learned = new long[n + 1];
+        learned[1] = 1;
+        for (int d = 2; d <= n; d++)
+            for (int j = Math.max(1, d - forget + 1); j <= d - delay; j++)
+                learned[d] = (learned[d] + learned[j]) % MOD;
+        long known = 0;
+        for (int d = Math.max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+        return (int) known;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int peopleAwareOfSecret(int n, int delay, int forget) {
+        const long long MOD = 1000000007LL;
+        vector<long long> learned(n + 1, 0);
+        learned[1] = 1;
+        for (int d = 2; d <= n; d++)
+            for (int j = max(1, d - forget + 1); j <= d - delay; j++)
+                learned[d] = (learned[d] + learned[j]) % MOD;
+        long long known = 0;
+        for (int d = max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+        return known;
+    }
+};`,
+          python: r`class Solution:
+    def peopleAwareOfSecret(self, n: int, delay: int, forget: int) -> int:
+        MOD = 10**9 + 7
+        learned = [0] * (n + 1)
+        learned[1] = 1
+        for d in range(2, n + 1):
+            learned[d] = sum(learned[max(1, d - forget + 1): max(0, d - delay + 1)]) % MOD
+        return sum(learned[max(1, n - forget + 1):]) % MOD`,
+          javascript: r`var peopleAwareOfSecret = function(n, delay, forget) {
+    const MOD = 1000000007;
+    const learned = new Array(n + 1).fill(0);
+    learned[1] = 1;
+    for (let d = 2; d <= n; d++)
+        for (let j = Math.max(1, d - forget + 1); j <= d - delay; j++)
+            learned[d] = (learned[d] + learned[j]) % MOD;
+    let known = 0;
+    for (let d = Math.max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+    return known;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'DP with a running window of sharers',
+        idea: 'The set of people able to share slides forward by one day each day: the cohort from `d − delay` starts sharing and the cohort from `d − forget` forgets. Keep that count as a running sum.',
+        steps: [
+          '`learned[1] = 1`, `sharing = 0`.',
+          'For each day `d ≥ 2`: add `learned[d − delay]` (if that day exists), subtract `learned[d − forget]` (if it exists), and set `learned[d] = sharing`.',
+          'Return the sum of `learned` over days `n − forget + 1 … n`, modulo 10⁹ + 7.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'This is a queue of cohorts: each cohort joins the sharers once and leaves once. Keep `sharing` non-negative when subtracting under the modulus.',
+        code: {
+          java: r`class Solution {
+    public int peopleAwareOfSecret(int n, int delay, int forget) {
+        final long MOD = 1_000_000_007L;
+        long[] learned = new long[n + 1];
+        learned[1] = 1;
+        long sharing = 0;
+        for (int d = 2; d <= n; d++) {
+            if (d - delay >= 1) sharing = (sharing + learned[d - delay]) % MOD;
+            if (d - forget >= 1) sharing = (sharing - learned[d - forget] + MOD) % MOD;
+            learned[d] = sharing;
+        }
+        long known = 0;
+        for (int d = Math.max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+        return (int) known;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int peopleAwareOfSecret(int n, int delay, int forget) {
+        const long long MOD = 1000000007LL;
+        vector<long long> learned(n + 1, 0);
+        learned[1] = 1;
+        long long sharing = 0;
+        for (int d = 2; d <= n; d++) {
+            if (d - delay >= 1) sharing = (sharing + learned[d - delay]) % MOD;
+            if (d - forget >= 1) sharing = (sharing - learned[d - forget] + MOD) % MOD;
+            learned[d] = sharing;
+        }
+        long long known = 0;
+        for (int d = max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+        return known;
+    }
+};`,
+          python: r`class Solution:
+    def peopleAwareOfSecret(self, n: int, delay: int, forget: int) -> int:
+        MOD = 10**9 + 7
+        learned = [0] * (n + 1)
+        learned[1] = 1
+        sharing = 0
+        for d in range(2, n + 1):
+            if d - delay >= 1:
+                sharing += learned[d - delay]
+            if d - forget >= 1:
+                sharing -= learned[d - forget]
+            sharing %= MOD
+            learned[d] = sharing
+        return sum(learned[max(1, n - forget + 1):]) % MOD`,
+          javascript: r`var peopleAwareOfSecret = function(n, delay, forget) {
+    const MOD = 1000000007;
+    const learned = new Array(n + 1).fill(0);
+    learned[1] = 1;
+    let sharing = 0;
+    for (let d = 2; d <= n; d++) {
+        if (d - delay >= 1) sharing = (sharing + learned[d - delay]) % MOD;
+        if (d - forget >= 1) sharing = (sharing - learned[d - forget] + MOD) % MOD;
+        learned[d] = sharing;
+    }
+    let known = 0;
+    for (let d = Math.max(1, n - forget + 1); d <= n; d++) known = (known + learned[d]) % MOD;
+    return known;
+};`,
+        },
+      },
+    ],
+  },
+  'design-front-middle-back-queue': {
+    pattern: 'Two balanced deques: the middle is always at their boundary',
+    approaches: [
+      {
+        level: 'Brute force', name: 'One list, insert and remove by index',
+        idea: 'Keep everything in one list. The middle insert position is `size / 2`; the middle pop position is `(size − 1) / 2`.',
+        steps: [
+          '`pushFront` inserts at 0, `pushMiddle` at `size / 2`, `pushBack` appends.',
+          '`popFront` removes index 0, `popMiddle` index `(size − 1) / 2`, `popBack` the last; each returns -1 on an empty list.',
+        ],
+        time: 'O(n) for front and middle operations', space: 'O(n)',
+        why: 'Inserting or removing in the middle of an array shifts up to n elements. With 1000 calls that is fine, but it isn\'t O(1).',
+        code: {
+          java: r`class FrontMiddleBackQueue {
+    private final List<Integer> a = new ArrayList<>();
+    public FrontMiddleBackQueue() {}
+    public void pushFront(int val) { a.add(0, val); }
+    public void pushMiddle(int val) { a.add(a.size() / 2, val); }
+    public void pushBack(int val) { a.add(val); }
+    public int popFront() { return a.isEmpty() ? -1 : a.remove(0); }
+    public int popMiddle() { return a.isEmpty() ? -1 : a.remove((a.size() - 1) / 2); }
+    public int popBack() { return a.isEmpty() ? -1 : a.remove(a.size() - 1); }
+}`,
+          cpp: r`class FrontMiddleBackQueue {
+    vector<int> a;
+    int take(int i) { int v = a[i]; a.erase(a.begin() + i); return v; }
+public:
+    FrontMiddleBackQueue() {}
+    void pushFront(int val) { a.insert(a.begin(), val); }
+    void pushMiddle(int val) { a.insert(a.begin() + a.size() / 2, val); }
+    void pushBack(int val) { a.push_back(val); }
+    int popFront() { return a.empty() ? -1 : take(0); }
+    int popMiddle() { return a.empty() ? -1 : take((a.size() - 1) / 2); }
+    int popBack() { return a.empty() ? -1 : take(a.size() - 1); }
+};`,
+          python: r`class FrontMiddleBackQueue:
+    def __init__(self):
+        self.a = []
+
+    def pushFront(self, val: int) -> None:
+        self.a.insert(0, val)
+
+    def pushMiddle(self, val: int) -> None:
+        self.a.insert(len(self.a) // 2, val)
+
+    def pushBack(self, val: int) -> None:
+        self.a.append(val)
+
+    def popFront(self) -> int:
+        return self.a.pop(0) if self.a else -1
+
+    def popMiddle(self) -> int:
+        return self.a.pop((len(self.a) - 1) // 2) if self.a else -1
+
+    def popBack(self) -> int:
+        return self.a.pop() if self.a else -1`,
+          javascript: r`var FrontMiddleBackQueue = function() {
+    this.a = [];
+};
+
+FrontMiddleBackQueue.prototype.pushFront = function(val) { this.a.unshift(val); };
+FrontMiddleBackQueue.prototype.pushMiddle = function(val) { this.a.splice(this.a.length >> 1, 0, val); };
+FrontMiddleBackQueue.prototype.pushBack = function(val) { this.a.push(val); };
+FrontMiddleBackQueue.prototype.popFront = function() { return this.a.length ? this.a.shift() : -1; };
+FrontMiddleBackQueue.prototype.popMiddle = function() {
+    return this.a.length ? this.a.splice((this.a.length - 1) >> 1, 1)[0] : -1;
+};
+FrontMiddleBackQueue.prototype.popBack = function() { return this.a.length ? this.a.pop() : -1; };`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Two deques, kept balanced',
+        idea: 'Split the queue into a left half and a right half, with `right` holding as many elements as `left` or one more. Then the middle is always the back of `left` or the front of `right`.',
+        steps: [
+          'After any front or back operation, rebalance: move one element across the boundary if the sizes break the rule.',
+          '`pushMiddle`: if the halves are equal, the new value becomes the front of `right`; otherwise it goes to the back of `left`.',
+          '`popMiddle`: with equal halves the frontmost middle is the back of `left`; otherwise it is the front of `right`.',
+          'Every pop returns -1 when `right` is empty (then the whole queue is empty).',
+        ],
+        time: 'O(1) per operation', space: 'O(n)',
+        why: 'Each operation touches the ends of two deques and moves at most one element. (JavaScript has no built-in deque; its `shift`/`unshift` are fine at this size.)',
+        code: {
+          java: r`class FrontMiddleBackQueue {
+    private final ArrayDeque<Integer> left = new ArrayDeque<>(), right = new ArrayDeque<>();
+    public FrontMiddleBackQueue() {}
+    private void fix() {   // keep right.size() == left.size() or left.size() + 1
+        if (left.size() > right.size()) right.offerFirst(left.pollLast());
+        else if (right.size() > left.size() + 1) left.offerLast(right.pollFirst());
+    }
+    public void pushFront(int val) { left.offerFirst(val); fix(); }
+    public void pushMiddle(int val) {
+        if (left.size() == right.size()) right.offerFirst(val); else left.offerLast(val);
+    }
+    public void pushBack(int val) { right.offerLast(val); fix(); }
+    public int popFront() {
+        if (right.isEmpty()) return -1;
+        int v = left.isEmpty() ? right.pollFirst() : left.pollFirst();
+        fix();
+        return v;
+    }
+    public int popMiddle() {
+        if (right.isEmpty()) return -1;
+        return left.size() == right.size() ? left.pollLast() : right.pollFirst();
+    }
+    public int popBack() {
+        if (right.isEmpty()) return -1;
+        int v = right.pollLast();
+        fix();
+        return v;
+    }
+}`,
+          cpp: r`class FrontMiddleBackQueue {
+    deque<int> left, right;   // right.size() == left.size() or left.size() + 1
+    void fix() {
+        if (left.size() > right.size()) { right.push_front(left.back()); left.pop_back(); }
+        else if (right.size() > left.size() + 1) { left.push_back(right.front()); right.pop_front(); }
+    }
+public:
+    FrontMiddleBackQueue() {}
+    void pushFront(int val) { left.push_front(val); fix(); }
+    void pushMiddle(int val) {
+        if (left.size() == right.size()) right.push_front(val); else left.push_back(val);
+    }
+    void pushBack(int val) { right.push_back(val); fix(); }
+    int popFront() {
+        if (right.empty()) return -1;
+        int v;
+        if (left.empty()) { v = right.front(); right.pop_front(); }
+        else { v = left.front(); left.pop_front(); }
+        fix();
+        return v;
+    }
+    int popMiddle() {
+        if (right.empty()) return -1;
+        int v;
+        if (left.size() == right.size()) { v = left.back(); left.pop_back(); }
+        else { v = right.front(); right.pop_front(); }
+        return v;
+    }
+    int popBack() {
+        if (right.empty()) return -1;
+        int v = right.back(); right.pop_back();
+        fix();
+        return v;
+    }
+};`,
+          python: r`class FrontMiddleBackQueue:
+    def __init__(self):
+        self.left = deque()    # len(right) is len(left) or len(left) + 1
+        self.right = deque()
+
+    def _fix(self) -> None:
+        if len(self.left) > len(self.right):
+            self.right.appendleft(self.left.pop())
+        elif len(self.right) > len(self.left) + 1:
+            self.left.append(self.right.popleft())
+
+    def pushFront(self, val: int) -> None:
+        self.left.appendleft(val)
+        self._fix()
+
+    def pushMiddle(self, val: int) -> None:
+        if len(self.left) == len(self.right):
+            self.right.appendleft(val)
+        else:
+            self.left.append(val)
+
+    def pushBack(self, val: int) -> None:
+        self.right.append(val)
+        self._fix()
+
+    def popFront(self) -> int:
+        if not self.right:
+            return -1
+        v = self.left.popleft() if self.left else self.right.popleft()
+        self._fix()
+        return v
+
+    def popMiddle(self) -> int:
+        if not self.right:
+            return -1
+        return self.left.pop() if len(self.left) == len(self.right) else self.right.popleft()
+
+    def popBack(self) -> int:
+        if not self.right:
+            return -1
+        v = self.right.pop()
+        self._fix()
+        return v`,
+          javascript: r`var FrontMiddleBackQueue = function() {
+    this.left = [];    // right.length is left.length or left.length + 1
+    this.right = [];
+};
+
+FrontMiddleBackQueue.prototype.fix = function() {
+    if (this.left.length > this.right.length) this.right.unshift(this.left.pop());
+    else if (this.right.length > this.left.length + 1) this.left.push(this.right.shift());
+};
+
+FrontMiddleBackQueue.prototype.pushFront = function(val) { this.left.unshift(val); this.fix(); };
+
+FrontMiddleBackQueue.prototype.pushMiddle = function(val) {
+    if (this.left.length === this.right.length) this.right.unshift(val);
+    else this.left.push(val);
+};
+
+FrontMiddleBackQueue.prototype.pushBack = function(val) { this.right.push(val); this.fix(); };
+
+FrontMiddleBackQueue.prototype.popFront = function() {
+    if (!this.right.length) return -1;
+    const v = this.left.length ? this.left.shift() : this.right.shift();
+    this.fix();
+    return v;
+};
+
+FrontMiddleBackQueue.prototype.popMiddle = function() {
+    if (!this.right.length) return -1;
+    return this.left.length === this.right.length ? this.left.pop() : this.right.shift();
+};
+
+FrontMiddleBackQueue.prototype.popBack = function() {
+    if (!this.right.length) return -1;
+    const v = this.right.pop();
+    this.fix();
+    return v;
+};`,
+        },
+      },
+    ],
+  },
+  'design-most-recently-used-queue': {
+    pattern: 'Order-statistics over growing positions: a Fenwick tree with binary lifting',
+    approaches: [
+      {
+        level: 'Brute force', name: 'A list: remove the k-th, append it',
+        idea: 'Keep the queue as a list and do exactly what fetch says.',
+        steps: [
+          'The constructor builds `[1, …, n]`.',
+          '`fetch(k)` removes the element at index `k − 1`, appends it and returns it.',
+        ],
+        time: 'O(n) per fetch', space: 'O(n)',
+        why: 'Removing from the middle shifts the elements after it. With n and the calls ≤ 2000 this passes; the follow-up asks for better.',
+        code: {
+          java: r`class MRUQueue {
+    private final List<Integer> a = new ArrayList<>();
+    public MRUQueue(int n) { for (int i = 1; i <= n; i++) a.add(i); }
+    public int fetch(int k) {
+        int v = a.remove(k - 1);
+        a.add(v);
+        return v;
+    }
+}`,
+          cpp: r`class MRUQueue {
+    vector<int> a;
+public:
+    MRUQueue(int n) { for (int i = 1; i <= n; i++) a.push_back(i); }
+    int fetch(int k) {
+        int v = a[k - 1];
+        a.erase(a.begin() + (k - 1));
+        a.push_back(v);
+        return v;
+    }
+};`,
+          python: r`class MRUQueue:
+    def __init__(self, n: int):
+        self.a = list(range(1, n + 1))
+
+    def fetch(self, k: int) -> int:
+        v = self.a.pop(k - 1)
+        self.a.append(v)
+        return v`,
+          javascript: r`var MRUQueue = function(n) {
+    this.a = [];
+    for (let i = 1; i <= n; i++) this.a.push(i);
+};
+
+MRUQueue.prototype.fetch = function(k) {
+    const v = this.a.splice(k - 1, 1)[0];
+    this.a.push(v);
+    return v;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Fenwick tree over positions',
+        idea: 'Give each element a position that never moves: 1 … n at the start, and every fetched element gets the next position after the end. A Fenwick tree marks which positions are occupied, so the k-th element is the k-th occupied position.',
+        steps: [
+          'Allocate `n + calls` positions; mark 1 … n as occupied with values 1 … n.',
+          'Find the k-th occupied position with binary lifting on the Fenwick tree: walk down the powers of two, skipping a block whenever it holds fewer than k elements.',
+          'Clear that position, write its value at the next position past the end, mark it, and return the value.',
+        ],
+        time: 'O(log(n + calls)) per fetch', space: 'O(n + calls)',
+        why: 'Positions only grow, so "move to the end" is just "write at a new position". Square-root decomposition (blocks of √n) is a simpler alternative at O(√n) per fetch.',
+        code: {
+          java: r`class MRUQueue {
+    private final int cap; private final int[] bit, val; private int end;
+    public MRUQueue(int n) {
+        cap = n + 2001; bit = new int[cap + 1]; val = new int[cap + 1];
+        for (int i = 1; i <= n; i++) { val[i] = i; add(i, 1); }
+        end = n;
+    }
+    private void add(int i, int d) { for (; i <= cap; i += i & -i) bit[i] += d; }
+    public int fetch(int k) {
+        int pos = 0;
+        for (int step = Integer.highestOneBit(cap); step > 0; step >>= 1)
+            if (pos + step <= cap && bit[pos + step] < k) { pos += step; k -= bit[pos]; }
+        pos++;                      // the k-th occupied position
+        int v = val[pos];
+        add(pos, -1);
+        val[++end] = v;
+        add(end, 1);
+        return v;
+    }
+}`,
+          cpp: r`class MRUQueue {
+    int cap, end;
+    vector<int> bit, val;
+    void add(int i, int d) { for (; i <= cap; i += i & -i) bit[i] += d; }
+public:
+    MRUQueue(int n) : cap(n + 2001), end(n), bit(n + 2002, 0), val(n + 2002, 0) {
+        for (int i = 1; i <= n; i++) { val[i] = i; add(i, 1); }
+    }
+    int fetch(int k) {
+        int pos = 0, step = 1;
+        while (step * 2 <= cap) step *= 2;
+        for (; step > 0; step >>= 1)
+            if (pos + step <= cap && bit[pos + step] < k) { pos += step; k -= bit[pos]; }
+        pos++;                      // the k-th occupied position
+        int v = val[pos];
+        add(pos, -1);
+        val[++end] = v;
+        add(end, 1);
+        return v;
+    }
+};`,
+          python: r`class MRUQueue:
+    def __init__(self, n: int):
+        self.cap = n + 2001
+        self.bit = [0] * (self.cap + 1)
+        self.val = [0] * (self.cap + 1)
+        for i in range(1, n + 1):
+            self.val[i] = i
+            self._add(i, 1)
+        self.end = n
+
+    def _add(self, i: int, d: int) -> None:
+        while i <= self.cap:
+            self.bit[i] += d
+            i += i & -i
+
+    def fetch(self, k: int) -> int:
+        pos = 0
+        step = 1 << (self.cap.bit_length() - 1)
+        while step:
+            if pos + step <= self.cap and self.bit[pos + step] < k:
+                pos += step
+                k -= self.bit[pos]
+            step >>= 1
+        pos += 1                    # the k-th occupied position
+        v = self.val[pos]
+        self._add(pos, -1)
+        self.end += 1
+        self.val[self.end] = v
+        self._add(self.end, 1)
+        return v`,
+          javascript: r`var MRUQueue = function(n) {
+    this.cap = n + 2001;
+    this.bit = new Int32Array(this.cap + 1);
+    this.val = new Int32Array(this.cap + 1);
+    for (let i = 1; i <= n; i++) { this.val[i] = i; this.add(i, 1); }
+    this.end = n;
+};
+
+MRUQueue.prototype.add = function(i, d) {
+    for (; i <= this.cap; i += i & -i) this.bit[i] += d;
+};
+
+MRUQueue.prototype.fetch = function(k) {
+    let pos = 0, step = 1;
+    while (step * 2 <= this.cap) step *= 2;
+    for (; step > 0; step >>= 1)
+        if (pos + step <= this.cap && this.bit[pos + step] < k) { pos += step; k -= this.bit[pos]; }
+    pos++;                          // the k-th occupied position
+    const v = this.val[pos];
+    this.add(pos, -1);
+    this.val[++this.end] = v;
+    this.add(this.end, 1);
+    return v;
+};`,
+        },
+      },
+    ],
+  },
+  'design-ride-sharing-system': {
+    pattern: 'Two FIFO queues, with cancellations handled by lazy deletion',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Lists, removing cancelled riders right away',
+        idea: 'Keep riders and drivers in arrival order. On cancel, search the rider list and remove the rider.',
+        steps: [
+          '`addRider` / `addDriver` append to their list.',
+          '`cancelRider` finds the rider in the list and removes it (nothing happens if it isn\'t there).',
+          '`matchDriverWithRider` returns `[-1, -1]` if a list is empty, else removes and returns both fronts.',
+        ],
+        time: 'O(n) per cancel or match', space: 'O(n)',
+        why: 'Removing from the middle (or the front) of an array list is linear.',
+        code: {
+          java: r`class RideSharingSystem {
+    private final List<Integer> riders = new ArrayList<>(), drivers = new ArrayList<>();
+    public RideSharingSystem() {}
+    public void addRider(int riderId) { riders.add(riderId); }
+    public void addDriver(int driverId) { drivers.add(driverId); }
+    public int[] matchDriverWithRider() {
+        if (riders.isEmpty() || drivers.isEmpty()) return new int[] { -1, -1 };
+        return new int[] { drivers.remove(0), riders.remove(0) };
+    }
+    public void cancelRider(int riderId) { riders.remove(Integer.valueOf(riderId)); }
+}`,
+          cpp: r`class RideSharingSystem {
+    vector<int> riders, drivers;
+public:
+    RideSharingSystem() {}
+    void addRider(int riderId) { riders.push_back(riderId); }
+    void addDriver(int driverId) { drivers.push_back(driverId); }
+    vector<int> matchDriverWithRider() {
+        if (riders.empty() || drivers.empty()) return {-1, -1};
+        vector<int> r = {drivers.front(), riders.front()};
+        drivers.erase(drivers.begin());
+        riders.erase(riders.begin());
+        return r;
+    }
+    void cancelRider(int riderId) {
+        auto it = find(riders.begin(), riders.end(), riderId);
+        if (it != riders.end()) riders.erase(it);
+    }
+};`,
+          python: r`class RideSharingSystem:
+    def __init__(self):
+        self.riders = []
+        self.drivers = []
+
+    def addRider(self, riderId: int) -> None:
+        self.riders.append(riderId)
+
+    def addDriver(self, driverId: int) -> None:
+        self.drivers.append(driverId)
+
+    def matchDriverWithRider(self) -> List[int]:
+        if not self.riders or not self.drivers:
+            return [-1, -1]
+        return [self.drivers.pop(0), self.riders.pop(0)]
+
+    def cancelRider(self, riderId: int) -> None:
+        if riderId in self.riders:
+            self.riders.remove(riderId)`,
+          javascript: r`var RideSharingSystem = function() {
+    this.riders = [];
+    this.drivers = [];
+};
+
+RideSharingSystem.prototype.addRider = function(riderId) { this.riders.push(riderId); };
+
+RideSharingSystem.prototype.addDriver = function(driverId) { this.drivers.push(driverId); };
+
+RideSharingSystem.prototype.matchDriverWithRider = function() {
+    if (!this.riders.length || !this.drivers.length) return [-1, -1];
+    return [this.drivers.shift(), this.riders.shift()];
+};
+
+RideSharingSystem.prototype.cancelRider = function(riderId) {
+    const i = this.riders.indexOf(riderId);
+    if (i >= 0) this.riders.splice(i, 1);
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Queues plus a set of waiting riders',
+        idea: 'Don\'t remove a cancelled rider from the queue. Keep a set of riders still waiting; when matching, skip queue fronts that are no longer in the set.',
+        steps: [
+          '`addRider` pushes the id to the rider queue and adds it to `waiting`; `addDriver` pushes to the driver queue.',
+          '`cancelRider` removes the id from `waiting` (a no-op if it was already matched or cancelled).',
+          '`matchDriverWithRider` pops rider-queue fronts not in `waiting`; if either queue is then empty, return `[-1, -1]`; otherwise pop both fronts and remove the rider from `waiting`.',
+        ],
+        time: 'O(1) amortised per call', space: 'O(n)',
+        why: 'Each rider is pushed once and popped once, whether matched or skipped after a cancel: lazy deletion.',
+        code: {
+          java: r`class RideSharingSystem {
+    private final ArrayDeque<Integer> riders = new ArrayDeque<>(), drivers = new ArrayDeque<>();
+    private final Set<Integer> waiting = new HashSet<>();
+    public RideSharingSystem() {}
+    public void addRider(int riderId) { riders.offerLast(riderId); waiting.add(riderId); }
+    public void addDriver(int driverId) { drivers.offerLast(driverId); }
+    public int[] matchDriverWithRider() {
+        while (!riders.isEmpty() && !waiting.contains(riders.peekFirst())) riders.pollFirst();
+        if (riders.isEmpty() || drivers.isEmpty()) return new int[] { -1, -1 };
+        int r = riders.pollFirst();
+        waiting.remove(r);
+        return new int[] { drivers.pollFirst(), r };
+    }
+    public void cancelRider(int riderId) { waiting.remove(riderId); }
+}`,
+          cpp: r`class RideSharingSystem {
+    deque<int> riders, drivers;
+    unordered_set<int> waiting;
+public:
+    RideSharingSystem() {}
+    void addRider(int riderId) { riders.push_back(riderId); waiting.insert(riderId); }
+    void addDriver(int driverId) { drivers.push_back(driverId); }
+    vector<int> matchDriverWithRider() {
+        while (!riders.empty() && !waiting.count(riders.front())) riders.pop_front();
+        if (riders.empty() || drivers.empty()) return {-1, -1};
+        int r = riders.front(); riders.pop_front();
+        int d = drivers.front(); drivers.pop_front();
+        waiting.erase(r);
+        return {d, r};
+    }
+    void cancelRider(int riderId) { waiting.erase(riderId); }
+};`,
+          python: r`class RideSharingSystem:
+    def __init__(self):
+        self.riders = deque()
+        self.drivers = deque()
+        self.waiting = set()
+
+    def addRider(self, riderId: int) -> None:
+        self.riders.append(riderId)
+        self.waiting.add(riderId)
+
+    def addDriver(self, driverId: int) -> None:
+        self.drivers.append(driverId)
+
+    def matchDriverWithRider(self) -> List[int]:
+        while self.riders and self.riders[0] not in self.waiting:
+            self.riders.popleft()
+        if not self.riders or not self.drivers:
+            return [-1, -1]
+        r = self.riders.popleft()
+        self.waiting.discard(r)
+        return [self.drivers.popleft(), r]
+
+    def cancelRider(self, riderId: int) -> None:
+        self.waiting.discard(riderId)`,
+          javascript: r`var RideSharingSystem = function() {
+    this.riders = []; this.rh = 0;     // queues as arrays with a head index
+    this.drivers = []; this.dh = 0;
+    this.waiting = new Set();
+};
+
+RideSharingSystem.prototype.addRider = function(riderId) {
+    this.riders.push(riderId);
+    this.waiting.add(riderId);
+};
+
+RideSharingSystem.prototype.addDriver = function(driverId) { this.drivers.push(driverId); };
+
+RideSharingSystem.prototype.matchDriverWithRider = function() {
+    while (this.rh < this.riders.length && !this.waiting.has(this.riders[this.rh])) this.rh++;
+    if (this.rh === this.riders.length || this.dh === this.drivers.length) return [-1, -1];
+    const r = this.riders[this.rh++];
+    this.waiting.delete(r);
+    return [this.drivers[this.dh++], r];
+};
+
+RideSharingSystem.prototype.cancelRider = function(riderId) { this.waiting.delete(riderId); };`,
+        },
+      },
+    ],
+  },
+  'design-bounded-blocking-queue': {
+    pattern: 'Monitor: one lock, wait in a loop on condition variables (notFull / notEmpty)',
+    approaches: [
+      {
+        level: 'Better', name: 'One lock, one wait set (wait / notifyAll)',
+        idea: 'Guard the queue with one lock. A thread that can\'t proceed waits on the lock\'s single condition, and every change wakes all waiters, who re-check.',
+        steps: [
+          'Every method holds the lock for its whole body.',
+          '`enqueue`: while the queue is full, wait; then append and wake everyone.',
+          '`dequeue`: while the queue is empty, wait; then remove the front and wake everyone.',
+          '`size` returns the count under the lock.',
+        ],
+        time: 'O(1) per call, plus wake-ups', space: 'O(capacity)',
+        why: 'Correct, but notifyAll wakes producers and consumers alike: most re-check their condition and go back to sleep. The while loop (not an if) is essential, because a woken thread may find the condition false again.',
+        code: {
+          java: r`class BoundedBlockingQueue {
+    private final int capacity;
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    public BoundedBlockingQueue(int capacity) { this.capacity = capacity; }
+    public synchronized void enqueue(int element) throws InterruptedException {
+        while (q.size() == capacity) wait();
+        q.offerLast(element);
+        notifyAll();
+    }
+    public synchronized int dequeue() throws InterruptedException {
+        while (q.isEmpty()) wait();
+        int v = q.pollFirst();
+        notifyAll();
+        return v;
+    }
+    public synchronized int size() { return q.size(); }
+}`,
+          cpp: r`class BoundedBlockingQueue {
+    int capacity;
+    deque<int> q;
+    mutex m;
+    condition_variable cv;
+public:
+    BoundedBlockingQueue(int capacity) : capacity(capacity) {}
+    void enqueue(int element) {
+        unique_lock<mutex> lock(m);
+        cv.wait(lock, [&] { return (int) q.size() < capacity; });
+        q.push_back(element);
+        cv.notify_all();
+    }
+    int dequeue() {
+        unique_lock<mutex> lock(m);
+        cv.wait(lock, [&] { return !q.empty(); });
+        int v = q.front(); q.pop_front();
+        cv.notify_all();
+        return v;
+    }
+    int size() {
+        lock_guard<mutex> lock(m);
+        return q.size();
+    }
+};`,
+          python: r`import threading
+
+class BoundedBlockingQueue(object):
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.q = deque()
+        self.cv = threading.Condition()
+
+    def enqueue(self, element: int) -> None:
+        with self.cv:
+            while len(self.q) == self.capacity:
+                self.cv.wait()
+            self.q.append(element)
+            self.cv.notify_all()
+
+    def dequeue(self) -> int:
+        with self.cv:
+            while not self.q:
+                self.cv.wait()
+            v = self.q.popleft()
+            self.cv.notify_all()
+            return v
+
+    def size(self) -> int:
+        with self.cv:
+            return len(self.q)`,
+          javascript: r`// JavaScript runs your code on one thread, so there is nothing to lock: a plain queue.
+var BoundedBlockingQueue = function(capacity) {
+    this.capacity = capacity;
+    this.q = [];
+};
+
+BoundedBlockingQueue.prototype.enqueue = function(element) {
+    if (this.q.length === this.capacity) throw new Error('full: a real blocking queue would wait here');
+    this.q.push(element);
+};
+
+BoundedBlockingQueue.prototype.dequeue = function() {
+    if (!this.q.length) throw new Error('empty: a real blocking queue would wait here');
+    return this.q.shift();
+};
+
+BoundedBlockingQueue.prototype.size = function() { return this.q.length; };`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'One lock, two conditions (notFull, notEmpty)',
+        idea: 'Split the waiters: producers wait on `notFull`, consumers on `notEmpty`. An enqueue wakes one consumer; a dequeue wakes one producer.',
+        steps: [
+          'Create one lock and two conditions bound to it.',
+          '`enqueue`: lock; while full, await `notFull`; append; signal `notEmpty`; unlock (in a finally).',
+          '`dequeue`: lock; while empty, await `notEmpty`; remove the front; signal `notFull`; unlock.',
+          '`size`: read the count under the lock.',
+        ],
+        time: 'O(1) per call', space: 'O(capacity)',
+        why: 'Each signal goes to a thread that can actually use it, so there is no thundering herd. Waiting releases the lock, which is why another thread can make room in the meantime; the while loop handles spurious wake-ups. A Semaphore pair (slots, items) plus a mutex is another standard answer.',
+        code: {
+          java: r`class BoundedBlockingQueue {
+    private final int capacity;
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition notFull = lock.newCondition(), notEmpty = lock.newCondition();
+    public BoundedBlockingQueue(int capacity) { this.capacity = capacity; }
+    public void enqueue(int element) throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.size() == capacity) notFull.await();
+            q.offerLast(element);
+            notEmpty.signal();
+        } finally { lock.unlock(); }
+    }
+    public int dequeue() throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.isEmpty()) notEmpty.await();
+            int v = q.pollFirst();
+            notFull.signal();
+            return v;
+        } finally { lock.unlock(); }
+    }
+    public int size() {
+        lock.lock();
+        try { return q.size(); } finally { lock.unlock(); }
+    }
+}`,
+          cpp: r`class BoundedBlockingQueue {
+    int capacity;
+    deque<int> q;
+    mutex m;
+    condition_variable notFull, notEmpty;
+public:
+    BoundedBlockingQueue(int capacity) : capacity(capacity) {}
+    void enqueue(int element) {
+        unique_lock<mutex> lock(m);
+        notFull.wait(lock, [&] { return (int) q.size() < capacity; });
+        q.push_back(element);
+        notEmpty.notify_one();
+    }
+    int dequeue() {
+        unique_lock<mutex> lock(m);
+        notEmpty.wait(lock, [&] { return !q.empty(); });
+        int v = q.front(); q.pop_front();
+        notFull.notify_one();
+        return v;
+    }
+    int size() {
+        lock_guard<mutex> lock(m);
+        return q.size();
+    }
+};`,
+          python: r`import threading
+
+class BoundedBlockingQueue(object):
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.q = deque()
+        lock = threading.Lock()
+        self.not_full = threading.Condition(lock)
+        self.not_empty = threading.Condition(lock)
+
+    def enqueue(self, element: int) -> None:
+        with self.not_full:
+            while len(self.q) == self.capacity:
+                self.not_full.wait()
+            self.q.append(element)
+            self.not_empty.notify()
+
+    def dequeue(self) -> int:
+        with self.not_empty:
+            while not self.q:
+                self.not_empty.wait()
+            v = self.q.popleft()
+            self.not_full.notify()
+            return v
+
+    def size(self) -> int:
+        with self.not_full:
+            return len(self.q)`,
+          javascript: r`// JavaScript runs your code on one thread, so there is nothing to lock. With a head index,
+// dequeue is O(1) instead of shift's O(n).
+var BoundedBlockingQueue = function(capacity) {
+    this.capacity = capacity;
+    this.q = [];
+    this.head = 0;
+};
+
+BoundedBlockingQueue.prototype.enqueue = function(element) {
+    if (this.size() === this.capacity) throw new Error('full: a real blocking queue would wait here');
+    this.q.push(element);
+};
+
+BoundedBlockingQueue.prototype.dequeue = function() {
+    if (!this.size()) throw new Error('empty: a real blocking queue would wait here');
+    return this.q[this.head++];
+};
+
+BoundedBlockingQueue.prototype.size = function() { return this.q.length - this.head; };`,
+        },
+      },
+    ],
+  },
 };

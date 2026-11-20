@@ -53,4 +53,7 @@ export default {
   'partition-array-such-that-maximum-difference-is-k': {
     explain: 'Sorted: [1,2,3,5,6]. The first group takes 1, 2 and 3 (all within 2 of 1). 5 is more than 2 above 1, so it starts a second group, which also takes 6. `2` groups.',
   },
+  'orderly-queue': {
+    explain: 'With k = 1 only rotations are possible: "cba" → "bac" → "acb" → "cba" again. The smallest of the three is `"acb"`.',
+  },
 };

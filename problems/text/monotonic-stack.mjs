@@ -133,4 +133,67 @@ A subsequence keeps the original order but may skip elements.`,
       'Keep a deque of start indexes with increasing p. For each j: while p[j] − p[front] ≥ k, record j − front and pop the front (a later j could only be longer); then pop the back while p[back] ≥ p[j]; push j. Use 64-bit prefix sums.',
     ],
   },
+  // ---- visible people, counting windows with a min and max queue
+  'number-of-visible-people-in-a-queue': {
+    statement: `There are \`n\` people standing in a queue, numbered \`0\` to \`n − 1\` from left to right, with distinct heights \`heights[i]\`. Everyone looks to the right.
+
+Person \`i\` can see person \`j\` (\`i < j\`) if everybody standing between them is shorter than both of them: \`min(heights[i], heights[j]) > max(heights[i + 1], …, heights[j − 1])\`.
+
+Return an array \`answer\` where \`answer[i]\` is the number of people person \`i\` can see.`,
+    constraints: ['1 <= heights.length <= 1e5', '1 <= heights[i] <= 1e5', 'All values of heights are distinct'],
+    hints: [
+      'Person i sees a run of people who are each taller than everyone before them (and shorter than i), and then the first person taller than i, after which nobody else is visible.',
+      'Go from right to left with a stack of heights that could still be seen, decreasing from bottom to top.',
+      'For person i: pop every height shorter than heights[i], counting one visible person per pop (they are hidden from everyone further left anyway). If the stack is still non-empty, its top is the first taller person: one more. Then push heights[i].',
+    ],
+  },
+  'continuous-subarrays': {
+    statement: `Given an integer array \`nums\`, a subarray is **continuous** if every pair of its elements differs by at most \`2\`: for all indices \`i₁, i₂\` in it, \`|nums[i₁] − nums[i₂]| ≤ 2\`.
+
+Return the total number of continuous subarrays. A subarray is a contiguous non-empty part of the array.`,
+    constraints: ['1 <= nums.length <= 1e5', '1 <= nums[i] <= 1e9'],
+    hints: [
+      '"Every pair differs by at most 2" means max − min ≤ 2. A smaller subarray of a continuous one is continuous too, so use a sliding window.',
+      'For every end r, find the smallest start l whose window is valid; then all r − l + 1 subarrays ending at r count.',
+      'Keep the window\'s maximum and minimum with a max queue and a min queue (monotonic deques of indexes). Move l forward while max − min > 2, dropping deque fronts that fall out of the window.',
+    ],
+  },
+  'count-subarrays-with-fixed-bounds': {
+    statement: `You are given an integer array \`nums\` and two integers \`minK\` and \`maxK\`. A **fixed-bound subarray** is a subarray whose minimum value is exactly \`minK\` and whose maximum value is exactly \`maxK\`.
+
+Return the number of fixed-bound subarrays.`,
+    constraints: ['2 <= nums.length <= 1e5', '1 <= nums[i] <= 1e6', '1 <= minK <= 1e6', '1 <= maxK <= 1e6'],
+    hints: [
+      'A value outside [minK, maxK] can never be inside a valid subarray: it splits the array into independent pieces.',
+      'Fix the end r. A start l works if there is no bad value in [l, r], and the window contains at least one minK and one maxK.',
+      'Remember the last index of a bad value, of minK and of maxK. The valid starts are bad + 1 … min(lastMin, lastMax): add max(0, min(lastMin, lastMax) − bad) for every r. If minK > maxK, nothing is ever counted.',
+    ],
+  },
+  'count-subarrays-with-cost-less-than-or-equal-to-k': {
+    statement: `You are given an integer array \`nums\` and an integer \`k\`. The **cost** of a subarray \`nums[l..r]\` is
+
+\`(max(nums[l..r]) − min(nums[l..r])) × (r − l + 1)\`,
+
+its spread times its length. Return the number of subarrays whose cost is at most \`k\`.`,
+    constraints: ['1 <= nums.length <= 1e5', '1 <= nums[i] <= 1e9', '0 <= k <= 1e15'],
+    hints: [
+      'Removing an element from either end never increases the spread and always shrinks the length, so the cost never goes up. Valid subarrays ending at r are a range of starts: a sliding window.',
+      'For each r, move l forward while the cost of [l, r] is above k, then add r − l + 1.',
+      'The window\'s max and min come from a max queue and a min queue (monotonic deques). The cost can reach about 10⁹ × 10⁵ = 10¹⁴: compute it in 64 bits.',
+    ],
+  },
+  'count-prime-gap-balanced-subarrays': {
+    statement: `You are given an integer array \`nums\` and an integer \`k\`. A subarray is **prime-gap balanced** if:
+
+- it contains **at least two** prime numbers, and
+- the difference between the largest and the smallest prime number in it is at most \`k\`.
+
+Return the number of prime-gap balanced subarrays. (Repeated primes count separately: \`[2, 2]\` contains two primes.)`,
+    constraints: ['1 <= nums.length <= 5e4', '1 <= nums[i] <= 5e4', '0 <= k <= 5e4'],
+    hints: [
+      'Sieve the primes up to max(nums) first. Non-primes never affect the condition except by being in the subarray.',
+      'For a fixed end r, a larger window only adds primes and can only widen the prime spread. So the starts that keep the spread ≤ k form a range [l, r], and l only moves right: slide l with a max queue and a min queue over the primes in the window.',
+      'The subarray also needs two primes: the start must be at or before the second-latest prime at or before r (call it prev). Add prev − l + 1 when prev ≥ l.',
+    ],
+  },
 };

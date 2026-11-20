@@ -28,4 +28,32 @@ export default {
     const pos = a.filter((v) => v > 0).reduce((s, v) => s + v, 0);
     return [a, g.pick([1, g.int(1, Math.max(1, pos)), Math.max(1, pos), pos + 1, 1e9])];
   },
+  // ---- visible people, counting windows with a min and max queue
+  'number-of-visible-people-in-a-queue': (g) => {
+    const n = g.len(1, 1e5, 30);
+    const p = g.perm(n, 1);
+    const shape = g.pick(['random', 'up', 'down', 'random']);
+    if (shape === 'up') p.sort((x, y) => x - y);
+    if (shape === 'down') p.sort((x, y) => y - x);
+    return [shape === 'random' && g.bool(0.5) ? p.map((v) => v * g.int(1, Math.floor(1e5 / n))) .filter((v, i, a) => a.indexOf(v) === i) : p];
+  },
+  'continuous-subarrays': (g) => [g.ints(g.len(1, 1e5, 30), 1, g.pick([1e9, 5, 3, 1]))],
+  'count-subarrays-with-fixed-bounds': (g) => {
+    const hi = g.pick([1e6, 10, 6, 3]);
+    const a = g.ints(g.len(2, 1e5, 30), 1, hi);
+    const pick = () => g.bool(0.8) ? g.pick(a) : g.int(1, hi);
+    let mn = pick(), mx = pick();
+    if (g.bool(0.85) && mn > mx) [mn, mx] = [mx, mn];
+    return [a, mn, mx];
+  },
+  'count-subarrays-with-cost-less-than-or-equal-to-k': (g) => {
+    const a = g.ints(g.len(1, 1e5, 30), 1, g.pick([1e9, 10, 3, 1]));
+    const spread = Math.max(...a) - Math.min(...a);
+    return [a, g.pick([0, 1, g.int(0, spread * 3), spread * a.length, 1e15])];
+  },
+  'count-prime-gap-balanced-subarrays': (g) => {
+    const SMALL = [2, 3, 5, 7, 11, 13, 1, 4, 6, 8, 9, 10];
+    const a = g.bool(0.5) ? Array.from({ length: g.len(1, 5e4, 30) }, () => g.pick(SMALL)) : g.ints(g.len(1, 5e4, 30), 1, g.pick([5e4, 100, 20]));
+    return [a, g.pick([0, 1, 2, g.int(0, 50), 5e4])];
+  },
 };

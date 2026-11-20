@@ -68,4 +68,29 @@ export default {
   'exam-room': {
     explain: 'The first student sits at 0 and the second at 9 (as far from 0 as possible). The third takes 4, the middle of 0 … 9 (distance 4, lowest on the tie with 5). The fourth takes 2. After 4 leaves, the widest gap is 2 … 9 and its middle is 5: `[null, 0, 9, 4, 2, null, 5]`.',
   },
+  // ---- queue design and queue simulations
+  'number-of-recent-calls': {
+    explain: 'Ping 1: the window [−2999, 1] holds just 1. Ping 100: [−2900, 100] holds 1 and 100. Ping 3001: [1, 3001] still includes 1, so three. Ping 3002: [2, 3002] drops 1, leaving 100, 3001 and 3002. Output: `[null,1,2,3,3]`.',
+  },
+  'time-needed-to-buy-tickets': {
+    explain: 'Person 2 needs 2 tickets, so two rounds: in each round persons 0, 1 and 2 each buy one. Persons 0 and 2 need only 2 and person 1 gets 2 of their 3 before person 2 is done: 2 + 2 + 2 = `6` seconds.',
+  },
+  'number-of-students-unable-to-eat-lunch': {
+    explain: 'Two students want 0 and two want 1, and the sandwiches are 0, 1, 0, 1. Each sandwich, when it reaches the top, is wanted by someone still in the queue, so every student eats and the answer is `0`.',
+  },
+  'number-of-people-aware-of-a-secret': {
+    explain: 'A learns on day 1, shares on days 3 and 4 (B learns on day 3, C on day 4) and forgets on day 5. B shares on days 5 and 6 (D and E learn); C starts sharing on day 6 (F learns). At the end of day 6, A has forgotten, and B, C, D, E and F know it: `5` people.',
+  },
+  'design-front-middle-back-queue': {
+    explain: 'pushFront 1 → [1], pushBack 2 → [1, 2], pushMiddle 3 → [1, 3, 2], pushMiddle 4 → [1, 4, 3, 2]. popFront returns 1 → [4, 3, 2]; popMiddle returns 3 → [4, 2]; popMiddle (two middles, take the front one) returns 4 → [2]; popBack returns 2; popFront on the empty queue returns -1. Output: `[null,null,null,null,null,1,3,4,2,-1]`.',
+  },
+  'design-most-recently-used-queue': {
+    explain: 'Start with [1..8]. fetch(3) moves 3 to the end: [1,2,4,5,6,7,8,3]. fetch(5) moves 6: [1,2,4,5,7,8,3,6]. fetch(2) moves 2: [1,4,5,7,8,3,6,2]. fetch(8) returns the last element, 2, and the queue is unchanged. Output: `[null,3,6,2,2]`.',
+  },
+  'design-ride-sharing-system': {
+    explain: 'Riders 3 and 1 wait (in that order) and driver 2 waits. The first match pairs driver 2 with rider 3: [2, 3]. Driver 5 arrives; cancelling rider 3 does nothing because 3 is no longer waiting. The next match pairs driver 5 with rider 1: [5, 1], and then nobody is left: [-1, -1]. Output: `[null,null,null,null,[2,3],null,null,[5,1],[-1,-1]]`.',
+  },
+  'design-bounded-blocking-queue': {
+    explain: 'Capacity 3. Enqueue 1 and dequeue it (returns 1). Enqueue 0, 2 and 3: the queue is [0, 2, 3], full, so size is 3. Dequeue returns the front, 0, and size drops to 2. Output: `[null,null,1,null,null,null,3,0,2]`.',
+  },
 };

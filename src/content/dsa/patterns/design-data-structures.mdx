@@ -443,6 +443,220 @@ class ExamRoom {
 
 `seat` is O(k) for k seated students, fine for 10⁴ calls. The O(log n) version keeps the **gaps** in a heap (widest first, then lowest seat) with lazy deletion: `leave` merges two gaps into one, and the two old gaps go stale. The Solution tab has it.
 
+## Designing with queues
+
+A queue is the right structure when **order of arrival is the rule**: first come, first served, or "drop whatever is oldest". Most queue design questions add one twist to that rule: a sliding time window, a middle you can reach, an element that jumps to the back, someone leaving the line early, or several threads sharing it. Each twist has a standard answer.
+
+| Twist | Structure | Problem |
+| --- | --- | --- |
+| Drop what is too old | Queue; expire from the front | Number of Recent Calls (933) |
+| Reach the middle | Two deques, kept balanced | Design Front Middle Back Queue (1670) |
+| Move the k-th to the back | Fenwick tree over growing positions | Design Most Recently Used Queue (1756) |
+| Leave the line early | Queue + set, lazy deletion | Design Ride Sharing System |
+| Many threads | Lock + two condition variables | Design Bounded Blocking Queue (1188) |
+
+### Number of Recent Calls (933): expire from the front
+
+`ping(t)` records a request at time `t` (always larger than the last one) and returns how many requests fall in `[t − 3000, t]`. Times only grow, so a request that leaves the window never comes back: append on the right, drop from the left.
+
+```java
+class RecentCounter {
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+
+    public int ping(int t) {
+        q.offerLast(t);
+        while (q.peekFirst() < t - 3000) q.pollFirst();   // too old, gone for good
+        return q.size();
+    }
+}
+```
+
+Each request is added once and removed once: O(1) amortised. The same shape (a queue of timestamps) is the sliding-window rate limiter in system design.
+
+### Design Front Middle Back Queue (1670): two balanced halves
+
+Push and pop at the front, the **middle** and the back; with two middles, use the front one. A single list makes the middle O(n). Instead split the queue into `left` and `right` deques and keep `right` the same size as `left` or **one bigger**. Then the middle is always at the boundary:
+
+- `pushMiddle`: equal halves → front of `right`; otherwise → back of `left`.
+- `popMiddle`: equal halves → back of `left` (the frontmost middle); otherwise → front of `right`.
+- After any front or back operation, move at most one element across to restore the sizes.
+
+```java
+class FrontMiddleBackQueue {
+    private final ArrayDeque<Integer> left = new ArrayDeque<>(), right = new ArrayDeque<>();
+
+    private void fix() {   // right.size() == left.size() or left.size() + 1
+        if (left.size() > right.size()) right.offerFirst(left.pollLast());
+        else if (right.size() > left.size() + 1) left.offerLast(right.pollFirst());
+    }
+    public void pushFront(int val) { left.offerFirst(val); fix(); }
+    public void pushMiddle(int val) {
+        if (left.size() == right.size()) right.offerFirst(val); else left.offerLast(val);
+    }
+    public void pushBack(int val) { right.offerLast(val); fix(); }
+    public int popFront() {
+        if (right.isEmpty()) return -1;                     // right empty ⇒ whole queue empty
+        int v = left.isEmpty() ? right.pollFirst() : left.pollFirst();
+        fix();
+        return v;
+    }
+    public int popMiddle() {
+        if (right.isEmpty()) return -1;
+        return left.size() == right.size() ? left.pollLast() : right.pollFirst();
+    }
+    public int popBack() {
+        if (right.isEmpty()) return -1;
+        int v = right.pollLast();
+        fix();
+        return v;
+    }
+}
+```
+
+The same "two halves, balanced" idea is behind the running median ([Heaps](/dsa/patterns/heap-patterns)), with heaps instead of deques.
+
+### Design Most Recently Used Queue (1756): positions that only grow
+
+`MRUQueue(n)` starts as `[1 … n]`; `fetch(k)` moves the k-th element to the end. A list (`remove(k − 1)`, then `add`) is O(n) per fetch and passes; the follow-up asks for better.
+
+The trick: never move anything. Give every element a **position** that only grows, 1 … n at the start, and the next free position past the end each time it is fetched. A [Fenwick tree](/dsa/patterns/range-queries) marks which positions are occupied, so "the k-th element" is "the k-th occupied position", found in O(log n) by walking down the powers of two:
+
+```java
+public int fetch(int k) {
+    int pos = 0;
+    for (int step = Integer.highestOneBit(cap); step > 0; step >>= 1)
+        if (pos + step <= cap && bit[pos + step] < k) { pos += step; k -= bit[pos]; }
+    pos++;                       // the k-th occupied position
+    int v = val[pos];
+    add(pos, -1);                // free it...
+    val[++end] = v;              // ...and write the value at a new position at the back
+    add(end, 1);
+    return v;
+}
+```
+
+Square-root decomposition (blocks of about √n elements, skip whole blocks when counting to k) is the other standard answer, at O(√n) per fetch.
+
+### Design Ride Sharing System: leaving the line early
+
+Riders and drivers each wait in arrival order; a match pairs the longest-waiting driver with the longest-waiting rider and returns `[driverId, riderId]` (or `[-1, -1]`). A rider may **cancel** while waiting. Removing from the middle of a queue is O(n), so don't: keep a set of riders still waiting, remove the id from the set on cancel, and skip queue fronts that are no longer in the set when matching. This is the same **lazy deletion** as the heaps above, on a queue.
+
+```java
+class RideSharingSystem {
+    private final ArrayDeque<Integer> riders = new ArrayDeque<>(), drivers = new ArrayDeque<>();
+    private final Set<Integer> waiting = new HashSet<>();
+
+    public void addRider(int riderId) { riders.offerLast(riderId); waiting.add(riderId); }
+    public void addDriver(int driverId) { drivers.offerLast(driverId); }
+    public void cancelRider(int riderId) { waiting.remove(riderId); }   // no-op if already matched
+
+    public int[] matchDriverWithRider() {
+        while (!riders.isEmpty() && !waiting.contains(riders.peekFirst())) riders.pollFirst();   // cancelled
+        if (riders.isEmpty() || drivers.isEmpty()) return new int[] { -1, -1 };
+        int r = riders.pollFirst();
+        waiting.remove(r);
+        return new int[] { drivers.pollFirst(), r };
+    }
+}
+```
+
+### Design Bounded Blocking Queue (1188): producers and consumers
+
+The concurrency version: `enqueue` must **wait** while the queue is full, and `dequeue` must wait while it is empty, with many threads calling at once. Three rules:
+
+1. **One lock guards everything.** Every method, `size` included, reads or writes shared state.
+2. **Waiting releases the lock.** A thread that slept while holding it would stop everyone else from making room. Condition variables do this: `await()` releases the lock and re-acquires it on waking.
+3. **Wait in a `while`, not an `if`.** A woken thread may find the condition false again (another thread got there first, or a spurious wake-up).
+
+Use **two** conditions so a signal reaches a thread that can use it: producers wait on `notFull`, consumers on `notEmpty`.
+
+```java
+class BoundedBlockingQueue {
+    private final int capacity;
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition notFull = lock.newCondition(), notEmpty = lock.newCondition();
+
+    public BoundedBlockingQueue(int capacity) { this.capacity = capacity; }
+
+    public void enqueue(int element) throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.size() == capacity) notFull.await();   // releases the lock while waiting
+            q.offerLast(element);
+            notEmpty.signal();                              // one consumer can go now
+        } finally { lock.unlock(); }
+    }
+
+    public int dequeue() throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.isEmpty()) notEmpty.await();
+            int v = q.pollFirst();
+            notFull.signal();                               // one producer can go now
+            return v;
+        } finally { lock.unlock(); }
+    }
+
+    public int size() {
+        lock.lock();
+        try { return q.size(); } finally { lock.unlock(); }
+    }
+}
+```
+
+`synchronized` methods with `wait()` / `notifyAll()` also work, but every change wakes producers and consumers alike. Two semaphores (free slots, filled slots) plus a mutex is the other classic answer. In C++ this is `mutex` + `condition_variable`, in Python `threading.Condition`.
+
+<Callout type="note" title="How it is judged here">
+
+The solver runs your class on one thread, so its tests never call `enqueue` on a full queue or `dequeue` on an empty one (that would wait forever). They check the queue's behaviour and capacity; the waiting itself is yours to get right. Write it exactly as you would for the concurrent version.
+
+</Callout>
+
+### Time Needed to Buy Tickets (2073): count instead of simulating
+
+Some "queue" problems describe a line of people and invite you to simulate it. Often the rotation doesn't change the answer, and counting does the same work in one pass.
+
+Here, each second the front person buys one ticket and rejoins the back if they need more. Person `k` finishes after `tickets[k]` rounds; in those rounds everyone at or before `k` buys up to their own need, and everyone after `k` gets one round fewer:
+
+```java
+int t = 0;
+for (int i = 0; i < tickets.length; i++)
+    t += Math.min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
+return t;
+```
+
+### Number of Students Unable to Eat Lunch (1700): only the counts matter
+
+A student who doesn't want the top sandwich walks to the back, so the top sandwich is taken as long as **anyone** still in line wants it. Only the counts matter: walk the sandwiches, and the first one nobody wants stops everything.
+
+```java
+int[] want = new int[2];
+for (int s : students) want[s]++;
+for (int i = 0; i < sandwiches.length; i++) {
+    if (want[sandwiches[i]] == 0) return sandwiches.length - i;   // everyone left goes hungry
+    want[sandwiches[i]]--;
+}
+return 0;
+```
+
+### Number of People Aware of a Secret (2327): a queue of cohorts
+
+Here the queue is of **cohorts**: `learned[d]` people learn on day `d`; they share from day `d + delay` and forget on day `d + forget`. The number of people sharing on day `d` is a sliding window sum: add the cohort that starts sharing, subtract the one that forgets.
+
+```java
+learned[1] = 1;
+long sharing = 0;
+for (int d = 2; d <= n; d++) {
+    if (d - delay >= 1) sharing = (sharing + learned[d - delay]) % MOD;          // starts sharing today
+    if (d - forget >= 1) sharing = (sharing - learned[d - forget] + MOD) % MOD;  // forgot today
+    learned[d] = sharing;                                                        // each sharer tells one person
+}
+// answer: learned[n − forget + 1] + … + learned[n]
+```
+
+[Dota2 Senate](/dsa/patterns/greedy) is the counter-example: there the order of the queue decides who bans whom, so you do simulate it, with two queues of indexes.
+
 ## Design problems at a glance
 
 | Problem | Structures | Key trick |
@@ -456,6 +670,9 @@ class ExamRoom {
 | Running median | Max-heap + min-heap | Balance sizes ([Heaps](/dsa/patterns/heap-patterns)) |
 | Min / max with updates | Heap + map of current values | Lazy deletion: skip stale tops |
 | Lowest free seat / number | Counter + heap of returned ones | Don't store "everything from next on" |
+| Middle of a queue | Two deques, balanced | The middle sits at the boundary; move one element to rebalance |
+| Leave a queue early | Queue + set of who is still waiting | Lazy deletion: skip cancelled fronts |
+| Blocking queue | Lock + notFull / notEmpty conditions | Wait in a `while`; waiting releases the lock |
 | Max / min queue | Queue + monotonic deque | Drop values a newer one beats ([Monotonic Stack](/dsa/patterns/monotonic-stack#min-queue-and-max-queue)) |
 | Iterators | One-element buffer or stack of iterators | Compute lazily; `hasNext` is idempotent |
 
@@ -480,6 +697,9 @@ class ExamRoom {
 | 706 | [Design HashMap](https://leetcode.com/problems/design-hashmap/) | Easy | Buckets and chaining |
 | 705 | [Design HashSet](https://leetcode.com/problems/design-hashset/) | Easy | Buckets with chaining |
 | 225 | [Implement Stack using Queues](https://leetcode.com/problems/implement-stack-using-queues/) | Easy | Rotate the queue on push |
+| 933 | [Number of Recent Calls](https://leetcode.com/problems/number-of-recent-calls/) | Easy | Queue of timestamps; expire from the front |
+| 2073 | [Time Needed to Buy Tickets](https://leetcode.com/problems/time-needed-to-buy-tickets/) | Easy | Count with min instead of simulating |
+| 1700 | [Number of Students Unable to Eat Lunch](https://leetcode.com/problems/number-of-students-unable-to-eat-lunch/) | Easy | Queue order doesn't matter: count preferences |
 | 155 | [Min Stack](https://leetcode.com/problems/min-stack/) | Medium | Store extra state per entry |
 | 146 | [LRU Cache](https://leetcode.com/problems/lru-cache/) | Medium | HashMap + doubly linked list |
 | 380 | [Insert Delete GetRandom O(1)](https://leetcode.com/problems/insert-delete-getrandom-o1/) | Medium | Swap with the last |
@@ -496,6 +716,11 @@ class ExamRoom {
 | 2349 | [Design a Number Container System](https://leetcode.com/problems/design-a-number-container-system/) | Medium | A lazy min-heap per number |
 | 2353 | [Design a Food Rating System](https://leetcode.com/problems/design-a-food-rating-system/) | Medium | A lazy heap per cuisine, ties by name |
 | 855 | [Exam Room](https://leetcode.com/problems/exam-room/) | Medium | Sorted set of seats (or a heap of gaps) |
+| 1670 | [Design Front Middle Back Queue](https://leetcode.com/problems/design-front-middle-back-queue/) | Medium | Two balanced deques |
+| 1756 | [Design Most Recently Used Queue](https://leetcode.com/problems/design-most-recently-used-queue/) | Medium | Fenwick tree over growing positions |
+| — | [Design Ride Sharing System](https://leetcode.com/problems/design-ride-sharing-system/) | Medium | Two queues + lazy deletion of cancelled riders |
+| 1188 | [Design Bounded Blocking Queue](https://leetcode.com/problems/design-bounded-blocking-queue/) | Medium | Lock + two condition variables |
+| 2327 | [Number of People Aware of a Secret](https://leetcode.com/problems/number-of-people-aware-of-a-secret/) | Medium | DP with a sliding window of sharers |
 | 460 | [LFU Cache](https://leetcode.com/problems/lfu-cache/) | Hard | Frequency buckets + minFreq |
 | 381 | [Insert Delete GetRandom O(1) – Duplicates allowed](https://leetcode.com/problems/insert-delete-getrandom-o1-duplicates-allowed/) | Hard | Value → set of indexes |
 | 895 | [Maximum Frequency Stack](https://leetcode.com/problems/maximum-frequency-stack/) | Hard | A stack per frequency level |

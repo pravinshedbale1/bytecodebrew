@@ -545,4 +545,243 @@ export default [
     public void leave(int p) { seated.remove(p); }
 }`,
   },
+  // ---- queue design and queue simulations
+  {
+    slug: 'number-of-recent-calls', title: 'Number of Recent Calls', level: 'Easy',
+    summary: 'RecentCounter.ping(t) records a request at time t (strictly increasing) and returns how many requests fall in the last 3000 ms, [t − 3000, t].',
+    design: { cls: 'RecentCounter', ctor: [], methods: [['int', 'ping', [['int', 't']]]] },
+    tests: [
+      { in: [['RecentCounter', 'ping', 'ping', 'ping', 'ping'], [[], [1], [100], [3001], [3002]]], out: [null, 1, 2, 3, 3] },
+      { in: [['RecentCounter', 'ping'], [[], [1000000000]]] },
+      { in: [['RecentCounter', 'ping', 'ping', 'ping', 'ping', 'ping'], [[], [1], [3001], [3002], [6002], [6003]]] },
+    ],
+    ref: `class RecentCounter {
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    public RecentCounter() {}
+    public int ping(int t) {
+        q.offerLast(t);
+        while (q.peekFirst() < t - 3000) q.pollFirst();
+        return q.size();
+    }
+}`,
+  },
+  {
+    slug: 'time-needed-to-buy-tickets', title: 'Time Needed to Buy Tickets', level: 'Easy',
+    summary: 'People stand in a line; person i wants tickets[i] tickets. Each second the person at the front buys one ticket and, if they still need more, goes to the back. Return how many seconds pass until person k has all their tickets.',
+    method: 'timeRequiredToBuy', params: [['int[]', 'tickets'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[2, 3, 2], 2], out: 6 },
+      { in: [[5, 1, 1, 1], 0], out: 8 },
+      { in: [[1], 0] },
+      { in: [[100, 100, 100], 1] },
+      { in: [[3, 1, 4, 1, 5], 4] },
+    ],
+    ref: `class Solution {
+    public int timeRequiredToBuy(int[] tickets, int k) {
+        int t = 0;
+        for (int i = 0; i < tickets.length; i++)
+            t += Math.min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
+        return t;
+    }
+}`,
+  },
+  {
+    slug: 'number-of-students-unable-to-eat-lunch', title: 'Number of Students Unable to Eat Lunch', level: 'Easy',
+    summary: 'Students in a queue each prefer sandwich 0 or 1; sandwiches sit in a stack. The front student takes the top sandwich if it matches, otherwise goes to the back. Return how many students are left when nobody in the queue wants the top sandwich.',
+    method: 'countStudents', params: [['int[]', 'students'], ['int[]', 'sandwiches']], returns: 'int',
+    tests: [
+      { in: [[1, 1, 0, 0], [0, 1, 0, 1]], out: 0 },
+      { in: [[1, 1, 1, 0, 0, 1], [1, 0, 0, 0, 1, 1]], out: 3 },
+      { in: [[0], [1]] },
+      { in: [[1], [1]] },
+      { in: [[0, 0, 0, 1], [1, 1, 0, 0]] },
+    ],
+    ref: `class Solution {
+    public int countStudents(int[] students, int[] sandwiches) {
+        int[] want = new int[2];
+        for (int s : students) want[s]++;
+        for (int i = 0; i < sandwiches.length; i++) {
+            if (want[sandwiches[i]] == 0) return sandwiches.length - i;
+            want[sandwiches[i]]--;
+        }
+        return 0;
+    }
+}`,
+  },
+  {
+    slug: 'number-of-people-aware-of-a-secret', title: 'Number of People Aware of a Secret', level: 'Medium',
+    summary: 'On day 1 one person learns a secret. Each person starts sharing it with one new person per day from `delay` days after learning it, and forgets it `forget` days after learning it (and stops sharing). Return how many people know the secret at the end of day n, modulo 10⁹ + 7.',
+    method: 'peopleAwareOfSecret', params: [['int', 'n'], ['int', 'delay'], ['int', 'forget']], returns: 'int',
+    tests: [
+      { in: [6, 2, 4], out: 5 },
+      { in: [4, 1, 3], out: 6 },
+      { in: [2, 1, 2] },
+      { in: [1000, 1, 1000] },
+      { in: [1000, 999, 1000] },
+      { in: [10, 3, 5] },
+    ],
+    ref: `class Solution {
+    public int peopleAwareOfSecret(int n, int delay, int forget) {
+        final long MOD = 1_000_000_007L;
+        long[] learned = new long[n + 1];       // learned[d]: people who learn on day d
+        learned[1] = 1;
+        long sharing = 0;                       // people able to share today
+        for (int d = 2; d <= n; d++) {
+            if (d - delay >= 1) sharing = (sharing + learned[d - delay]) % MOD;
+            if (d - forget >= 1) sharing = (sharing - learned[d - forget] + MOD) % MOD;
+            learned[d] = sharing;
+        }
+        long known = 0;
+        for (int d = n - forget + 1; d <= n; d++) if (d >= 1) known = (known + learned[d]) % MOD;
+        return (int) known;
+    }
+}`,
+  },
+  {
+    slug: 'design-front-middle-back-queue', title: 'Design Front Middle Back Queue', level: 'Medium',
+    summary: 'A queue that can push and pop at the front, the middle and the back. With two middle positions, the frontmost one is used. Pops return -1 when the queue is empty.',
+    design: {
+      cls: 'FrontMiddleBackQueue', ctor: [],
+      methods: [
+        ['void', 'pushFront', [['int', 'val']]], ['void', 'pushMiddle', [['int', 'val']]], ['void', 'pushBack', [['int', 'val']]],
+        ['int', 'popFront', []], ['int', 'popMiddle', []], ['int', 'popBack', []],
+      ],
+    },
+    tests: [
+      { in: [['FrontMiddleBackQueue', 'pushFront', 'pushBack', 'pushMiddle', 'pushMiddle', 'popFront', 'popMiddle', 'popMiddle', 'popBack', 'popFront'], [[], [1], [2], [3], [4], [], [], [], [], []]], out: [null, null, null, null, null, 1, 3, 4, 2, -1] },
+      { in: [['FrontMiddleBackQueue', 'popMiddle', 'pushMiddle', 'popMiddle', 'popFront', 'popBack'], [[], [], [7], [], [], []]] },
+      { in: [['FrontMiddleBackQueue', 'pushBack', 'pushBack', 'pushBack', 'pushBack', 'pushBack', 'pushMiddle', 'popMiddle', 'popMiddle', 'popMiddle'], [[], [1], [2], [3], [4], [5], [6], [], [], []]] },
+    ],
+    ref: `class FrontMiddleBackQueue {
+    // left holds the first half, right the second; right.size() is left.size() or left.size() + 1
+    private final ArrayDeque<Integer> left = new ArrayDeque<>(), right = new ArrayDeque<>();
+    public FrontMiddleBackQueue() {}
+    private void fix() {
+        if (left.size() > right.size()) right.offerFirst(left.pollLast());
+        else if (right.size() > left.size() + 1) left.offerLast(right.pollFirst());
+    }
+    public void pushFront(int val) { left.offerFirst(val); fix(); }
+    public void pushMiddle(int val) {
+        if (left.size() == right.size()) right.offerFirst(val); else left.offerLast(val);
+    }
+    public void pushBack(int val) { right.offerLast(val); fix(); }
+    public int popFront() {
+        if (right.isEmpty()) return -1;
+        int v = left.isEmpty() ? right.pollFirst() : left.pollFirst();
+        fix();
+        return v;
+    }
+    public int popMiddle() {
+        if (right.isEmpty()) return -1;
+        return left.size() == right.size() ? left.pollLast() : right.pollFirst();
+    }
+    public int popBack() {
+        if (right.isEmpty()) return -1;
+        int v = right.pollLast();
+        fix();
+        return v;
+    }
+}`,
+  },
+  {
+    slug: 'design-most-recently-used-queue', title: 'Design Most Recently Used Queue', level: 'Medium',
+    summary: 'MRUQueue(n) starts as [1, 2, …, n]. fetch(k) removes the k-th element (1-indexed), appends it to the end and returns it.',
+    design: { cls: 'MRUQueue', ctor: [['int', 'n']], methods: [['int', 'fetch', [['int', 'k']]]] },
+    tests: [
+      { in: [['MRUQueue', 'fetch', 'fetch', 'fetch', 'fetch'], [[8], [3], [5], [2], [8]]], out: [null, 3, 6, 2, 2] },
+      { in: [['MRUQueue', 'fetch', 'fetch', 'fetch'], [[1], [1], [1], [1]]] },
+      { in: [['MRUQueue', 'fetch', 'fetch', 'fetch', 'fetch', 'fetch'], [[5], [1], [1], [1], [1], [1]]] },
+    ],
+    ref: `class MRUQueue {
+    // Positions 1 … n + calls; bit marks which positions hold an element. fetch finds the k-th set
+    // position by binary lifting, clears it and writes the element at the next free position at the end.
+    private final int cap; private final int[] bit, val; private int end;
+    public MRUQueue(int n) {
+        cap = n + 2001; bit = new int[cap + 1]; val = new int[cap + 1];
+        for (int i = 1; i <= n; i++) { val[i] = i; add(i, 1); }
+        end = n;
+    }
+    private void add(int i, int d) { for (; i <= cap; i += i & -i) bit[i] += d; }
+    public int fetch(int k) {
+        int pos = 0;
+        for (int step = Integer.highestOneBit(cap); step > 0; step >>= 1)
+            if (pos + step <= cap && bit[pos + step] < k) { pos += step; k -= bit[pos]; }
+        pos++;
+        int v = val[pos];
+        add(pos, -1);
+        val[++end] = v;
+        add(end, 1);
+        return v;
+    }
+}`,
+  },
+  {
+    slug: 'design-ride-sharing-system', title: 'Design Ride Sharing System', level: 'Medium',
+    summary: 'Riders and drivers wait in arrival order. matchDriverWithRider pairs the longest-waiting driver with the longest-waiting rider and returns [driverId, riderId], or [-1, -1] if either side is empty. cancelRider removes a rider who is still waiting.',
+    design: {
+      cls: 'RideSharingSystem', ctor: [],
+      methods: [['void', 'addRider', [['int', 'riderId']]], ['void', 'addDriver', [['int', 'driverId']]], ['int[]', 'matchDriverWithRider', []], ['void', 'cancelRider', [['int', 'riderId']]]],
+    },
+    tests: [
+      { in: [['RideSharingSystem', 'addRider', 'addDriver', 'addRider', 'matchDriverWithRider', 'addDriver', 'cancelRider', 'matchDriverWithRider', 'matchDriverWithRider'], [[], [3], [2], [1], [], [5], [3], [], []]] },
+      { in: [['RideSharingSystem', 'matchDriverWithRider', 'addDriver', 'matchDriverWithRider', 'addRider', 'matchDriverWithRider'], [[], [], [4], [], [9], []]] },
+      { in: [['RideSharingSystem', 'addRider', 'addRider', 'cancelRider', 'cancelRider', 'addDriver', 'addDriver', 'matchDriverWithRider', 'matchDriverWithRider'], [[], [1], [2], [1], [7], [10], [11], [], []]] },
+    ],
+    ref: `class RideSharingSystem {
+    private final ArrayDeque<Integer> riders = new ArrayDeque<>(), drivers = new ArrayDeque<>();
+    private final Set<Integer> waiting = new HashSet<>();     // riders still waiting (cancelled ones are skipped lazily)
+    public RideSharingSystem() {}
+    public void addRider(int riderId) { riders.offerLast(riderId); waiting.add(riderId); }
+    public void addDriver(int driverId) { drivers.offerLast(driverId); }
+    public int[] matchDriverWithRider() {
+        while (!riders.isEmpty() && !waiting.contains(riders.peekFirst())) riders.pollFirst();
+        if (riders.isEmpty() || drivers.isEmpty()) return new int[] { -1, -1 };
+        int r = riders.pollFirst();
+        waiting.remove(r);
+        return new int[] { drivers.pollFirst(), r };
+    }
+    public void cancelRider(int riderId) { waiting.remove(riderId); }
+}`,
+  },
+  {
+    slug: 'design-bounded-blocking-queue', title: 'Design Bounded Blocking Queue', level: 'Medium',
+    summary: 'A thread-safe FIFO queue with a capacity: enqueue blocks while the queue is full, dequeue blocks while it is empty, size returns the number of elements. Judged here on one thread, so tests never call enqueue on a full queue or dequeue on an empty one.',
+    design: {
+      cls: 'BoundedBlockingQueue', ctor: [['int', 'capacity']],
+      methods: [['void', 'enqueue', [['int', 'element']]], ['int', 'dequeue', []], ['int', 'size', []]],
+    },
+    tests: [
+      { in: [['BoundedBlockingQueue', 'enqueue', 'dequeue', 'enqueue', 'enqueue', 'enqueue', 'size', 'dequeue', 'size'], [[3], [1], [], [0], [2], [3], [], [], []]] },
+      { in: [['BoundedBlockingQueue', 'size', 'enqueue', 'size', 'dequeue', 'size'], [[1], [], [5], [], [], []]] },
+      { in: [['BoundedBlockingQueue', 'enqueue', 'enqueue', 'enqueue', 'dequeue', 'enqueue', 'dequeue', 'dequeue', 'dequeue'], [[3], [1], [2], [3], [], [4], [], [], []]] },
+    ],
+    ref: `class BoundedBlockingQueue {
+    private final int capacity;
+    private final ArrayDeque<Integer> q = new ArrayDeque<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition notFull = lock.newCondition(), notEmpty = lock.newCondition();
+    public BoundedBlockingQueue(int capacity) { this.capacity = capacity; }
+    public void enqueue(int element) throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.size() == capacity) notFull.await();
+            q.offerLast(element);
+            notEmpty.signal();
+        } finally { lock.unlock(); }
+    }
+    public int dequeue() throws InterruptedException {
+        lock.lock();
+        try {
+            while (q.isEmpty()) notEmpty.await();
+            int v = q.pollFirst();
+            notFull.signal();
+            return v;
+        } finally { lock.unlock(); }
+    }
+    public int size() {
+        lock.lock();
+        try { return q.size(); } finally { lock.unlock(); }
+    }
+}`,
+  },
 ];

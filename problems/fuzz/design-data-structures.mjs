@@ -203,4 +203,59 @@ export default {
       return ['leave', [p]];
     });
   },
+  // ---- queue design and queue simulations
+  'number-of-recent-calls': (g) => {
+    let t = g.pick([0, 0, 2999, 1e9 - 20000]);
+    const gap = g.pick([1, 50, 1000, 3000, 3001, 10000]);
+    return seq(g, 'RecentCounter', [], g.len(1, 1e4, 40), () => {
+      t += g.pick([1, g.int(1, gap), gap, 3000, 3001]);
+      return t > 1e9 ? null : ['ping', [t]];
+    });
+  },
+  'time-needed-to-buy-tickets': (g) => {
+    const a = g.ints(g.len(1, 100, 20), 1, g.pick([100, 3, 1]));
+    return [a, g.pick([0, a.length - 1, g.int(0, a.length - 1)])];
+  },
+  'number-of-students-unable-to-eat-lunch': (g) => {
+    const n = g.len(1, 100, 25);
+    const p = g.pick([0.5, 0.1, 0.9]);
+    return [Array.from({ length: n }, () => (g.bool(p) ? 1 : 0)), Array.from({ length: n }, () => (g.bool(g.pick([p, 0.5])) ? 1 : 0))];
+  },
+  'number-of-people-aware-of-a-secret': (g) => {
+    const n = g.pick([2, 3, g.int(2, 40), g.int(2, 1000), 1000]);
+    const forget = g.pick([n, g.int(2, n), 2]);
+    return [n, g.int(1, forget - 1), forget];
+  },
+  'design-front-middle-back-queue': (g) => seq(g, 'FrontMiddleBackQueue', [], g.len(1, 1000, 60), () => {
+    const op = g.pick(['pushFront', 'pushMiddle', 'pushBack', 'popFront', 'popMiddle', 'popBack', 'pushMiddle', 'popMiddle']);
+    return [op, op.startsWith('push') ? [g.int(1, g.pick([9, 1e9]))] : []];
+  }),
+  'design-most-recently-used-queue': (g) => {
+    const n = g.pick([1, 2, g.int(1, 30), 2000]);
+    return seq(g, 'MRUQueue', [n], g.len(1, 2000, 40), () => ['fetch', [g.pick([1, n, g.int(1, n)])]]);
+  },
+  'design-ride-sharing-system': (g) => {
+    let nextRider = 1, nextDriver = 1;
+    const waiting = [];
+    return seq(g, 'RideSharingSystem', [], g.len(1, 1000, 60), () => {
+      const op = g.pick(['addRider', 'addRider', 'addDriver', 'addDriver', 'matchDriverWithRider', 'matchDriverWithRider', 'cancelRider']);
+      if (op === 'addRider') { if (nextRider > 1000) return null; waiting.push(nextRider); return [op, [nextRider++]]; }
+      if (op === 'addDriver') { if (nextDriver > 1000) return null; return [op, [nextDriver++]]; }
+      if (op === 'cancelRider') {
+        const id = waiting.length && g.bool(0.7) ? g.pick(waiting) : g.int(1, Math.max(1, nextRider - 1));
+        return [op, [id]];
+      }
+      return [op, []];
+    });
+  },
+  'design-bounded-blocking-queue': (g) => {
+    const cap = g.pick([1, 2, g.int(1, 30), 30]);
+    let size = 0;
+    return seq(g, 'BoundedBlockingQueue', [cap], g.len(1, 1000, 60), () => {
+      const op = g.pick(['enqueue', 'enqueue', 'dequeue', 'size']);
+      if (op === 'enqueue') { if (size === cap) return null; size++; return [op, [g.int(0, 20)]]; }
+      if (op === 'dequeue') { if (!size) return null; size--; return [op, []]; }
+      return [op, []];
+    });
+  },
 };

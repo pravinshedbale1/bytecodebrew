@@ -8,7 +8,7 @@
  *  Extra pieces (TreeNode, ListNode, graph Node…) are included only when a problem needs them,
  *  mirroring the classes LeetCode predefines.
  */
-export const IMPORTS = 'import java.util.*; import java.util.function.*; import java.util.stream.*;';
+export const IMPORTS = 'import java.util.*; import java.util.function.*; import java.util.stream.*; import java.util.concurrent.*; import java.util.concurrent.atomic.*; import java.util.concurrent.locks.*;';
 
 export const BCB = String.raw`
 @SuppressWarnings({"unchecked", "rawtypes"})

@@ -72,7 +72,7 @@ export function ProblemTracker() {
                     <li key={p.slug} className={styles.item}>
                       <SolvedToggle slug={p.slug} title={p.title} />
                       <a href={`https://leetcode.com/problems/${p.slug}/`} target="_blank" rel="noopener noreferrer">
-                        {p.num}. {p.title}
+                        {/^\d+$/.test(p.num) ? `${p.num}. ` : ''}{p.title}
                       </a>
                       <SolveLink slug={p.slug} />
                       <span className={`${styles.level} ${styles[p.level.toLowerCase()]}`}>{p.level}</span>

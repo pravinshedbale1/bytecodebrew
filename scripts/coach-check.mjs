@@ -32,7 +32,7 @@ for (const [p, v] of Object.entries(PATTERNS)) {
 for (const p of PLACEMENT) check(PATTERNS[p], `placement pattern ${p} is unknown`);
 
 // ---- a catalogue like the browser's (ladder order and levels from the lesson tables)
-const ROW = /^\|\s*(\d+)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
+const ROW = /^\|\s*(\d+|—)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
 const dir = join(root, 'src/content/dsa/patterns');
 const catalog = { order: [], byPattern: {}, problems: {}, cx: cxData };
 const order = JSON.parse(JSON.stringify([...lessons]));

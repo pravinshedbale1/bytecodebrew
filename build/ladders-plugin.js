@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
  * time: { [lessonId]: [{ num, title, slug, level }] }. Used by the Problem Tracker.
  */
 const ID = 'virtual:dsa-ladders';
-const ROW = /^\|\s*(\d+)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
+const ROW = /^\|\s*(\d+|—)\s*\|\s*\[([^\]]+)\]\(https:\/\/leetcode\.com\/problems\/([a-z0-9-]+)\/?\)\s*\|\s*(Easy|Medium|Hard)\s*\|/gm;
 
 export function dsaLadders(dir) {
   return {

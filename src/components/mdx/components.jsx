@@ -92,6 +92,9 @@ const MaxQueueViz = lazyViz(() => import('./viz/QueueViz'), 'MaxQueueViz');
 const LimitWindowViz = lazyViz(() => import('./viz/QueueViz'), 'LimitWindowViz');
 const LazyHeapViz = lazyViz(() => import('./viz/QueueViz'), 'LazyHeapViz');
 const PartitionKViz = lazyViz(() => import('./viz/QueueViz'), 'PartitionKViz');
+const VisiblePeopleViz = lazyViz(() => import('./viz/QueueViz'), 'VisiblePeopleViz');
+const FixedBoundsViz = lazyViz(() => import('./viz/QueueViz'), 'FixedBoundsViz');
+const FlipWindowViz = lazyViz(() => import('./viz/QueueViz'), 'FlipWindowViz');
 const SpanViz = lazyViz(() => import('./viz/ContributionViz'), 'SpanViz');
 const BitContribViz = lazyViz(() => import('./viz/ContributionViz'), 'BitContribViz');
 const SortedContribViz = lazyViz(() => import('./viz/ContributionViz'), 'SortedContribViz');
@@ -300,6 +303,9 @@ export const mdxComponents = {
   LimitWindowViz,
   LazyHeapViz,
   PartitionKViz,
+  VisiblePeopleViz,
+  FixedBoundsViz,
+  FlipWindowViz,
   SpanViz,
   BitContribViz,
   SortedContribViz,

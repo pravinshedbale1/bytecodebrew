@@ -1987,4 +1987,256 @@ public:
       },
     ],
   },
+  // ---- flip windows
+  'minimum-operations-to-make-binary-array-elements-equal-to-one-i': {
+    pattern: 'Forced greedy: the leftmost 0 can only be fixed by the window starting there',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Try every set of windows',
+        idea: 'Flipping a window twice cancels out and the order of flips doesn\'t matter, so a plan is just a set of window starts. Try them all.',
+        steps: [
+          'For every subset of the `n − 2` window starts, apply its flips to a copy of the array.',
+          'If the copy is all ones, keep the smallest subset size seen; return -1 if none works.',
+        ],
+        time: 'O(2ⁿ · n)', space: 'O(n)',
+        why: 'Exponential: only usable for tiny arrays. It shows the two facts the greedy relies on: each window is used at most once, and order is irrelevant.',
+        timesOut: ['generated'],
+        code: {
+          java: r`class Solution {
+    public int minOperations(int[] nums) {
+        int n = nums.length, w = n - 2, best = Integer.MAX_VALUE;
+        for (int mask = 0; mask < (1 << w); mask++) {
+            int[] a = nums.clone();
+            for (int s = 0; s < w; s++)
+                if ((mask >> s & 1) == 1) { a[s] ^= 1; a[s + 1] ^= 1; a[s + 2] ^= 1; }
+            boolean ok = true;
+            for (int x : a) if (x == 0) { ok = false; break; }
+            if (ok) best = Math.min(best, Integer.bitCount(mask));
+        }
+        return best == Integer.MAX_VALUE ? -1 : best;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minOperations(vector<int>& nums) {
+        int n = nums.size(), w = n - 2, best = INT_MAX;
+        for (int mask = 0; mask < (1 << w); mask++) {
+            vector<int> a = nums;
+            for (int s = 0; s < w; s++)
+                if (mask >> s & 1) { a[s] ^= 1; a[s + 1] ^= 1; a[s + 2] ^= 1; }
+            if (count(a.begin(), a.end(), 0) == 0) best = min(best, __builtin_popcount(mask));
+        }
+        return best == INT_MAX ? -1 : best;
+    }
+};`,
+          python: r`class Solution:
+    def minOperations(self, nums: List[int]) -> int:
+        n = len(nums)
+        w = n - 2
+        best = inf
+        for mask in range(1 << w):
+            a = nums[:]
+            for s in range(w):
+                if mask >> s & 1:
+                    a[s] ^= 1
+                    a[s + 1] ^= 1
+                    a[s + 2] ^= 1
+            if 0 not in a:
+                best = min(best, bin(mask).count('1'))
+        return -1 if best == inf else best`,
+          javascript: r`var minOperations = function(nums) {
+    const n = nums.length, w = n - 2;
+    let best = Infinity;
+    for (let mask = 0; mask < (1 << w); mask++) {
+        const a = nums.slice();
+        let ops = 0;
+        for (let s = 0; s < w; s++)
+            if ((mask >> s) & 1) { a[s] ^= 1; a[s + 1] ^= 1; a[s + 2] ^= 1; ops++; }
+        if (!a.includes(0)) best = Math.min(best, ops);
+    }
+    return best === Infinity ? -1 : best;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Left-to-right greedy',
+        idea: 'Only the window starting at index 0 touches index 0, so whether to flip it is forced. Fix index 0, then index 1 is only touched by the window starting at 1, and so on.',
+        steps: [
+          'For `i` from 0 to `n − 3`: if `nums[i] == 0`, flip `i`, `i + 1` and `i + 2` and count one operation.',
+          'Afterwards the first `n − 2` elements are 1. If the last two are also 1, return the count; otherwise return -1.',
+        ],
+        time: 'O(n)', space: 'O(1)',
+        why: 'Every choice is forced, so the greedy plan is the only plan; it is minimal because no other plan exists. For a general k, flipping k cells per step is O(nk); see K Consecutive Bit Flips for O(n).',
+        code: {
+          java: r`class Solution {
+    public int minOperations(int[] nums) {
+        int n = nums.length, ops = 0;
+        for (int i = 0; i + 2 < n; i++)
+            if (nums[i] == 0) { nums[i] = 1; nums[i + 1] ^= 1; nums[i + 2] ^= 1; ops++; }
+        return nums[n - 2] == 1 && nums[n - 1] == 1 ? ops : -1;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minOperations(vector<int>& nums) {
+        int n = nums.size(), ops = 0;
+        for (int i = 0; i + 2 < n; i++)
+            if (nums[i] == 0) { nums[i] = 1; nums[i + 1] ^= 1; nums[i + 2] ^= 1; ops++; }
+        return nums[n - 2] == 1 && nums[n - 1] == 1 ? ops : -1;
+    }
+};`,
+          python: r`class Solution:
+    def minOperations(self, nums: List[int]) -> int:
+        n, ops = len(nums), 0
+        for i in range(n - 2):
+            if nums[i] == 0:
+                nums[i] = 1
+                nums[i + 1] ^= 1
+                nums[i + 2] ^= 1
+                ops += 1
+        return ops if nums[-1] == 1 and nums[-2] == 1 else -1`,
+          javascript: r`var minOperations = function(nums) {
+    const n = nums.length;
+    let ops = 0;
+    for (let i = 0; i + 2 < n; i++)
+        if (nums[i] === 0) { nums[i] = 1; nums[i + 1] ^= 1; nums[i + 2] ^= 1; ops++; }
+    return nums[n - 2] === 1 && nums[n - 1] === 1 ? ops : -1;
+};`,
+        },
+      },
+    ],
+  },
+  'minimum-number-of-k-consecutive-bit-flips': {
+    pattern: 'Forced greedy + a sliding count of active flips (difference array / queue of flip ends)',
+    approaches: [
+      {
+        level: 'Brute force', name: 'Greedy, flipping k cells each time',
+        idea: 'The leftmost 0 can only be fixed by a flip starting there, so flip there, for real, and move on.',
+        steps: [
+          'For `i` from 0: if `nums[i] == 0`, flip `nums[i … i + k − 1]` (return -1 if that runs past the end) and count it.',
+          'Return the count.',
+        ],
+        time: 'O(n · k)', space: 'O(1)',
+        why: 'Each flip rewrites k cells: 5 × 10⁹ operations for n = 10⁵ and k = n / 2.',
+        code: {
+          java: r`class Solution {
+    public int minKBitFlips(int[] nums, int k) {
+        int n = nums.length, flips = 0;
+        for (int i = 0; i < n; i++) {
+            if (nums[i] == 1) continue;
+            if (i + k > n) return -1;
+            for (int j = i; j < i + k; j++) nums[j] ^= 1;
+            flips++;
+        }
+        return flips;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minKBitFlips(vector<int>& nums, int k) {
+        int n = nums.size(), flips = 0;
+        for (int i = 0; i < n; i++) {
+            if (nums[i] == 1) continue;
+            if (i + k > n) return -1;
+            for (int j = i; j < i + k; j++) nums[j] ^= 1;
+            flips++;
+        }
+        return flips;
+    }
+};`,
+          python: r`class Solution:
+    def minKBitFlips(self, nums: List[int], k: int) -> int:
+        n, flips = len(nums), 0
+        for i in range(n):
+            if nums[i] == 1:
+                continue
+            if i + k > n:
+                return -1
+            for j in range(i, i + k):
+                nums[j] ^= 1
+            flips += 1
+        return flips`,
+          javascript: r`var minKBitFlips = function(nums, k) {
+    const n = nums.length;
+    let flips = 0;
+    for (let i = 0; i < n; i++) {
+        if (nums[i] === 1) continue;
+        if (i + k > n) return -1;
+        for (let j = i; j < i + k; j++) nums[j] ^= 1;
+        flips++;
+    }
+    return flips;
+};`,
+        },
+      },
+      {
+        level: 'Optimal', name: 'Count the flips that cover i',
+        idea: 'Don\'t touch the array. Keep `active`, the number of flips covering index i: the current bit is `nums[i]` if `active` is even and flipped if odd. Each flip stops covering at `i + k`, so record that end and subtract it when you get there.',
+        steps: [
+          'At each `i`, subtract the flips that ended here: `active −= endsAt[i]`.',
+          'If `(nums[i] + active)` is even, the bit is 0: if `i + k > n` return -1; otherwise start a flip: `flips++`, `active++`, `endsAt[i + k]++`.',
+          'Return `flips`.',
+        ],
+        time: 'O(n)', space: 'O(n)',
+        why: 'The `endsAt` array is a difference array (equivalently, a queue of flip end positions): a sliding window of length k over where flips started. It can be made O(1) space by marking flip starts in nums itself (e.g. adding 2).',
+        code: {
+          java: r`class Solution {
+    public int minKBitFlips(int[] nums, int k) {
+        int n = nums.length, flips = 0, active = 0;
+        int[] endsAt = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+            active -= endsAt[i];
+            if ((nums[i] + active) % 2 == 0) {
+                if (i + k > n) return -1;
+                flips++; active++; endsAt[i + k]++;
+            }
+        }
+        return flips;
+    }
+}`,
+          cpp: r`class Solution {
+public:
+    int minKBitFlips(vector<int>& nums, int k) {
+        int n = nums.size(), flips = 0, active = 0;
+        vector<int> endsAt(n + 1, 0);
+        for (int i = 0; i < n; i++) {
+            active -= endsAt[i];
+            if ((nums[i] + active) % 2 == 0) {
+                if (i + k > n) return -1;
+                flips++; active++; endsAt[i + k]++;
+            }
+        }
+        return flips;
+    }
+};`,
+          python: r`class Solution:
+    def minKBitFlips(self, nums: List[int], k: int) -> int:
+        n = len(nums)
+        ends_at = [0] * (n + 1)
+        flips = active = 0
+        for i in range(n):
+            active -= ends_at[i]
+            if (nums[i] + active) % 2 == 0:
+                if i + k > n:
+                    return -1
+                flips += 1
+                active += 1
+                ends_at[i + k] += 1
+        return flips`,
+          javascript: r`var minKBitFlips = function(nums, k) {
+    const n = nums.length, endsAt = new Int32Array(n + 1);
+    let flips = 0, active = 0;
+    for (let i = 0; i < n; i++) {
+        active -= endsAt[i];
+        if ((nums[i] + active) % 2 === 0) {
+            if (i + k > n) return -1;
+            flips++; active++; endsAt[i + k]++;
+        }
+    }
+    return flips;
+};`,
+        },
+      },
+    ],
+  },
 };

@@ -114,4 +114,27 @@ Value \`a\` is closer to \`x\` than value \`b\` if \`|a − x| < |b − x|\`, or
       'Binary search the start index s in [0, n − k]. Compare x − arr[mid] with arr[mid + k] − x: if the left value is farther, the window should start later. That is O(log(n − k) + k).',
     ],
   },
+  // ---- flip windows
+  'minimum-operations-to-make-binary-array-elements-equal-to-one-i': {
+    statement: `You are given a binary array \`nums\`. In one operation you may choose any **3 consecutive** elements and flip all of them (\`0\` becomes \`1\` and \`1\` becomes \`0\`).
+
+Return the minimum number of operations needed to make every element equal to \`1\`, or \`-1\` if it is impossible.`,
+    constraints: ['3 <= nums.length <= 1e5', '0 <= nums[i] <= 1'],
+    hints: [
+      'The order of the operations doesn\'t matter, and flipping the same window twice undoes it: each window is flipped once or not at all.',
+      'Look at index 0: only the window starting at 0 can change it. So if nums[0] is 0 you must flip there, and otherwise you must not.',
+      'Repeat the same reasoning left to right: at i, flip [i, i + 2] if nums[i] is 0. At the end, the last two elements must already be 1, or it is impossible.',
+    ],
+  },
+  'minimum-number-of-k-consecutive-bit-flips': {
+    statement: `You are given a binary array \`nums\` and an integer \`k\`. A **k-bit flip** chooses a subarray of length exactly \`k\` and flips every bit in it (\`0\` ↔ \`1\`).
+
+Return the minimum number of k-bit flips needed so that the array has no \`0\`, or \`-1\` if it is not possible.`,
+    constraints: ['1 <= nums.length <= 1e5', '1 <= k <= nums.length', '0 <= nums[i] <= 1'],
+    hints: [
+      'Going left to right, the leftmost 0 can only be fixed by a flip that starts exactly there, so the greedy choice is forced.',
+      'Flipping k bits for real is O(nk). Instead, count how many flips cover the current index: the bit is nums[i] if that count is even, and flipped if it is odd.',
+      'Record where each flip stops covering (i + k), like a queue of flip ends or a difference array, and subtract it when you reach that index. If a flip would run past the end, return -1.',
+    ],
+  },
 };

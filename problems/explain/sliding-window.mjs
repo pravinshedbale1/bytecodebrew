@@ -38,4 +38,11 @@ export default {
   'find-k-closest-elements': {
     explain: 'Distances from x = 3 are 2, 1, 0, 1, 2. The four smallest are 0, 1, 1 and one of the 2s; on that tie 1 beats 5 because it is smaller, so the answer is `[1,2,3,4]`.',
   },
+  // ---- flip windows
+  'minimum-operations-to-make-binary-array-elements-equal-to-one-i': {
+    explain: 'Index 0 is 0, so flip [0..2]: [1,0,0,1,0,0]. Index 1 is now 0, so flip [1..3]: [1,1,1,0,0,0]. Index 3 is 0, so flip [3..5]: all ones. That is `3` operations, and each one was forced.',
+  },
+  'minimum-number-of-k-consecutive-bit-flips': {
+    explain: 'With k = 1, each flip changes one bit: flip index 0 and index 2 to get [1,1,1]. Two zeros need two flips, so the answer is `2`.',
+  },
 };

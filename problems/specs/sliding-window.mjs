@@ -268,4 +268,52 @@ export default [
     }
 }`,
   },
+  // ---- flip windows: a queue of where flips end
+  {
+    slug: 'minimum-operations-to-make-binary-array-elements-equal-to-one-i', title: 'Minimum Operations to Make Binary Array Elements Equal to One I', level: 'Medium',
+    summary: 'In one operation, flip any 3 consecutive elements of a binary array. Return the fewest operations that make every element 1, or -1 if it cannot be done.',
+    method: 'minOperations', params: [['int[]', 'nums']], returns: 'int',
+    tests: [
+      { in: [[0, 1, 1, 1, 0, 0]], out: 3 },
+      { in: [[0, 1, 1, 1]], out: -1 },
+      { in: [[1, 1, 1]] },
+      { in: [[0, 0, 0]] },
+      { in: [[0, 0, 1, 1, 0, 0]] },
+    ],
+    ref: `class Solution {
+    public int minOperations(int[] nums) {
+        int ops = 0;
+        for (int i = 0; i + 2 < nums.length; i++)
+            if (nums[i] == 0) { nums[i] = 1; nums[i + 1] ^= 1; nums[i + 2] ^= 1; ops++; }
+        return nums[nums.length - 2] == 1 && nums[nums.length - 1] == 1 ? ops : -1;
+    }
+}`,
+  },
+  {
+    slug: 'minimum-number-of-k-consecutive-bit-flips', title: 'Minimum Number of K Consecutive Bit Flips', level: 'Hard',
+    summary: 'A k-bit flip flips k consecutive elements of a binary array. Return the fewest k-bit flips that leave no 0 in the array, or -1 if that is impossible.',
+    method: 'minKBitFlips', params: [['int[]', 'nums'], ['int', 'k']], returns: 'int',
+    tests: [
+      { in: [[0, 1, 0], 1], out: 2 },
+      { in: [[1, 1, 0], 2], out: -1 },
+      { in: [[0, 0, 0, 1, 0, 1, 1, 0], 3], out: 3 },
+      { in: [[1], 1] },
+      { in: [[0, 0, 0, 0], 4] },
+      { in: [[0, 1, 0, 1], 4] },
+    ],
+    ref: `class Solution {
+    public int minKBitFlips(int[] nums, int k) {
+        int n = nums.length, flips = 0, active = 0;   // active: flips that cover index i
+        int[] endsAt = new int[n + 1];                // endsAt[j]: flips whose window ends just before j
+        for (int i = 0; i < n; i++) {
+            active -= endsAt[i];
+            if ((nums[i] + active) % 2 == 0) {        // still 0 after the active flips
+                if (i + k > n) return -1;
+                flips++; active++; endsAt[i + k]++;
+            }
+        }
+        return flips;
+    }
+}`,
+  },
 ];

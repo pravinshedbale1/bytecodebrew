@@ -808,6 +808,34 @@ function common(name, steps, code, kinds) {
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
 }
 
+// ---------------------------------------------------------------- 1944 visible people, 2444 fixed bounds, 995 k-bit flips
+{
+  const run = (name, steps, code, kinds, want) => {
+    common(name, steps, code, kinds);
+    ok(steps.at(-1).answer === want, `${name}: answer ${steps.at(-1).answer} vs ${want}`);
+  };
+  const V = (input) => run(`visiblePeople ${JSON.stringify(input)}`, qu.visiblePeople(input), qu.visiblePeopleCode, ['start', 'person', 'done'], `[${qu.visiblePeopleAnswer(input).join(', ')}]`);
+  for (const e of Object.values(qu.VISIBLE_PEOPLE)) V(e.input);
+  for (let t = 0; t < 2000; t++) V(qu.randomVisiblePeople({}, rand));
+  ok(qu.visiblePeople(qu.VISIBLE_PEOPLE.lesson.input).at(-1).answer === '[3, 1, 2, 1, 1, 0]' && qu.visiblePeople(qu.VISIBLE_PEOPLE.rising.input).at(-1).answer === '[4, 1, 1, 1, 0]', 'visiblePeople: LeetCode 1944 examples');
+  ok(qu.parseVisiblePeople({ heights: '3, 3' }).error, 'visiblePeople: duplicate heights rejected');
+
+  const F = (input) => run(`fixedBounds ${JSON.stringify(input)}`, qu.fixedBounds(input), qu.fixedBoundsCode, ['start', 'count', 'none', 'done'], `${qu.fixedBoundsAnswer(input)}`);
+  for (const e of Object.values(qu.FIXED_BOUNDS)) F(e.input);
+  for (let t = 0; t < 2000; t++) F(qu.randomFixedBounds({}, rand));
+  F({ nums: [3, 2, 4], minK: 3, maxK: 2 });
+  ok(qu.fixedBounds(qu.FIXED_BOUNDS.lesson.input).at(-1).answer === '2' && qu.fixedBounds(qu.FIXED_BOUNDS.ones.input).at(-1).answer === '10', 'fixedBounds: LeetCode 2444 examples');
+
+  const W = (input) => {
+    const steps = qu.flipWindow(input);
+    run(`flipWindow ${JSON.stringify(input)}`, steps, qu.flipWindowCode, ['start', 'ok', 'flip', 'fail', 'done'], `${qu.flipWindowAnswer(input)}`);
+    if (steps.at(-1).kind === 'done') ok(steps.at(-1).now.every((b) => b === 1), 'flipWindow: all ones at the end');
+  };
+  for (const e of Object.values(qu.FLIP_WINDOW)) W(e.input);
+  for (let t = 0; t < 2000; t++) W(qu.randomFlipWindow({}, rand));
+  ok(qu.flipWindow(qu.FLIP_WINDOW.lesson.input).at(-1).answer === '3' && qu.flipWindow(qu.FLIP_WINDOW.fail.input).at(-1).answer === '-1', 'flipWindow: LeetCode 995 examples');
+}
+
 // ---------------------------------------------------------------- design, matrices and advanced topics
 {
   const runL = (input) => {

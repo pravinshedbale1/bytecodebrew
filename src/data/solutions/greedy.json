@@ -769,5 +769,50 @@
     }
    }
   ]
+ },
+ "orderly-queue": {
+  "pattern": "Case split: k = 1 gives only rotations; k ≥ 2 can swap neighbours, so sort",
+  "approaches": [
+   {
+    "level": "Brute force",
+    "name": "Search every reachable string",
+    "idea": "Breadth-first search over strings: from each string, try moving each of the first k letters to the end, and keep the smallest string seen.",
+    "steps": [
+     "Start a queue and a visited set with `s`.",
+     "For each string popped, generate the k successors; add unseen ones.",
+     "Return the smallest visited string."
+    ],
+    "time": "O(n! · k · n) in the worst case",
+    "space": "O(n! · n)",
+    "why": "For k ≥ 2 every permutation is reachable, so the search visits up to n! strings. It only works for tiny inputs, but running it on small cases is how you would discover the sorting fact.",
+    "timesOut": [
+     "generated"
+    ],
+    "code": {
+     "java": "class Solution {\n    public String orderlyQueue(String s, int k) {\n        Set<String> seen = new HashSet<>(List.of(s));\n        ArrayDeque<String> q = new ArrayDeque<>(List.of(s));\n        String best = s;\n        while (!q.isEmpty()) {\n            String cur = q.poll();\n            if (cur.compareTo(best) < 0) best = cur;\n            for (int i = 0; i < k; i++) {\n                String next = cur.substring(0, i) + cur.substring(i + 1) + cur.charAt(i);\n                if (seen.add(next)) q.offer(next);\n            }\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string orderlyQueue(string s, int k) {\n        unordered_set<string> seen = {s};\n        queue<string> q;\n        q.push(s);\n        string best = s;\n        while (!q.empty()) {\n            string cur = q.front(); q.pop();\n            best = min(best, cur);\n            for (int i = 0; i < k; i++) {\n                string next = cur.substr(0, i) + cur.substr(i + 1) + cur[i];\n                if (seen.insert(next).second) q.push(next);\n            }\n        }\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def orderlyQueue(self, s: str, k: int) -> str:\n        seen = {s}\n        q = deque([s])\n        while q:\n            cur = q.popleft()\n            for i in range(k):\n                nxt = cur[:i] + cur[i + 1:] + cur[i]\n                if nxt not in seen:\n                    seen.add(nxt)\n                    q.append(nxt)\n        return min(seen)",
+     "javascript": "var orderlyQueue = function(s, k) {\n    const seen = new Set([s]), q = [s];\n    let best = s;\n    for (let h = 0; h < q.length; h++) {\n        const cur = q[h];\n        if (cur < best) best = cur;\n        for (let i = 0; i < k; i++) {\n            const next = cur.slice(0, i) + cur.slice(i + 1) + cur[i];\n            if (!seen.has(next)) { seen.add(next); q.push(next); }\n        }\n    }\n    return best;\n};"
+    }
+   },
+   {
+    "level": "Optimal",
+    "name": "Rotations for k = 1, sort for k ≥ 2",
+    "idea": "With k = 1 each move rotates the string, so the reachable strings are exactly the n rotations. With k ≥ 2 you can swap any two neighbouring letters, which lets you bubble-sort.",
+    "steps": [
+     "If `k ≥ 2`, return the letters of `s` sorted.",
+     "If `k = 1`, compare all n rotations `s[i:] + s[:i]` and return the smallest."
+    ],
+    "time": "O(n²) for k = 1, O(n log n) for k ≥ 2",
+    "space": "O(n)",
+    "why": "The swap: rotate until the pair (a, b) is at the front, move b to the end (k ≥ 2 allows picking the second letter), then rotate a and the rest round; the result is the original string with a and b swapped. Adjacent swaps generate every permutation.",
+    "code": {
+     "java": "class Solution {\n    public String orderlyQueue(String s, int k) {\n        if (k >= 2) {\n            char[] c = s.toCharArray();\n            Arrays.sort(c);\n            return new String(c);\n        }\n        String best = s;\n        for (int i = 1; i < s.length(); i++) {\n            String r = s.substring(i) + s.substring(0, i);\n            if (r.compareTo(best) < 0) best = r;\n        }\n        return best;\n    }\n}",
+     "cpp": "class Solution {\npublic:\n    string orderlyQueue(string s, int k) {\n        if (k >= 2) {\n            sort(s.begin(), s.end());\n            return s;\n        }\n        string best = s;\n        for (int i = 1; i < (int) s.size(); i++) best = min(best, s.substr(i) + s.substr(0, i));\n        return best;\n    }\n};",
+     "python": "class Solution:\n    def orderlyQueue(self, s: str, k: int) -> str:\n        if k >= 2:\n            return ''.join(sorted(s))\n        return min(s[i:] + s[:i] for i in range(len(s)))",
+     "javascript": "var orderlyQueue = function(s, k) {\n    if (k >= 2) return s.split('').sort().join('');\n    let best = s;\n    for (let i = 1; i < s.length; i++) {\n        const r = s.slice(i) + s.slice(0, i);\n        if (r < best) best = r;\n    }\n    return best;\n};"
+    }
+   }
+  ]
  }
 }
