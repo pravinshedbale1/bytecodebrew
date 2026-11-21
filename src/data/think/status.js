@@ -28,5 +28,6 @@ export const POLISHED = [
   'two-pointers',
   'sliding-window',
   'prefix-sums',
+  'intervals',
   'cyclic-sort',
 ];
