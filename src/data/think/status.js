@@ -9,4 +9,5 @@ export const COMPLETE = [
   'prefix-sums',
   'intervals',
   'binary-search',
+  'binary-search-on-answer',
 ];
