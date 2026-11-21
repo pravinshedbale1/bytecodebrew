@@ -826,6 +826,21 @@ function common(name, steps, code, kinds) {
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
 }
 
+// ---------------------------------------------------------------- 42 trapping rain water
+{
+  const T = (input) => {
+    const steps = tp.trap(input);
+    common(`trap ${JSON.stringify(input)}`, steps, tp.trapCode, ['start', 'left', 'right', 'done']);
+    const want = tp.trapAnswer(input);
+    ok(steps.at(-1).answer === `${want.reduce((s, v) => s + v, 0)}`, `trap ${JSON.stringify(input)}: total`);
+    ok(steps.at(-1).water.every((w, i) => w === want[i]), `trap ${JSON.stringify(input)}: water above every bar`);
+  };
+  for (const e of Object.values(tp.TRAP)) T(e.input);
+  for (let t = 0; t < 3000; t++) T(tp.randomTrap({}, rand));
+  T({ heights: [5] });
+  ok(tp.trap(tp.TRAP.lesson.input).at(-1).answer === '6' && tp.trap(tp.TRAP.right.input).at(-1).answer === '9', 'trap: LeetCode 42 examples');
+}
+
 // ---------------------------------------------------------------- structures beside the input (SideViz)
 {
   const run = (name, steps, code, kinds, want) => {

@@ -50,6 +50,7 @@ const TwoSumMapViz = lazyViz(() => import('./viz/HashingViz'), 'TwoSumMapViz');
 const ConsecutiveSetViz = lazyViz(() => import('./viz/HashingViz'), 'ConsecutiveSetViz');
 const PairSumViz = lazyViz(() => import('./viz/TwoPointersViz'), 'PairSumViz');
 const ContainerViz = lazyViz(() => import('./viz/TwoPointersViz'), 'ContainerViz');
+const TrapWaterViz = lazyViz(() => import('./viz/TwoPointersViz'), 'TrapWaterViz');
 const ReadWriteViz = lazyViz(() => import('./viz/TwoPointersViz'), 'ReadWriteViz');
 const DutchFlagViz = lazyViz(() => import('./viz/TwoPointersViz'), 'DutchFlagViz');
 const SlidingWindowViz = lazyViz(() => import('./viz/SlidingWindowViz'), 'SlidingWindowViz');
@@ -264,6 +265,7 @@ export const mdxComponents = {
   ConsecutiveSetViz,
   PairSumViz,
   ContainerViz,
+  TrapWaterViz,
   ReadWriteViz,
   DutchFlagViz,
   SlidingWindowViz,

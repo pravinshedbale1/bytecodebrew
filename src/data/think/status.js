@@ -24,5 +24,6 @@ export const COMPLETE = [
  *   - no unexplained jargon (monotone, invariant, canonical, amortised)
  */
 export const POLISHED = [
+  'hashing',
   'cyclic-sort',
 ];

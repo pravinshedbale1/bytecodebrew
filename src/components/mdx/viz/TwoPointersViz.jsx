@@ -1,6 +1,8 @@
 import { StepViz, Key } from './StepViz';
 import { ArrayStrip, Arcs, Float, Stage, pitchFor } from './prims';
 import styles from './TwoPointersViz.module.css';
+import { CmpCard } from './sideKit';
+import { TRAP, parseTrap, randomTrap, trap, trapCode } from './models/twoPointers';
 import {
   CONTAINER, DUTCH, PAIR_SUM, READ_WRITE, container, containerCode, dutchCode, dutchFlag, pairSum, pairSumCode,
   parseContainer, parseDutch, parsePairSum, parseReadWrite, randomContainer, randomDutch, randomPairSum, randomReadWrite,
@@ -376,4 +378,78 @@ const dutchSpec = {
 
 export function DutchFlagViz(props) {
   return <StepViz spec={dutchSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- 42: trapping rain water
+
+function TrapStage({ step: f, input, width }) {
+  const h = input.heights;
+  const n = h.length;
+  const pitch = pitchFor(width - 8, n, 30, 52);
+  const W = n * pitch;
+  const max = Math.max(1, ...h);
+  const unit = Math.max(12, Math.min(22, Math.floor(150 / max)));
+  const top = 34;
+  const base = top + max * unit;
+  const height = base + 54;
+  const x = (k) => k * pitch;
+  const y = (v) => base - v * unit;
+  const done = f.kind === 'done';
+  const inPlay = (k) => !done && k >= f.l && k <= f.r;
+  const card = f.side
+    ? { q: `leftMax ${f.leftMax} ${f.side === 'L' ? '<' : '≥'} rightMax ${f.rightMax}`, a: `${f.side === 'L' ? 'left' : 'right'} decides: bar ${f.bar} holds ${f.water[f.bar]}`, tone: f.water[f.bar] ? 'yes' : 'info' }
+    : null;
+  return (
+    <div>
+      <div className={styles.barsWrap} style={{ width: W }}>
+        <svg width={W} height={height} className={styles.bars} role="img" aria-label={`heights = [${h.join(', ')}]`}>
+          {h.map((v, k) => (f.water[k] ? (
+            <rect key={`w${k}`} x={x(k) + 1} y={y(v + f.water[k])} width={pitch - 2} height={f.water[k] * unit} className={`${styles.water} ${k === f.bar ? styles.waterNew : ''}`} />
+          ) : null))}
+          {h.map((v, k) => (
+            <g key={k}>
+              <rect x={x(k) + 2} y={y(v)} width={pitch - 4} height={Math.max(1, v * unit)} rx="2" className={[styles.bar, !inPlay(k) && !done && f.kind !== 'start' && styles.barOut, k === f.bar && styles.barWall].filter(Boolean).join(' ')} />
+              <text x={x(k) + pitch / 2} y={base + 14} textAnchor="middle" className={styles.barValue}>{v}</text>
+              <text x={x(k) + pitch / 2} y={base + 27} textAnchor="middle" className={styles.barIndex}>{k}</text>
+            </g>
+          ))}
+          <line x1="0" x2={W} y1={base} y2={base} className={styles.floor} />
+          {!done && f.kind !== 'start' && (
+            <>
+              <line x1={0} x2={x(Math.min(f.l, n - 1)) + pitch} y1={y(f.leftMax)} y2={y(f.leftMax)} className={styles.maxLine} />
+              <line x1={x(Math.max(f.r, 0))} x2={W} y1={y(f.rightMax)} y2={y(f.rightMax)} className={styles.maxLine} />
+              <text x={4} y={y(f.leftMax) - 4} className={styles.maxLabel}>leftMax {f.leftMax}</text>
+              <text x={W - 4} y={y(f.rightMax) - 4} textAnchor="end" className={styles.maxLabel}>rightMax {f.rightMax}</text>
+            </>
+          )}
+          {!done && f.l <= f.r && f.l < n && <text x={x(f.l) + pitch / 2} y={base + 44} textAnchor="middle" className={styles.ptrL}>l</text>}
+          {!done && f.l <= f.r && f.r >= 0 && <text x={x(f.r) + pitch / 2} y={base + 44} textAnchor="middle" className={styles.ptrR}>r</text>}
+        </svg>
+      </div>
+      {card && <CmpCard {...card} style={{ maxWidth: 360, margin: '8px 0 0' }} />}
+    </div>
+  );
+}
+
+const trapSpec = {
+  title: 'Trapping rain water, one bar at a time',
+  examples: TRAP,
+  simulate: trap,
+  code: () => trapCode,
+  kinds: { start: ['Start', 'neutral'], left: ['Left settles', 'accent'], right: ['Right settles', 'accent'], done: ['Total', 'success'] },
+  describe: (input) => `heights = [${input.heights.join(', ')}]`,
+  rule: () => 'the side with the lower wall so far decides the water above its bar',
+  stats: (f) => [['water', f.total]],
+  legend: () => [[<Key shape="box" tone="accent">·</Key>, 'the bar being settled'], [<Key shape="box" tone="note">·</Key>, 'water'], [<Key tone="neutral">- -</Key>, 'tallest wall so far on each side']],
+  fields: () => [{ name: 'heights', label: 'heights (0 to 9)', placeholder: '0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1' }],
+  values: (input) => ({ heights: input.heights.join(', ') }),
+  parse: parseTrap,
+  random: (input) => randomTrap(input),
+  hint: () => 'Up to 14 bars with heights 0 to 9.',
+  delay: () => 1800,
+  Stage: TrapStage,
+};
+
+export function TrapWaterViz(props) {
+  return <StepViz spec={trapSpec} {...props} />;
 }

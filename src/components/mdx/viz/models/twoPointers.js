@@ -429,3 +429,81 @@ export function randomDutch(rand = Math.random) {
   return { nums: Array.from({ length: r.int(6, 10) }, () => r.int(0, 2)) };
 }
 
+
+// ---------------------------------------------------------------- 42: trapping rain water, one bar at a time
+
+export const TRAP = {
+  lesson: { label: 'The example', input: { heights: [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1] } },
+  right: { label: 'The right side decides', input: { heights: [4, 2, 0, 3, 2, 5] } },
+};
+
+export const trapCode = [
+  ['init', 'int l = 0, r = n - 1, leftMax = 0, rightMax = 0, total = 0;'],
+  ['loop', 'while (l <= r) {'],
+  ['max', '    leftMax = Math.max(leftMax, h[l]);  rightMax = Math.max(rightMax, h[r]);'],
+  ['left', '    if (leftMax < rightMax) { total += leftMax - h[l]; l++; }   // the left wall is lower: it decides'],
+  ['right', '    else { total += rightMax - h[r]; r--; }                     // the right wall is lower (or equal)'],
+  ['end', '}'],
+];
+
+/** Water above every bar by brute force: min(tallest on the left, tallest on the right) − height. */
+export function trapAnswer({ heights: h }) {
+  return h.map((v, i) => Math.max(0, Math.min(Math.max(...h.slice(0, i + 1)), Math.max(...h.slice(i))) - v));
+}
+
+export function trap(input) {
+  const h = input.heights;
+  const n = h.length;
+  const water = new Array(n).fill(null);   // null = not settled yet
+  let l = 0, r = n - 1, leftMax = 0, rightMax = 0, total = 0;
+  const steps = [];
+  const snap = (x) => steps.push({ l, r, leftMax, rightMax, total, water: [...water], bar: null, side: null, ...x });
+  snap({
+    kind: 'start', lines: ['init'],
+    title: 'Water collects where both sides have a taller wall',
+    text: 'The water above a bar rises to the lower of two walls: the tallest bar on its left and the tallest on its right. Two pointers start at the ends; each step settles the water above one bar, from whichever side has the lower wall so far.',
+    calc: ['l = 0, r = ' + (n - 1), 'leftMax = 0, rightMax = 0'],
+  });
+  while (l <= r) {
+    leftMax = Math.max(leftMax, h[l]);
+    rightMax = Math.max(rightMax, h[r]);
+    if (leftMax < rightMax) {
+      const w = leftMax - h[l];
+      water[l] = w; total += w;
+      snap({
+        kind: 'left', bar: l, side: 'L', lines: ['loop', 'max', 'left'],
+        title: w ? `Bar ${l} holds ${w}` : `Bar ${l} holds nothing`,
+        text: `The tallest wall on the left so far is ${leftMax}; on the right there is already a ${rightMax}, which is taller. So the water above bar ${l} can only rise to ${leftMax}, whatever lies in between: ${leftMax} − ${h[l]} = ${w}.${w ? '' : ' (This bar is the wall itself.)'} Move l right.`,
+        calc: [`leftMax ${leftMax} < rightMax ${rightMax} → the left decides`, `water[${l}] = ${leftMax} − ${h[l]} = ${w}`, `total = ${total}`],
+      });
+      l++;
+    } else {
+      const w = rightMax - h[r];
+      water[r] = w; total += w;
+      snap({
+        kind: 'right', bar: r, side: 'R', lines: ['loop', 'max', 'right'],
+        title: w ? `Bar ${r} holds ${w}` : `Bar ${r} holds nothing`,
+        text: `The tallest wall on the right so far is ${rightMax}, and the left already has a ${leftMax}, at least as tall. So the water above bar ${r} rises to ${rightMax}: ${rightMax} − ${h[r]} = ${w}.${w ? '' : ' (This bar is the wall itself.)'} Move r left.`,
+        calc: [`leftMax ${leftMax} ≥ rightMax ${rightMax} → the right decides`, `water[${r}] = ${rightMax} − ${h[r]} = ${w}`, `total = ${total}`],
+      });
+      r--;
+    }
+  }
+  snap({
+    kind: 'done', lines: ['end'], answer: `${total}`,
+    title: `Total water: ${total}`,
+    text: `Every bar was settled exactly once, so this is O(n) with no extra arrays. The check: computing min(tallest left, tallest right) − height for every bar also gives ${trapAnswer(input).reduce((s, v) => s + v, 0)}.`,
+    calc: [`total = ${total}`],
+  });
+  return steps;
+}
+
+export function parseTrap(values) {
+  const r = parseInts(values.heights, { min: 0, max: 9, minLen: 1, maxLen: 14, name: 'heights' });
+  return r.error ? r : { input: { heights: r.arr } };
+}
+
+export function randomTrap(input, rand = Math.random) {
+  const g = rng(rand);
+  return { heights: Array.from({ length: g.int(6, 12) }, () => g.int(0, 6)) };
+}

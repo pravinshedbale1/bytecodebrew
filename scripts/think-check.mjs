@@ -102,7 +102,7 @@ for (const [slug, t] of Object.entries(THINK)) {
   if (w.viz && !w.inputs?.length) fail(`${at}: ${w.viz} needs inputs`);
   (w.frames ?? []).forEach((f, k) => { if (!f.title || !f.text) fail(`${at}: frame ${k + 1} needs a title and text`); checkSketch(`${at} frame ${k + 1}`, f.sketch); });
   if (!(t.edges?.length >= 2)) fail(`${at}: at least two edge cases`);
-  if (POLISHED.includes(index[slug])) polishedRules(at, t);
+  if (POLISHED.includes(index[slug]) || t.aha) polishedRules(at, t);   // a walkthrough with an aha is held to the full standard
 }
 
 /** The full standard, for patterns listed in status.js POLISHED. */
