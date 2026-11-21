@@ -31,5 +31,6 @@ export const POLISHED = [
   'intervals',
   'binary-search',
   'binary-search-on-answer',
+  'sorting-and-selection',
   'cyclic-sort',
 ];
