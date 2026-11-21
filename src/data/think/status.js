@@ -16,6 +16,7 @@ export const COMPLETE = [
   'fast-slow-pointers',
   'linked-list-manipulation',
   'stack-patterns',
+  'monotonic-stack',
 ];
 
 /**
@@ -41,4 +42,5 @@ export const POLISHED = [
   'fast-slow-pointers',
   'linked-list-manipulation',
   'stack-patterns',
+  'monotonic-stack',
 ];

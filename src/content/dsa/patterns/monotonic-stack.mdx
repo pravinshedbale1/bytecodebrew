@@ -102,6 +102,8 @@ static int[] nextGreaterCircular(int[] a) {
 }
 ```
 
+<TokenStackViz examples={['nge2']} title="Two laps around the circle, step by step" />
+
 ### Largest rectangle in a histogram (hard, classic)
 
 For each bar, the widest rectangle using it as the **shortest** bar extends left and right until it meets a **smaller** bar. Keep an **increasing** stack. When a bar is popped, the bar that popped it is the first smaller one on the right, and the bar beneath it on the stack is the first smaller one on the left — so the popped bar knows its full width.
@@ -182,6 +184,8 @@ static String removeKdigits(String num, int k) {
     return out.isEmpty() ? "0" : out;
 }
 ```
+
+<TokenStackViz examples={['removek']} title="Remove k digits, step by step" />
 
 ### Number of Visible People in a Queue (1944): each pop is someone you can see
 
@@ -358,6 +362,8 @@ public long continuousSubarrays(int[] nums) {
 
 Storing **indexes** in the deques (instead of values, as in 1438) makes "has this left the window?" a simple `index < l` check. The count reaches about 5 × 10⁹, so use a `long`.
 
+<LimitWindowViz examples={['count']} title="Count the windows ending at each r" />
+
 ### Count Subarrays With Cost Less Than or Equal to K: check the condition is monotone
 
 > The cost of a subarray is (max − min) × length. Count the subarrays with cost at most `k`.
@@ -369,6 +375,8 @@ while ((long) (nums[maxQ.peekFirst()] - nums[minQ.peekFirst()]) * (r - l + 1) > 
 ```
 
 Compute the cost in 64 bits: up to 10⁹ × 10⁵.
+
+<LimitWindowViz examples={['cost']} title="Cost = spread × length, step by step" />
 
 ### Count Prime-Gap Balanced Subarrays: a window over some of the elements
 
@@ -391,6 +399,8 @@ for (int l = 0, r = 0; r < nums.length; r++) {
     if (prev >= l) count += prev - l + 1;
 }
 ```
+
+<LimitWindowViz examples={['prime']} title="Only primes join the queues" />
 
 ### Count Subarrays With Fixed Bounds (2444): three positions, no window
 
@@ -455,6 +465,8 @@ public int constrainedSubsetSum(int[] nums, int k) {         // 1425: a subseque
 }
 ```
 
+<DpDequeViz examples={['jump', 'csum']} title="DP with a max queue, step by step" />
+
 ### A min queue over prefix sums: Shortest Subarray with Sum at Least K (862)
 
 With negative numbers a plain sliding window fails: adding an element can **lower** the sum. Work with prefix sums `p` instead: subarray `[i, j)` has sum `p[j] − p[i]`, and we want the smallest `j − i` with `p[j] − p[i] ≥ k`. Keep a deque of candidate starts with **increasing** prefix values:
@@ -486,6 +498,8 @@ public int shortestSubarray(int[] nums, int k) {
 - **Overflow** in contribution sums — use `long`.
 
 </Callout>
+
+<DpDequeViz examples={['shortest']} title="A min queue over prefix sums, step by step" />
 
 ## Practice ladder
 

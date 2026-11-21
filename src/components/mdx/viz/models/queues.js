@@ -144,8 +144,16 @@ export function randomMaxQueue(input, rand = Math.random) {
 export const LIMIT_WINDOW = {
   lesson: { label: 'nums = [10,1,2,4,7,2], limit 5', input: { nums: [10, 1, 2, 4, 7, 2], limit: 5 } },
   tight: { label: 'limit 0: equal runs', input: { nums: [4, 2, 2, 2, 4, 4, 2, 2], limit: 0 } },
+  count: { label: 'Count: [5,4,2,4], limit 2', input: { nums: [5, 4, 2, 4], limit: 2, goal: 'count' } },
+  cost: { label: 'Cost ≤ 4: [1,3,2]', input: { nums: [1, 3, 2], limit: 4, goal: 'cost' } },
+  prime: { label: 'Primes: [1,2,3], k = 1', input: { nums: [1, 2, 3], limit: 1, goal: 'prime' } },
 };
 
+/**
+ * Goals: longest (1438: the longest window with max − min ≤ limit), count (2762: how many windows have
+ * max − min ≤ limit), cost (3420: how many have (max − min) × length ≤ k), prime (3589: how many have at
+ * least two primes whose largest − smallest ≤ k; the deques only hold primes).
+ */
 export const limitWindowCode = [
   ['grow', 'for (int r = 0; r < n; r++) {   // add a[r] to both deques'],
   ['maxdq', '    while (!maxQ.isEmpty() && maxQ.peekLast() < a[r]) maxQ.pollLast();'],
@@ -161,85 +169,157 @@ export const limitWindowCode = [
   ['end', '}'],
 ];
 
-export function limitWindowAnswer({ nums: a, limit }) {
-  let best = 0;
+export function limitWindowCodeFor(goal = 'longest') {
+  if (goal === 'longest') return limitWindowCode;
+  const prime = goal === 'prime';
+  const cond = goal === 'cost' ? '(long) (max - min) * (r - l + 1) > k' : prime ? 'max - min > k' : 'max - min > limit';
+  return [
+    ['grow', `for (int r = 0; r < n; r++) {${prime ? '   // only primes join the deques' : ''}`],
+    ...(prime ? [['grow', '    if (isPrime[a[r]]) { secondLast = last; last = r;']] : []),
+    ['maxdq', `${prime ? '    ' : ''}    while (!maxQ.isEmpty() && a[maxQ.peekLast()] < a[r]) maxQ.pollLast(); maxQ.offerLast(r);`],
+    ['mindq', `${prime ? '    ' : ''}    while (!minQ.isEmpty() && a[minQ.peekLast()] > a[r]) minQ.pollLast(); minQ.offerLast(r);${prime ? ' }' : ''}`],
+    ['shrink', `    while (${cond}) {          // max, min: the deque fronts`],
+    ['shrink', '        if (maxQ.peekFirst() == l) maxQ.pollFirst();'],
+    ['shrink', '        if (minQ.peekFirst() == l) minQ.pollFirst();'],
+    ['shrink', '        l++;'],
+    ['shrink', '    }'],
+    prime
+      ? ['count', '    if (secondLast >= l) total += secondLast - l + 1;   // starts that keep two primes']
+      : ['count', '    total += r - l + 1;                   // every start in [l, r] works'],
+    ['end', '}'],
+  ];
+}
+
+export function isPrimeSmall(x) {
+  if (x < 2) return false;
+  for (let d = 2; d * d <= x; d++) if (x % d === 0) return false;
+  return true;
+}
+
+export const isPrime = isPrimeSmall;
+
+/** The brute-force answer, for the checks and the last step. */
+export function limitWindowAnswer({ nums: a, limit, goal = 'longest' }) {
+  let best = 0, total = 0;
   for (let l = 0; l < a.length; l++) for (let r = l; r < a.length; r++) {
     const part = a.slice(l, r + 1);
-    if (Math.max(...part) - Math.min(...part) <= limit) best = Math.max(best, r - l + 1);
+    if (goal === 'prime') {
+      const ps = part.filter(isPrimeSmall);
+      if (ps.length >= 2 && Math.max(...ps) - Math.min(...ps) <= limit) total++;
+      continue;
+    }
+    const spread = Math.max(...part) - Math.min(...part);
+    const ok = goal === 'cost' ? spread * part.length <= limit : spread <= limit;
+    if (ok) { best = Math.max(best, r - l + 1); total++; }
   }
-  return best;
+  return goal === 'longest' ? best : total;
 }
 
 export function limitWindow(input) {
-  const { nums: a, limit } = input;
+  const { nums: a, limit, goal = 'longest' } = input;
   const n = a.length;
+  const prime = goal === 'prime';
+  const name = goal === 'longest' || goal === 'count' ? 'limit' : 'k';
   const maxQ = [], minQ = [];   // indexes
   const steps = [];
-  let l = 0, best = 0, bestAt = null;
-  const snap = (x) => steps.push({ l, maxQ: [...maxQ], minQ: [...minQ], best, bestAt, ...x });
+  let l = 0, best = 0, bestAt = null, total = 0, last = -1, secondLast = -1;
+  const spread = () => (maxQ.length ? a[maxQ[0]] - a[minQ[0]] : 0);
+  const bad = (r) => (goal === 'cost' ? spread() * (r - l + 1) > limit : spread() > limit);
+  const what = (r) => (goal === 'cost' ? `(${a[maxQ[0]]} − ${a[minQ[0]]}) × ${r - l + 1} = ${spread() * (r - l + 1)}` : maxQ.length ? `${a[maxQ[0]]} − ${a[minQ[0]]} = ${spread()}` : 'no primes yet');
+  const snap = (x) => steps.push({ l, maxQ: [...maxQ], minQ: [...minQ], best: goal === 'longest' ? best : total, bestAt, total, goal, countTo: null, ...x });
+  const intro = {
+    longest: ['Longest window of', 'A window is fine when its largest and smallest values are close enough, and shrinking a fine window keeps it fine: a sliding window. The hard part is knowing the window\'s max and min as values arrive on the right and leave on the left. That\'s exactly a max queue plus a min queue: two monotonic deques.'],
+    count: ['Count the windows of', 'A window is fine when max − min ≤ limit, and every smaller window inside a fine one is fine too. So for each right end r, the fine windows are exactly those starting anywhere in [l, r]: r − l + 1 of them. The max queue and min queue keep the window\'s max and min.'],
+    cost: ['Count the windows of', 'Cost = (max − min) × length. Shrinking a window can only lower both, so the cheap windows ending at r are exactly those starting in [l, r]: r − l + 1 of them. The max queue and min queue give max and min.'],
+    prime: ['Count the windows of', 'Only primes matter here, so only primes join the max and min queues. Shrinking a window can only lower its prime spread, so for each r the starts that keep the spread ≤ k form a range [l, r]. Of those, the ones that still contain two primes start at or before the second-last prime.'],
+  }[goal];
   snap({
     kind: 'start', r: null, lines: [],
-    title: `Longest window of ${list(a)} with max − min ≤ ${limit}`,
-    text: 'A window is fine when its largest and smallest values are close enough, and shrinking a fine window keeps it fine: a sliding window. The hard part is knowing the window\'s max and min as values arrive on the right and leave on the left. That\'s exactly a max queue plus a min queue: two monotonic deques.',
+    title: `${intro[0]} ${list(a)} ${goal === 'longest' || goal === 'count' ? `with max − min ≤ ${limit}` : goal === 'cost' ? `with cost ≤ ${limit}` : `with two primes at most ${limit} apart`}`,
+    text: intro[1],
     calc: ['maxQ = [], minQ = []'],
   });
   for (let r = 0; r < n; r++) {
-    while (maxQ.length && a[maxQ.at(-1)] < a[r]) maxQ.pop();
-    maxQ.push(r);
-    while (minQ.length && a[minQ.at(-1)] > a[r]) minQ.pop();
-    minQ.push(r);
-    const mx = a[maxQ[0]], mn = a[minQ[0]];
+    const joins = !prime || isPrimeSmall(a[r]);
+    if (joins) {
+      while (maxQ.length && a[maxQ.at(-1)] < a[r]) maxQ.pop();
+      maxQ.push(r);
+      while (minQ.length && a[minQ.at(-1)] > a[r]) minQ.pop();
+      minQ.push(r);
+      if (prime) { secondLast = last; last = r; }
+    }
+    const over = bad(r);
     snap({
-      kind: 'grow', r, lines: ['grow', 'maxdq', 'mindq'],
-      title: `Add a[${r}] = ${a[r]}: max ${mx}, min ${mn}`,
-      text: `${a[r]} joins both deques; values it beats are dropped from their backs (they can't be the max or min while ${a[r]} is in the window). The fronts give the window's max = ${mx} and min = ${mn}: ${mx} − ${mn} = ${mx - mn} ${mx - mn > limit ? `> ${limit}, too wide` : `≤ ${limit}, fine`}.`,
-      calc: [`window [${l}, ${r}]`, `max − min = ${mx} − ${mn} = ${mx - mn}`],
+      kind: 'grow', r, over, tooMuch: over, lines: ['grow', ...(joins ? ['maxdq', 'mindq'] : [])],
+      title: joins ? `Add a[${r}] = ${a[r]}${maxQ.length ? `: max ${a[maxQ[0]]}, min ${a[minQ[0]]}` : ''}` : `a[${r}] = ${a[r]} is not prime: the deques don't change`,
+      text: joins
+        ? `${a[r]} joins both deques; values it beats are dropped from their backs (they can't be the max or min while ${a[r]} is in the window). ${goal === 'cost' ? `Cost = ${what(r)}` : `The fronts give ${what(r)}`} ${over ? `> ${limit}: too much.` : `≤ ${limit}: fine.`}`
+        : `Non-primes never affect the prime spread, but they still extend the window${over ? '' : ', so it stays fine'}.`,
+      calc: [`window [${l}, ${r}]`, goal === 'cost' ? `cost = ${what(r)}` : `spread = ${what(r)}`],
     });
-    if (mx - mn > limit) {
+    if (over) {
       const from = l;
-      while (a[maxQ[0]] - a[minQ[0]] > limit) {
+      while (bad(r)) {
         if (maxQ[0] === l) maxQ.shift();
         if (minQ[0] === l) minQ.shift();
         l++;
       }
       snap({
         kind: 'shrink', r, from, lines: ['shrink'],
-        title: `Too wide: move l from ${from} to ${l}`,
-        text: `Drop values from the left. When a dropped index is at the front of a deque, it leaves that deque too, and the next value becomes the max or min. Stop when max − min = ${a[maxQ[0]]} − ${a[minQ[0]]} = ${a[maxQ[0]] - a[minQ[0]]} ≤ ${limit}.`,
-        calc: [`window [${l}, ${r}]`, `max − min = ${a[maxQ[0]] - a[minQ[0]]}`],
+        title: `Too ${goal === 'cost' ? 'costly' : 'wide'}: move l from ${from} to ${l}`,
+        text: `Drop values from the left. When a dropped index is at the front of a deque, it leaves that deque too, and the next value becomes the max or min. Stop when ${goal === 'cost' ? `the cost, ${what(r)},` : `${what(r)}`} is ≤ ${limit}.`,
+        calc: [`window [${l}, ${r}]`, goal === 'cost' ? `cost = ${what(r)}` : `spread = ${what(r)}`],
       });
     }
-    if (r - l + 1 > best) {
-      best = r - l + 1;
-      bestAt = [l, r];
+    if (goal === 'longest') {
+      if (r - l + 1 > best) {
+        best = r - l + 1;
+        bestAt = [l, r];
+        snap({
+          kind: 'best', r, lines: ['best'],
+          title: `New best: [${l}, ${r}], length ${best}`,
+          text: `Window ${list(a.slice(l, r + 1))} has max − min ≤ ${limit} and is the longest so far.`,
+          calc: [`best = ${r} − ${l} + 1 = ${best}`],
+        });
+      }
+    } else {
+      const c = prime ? (secondLast >= l ? secondLast - l + 1 : 0) : r - l + 1;
+      total += c;
       snap({
-        kind: 'best', r, lines: ['best'],
-        title: `New best: [${l}, ${r}], length ${best}`,
-        text: `Window ${list(a.slice(l, r + 1))} has max − min ≤ ${limit} and is the longest so far.`,
-        calc: [`best = ${r} − ${l} + 1 = ${best}`],
+        kind: 'count', r, add: c, countTo: c ? (prime ? secondLast : r) : null, lines: ['count'],
+        title: c ? `${c} window${c === 1 ? '' : 's'} end at ${r}` : `No window ending at ${r} counts yet`,
+        text: prime
+          ? (c ? `A start must be ≥ l = ${l} (to keep the spread ≤ ${limit}) and ≤ ${secondLast}, the second-last prime, so that two primes are inside: ${secondLast} − ${l} + 1 = ${c}.` : secondLast < 0 ? 'Fewer than two primes so far.' : `The second-last prime, at ${secondLast}, is before l = ${l}: no start keeps two primes close enough.`)
+          : `Every start from l = ${l} to r = ${r} gives a window that is ${goal === 'cost' ? 'cheap enough' : 'fine'}: [${l}..${r}], [${l + 1}..${r}], …, [${r}..${r}].`,
+        calc: [prime ? `count = ${c}` : `r − l + 1 = ${r} − ${l} + 1 = ${c}`, `total = ${total}`],
       });
     }
   }
+  const ans = goal === 'longest' ? best : total;
   snap({
-    kind: 'done', r: null, lines: ['end'], answer: `${best}`,
-    title: `Longest: ${best}`,
-    text: `Each index enters and leaves each deque at most once: O(n). (A TreeMap or two heaps of the window also work, at O(n log n).) The check: trying every subarray also gives ${limitWindowAnswer(input)}.`,
-    calc: [`best = ${best}`],
+    kind: 'done', r: null, lines: ['end'], answer: `${ans}`,
+    title: goal === 'longest' ? `Longest: ${best}` : `Total: ${total}`,
+    text: `Each index enters and leaves each deque at most once: O(n). The check: trying every subarray also gives ${limitWindowAnswer(input)}.`,
+    calc: [goal === 'longest' ? `best = ${best}` : `total = ${total}`],
   });
   return steps;
 }
 
-export function parseLimitWindow(values) {
-  const r = parseInts(values.nums, { min: 1, max: 30, minLen: 1, maxLen: 10, name: 'nums' });
+export function parseLimitWindow(values, input = {}) {
+  const goal = input.goal ?? 'longest';
+  const r = parseInts(values.nums, { min: 1, max: goal === 'prime' ? 50 : 30, minLen: 1, maxLen: 10, name: 'nums' });
   if (r.error) return r;
-  const k = parseInt1(values.limit, { min: 0, max: 30, name: 'limit' });
+  const k = parseInt1(values.limit, { min: 0, max: goal === 'cost' ? 300 : 30, name: goal === 'longest' || goal === 'count' ? 'limit' : 'k' });
   if (k.error) return k;
-  return { input: { nums: r.arr, limit: k.v } };
+  return { input: { nums: r.arr, limit: k.v, ...(goal !== 'longest' ? { goal } : {}) } };
 }
 
-export function randomLimitWindow(input, rand = Math.random) {
+export function randomLimitWindow(input = {}, rand = Math.random) {
   const g = rng(rand);
-  return { nums: Array.from({ length: g.int(5, 9) }, () => g.int(1, 12)), limit: g.int(0, 6) };
+  const goal = input.goal ?? 'longest';
+  const nums = Array.from({ length: g.int(goal === 'longest' ? 5 : 3, 9) }, () => g.int(1, goal === 'prime' ? 20 : 12));
+  const limit = goal === 'cost' ? g.int(0, 40) : g.int(0, 6);
+  return { nums, limit, ...(goal !== 'longest' ? { goal } : {}) };
 }
 
 // ---------------------------------------------------------------- lazy deletion: Stock Price Fluctuation

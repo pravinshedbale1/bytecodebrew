@@ -506,6 +506,7 @@ export function StackSideViz(props) {
 const TS_LABEL = {
   dups: 'kept letters', backspace: 'the screen', baseball: 'the record', rpn: 'values waiting', path: 'folders, root at the bottom',
   calc: 'terms', decode: 'saved (text, × k)', lvp: 'indexes', fleet: 'fleets (arrival time)',
+  nge2: 'waiting for a greater value', span: 'days not beaten yet', removek: 'kept digits',
 };
 const TS_RULE = {
   dups: 'Equal to the top → both vanish; otherwise push.',
@@ -517,6 +518,9 @@ const TS_RULE = {
   decode: '"[" saves (text, k); "]" repeats the inside and joins.',
   lvp: '( pushes its index; ) pops, then measures from the new top.',
   fleet: 'Closest car first: a later arrival time starts a new fleet.',
+  nge2: 'Two laps; a value answers every smaller one waiting on the stack.',
+  span: 'Pop days with price ≤ today and add their spans to today\'s.',
+  removek: 'While removals are left, pop a top digit bigger than the new one.',
 };
 
 function TokenStackStage({ step: f, input, width, seq, jump }) {
@@ -540,7 +544,7 @@ function TokenStackStage({ step: f, input, width, seq, jump }) {
         />
       </Stage>
       <div className={kit.sideRow}>
-        <Pile items={items} depth={f.depth} leaving={f.leaving} seq={seq} label={`stack: ${TS_LABEL[input.mode]}`} width={input.mode === 'path' || input.mode === 'decode' || input.mode === 'fleet' ? 150 : 124} />
+        <Pile items={items} depth={f.depth} leaving={f.leaving} seq={seq} label={`stack: ${TS_LABEL[input.mode]}`} width={['path', 'decode', 'fleet', 'span'].includes(input.mode) ? 150 : 124} />
         {f.card && <CmpCard {...f.card} style={{ minWidth: 150 }} />}
       </div>
     </div>
@@ -556,6 +560,9 @@ const tsDescribe = (input) => ({
   calc: () => `s = "${input.s}"`,
   decode: () => `s = "${input.s}"`,
   lvp: () => `s = "${input.s}"`,
+  nge2: () => `nums = [${input.nums.join(', ')}] (circular)`,
+  span: () => `prices = [${input.prices.join(', ')}]`,
+  removek: () => `num = "${input.num}", k = ${input.k}`,
   fleet: () => `target = ${input.target}, position = [${input.position.join(', ')}], speed = [${input.speed.join(', ')}]`,
 })[input.mode]();
 
@@ -568,6 +575,9 @@ const TS_FIELDS = {
   calc: [{ name: 's', label: 'expression', placeholder: 'e.g. 3+5/2' }],
   decode: [{ name: 's', label: 's', placeholder: 'e.g. 2[abc]3[cd]ef' }],
   lvp: [{ name: 's', label: 's', placeholder: 'e.g. )()())' }],
+  nge2: [{ name: 'nums', label: 'nums (circular)', placeholder: 'e.g. 1, 2, 3, 4, 3' }],
+  span: [{ name: 'prices', label: 'prices', placeholder: 'e.g. 100, 80, 60, 70, 60, 75, 85' }],
+  removek: [{ name: 'num', label: 'num', placeholder: 'e.g. 10200' }, { name: 'k', label: 'k', placeholder: '1', short: true }],
   fleet: [{ name: 'target', label: 'target', placeholder: '12', short: true }, { name: 'position', label: 'positions', placeholder: 'e.g. 10, 8, 0, 5, 3' }, { name: 'speed', label: 'speeds', placeholder: 'e.g. 2, 4, 1, 1, 3' }],
 };
 
@@ -583,6 +593,7 @@ const tokenStackSpec = {
     add: ['New term', 'accent'], sub: ['New term', 'accent'], mul: ['Multiply', 'success'], div: ['Divide', 'success'], sum: ['Sum', 'success'],
     digit: ['Count', 'neutral'], open: ['Open', 'accent'], close: ['Close', 'success'], letter: ['Letter', 'neutral'],
     base: ['New base', 'warn'], match: ['Match', 'success'], merge: ['Joins a fleet', 'success'], fleet: ['New fleet', 'accent'],
+    resolve: ['Answers', 'success'], pass: ['Lap two', 'muted'], absorb: ['Absorb', 'success'], drop: ['Remove', 'danger'], trim: ['Trim the end', 'warn'],
   },
   describe: tsDescribe,
   rule: (input) => TS_RULE[input.mode],
@@ -592,6 +603,7 @@ const tokenStackSpec = {
   values: (input) => ({
     dups: { s: input.s }, backspace: { s: input.s, t: input.t }, baseball: { ops: input.ops?.join(', ') }, rpn: { tokens: input.tokens?.join(', ') },
     path: { path: input.path }, calc: { s: input.s }, decode: { s: input.s }, lvp: { s: input.s },
+    nge2: { nums: input.nums?.join(', ') }, span: { prices: input.prices?.join(', ') }, removek: { num: input.num, k: String(input.k) },
     fleet: { target: String(input.target), position: input.position?.join(', '), speed: input.speed?.join(', ') },
   })[input.mode],
   parse: parseTokenStack,

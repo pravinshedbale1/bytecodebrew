@@ -3,7 +3,7 @@ import { ArrayStrip, Chips, RowLabel, Stage, pitchFor } from './prims';
 import {
   LAZY_HEAP, LIMIT_WINDOW, MAX_QUEUE, PARTITION_K,
   lazyHeap, lazyHeapCode, lazyHeapText, limitWindow, limitWindowCode, maxQueue, maxQueueCode, maxQueueText, partitionK, partitionKCode,
-  parseLazyHeap, parseLimitWindow, parseMaxQueue, parsePartitionK, randomLazyHeap, randomLimitWindow, randomMaxQueue, randomPartitionK,
+  isPrime, limitWindowCodeFor, parseLazyHeap, parseLimitWindow, parseMaxQueue, parsePartitionK, randomLazyHeap, randomLimitWindow, randomMaxQueue, randomPartitionK,
 } from './models/queues';
 import {
   FIXED_BOUNDS, FLIP_WINDOW, VISIBLE_PEOPLE,
@@ -88,8 +88,12 @@ function LimitStage({ step: f, input, width, jump }) {
       <Stage width={W} height={height} jump={jump} label={`nums = ${list(a)}`}>
         <ArrayStrip
           items={a} y={top} pitch={pitch} h={h} tags={tags}
-          bands={[...(f.bestAt ? [{ from: f.bestAt[0], to: f.bestAt[1], tone: 'ghost' }] : []), ...(f.r !== null ? [{ from: f.l, to: f.r, tone: f.kind === 'grow' && a[f.maxQ[0]] - a[f.minQ[0]] > input.limit ? 'danger' : 'accent' }] : [])]}
-          cls={(k) => (f.kind === 'shrink' && k >= f.from && k < f.l ? 'bad' : f.r !== null && k > f.r ? 'muted' : inWin(k) ? '' : f.r !== null ? 'dim' : '')}
+          bands={[...(f.bestAt ? [{ from: f.bestAt[0], to: f.bestAt[1], tone: 'ghost' }] : []), ...(f.r !== null ? [{ from: f.l, to: f.r, tone: f.kind === 'grow' && f.tooMuch ? 'danger' : 'accent' }] : [])]}
+          cls={(k) => [
+            f.kind === 'shrink' && k >= f.from && k < f.l ? 'bad' : f.r !== null && k > f.r ? 'muted' : inWin(k) ? '' : f.r !== null ? 'dim' : '',
+            f.kind === 'count' && f.countTo !== null && k >= f.l && k <= f.countTo ? 'hit' : '',
+            input.goal === 'prime' && isPrime(a[k]) ? 'warm' : '',
+          ].filter(Boolean).join(' ')}
         />
       </Stage>
       <Chips label="maxQ (front → back)" chips={f.maxQ.map((i, k) => ({ key: i, text: `${a[i]}`, note: `i${i}`, tone: k === 0 ? 'warn' : undefined }))} empty="empty" />
@@ -98,21 +102,28 @@ function LimitStage({ step: f, input, width, jump }) {
   );
 }
 
+const LIMIT_RULE = {
+  longest: 'window is fine while max − min ≤ limit; max and min come from the deque fronts',
+  count: 'fine while max − min ≤ limit; each r adds r − l + 1 windows',
+  cost: 'fine while (max − min) × length ≤ k; each r adds r − l + 1 windows',
+  prime: 'deques hold primes only; fine while their spread ≤ k; starts run from l to the second-to-last prime',
+};
+
 const limitSpec = {
-  title: '1438: a window with a max queue and a min queue',
+  title: 'A window with a max queue and a min queue',
   examples: LIMIT_WINDOW,
   simulate: limitWindow,
-  code: () => limitWindowCode,
-  kinds: { start: ['Start', 'neutral'], grow: ['Add', 'accent'], shrink: ['Shrink', 'warn'], best: ['Best', 'success'], done: ['Answer', 'success'] },
-  describe: (input) => `nums = ${list(input.nums)}, limit = ${input.limit}`,
-  rule: () => 'window is fine while max − min ≤ limit; max and min come from the deque fronts',
-  stats: (f) => [['best', String(f.best)]],
+  code: (input) => limitWindowCodeFor(input.goal),
+  kinds: { start: ['Start', 'neutral'], grow: ['Add', 'accent'], shrink: ['Shrink', 'warn'], best: ['Best', 'success'], count: ['Count', 'success'], done: ['Answer', 'success'] },
+  describe: (input) => `nums = ${list(input.nums)}, ${input.goal && input.goal !== 'longest' ? 'k' : 'limit'} = ${input.limit}`,
+  rule: (input) => LIMIT_RULE[input.goal ?? 'longest'],
+  stats: (f, input) => [[input.goal && input.goal !== 'longest' ? 'total' : 'best', String(f.best)]],
   legend: () => [[<Key shape="box" tone="accent">·</Key>, 'the window [l, r]'], [<Key shape="box" tone="warn">max</Key>, 'front of maxQ'], [<Key shape="box" tone="note">min</Key>, 'front of minQ'], [<Key shape="box" tone="success">·</Key>, 'best window so far (dashed)']],
-  fields: () => [{ name: 'nums', label: 'nums', placeholder: '10, 1, 2, 4, 7, 2' }, { name: 'limit', label: 'limit', placeholder: '5', short: true }],
+  fields: (input) => [{ name: 'nums', label: 'nums', placeholder: '10, 1, 2, 4, 7, 2' }, { name: 'limit', label: input.goal && input.goal !== 'longest' ? 'k' : 'limit', placeholder: '5', short: true }],
   values: (input) => ({ nums: input.nums.join(', '), limit: String(input.limit) }),
   parse: parseLimitWindow,
   random: (input) => randomLimitWindow(input),
-  hint: () => 'Up to 10 numbers between 1 and 30, and a limit from 0 to 30.',
+  hint: (input) => (input.goal === 'prime' ? 'Up to 10 numbers from 1 to 50 (primes are shaded), and k from 0 to 50.' : input.goal === 'cost' ? 'Up to 10 numbers from 1 to 30, and k from 0 to 300.' : 'Up to 10 numbers between 1 and 30, and a limit from 0 to 50.'),
   Stage: LimitStage,
 };
 

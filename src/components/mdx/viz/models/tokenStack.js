@@ -27,6 +27,9 @@ export const TOKEN_STACK = {
   decode: { label: '3[a2[c]]', input: { mode: 'decode', s: '3[a2[c]]' } },
   lvp: { label: '")()())"', input: { mode: 'lvp', s: ')()())' } },
   fleet: { label: 'target 12', input: { mode: 'fleet', target: 12, position: [10, 8, 0, 5, 3], speed: [2, 4, 1, 1, 3] } },
+  nge2: { label: 'Circular [1, 2, 1]', input: { mode: 'nge2', nums: [1, 2, 1] } },
+  span: { label: 'Stock span', input: { mode: 'span', prices: [100, 80, 60, 70, 60, 75, 85] } },
+  removek: { label: '"1432219", k = 3', input: { mode: 'removek', num: '1432219', k: 3 } },
 };
 
 export const tokenStackCode = {
@@ -101,6 +104,31 @@ export const tokenStackCode = {
     ['len', '        else best = Math.max(best, i - st.peek()); }'],
     ['end', '}'],
     ['ret', 'return best;'],
+  ],
+  nge2: [
+    ['init', 'int[] ans = new int[n]; Arrays.fill(ans, -1);'],
+    ['loop', 'for (int i = 0; i < 2 * n; i++) {        // two laps around the circle'],
+    ['x', '    int x = nums[i % n];'],
+    ['pop', '    while (!st.isEmpty() && nums[st.peek()] < x) ans[st.pop()] = x;'],
+    ['push', '    if (i < n) st.push(i);                // lap two only answers, it never waits'],
+    ['end', '}'],
+    ['ret', 'return ans;'],
+  ],
+  span: [
+    ['sig', 'int next(int price) {'],
+    ['init', '    int span = 1;'],
+    ['pop', '    while (!st.isEmpty() && st.peek()[0] <= price) span += st.pop()[1];   // absorb beaten days'],
+    ['push', '    st.push(new int[]{price, span});'],
+    ['ret', '    return span;'],
+    ['end', '}'],
+  ],
+  removek: [
+    ['loop', 'for (char d : num.toCharArray()) {'],
+    ['drop', '    while (k > 0 && !st.isEmpty() && st.peek() > d) { st.pop(); k--; }   // a bigger digit before a smaller one'],
+    ['push', '    st.push(d);'],
+    ['end', '}'],
+    ['trim', 'while (k > 0) { st.pop(); k--; }          // removals left: cut from the end'],
+    ['zeros', 'drop leading zeros; return the rest, or "0" if nothing is left;'],
   ],
   fleet: [
     ['sort', 'sort the cars by position, closest to target first;'],
@@ -394,8 +422,100 @@ function fleetRun({ target, position, speed }) {
   return finish(R.steps);
 }
 
+// ---------------------------------------------------------------- next greater, circular
+
+function nge2Run({ nums }) {
+  const n = nums.length;
+  const R = recorder([...nums, ...nums].map(String));
+  const ans = Array(n).fill(null);
+  const show = () => `[${ans.map((v) => (v === null ? '·' : v)).join(', ')}]`;
+  const marks = Object.fromEntries(nums.map((_, k) => [k + n, 'kept']));
+  R.snap({ kind: 'start', marks, lines: ['init'], title: 'Walk the circle twice', text: `After the last element comes the first again, so an element near the end may find its answer near the start. Walking the array twice (the shaded second copy) lets every element see everything after it around the circle. The stack holds elements still waiting for something greater; their values only fall towards the top.`, calc: ['ans = all −1 until found'], stats: [['answers', show()]] });
+  for (let i = 0; i < 2 * n; i++) {
+    const x = nums[i % n];
+    const popped = [];
+    while (R.stack.length && Number(R.stack.at(-1).main) < x) { const t = R.stack.at(-1); R.stack = R.stack.slice(0, -1); ans[Number(t.sub.slice(1))] = x; popped.push(t); }
+    let it = null;
+    if (i < n) { it = R.item(x, `i${i}`); R.stack = [...R.stack, it]; }
+    const lap2 = i >= n;
+    R.snap({
+      kind: popped.length ? 'resolve' : lap2 ? 'pass' : 'push', i, marks, pushed: it?.id, leaving: popped.length ? { ...popped.at(-1), tone: 'success' } : undefined,
+      card: popped.length ? { q: `${x} > ${popped.map((t) => t.main).join(', ')}`, a: `answers index ${popped.map((t) => t.sub.slice(1)).join(', ')}`, tone: 'yes' } : { q: `${x}`, a: lap2 ? 'nothing smaller is waiting' : 'nothing smaller waiting → wait too', tone: 'info' },
+      lines: ['loop', 'x', 'pop', ...(lap2 ? [] : ['push'])],
+      title: popped.length ? `${x} is the next greater value for ${popped.map((t) => `index ${t.sub.slice(1)}`).join(' and ')}` : lap2 ? `Lap two, ${x}: no one waiting is smaller` : `${x} waits for something greater`,
+      text: popped.length
+        ? `Every waiting value smaller than ${x} has found its answer: pop them.${lap2 ? ' This is the second lap, reaching around the end of the array.' : ''}${lap2 ? '' : ` Then ${x} waits on the stack.`}`
+        : lap2 ? 'The second lap only answers; it doesn\'t add anyone, so nobody waits twice.' : `The top of the stack is not smaller than ${x}, so nothing is answered; ${x} waits.`,
+      calc: [`x = nums[${i} % ${n}] = ${x}`, `ans = ${show()}`],
+      stats: [['answers', show()]],
+    });
+  }
+  const out = ans.map((v) => (v === null ? -1 : v));
+  R.snap({ kind: 'done', marks, lines: ['ret'], answer: `[${out.join(', ')}]`, title: `Answers: [${out.join(', ')}]`, text: `${R.stack.length ? `Still waiting after two laps: ${R.stack.map((t) => t.main).join(', ')}. Nothing anywhere is greater, so ${R.stack.length === 1 ? 'its' : 'their'} answer stays −1.` : 'Everyone found a greater value.'} Two laps, each index pushed once: O(n).`, calc: [`return [${out.join(', ')}]`], stats: [['answers', `[${out.join(', ')}]`]] });
+  return finish(R.steps);
+}
+
+// ---------------------------------------------------------------- stock span
+
+function spanRun({ prices }) {
+  const R = recorder(prices.map(String));
+  const spans = [];
+  R.snap({ kind: 'start', lines: [], title: 'Each day: how many days back is the price ≤ today?', text: 'Once a day is beaten by a later day at least as high, no future day can stop at it: the later day blocks first. So fold its span into the later day and forget it. The stack keeps (price, span) for days not beaten yet; prices fall towards the top.', calc: ['stack = empty'], stats: [['spans', '[]']] });
+  prices.forEach((p, i) => {
+    let span = 1;
+    const popped = [];
+    while (R.stack.length && Number(R.stack.at(-1).main) <= p) { const t = R.stack.at(-1); R.stack = R.stack.slice(0, -1); span += Number(t.sub.split(' ')[1]); popped.push(t); }
+    const it = R.item(p, `span ${span}`);
+    R.stack = [...R.stack, it];
+    spans.push(span);
+    R.snap({
+      kind: popped.length ? 'absorb' : 'push', i, pushed: it.id, leaving: popped.length ? { ...popped.at(-1), tone: 'success' } : undefined,
+      card: popped.length ? { q: `1 + ${popped.map((t) => t.sub.split(' ')[1]).join(' + ')}`, a: `span ${span}`, tone: 'yes' } : { q: `${p}`, a: R.stack.length > 1 ? `${R.stack.at(-2).main} > ${p} → span 1` : 'first day → span 1', tone: 'info' },
+      lines: ['sig', 'init', 'pop', 'push', 'ret'],
+      title: popped.length ? `${p}: absorbs ${popped.map((t) => t.main).join(', ')} → span ${span}` : `${p}: span 1`,
+      text: popped.length
+        ? `${popped.map((t) => `${t.main} (span ${t.sub.split(' ')[1]})`).join(' and ')} ${popped.length === 1 ? 'is' : 'are'} ≤ ${p}: those days and everything they had absorbed count for today. ${R.stack.length > 1 ? `${R.stack.at(-2).main} > ${p} stops the count.` : 'Nothing higher is left before today.'}`
+        : R.stack.length > 1 ? `Yesterday's ${R.stack.at(-2).main} is higher, so the count stops at today.` : 'The first day only counts itself.',
+      calc: [`span = ${span}`, `spans = [${spans.join(', ')}]`],
+      stats: [['spans', `[${spans.join(', ')}]`]],
+    });
+  });
+  R.snap({ kind: 'done', lines: ['ret'], answer: `[${spans.join(', ')}]`, title: `Spans: [${spans.join(', ')}]`, text: 'Each day is pushed once and absorbed at most once, so all the calls together take O(n): O(1) per call on average.', calc: [`spans = [${spans.join(', ')}]`], stats: [['spans', `[${spans.join(', ')}]`]] });
+  return finish(R.steps);
+}
+
+// ---------------------------------------------------------------- remove k digits
+
+function removekRun({ num, k }) {
+  const R = recorder(num.split(''));
+  let left = k;
+  const kept = () => R.stack.map((x) => x.main).join('');
+  R.snap({ kind: 'start', lines: [], title: `Remove ${k} digit${k === 1 ? '' : 's'} from "${num}"`, text: 'The leftmost digits matter most. A digit followed by a smaller digit is a "peak": removing it makes the number smaller right at that position. So keep the kept digits on a stack, and pop the top while a smaller digit arrives and removals are left.', calc: [`removals left = ${k}`], stats: [['kept', '""'], ['left', k]] });
+  num.split('').forEach((d, i) => {
+    while (left > 0 && R.stack.length && R.stack.at(-1).main > d) {
+      const t = R.stack.at(-1);
+      R.stack = R.stack.slice(0, -1);
+      left--;
+      R.snap({ kind: 'drop', i, leaving: { ...t, tone: 'danger' }, card: { q: `${t.main} > ${d}`, a: `remove ${t.main}`, tone: 'bad' }, lines: ['loop', 'drop'], title: `${t.main} > ${d}: remove ${t.main}`, text: `With ${t.main} gone, ${d} moves into its place, and a smaller digit at that position makes the whole number smaller, whatever comes after.`, calc: [`removals left = ${left}`, `kept "${kept()}"`], stats: [['kept', `"${kept()}"`], ['left', left]] });
+    }
+    const it = R.item(d);
+    R.stack = [...R.stack, it];
+    R.snap({ kind: 'push', i, pushed: it.id, card: { q: `${d}`, a: left === 0 ? 'no removals left → keep' : R.stack.length > 1 ? `top ${R.stack.at(-2).main} ≤ ${d} → keep` : 'keep', tone: 'info' }, lines: ['loop', 'push'], title: `Keep ${d}`, text: left === 0 ? 'No removals are left, so every remaining digit stays.' : 'The kept digits never decrease from bottom to top, so there is no peak to remove yet.', calc: [`kept "${kept()}"`], stats: [['kept', `"${kept()}"`], ['left', left]] });
+  });
+  if (left > 0) {
+    const cut = R.stack.slice(-left);
+    R.stack = R.stack.slice(0, R.stack.length - left);
+    R.snap({ kind: 'trim', leaving: { ...cut.at(-1), tone: 'danger' }, card: { q: `${left} left`, a: `cut ${cut.map((x) => x.main).join('')} from the end`, tone: 'bad' }, lines: ['trim'], title: `${left} removal${left === 1 ? '' : 's'} left: cut from the end`, text: 'The kept digits never decrease, so the largest ones are at the end. Removing them there costs least.', calc: [`kept "${kept()}"`], stats: [['kept', `"${kept()}"`], ['left', 0]] });
+    left = 0;
+  }
+  const raw = kept();
+  const out = raw.replace(/^0+/, '') || '0';
+  R.snap({ kind: 'done', lines: ['zeros'], answer: `"${out}"`, title: `Smallest: "${out}"`, text: raw !== out ? `"${raw}" has leading zeros (or nothing left), so it is written "${out}". Each digit is pushed and popped at most once: O(n).` : 'Each digit is pushed and popped at most once: O(n).', calc: [`return "${out}"`], stats: [['kept', `"${out}"`]] });
+  return finish(R.steps);
+}
+
 export function tokenStack(input) {
-  return { dups: dupsRun, backspace: backspaceRun, baseball: baseballRun, rpn: rpnRun, path: pathRun, calc: calcRun, decode: decodeRun, lvp: lvpRun, fleet: fleetRun }[input.mode](input);
+  return { dups: dupsRun, backspace: backspaceRun, baseball: baseballRun, rpn: rpnRun, path: pathRun, calc: calcRun, decode: decodeRun, lvp: lvpRun, fleet: fleetRun, nge2: nge2Run, span: spanRun, removek: removekRun }[input.mode](input);
 }
 
 /** Reference answers, for the checks. */
@@ -417,6 +537,15 @@ export function tokenStackAnswer(input) {
       let best = 0;
       for (let i = 0; i < input.s.length; i++) { let bal = 0; for (let j = i; j < input.s.length; j++) { bal += input.s[j] === '(' ? 1 : -1; if (bal < 0) break; if (bal === 0) best = Math.max(best, j - i + 1); } }
       return String(best);
+    }
+    case 'nge2': { const a = input.nums, n = a.length; return `[${a.map((x, i) => { for (let s = 1; s < n; s++) if (a[(i + s) % n] > x) return a[(i + s) % n]; return -1; }).join(', ')}]`; }
+    case 'span': { const p = input.prices; return `[${p.map((x, i) => { let s = 0; while (i - s >= 0 && p[i - s] <= x) s++; return s; }).join(', ')}]`; }
+    case 'removek': {
+      const { num, k } = input; const n = num.length; let best = null;
+      const norm = (x) => x.replace(/^0+/, '') || '0';
+      const less = (a, b) => a.length !== b.length ? a.length < b.length : a < b;
+      for (let mask = 0; mask < 1 << n; mask++) { let c = 0; for (let b = 0; b < n; b++) if (mask >> b & 1) c++; if (c !== k) continue; const v = norm(num.split('').filter((_, b) => !(mask >> b & 1)).join('')); if (best === null || less(v, best)) best = v; }
+      return `"${best}"`;
     }
     default: {
       const cars = input.position.map((p, k) => [p, (input.target - p) / input.speed[k]]).sort((a, b) => b[0] - a[0]);
@@ -471,6 +600,14 @@ export function parseTokenStack(values, input) {
     return out.length > 60 ? { error: 'That decodes to more than 60 letters; try smaller counts.' } : { input: { mode, s } };
   }
   if (mode === 'lvp') { const s = str(values.s); return /^[()]{1,14}$/.test(s) ? { input: { mode, s } } : { error: 'Up to 14 brackets, ( and ) only.' }; }
+  if (mode === 'nge2') { const r = parseInts(values.nums, { min: -99, max: 99, minLen: 1, maxLen: 7, name: 'nums' }); return r.error ? r : { input: { mode, nums: r.arr } }; }
+  if (mode === 'span') { const r = parseInts(values.prices, { min: 1, max: 999, minLen: 1, maxLen: 9, name: 'prices' }); return r.error ? r : { input: { mode, prices: r.arr } }; }
+  if (mode === 'removek') {
+    const num = str(values.num);
+    if (!/^\d{1,10}$/.test(num) || (num.length > 1 && num[0] === '0')) return { error: 'Up to 10 digits, no leading zero.' };
+    const k = parseInt1(values.k, { min: 1, max: num.length, name: 'k' });
+    return k.error ? { error: `k from 1 to ${num.length}.` } : { input: { mode, num, k: k.v } };
+  }
   const tg = parseInt1(values.target, { min: 1, max: 100, name: 'target' });
   if (tg.error) return { error: 'target: a whole number from 1 to 100.' };
   const p = parseInts(values.position, { min: 0, max: tg.v - 1, minLen: 1, maxLen: 7, name: 'position' });
@@ -504,6 +641,9 @@ export function randomTokenStack(input, rand = Math.random) {
     return { mode, s: `${piece(2)}${g.bool(0.5) ? piece(1) : ''}` };
   }
   if (mode === 'lvp') return { mode, s: Array.from({ length: g.int(1, 12) }, () => pick('()')).join('') };
+  if (mode === 'nge2') return { mode, nums: Array.from({ length: g.int(1, 6) }, () => g.int(1, 9)) };
+  if (mode === 'span') return { mode, prices: Array.from({ length: g.int(1, 8) }, () => g.int(1, 9) * 10) };
+  if (mode === 'removek') { const len = g.int(1, 8); let num = String(g.int(1, 9)); for (let k = 1; k < len; k++) num += g.int(0, 9); return { mode, num, k: g.int(1, len) }; }
   const target = g.int(5, 30);
   const n = g.int(1, Math.min(6, target));
   const position = [];

@@ -32,6 +32,7 @@ import * as sd from '../src/components/mdx/viz/models/sides.js';
 import * as dc from '../src/components/mdx/viz/models/divide.js';
 import * as lo from '../src/components/mdx/viz/models/listOps.js';
 import * as tks from '../src/components/mdx/viz/models/tokenStack.js';
+import * as dqd from '../src/components/mdx/viz/models/dpDeque.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -816,9 +817,10 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.MAX_QUEUE)) Q(e.input);
   for (const mode of ['max', 'min']) for (let t = 0; t < 1500; t++) Q(qu.randomMaxQueue({ mode }, rand));
 
-  const L = (input) => run(`limitWindow ${JSON.stringify(input)}`, qu.limitWindow(input), qu.limitWindowCode, ['start', 'grow', 'shrink', 'best', 'done'], `${qu.limitWindowAnswer(input)}`);
+  const L = (input) => run(`limitWindow ${JSON.stringify(input)}`, qu.limitWindow(input), qu.limitWindowCodeFor(input.goal), ['start', 'grow', 'shrink', 'best', 'count', 'done'], `${qu.limitWindowAnswer(input)}`);
   for (const e of Object.values(qu.LIMIT_WINDOW)) L(e.input);
-  for (let t = 0; t < 2000; t++) L(qu.randomLimitWindow({}, rand));
+  for (const goal of ['longest', 'count', 'cost', 'prime']) for (let t = 0; t < 2000; t++) L(qu.randomLimitWindow({ goal }, rand));
+  ok(qu.limitWindow({ goal: 'count', nums: [5, 4, 2, 4], limit: 2 }).at(-1).answer === '8' && qu.limitWindow({ goal: 'cost', nums: [1, 3, 2], limit: 4 }).at(-1).answer === '5' && qu.limitWindow({ goal: 'prime', nums: [1, 2, 3], limit: 1 }).at(-1).answer === '2', 'limitWindow: LeetCode 2762, 3578-style cost and prime-gap examples');
   ok(qu.limitWindow({ nums: [8, 2, 4, 7], limit: 4 }).at(-1).answer === '2', 'limitWindow: LeetCode 1438 example is 2');
 
   const H = (input) => {
@@ -836,9 +838,26 @@ function common(name, steps, code, kinds) {
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
 }
 
+// ---------------------------------------------------------------- DP + deque (DpDequeViz)
+{
+  const kinds = ['start', 'expire', 'compute', 'push', 'found', 'replace', 'done'];
+  const run = (input) => {
+    const steps = dqd.dpDeque(input);
+    common(`dpDeque ${JSON.stringify(input)}`, steps, dqd.dpDequeCode[input.mode], kinds);
+    ok(steps.at(-1).answer === dqd.dpDequeAnswer(input), `dpDeque ${JSON.stringify(input)}: ${steps.at(-1).answer} ≠ ${dqd.dpDequeAnswer(input)}`);
+    steps.forEach((st) => {
+      const v = st.vals;
+      for (let x = 1; x < st.dq.length; x++) ok(input.mode === 'shortest' ? v[st.dq[x - 1]] < v[st.dq[x]] : v[st.dq[x - 1]] > v[st.dq[x]], `dpDeque ${input.mode}: the deque stays in order`);
+    });
+  };
+  Object.values(dqd.DP_DEQUE).forEach((e) => run(e.input));
+  for (let t = 0; t < 2000; t++) for (const mode of ['jump', 'csum', 'shortest']) run(dqd.randomDpDeque({ mode }, rand));
+  ok(dqd.dpDeque({ mode: 'jump', nums: [1, -1, -2, 4, -7, 3], k: 2 }).at(-1).answer === '7' && dqd.dpDeque({ mode: 'csum', nums: [10, 2, -10, 5, 20], k: 2 }).at(-1).answer === '37' && dqd.dpDeque({ mode: 'shortest', nums: [2, -1, 2], k: 3 }).at(-1).answer === '3' && dqd.dpDeque({ mode: 'shortest', nums: [1, 2], k: 4 }).at(-1).answer === '-1', 'dpDeque: LeetCode examples');
+}
+
 // ---------------------------------------------------------------- token by token with a stack (TokenStackViz)
 {
-  const kinds = ['start', 'push', 'cancel', 'done', 'back', 'noop', 'double', 'plus', 'op', 'skip', 'up', 'root', 'add', 'sub', 'mul', 'div', 'sum', 'digit', 'open', 'close', 'letter', 'base', 'match', 'merge', 'fleet'];
+  const kinds = ['start', 'push', 'cancel', 'done', 'back', 'noop', 'double', 'plus', 'op', 'skip', 'up', 'root', 'add', 'sub', 'mul', 'div', 'sum', 'digit', 'open', 'close', 'letter', 'base', 'match', 'merge', 'fleet', 'resolve', 'pass', 'absorb', 'drop', 'trim'];
   const run = (input) => {
     const steps = tks.tokenStack(input);
     common(`tokenStack ${JSON.stringify(input)}`, steps, tks.tokenStackCode[input.mode], kinds);
@@ -853,6 +872,7 @@ function common(name, steps, code, kinds) {
   for (let t = 0; t < 1500; t++) for (const mode of Object.keys(tks.tokenStackCode)) run(tks.randomTokenStack({ mode }, rand));
   const ans = (k) => tks.tokenStack(tks.TOKEN_STACK[k].input).at(-1).answer;
   ok(ans('dups') === '"ca"' && ans('backspace') === 'true' && ans('baseball') === '30' && ans('rpn') === '9' && ans('path') === '"/c"' && ans('calc') === '7' && ans('decode') === '"accaccacc"' && ans('lvp') === '4' && ans('fleet') === '3', 'tokenStack: LeetCode examples');
+  ok(ans('nge2') === '[2, -1, 2]' && ans('span') === '[1, 1, 1, 2, 1, 4, 6]' && ans('removek') === '"1219"' && tks.tokenStack({ mode: 'removek', num: '10200', k: 1 }).at(-1).answer === '"200"' && tks.tokenStack({ mode: 'removek', num: '10', k: 2 }).at(-1).answer === '"0"', 'tokenStack: monotonic examples');
   ok(tks.tokenStack({ mode: 'calc', s: '14-3/2' }).at(-1).answer === '13' && tks.tokenStack({ mode: 'rpn', tokens: ['4', '13', '5', '/', '+'] }).at(-1).answer === '6', 'tokenStack: truncation');
 }
 

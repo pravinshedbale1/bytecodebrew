@@ -11,6 +11,7 @@ import {
   parseBfsQueue, parseCallStack, parseDequeSide, parseStackQueue, parseWindowCounts,
   randomBfsQueue, randomCallStack, randomDequeSide, randomStackQueue, randomWindowCounts,
 } from './models/sides';
+import { DP_DEQUE, dpDeque, dpDequeCode, parseDpDeque, randomDpDeque } from './models/dpDeque';
 
 /**
  * Step-throughs that draw the helper structure beside the input, one decision per step:
@@ -348,4 +349,74 @@ const stackQueueSpec = {
 
 export function StackQueueViz(props) {
   return <StepViz spec={stackQueueSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- DP over the last k, with a deque
+
+function DpDequeStage({ step: f, input, width, seq, jump }) {
+  const short = input.mode === 'shortest';
+  const top = short ? f.vals : input.nums;
+  const n = top.length;
+  const pitch = pitchFor(width - 8, n, 36, 56);
+  const y1 = 30, y2 = y1 + 46 + 56;
+  const height = short ? y1 + 46 + 34 : y2 + 46 + 14;
+  const tags = f.i !== null ? { [f.i]: [{ label: short ? 'j' : 'i', tone: 'accent' }] } : {};
+  const inDq = new Set(f.dq);
+  const label = (j) => (short ? `p=${f.vals[j]}` : `dp=${f.vals[j]}`);
+  return (
+    <div>
+      <Stage width={n * pitch} height={height} jump={jump} label={short ? `prefix sums ${top.join(', ')}` : `nums ${top.join(', ')}`}>
+        <RowLabel x={0} y={y1 - 24}>{short ? 'prefix sums p (index = start)' : 'nums'}</RowLabel>
+        <ArrayStrip
+          items={top} y={y1} pitch={pitch} tags={tags}
+          bands={f.band ? [{ from: f.band[0], to: f.band[1], tone: f.kind === 'found' ? 'success' : 'accent', label: f.kind === 'found' ? 'sum ≥ k' : `last ${input.k}` }] : []}
+          cls={(k) => [k === f.i && 'cur', inDq.has(k) && k !== f.i && 'kept', f.i !== null && k > f.i && 'dim'].filter(Boolean).join(' ')}
+        />
+        {!short && <RowLabel x={0} y={y2 - 24}>dp: best score ending here</RowLabel>}
+        {!short && (
+          <ArrayStrip
+            items={f.vals.map((v, k) => ({ v: v === null ? '·' : v, id: k }))} y={y2} pitch={pitch} index={false}
+            cls={(k) => (k === f.i && f.kind === 'compute' ? 'hit' : f.vals[k] === null ? 'dim' : inDq.has(k) ? 'kept' : '')}
+          />
+        )}
+      </Stage>
+      <div className={styles.sideRow}>
+        <Lane
+          label={short ? 'deque of starts (p increasing front → back)' : 'deque of indexes (dp decreasing front → back)'}
+          seq={seq}
+          leaving={f.left ? { id: f.left.j, main: String(f.left.j), sub: label(f.left.j), tone: f.left.why === 'front' ? (f.kind === 'found' ? 'success' : 'danger') : 'muted' } : null}
+          items={f.dq.map((j, x) => ({ id: j, main: String(j), sub: label(j), isNew: f.pushed === j, tone: x === 0 ? 'success' : undefined }))}
+        />
+        {f.card && <CmpCard {...f.card} style={{ minWidth: 150 }} />}
+      </div>
+    </div>
+  );
+}
+
+const dpDequeSpec = {
+  title: 'A deque over the last stretch',
+  examples: DP_DEQUE,
+  simulate: dpDeque,
+  code: (input) => dpDequeCode[input.mode],
+  kinds: {
+    start: ['Start', 'neutral'], expire: ['Out of range', 'danger'], compute: ['dp', 'accent'], push: ['Push back', 'accent'],
+    found: ['Found', 'success'], replace: ['Pop back', 'warn'], done: ['Answer', 'success'],
+  },
+  describe: (input) => `nums = [${input.nums.join(', ')}], k = ${input.k}`,
+  rule: (input) => (input.mode === 'shortest'
+    ? 'pop the front while it makes sum ≥ k (record the length); pop the back while its p ≥ p[j]'
+    : 'drop the front once it is more than k back; dp[i] uses the front; pop the back while dp ≤ dp[i]'),
+  stats: (f, input) => (input.mode === 'shortest' ? [['shortest', f.best ?? '—']] : []),
+  legend: () => [[<Key shape="box" tone="accent">i</Key>, 'the index being worked out'], [<Key tone="success">front</Key>, 'the best candidate']],
+  fields: () => [{ name: 'nums', label: 'nums (−20 to 20)', placeholder: '1, -1, -2, 4, -7, 3' }, { name: 'k', label: 'k', placeholder: '2', short: true }],
+  values: (input) => ({ nums: input.nums.join(', '), k: String(input.k) }),
+  parse: parseDpDeque,
+  random: (input) => randomDpDeque(input),
+  hint: () => 'Up to 9 numbers between −20 and 20.',
+  delay: (f) => (f.kind === 'compute' ? 2200 : 1800),
+  Stage: DpDequeStage,
+};
+
+export function DpDequeViz(props) {
+  return <StepViz spec={dpDequeSpec} {...props} />;
 }

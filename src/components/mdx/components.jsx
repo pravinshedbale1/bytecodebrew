@@ -71,6 +71,7 @@ const TokenStackViz = lazyViz(() => import('./viz/StacksViz'), 'TokenStackViz');
 const NextGreaterViz = lazyViz(() => import('./viz/StacksViz'), 'NextGreaterViz');
 const StackSideViz = lazyViz(() => import('./viz/StacksViz'), 'StackSideViz');
 const DequeSideViz = lazyViz(() => import('./viz/SideViz'), 'DequeSideViz');
+const DpDequeViz = lazyViz(() => import('./viz/SideViz'), 'DpDequeViz');
 const WindowCountsViz = lazyViz(() => import('./viz/SideViz'), 'WindowCountsViz');
 const BfsQueueViz = lazyViz(() => import('./viz/SideViz'), 'BfsQueueViz');
 const CallStackViz = lazyViz(() => import('./viz/SideViz'), 'CallStackViz');
@@ -293,6 +294,7 @@ export const mdxComponents = {
   NextGreaterViz,
   StackSideViz,
   DequeSideViz,
+  DpDequeViz,
   WindowCountsViz,
   BfsQueueViz,
   CallStackViz,
