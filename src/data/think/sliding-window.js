@@ -1,76 +1,92 @@
 /** Practice thinking walkthroughs: sliding-window (format: src/data/think/index.js). */
 export default {
   'longest-substring-without-repeating-characters': {
+    aha: 'Keep a window [l, r] with no repeated letter. Grow it on the right; when the new letter is a repeat, move the left end past the earlier copy. Both ends only ever move right, so it is one pass.',
+    asks: {
+      read: 'Which word in the statement tells you the answer is one unbroken stretch of the string?',
+      observe: 'In "abcabcbb", the window "abc" meets another a. Which letters must leave so the window is valid again?',
+      pattern: 'Once a window has a repeated letter, can growing it ever fix that?',
+    },
     read: [
-      { phrase: 'the longest substring', says: 'We optimise over ranges of the string: the best range.' },
-      { phrase: 'a contiguous run of characters', says: 'Contiguous ranges: a sliding window is the first candidate.' },
-      { phrase: 'no character appears more than once', says: 'The rule for a valid window: every letter count is at most 1. Something must track the counts.' },
+      { phrase: 'the longest substring', says: 'We are looking for the best range of the string.' },
+      { phrase: 'a contiguous run of characters', says: 'An unbroken stretch: a sliding window is the first thing to try.' },
+      { phrase: 'no character appears more than once', says: 'The rule for a valid window: every letter count is at most 1. Something must keep those counts.' },
     ],
-    budget: { from: 's.length ≤ 5 × 10⁴', n: 5e4, aim: 'O(n)', note: 'All substrings is O(n²) = 2.5 × 10⁹ before even checking them: too slow.' },
+    budget: { from: 's.length ≤ 5 × 10⁴', n: 5e4, aim: 'O(n)', note: 'Listing all substrings is 1.25 × 10⁹ before even checking them: too slow.' },
     observe: [
       {
         title: 'A repeat spoils every bigger window too',
-        text: '"abca" contains two a\'s, so every window containing "abca" is invalid as well. Growing a bad window never fixes it; only moving the left end can.',
+        text: '"abca" has two a\'s, and every window containing it does too. Growing a bad window never fixes it; only moving the left end can.',
         sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a', 'b', 'c', 'b', 'b'], marks: { 0: 'bad', 3: 'bad' }, bands: [{ from: 0, to: 3, tone: 'danger', label: 'two a\'s' }] }] },
       },
       {
         title: 'The left end only ever moves right',
-        text: 'If [l, r] is the longest valid window ending at r, the best window ending at r + 1 cannot start before l. So both ends move forward only: about 2n moves in total.',
-        sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a', 'b', 'c', 'b', 'b'], bands: [{ from: 1, to: 3, tone: 'success', label: 'valid' }], tags: { 1: [['l', 'interview']], 3: [['r', 'accent']] } }], caption: 'drop the first a, and "bca" is valid again' },
+        text: 'Drop the first a and "bca" is valid again. The best window ending at the next letter can\'t start further left than this, so the left end never needs to go back.',
+        sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a', 'b', 'c', 'b', 'b'], bands: [{ from: 1, to: 3, tone: 'success', label: 'valid' }], tags: { 1: [['l', 'interview']], 3: [['r', 'accent']] } }] },
       },
       {
         title: 'The window\'s state is a count per letter',
-        text: 'To know if adding s[r] breaks the rule, keep how many times each letter is in the window. Adding and removing a letter are both O(1).',
+        text: 'To know whether adding s[r] creates a repeat, keep how many times each letter is in the window. Adding or removing one letter changes one count.',
         sketch: { kind: 'array', rows: [{ label: 'counts in "bca"', items: ['a:1', 'b:1', 'c:1'], marks: { 0: 'kept', 1: 'kept', 2: 'kept' } }] },
       },
     ],
-    brute: { idea: 'Check every substring: for each start, extend while the letters stay unique (a set), and keep the longest.', cost: 'O(n²)', waste: 'When the start moves by one, it re-checks letters it already knew were unique.' },
+    brute: { idea: 'For each start, extend while the letters stay unique (using a set), and keep the longest.', cost: 'O(n²)', waste: 'When the start moves by one, it re-checks letters it already knew were unique.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'Contiguous ranges, a validity rule that only gets worse as the window grows, and window state (counts) that updates in O(1) when one letter enters or leaves.',
+      why: 'An unbroken range, a rule that only gets worse as the window grows, and window state (letter counts) that updates in one step as a letter enters or leaves: O(n).',
       not: [
-        { id: 'two-pointers', why: 'Classic two pointers walk towards each other on sorted data; here both ends move in the same direction, which is what a sliding window is.' },
-        { id: 'hashing', why: 'A hash map (or array of counts) is the window\'s state, but on its own it doesn\'t say which range to look at.' },
-        { id: 'dp-strings', why: 'String DP compares positions in one or two strings; this asks about one contiguous range, which the window handles in O(n).' },
+        { id: 'two-pointers', why: 'Classic two pointers walk towards each other; here both ends move the same way, which is exactly a sliding window.' },
+        { id: 'hashing', why: 'The letter counts live in a map, but the map alone doesn\'t say which range to look at.' },
       ],
     },
     watch: { viz: 'WindowCountsViz', inputs: [{ label: '"abcabcbb"', input: { mode: 'unique', s: 'abcabcbb' } }, { label: '"pwwkew"', input: { mode: 'unique', s: 'pwwkew' } }] },
-    edges: ['The empty string → 0.', 'All the same letter: "bbbb" → 1.', 'Spaces and symbols count as characters too.'],
+    edges: ['The empty string: "" → 0.', 'All the same letter: "bbbb" → 1.', 'Spaces count as characters: "a b" → 3.'],
   },
 
   'maximum-average-subarray-i': {
     free: true,
+    aha: 'Every window has the same length k, so the best average is just the best sum. Slide the window one step at a time: add the number that enters, subtract the one that leaves.',
+    asks: {
+      observe: 'The window [1, 12, −5, −6] sums to 2. What is the sum of the next window, using only one addition and one subtraction?',
+      pattern: 'Two neighbouring windows share k − 1 numbers. How can you avoid adding those again?',
+    },
     read: [
       { phrase: 'contiguous subarrays of `nums` that have exactly `k` elements', says: 'Every candidate has the same length k: a fixed-size sliding window.' },
       { phrase: 'the largest average', says: 'With k fixed, the largest average is just the largest sum divided by k.' },
-      { phrase: 'adding the element that enters and subtracting the one that leaves', says: 'The statement spells out the update: O(1) per step.' },
+      { phrase: 'adding the element that enters and subtracting the one that leaves', says: 'The statement spells out the update: one step per move.' },
     ],
     budget: { from: 'n ≤ 10⁵, k ≤ n', n: 1e5, aim: 'O(n)', note: 'Summing each window from scratch is O(n · k), up to 2.5 × 10⁹ when k ≈ n / 2.' },
     observe: [
       {
-        title: 'Neighbouring windows share k − 1 elements',
-        text: 'Moving the window one step changes only two values: one enters on the right, one leaves on the left.',
+        title: 'Neighbouring windows share k − 1 numbers',
+        text: 'Moving the window one step changes only two numbers: one enters on the right, one leaves on the left.',
         sketch: { kind: 'array', rows: [{ items: [1, 12, -5, -6, 50, 3], bands: [{ from: 0, to: 3, tone: 'ghost', label: 'sum 2' }, { from: 1, to: 4, tone: 'accent' }], marks: { 0: 'dim', 4: 'cur' } }], caption: 'next sum = 2 − 1 + 50 = 51' },
       },
       {
         title: 'Track the sum, divide once',
-        text: 'Keep the best sum; divide by k only at the end.',
+        text: 'Keep the best sum while sliding; divide by k only at the end.',
+        sketch: { kind: 'array', rows: [{ label: 'window sums', items: [2, 51, 42], marks: { 1: 'hit' } }], caption: 'best 51 → 51 / 4 = 12.75' },
       },
     ],
-    brute: { idea: 'For each of the n − k + 1 windows, add up its k values.', cost: 'O(n · k)', waste: 'Each window re-adds the k − 1 values it shares with the previous one.' },
+    brute: { idea: 'For each of the n − k + 1 windows, add up its k numbers.', cost: 'O(n · k)', waste: 'Each window re-adds the k − 1 numbers it shares with the previous one.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A fixed-size window over contiguous values: update the sum in O(1) as it slides. O(n).',
+      why: 'A fixed-size window over neighbouring numbers: update the sum in one step as it slides. O(n).',
       not: [
-        { id: 'prefix-sums', why: 'prefix[i + k] − prefix[i] gives each window sum in O(1) too, but needs an extra array.' },
+        { id: 'prefix-sums', why: 'prefix[i + k] − prefix[i] gives each window sum in one step too, but needs an extra array.' },
         { id: 'two-pointers', why: 'The two ends move together at a fixed distance; that is exactly a fixed-size window.' },
       ],
     },
     watch: { viz: 'SlidingWindowViz', inputs: [{ label: '[1, 12, −5, −6, 50, 3], k = 4', input: { mode: 'fixed', nums: [1, 12, -5, -6, 50, 3], k: 4 } }] },
-    edges: ['k = n: one window.', 'All values negative.', 'k = 1: the largest single value.'],
+    edges: ['k = n: one window, [5, 5], k 2 → 5.', 'All negative: [−1, −2, −3], k 2 → −1.5.', 'k = 1: the largest value, [3, 9, 4] → 9.'],
   },
 
   'contains-duplicate-ii': {
+    aha: 'Only the last k numbers can be close enough to matter. Keep exactly those k numbers in a set: if the new number is already in the set, it has a copy at most k positions back.',
+    asks: {
+      observe: 'In [1, 2, 3, 1] with k = 3, how far apart are the two 1s? Would k = 2 still be enough?',
+      pattern: 'If only the last k numbers matter, what should you keep, and what should you throw away as you move?',
+    },
     read: [
       { phrase: '`nums[i] == nums[j]`', says: 'We are looking for a repeated value…' },
       { phrase: '`|i − j| <= k`', says: '…but only within distance k: only the last k values matter at any moment.' },
@@ -79,85 +95,99 @@ export default {
     observe: [
       {
         title: 'Only a window of the last k values matters',
-        text: 'A copy further back than k is too far. So keep exactly the last k values in a set.',
+        text: 'A copy further back than k positions is too far. So the set only ever needs the last k values.',
         sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], bands: [{ from: 0, to: 2, tone: 'accent', label: 'last k = 3' }], marks: { 3: 'cur', 0: 'hit' } }], caption: '1 is in the window: true' },
       },
       {
-        title: 'Slide: add the new value, drop the one k back',
-        text: 'Before adding nums[i], check the set; after adding it, remove nums[i − k] if the window is too big.',
+        title: 'Slide: check, add, drop the oldest',
+        text: 'Before adding nums[i], check the set. After adding it, remove nums[i − k] so the set never holds more than k values.',
+        sketch: { kind: 'array', rows: [{ label: '[1, 2, 3, 1, 2, 3], k = 2', items: [1, 2, 3, 1, 2, 3], bands: [{ from: 1, to: 2, tone: 'accent', label: 'set' }], marks: { 3: 'cur', 0: 'muted' } }], caption: 'the old 1 has already left: no match' },
       },
     ],
-    brute: { idea: 'For each index, compare its value with the next k values.', cost: 'O(n · k)', waste: 'Overlapping ranges are re-scanned; a set of the window answers "is it there?" in O(1).' },
+    brute: { idea: 'For each index, compare its value with the next k values.', cost: 'O(n · k)', waste: 'Overlapping ranges are re-scanned; a set of the window answers "is it there?" in one step.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A fixed-size window of the last k values, held in a hash set: O(n).',
+      why: 'A fixed-size window of the last k values, kept in a hash set: O(n).',
       not: [
-        { id: 'hashing', why: 'A map of each value\'s last index also works in O(n); the window view explains why only k values matter.' },
+        { id: 'hashing', why: 'A map of each value\'s last position also works in O(n); the window view explains why only k values matter.' },
         { id: 'two-pointers', why: 'No pair to steer; the window simply slides.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Add 1, 2, 3', text: 'Window {1, 2, 3}; no repeats yet.' },
-        { title: '1 again: in the window', text: 'The earlier 1 is 3 positions back, which is ≤ k = 3: true.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { 0: 'hit', 3: 'hit' } }] } },
+        { title: 'Add 1, 2, 3', text: 'The window {1, 2, 3} has no repeats yet.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], bands: [{ from: 0, to: 2, tone: 'accent' }] }] } },
+        { title: 'Next is 1: check the set', text: 'The set holds 1, 2, 3, which are the last k = 3 values.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { 3: 'cur' }, bands: [{ from: 0, to: 2, tone: 'accent' }] }] } },
+        { title: '1 is there → true', text: 'The earlier 1 is 3 positions back, which is ≤ k = 3.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { 0: 'hit', 3: 'hit' } }] } },
       ],
     },
-    edges: ['k = 0 → always false.', 'Equal values exactly k + 1 apart → false.', 'A single element.'],
+    edges: ['k = 0: [1, 1], k 0 → false.', 'Repeats exactly k + 1 apart: [1, 2, 1], k 1 → false.', 'A single element: [7], k 3 → false.'],
   },
 
   'minimum-size-subarray-sum': {
+    aha: 'All numbers are positive, so growing a window raises its sum and shrinking lowers it. Grow on the right until the sum is enough, then shrink from the left as long as it stays enough, recording each length.',
+    asks: {
+      observe: 'In [2, 3, 1, 2, 4, 3] with target 7, once [2, 3, 1, 2] reaches 8, can you drop the 2 on the left and still have at least 7?',
+      pattern: 'With only positive numbers, what happens to the sum when the window grows? When it shrinks?',
+    },
     read: [
-      { phrase: 'contains only positive integers', says: 'Adding an element always raises the sum, removing one always lowers it: the window\'s validity is monotone.' },
-      { phrase: 'the shortest contiguous subarray', says: 'Minimise a window length: grow until valid, then shrink as far as possible.' },
+      { phrase: 'contains only positive integers', says: 'Adding a number always raises the sum, removing one always lowers it: the window behaves predictably.' },
+      { phrase: 'the shortest contiguous subarray', says: 'Minimise a window\'s length: grow until it is enough, then shrink as far as possible.' },
       { phrase: 'return `0`', says: 'If even the whole array falls short, there is no answer.' },
     ],
     budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Extending from every start is O(n²).' },
     observe: [
       {
         title: 'Once the sum is enough, shrink from the left',
-        text: 'With positive values, the window [l, r] that just reached target may still be valid after dropping its left end. Keep dropping while it is.',
-        sketch: { kind: 'array', rows: [{ items: [2, 3, 1, 2, 4, 3], bands: [{ from: 2, to: 4, tone: 'success', label: 'sum 7' }], marks: { 0: 'dim', 1: 'dim' } }] },
+        text: 'With positive numbers, the window that just reached the target may still reach it after dropping its leftmost number. Keep dropping while it does.',
+        sketch: { kind: 'array', rows: [{ items: [2, 3, 1, 2, 4, 3], bands: [{ from: 2, to: 4, tone: 'success', label: 'sum 7' }], marks: { 0: 'dim', 1: 'dim' } }], caption: '[1, 2, 4] has length 3' },
       },
       {
         title: 'Neither end ever moves back',
-        text: 'Both pointers only move right, so the whole scan is O(n).',
+        text: 'Both ends only move right, so the whole scan is at most 2n moves.',
+        sketch: { kind: 'array', rows: [{ items: [2, 3, 1, 2, 4, 3], bands: [{ from: 4, to: 5, tone: 'success', label: 'sum 7' }], marks: { 0: 'dim', 1: 'dim', 2: 'dim', 3: 'dim' } }], caption: 'the shortest: [4, 3], length 2' },
       },
     ],
-    brute: { idea: 'From every start, add elements until the sum reaches target.', cost: 'O(n²)', waste: 'Each start rebuilds sums that the previous window already had.' },
+    brute: { idea: 'From every start, add numbers until the sum reaches the target.', cost: 'O(n²)', waste: 'Each start rebuilds sums that the previous window already had.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'Variable-size window on positive numbers: grow right until valid, then shrink left while still valid. O(n).',
+      why: 'A window that grows on the right until the sum is enough and shrinks on the left while it still is: each number enters and leaves once, O(n).',
       not: [
         { id: 'prefix-sums', why: 'Prefix sums plus binary search for each start give O(n log n).' },
-        { id: 'two-pointers', why: 'These are the two pointers, moving in the same direction: that is the sliding window.' },
+        { id: 'two-pointers', why: 'These are two pointers moving the same way: that is the sliding window.' },
       ],
     },
     watch: { viz: 'SlidingWindowViz', inputs: [{ label: 'target 7, [2, 3, 1, 2, 4, 3]', input: { mode: 'shortest', nums: [2, 3, 1, 2, 4, 3], target: 7 } }] },
-    edges: ['The total is below target → 0.', 'One element already ≥ target → 1.', 'The answer is the whole array.'],
+    edges: ['The total falls short: target 11, [1, 1, 1, 1] → 0.', 'One number is enough: target 4, [1, 4, 4] → 1.', 'The whole array is needed: target 6, [1, 2, 3] → 3.'],
   },
 
   'max-consecutive-ones-iii': {
+    aha: 'Flipping at most k zeros means finding the longest stretch that contains at most k zeros. Grow the window to the right counting zeros; when there are too many, move the left end past the oldest zero.',
+    asks: {
+      observe: 'In [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0] with k = 2, which stretch holds at most two zeros and is the longest?',
+      pattern: 'Rephrase it without the word "flip": what must the window contain at most?',
+    },
     read: [
       { phrase: 'flip at most `k` of the zeros', says: 'A budget of k zeros we are allowed to keep in the run.' },
-      { phrase: 'longest run of consecutive ones', says: 'A contiguous range, maximised.' },
-      { phrase: 'the longest window that contains at most `k` zeros', says: 'The statement reframes it: a window valid while its zero count ≤ k.' },
+      { phrase: 'longest run of consecutive ones', says: 'An unbroken stretch, as long as possible.' },
+      { phrase: 'the longest window that contains at most `k` zeros', says: 'The statement reframes it: a window is fine while its zero count is ≤ k.' },
     ],
     budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Extending from every start is O(n²).' },
     observe: [
       {
         title: 'Count the zeros inside the window',
-        text: 'The window is fine while it holds at most k zeros. A (k + 1)-th zero makes it invalid.',
+        text: 'The window is fine while it holds at most k zeros; a (k + 1)-th zero makes it too much.',
         sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 5, to: 10, tone: 'success', label: '2 zeros' }], marks: { 5: 'target', 10: 'target' } }], caption: 'k = 2: length 6' },
       },
       {
         title: 'Shrink until a zero leaves',
         text: 'When there are k + 1 zeros, move the left end past the oldest zero in the window.',
+        sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 0, to: 5, tone: 'danger', label: '3 zeros' }], marks: { 3: 'bad' } }], caption: 'drop everything up to the first zero' },
       },
     ],
-    brute: { idea: 'From every start, extend until a (k + 1)-th zero appears.', cost: 'O(n²)', waste: 'Each start recounts zeros the previous window already counted.' },
+    brute: { idea: 'From every start, extend until a (k + 1)-th zero appears.', cost: 'O(n²)', waste: 'Each start recounts zeros that the previous window already counted.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A longest window under a budget (zeros ≤ k): grow right, shrink left when over budget. O(n).',
+      why: 'The longest window under a budget (at most k zeros): grow right, shrink left when over budget. O(n).',
       not: [
         { id: 'prefix-sums', why: 'Prefix counts of zeros with binary search work in O(n log n).' },
         { id: 'dp-linear', why: 'A DP over positions is possible, but the window is simpler and O(n).' },
@@ -165,18 +195,24 @@ export default {
     },
     watch: {
       frames: [
-        { title: 'Grow to [0, 4]', text: 'Zeros at 3 and 4: two zeros, still fine. Length 5.' },
-        { title: 'Index 5 is a third zero: shrink', text: 'Move l past index 3 (the first zero): window [4, 5].' },
-        { title: 'Grow to index 10', text: 'Another zero at 10: shrink past index 4. The best window [5, 10] has length 6.', sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 5, to: 10, tone: 'success' }] }] } },
+        { title: 'Grow to index 4', text: 'Zeros at 3 and 4: two zeros, still fine. Length 5.', sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 0, to: 4, tone: 'accent' }] }] } },
+        { title: 'Index 5 is a third zero: shrink', text: 'Move l past index 3 (the oldest zero): the window becomes [4, 5].', sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 4, to: 5, tone: 'accent' }], marks: { 0: 'dim', 1: 'dim', 2: 'dim', 3: 'dim' } }] } },
+        { title: 'Grow to index 9: length 6', text: 'Ones only: the window [4, 9] has two zeros. Best so far 6.', sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 4, to: 9, tone: 'success' }] }] } },
+        { title: 'Index 10: shrink past index 4 → answer 6', text: 'The window [5, 10] is also 6 long. Nothing longer appears: the answer is 6.', sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 5, to: 10, tone: 'success' }] }] } },
       ],
     },
-    edges: ['k = 0: the longest run of ones as it is.', 'k ≥ number of zeros → n.', 'All zeros → k.'],
+    edges: ['k = 0: [1, 0, 1, 1] → 2 (the longest run as it is).', 'k at least the number of zeros: [0, 1, 0], k 2 → 3.', 'All zeros: [0, 0, 0], k 1 → 1.'],
   },
 
   'minimum-operations-to-make-binary-array-elements-equal-to-one-i': {
+    aha: 'Only the window starting at index 0 can change index 0, so whether to flip there is forced. Fix index 0, then index 1 is forced the same way, and so on: one left-to-right pass makes every decision.',
+    asks: {
+      observe: 'In [0, 1, 1, 1, 0, 0], which flips could possibly change index 0?',
+      pattern: 'If every decision is forced, is there anything left to search or compare?',
+    },
     read: [
       { phrase: 'flip all of them', says: 'An operation on a fixed-size window of 3.' },
-      { phrase: 'the minimum number of operations', says: 'Each window is either flipped once or not at all (twice cancels), and order doesn\'t matter.' },
+      { phrase: 'the minimum number of operations', says: 'Each window is flipped once or not at all (twice cancels), and order doesn\'t matter.' },
       { phrase: 'or `-1` if it is impossible', says: 'Some arrays can\'t be fixed: the last two cells may be stuck.' },
     ],
     budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Trying sets of windows is exponential; there is a forced choice instead.' },
@@ -188,62 +224,71 @@ export default {
       },
       {
         title: 'The last two cells have no window of their own',
-        text: 'After the scan, if either is still 0, nothing can fix it: −1.',
+        text: 'After the scan, if either of the last two is still 0, nothing can fix it: −1.',
+        sketch: { kind: 'array', rows: [{ label: '[0, 1, 1, 1] after flipping at 0', items: [1, 0, 0, 1], marks: { 1: 'bad', 2: 'bad' } }], caption: 'flipping at 1 fixes index 1 but breaks index 3 → −1' },
       },
     ],
-    brute: { idea: 'Try every subset of window starts and keep the smallest that leaves all ones.', cost: 'O(2ⁿ · n)', waste: 'Every decision is actually forced; there is only one plan to find.' },
+    brute: { idea: 'Try every set of window starts and keep the smallest that leaves all ones.', cost: 'O(2ⁿ · n)', waste: 'Every decision is actually forced; there is only one plan to find.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A fixed window of 3 sweeps left to right; at each step the choice is forced, so one pass gives the minimum.',
+      why: 'A window of 3 sweeps left to right, and at each step the choice is forced, so one pass gives the minimum.',
       not: [
         { id: 'backtracking', why: 'Exploring all sets of flips is exponential.' },
         { id: 'dp-linear', why: 'A DP is unnecessary: no choice ever branches.' },
       ],
     },
     watch: { viz: 'FlipWindowViz', inputs: [{ label: '[0, 1, 1, 1, 0, 0], k = 3', input: { nums: [0, 1, 1, 1, 0, 0], k: 3 } }, { label: '[0, 1, 1, 1], k = 3 (impossible)', input: { nums: [0, 1, 1, 1], k: 3 } }] },
-    edges: ['All ones → 0.', 'A zero stuck in the last two cells → −1.', 'n = 3.'],
+    edges: ['All ones: [1, 1, 1] → 0.', 'A zero stuck at the end: [1, 1, 0] → −1.', 'Exactly one window: [0, 0, 0] → 1.'],
   },
 
   'longest-repeating-character-replacement': {
+    aha: 'A window can be turned into one repeated letter if the letters that are NOT its most common letter number at most k. Slide a window keeping letter counts; shrink it when length − (most common count) goes above k.',
+    asks: {
+      observe: 'In "AABABBA" with k = 1, how many letters must change to make "AABA" all A? And "AABAB"?',
+      pattern: 'For a given window, which letter should you keep, and how many changes does that need?',
+    },
     read: [
       { phrase: 'at most `k` times in total', says: 'A budget of k changes for the window.' },
-      { phrase: 'the longest substring that can be made to consist of a single repeated letter', says: 'A longest valid window. Which letter? The one already most common in the window, so we change the fewest.' },
+      { phrase: 'the longest substring that can be made to consist of a single repeated letter', says: 'A longest valid window. Which letter? The one already most common in it, so the fewest letters change.' },
     ],
     budget: { from: 's.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Extending from every start is O(n²).' },
     observe: [
       {
-        title: 'A window is fixable when length − (most common count) ≤ k',
-        text: 'Keep the most common letter and change everything else. In "AABABBA" with k = 1, "AABA" needs one change.',
+        title: 'Changes needed = length − most common count',
+        text: 'Keep the most common letter and change everything else. "AABA" has three A\'s, so one change (the B) makes it "AAAA".',
         sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 0, to: 3, tone: 'success', label: '4 − 3 = 1 ≤ k' }], marks: { 2: 'target' } }] },
       },
       {
-        title: 'Slide, shrinking when the window needs too many changes',
-        text: 'Track letter counts in the window. If length − maxCount > k, drop the left letter.',
-      },
-      {
-        title: 'The best count never needs to go down',
-        text: 'The answer only improves when some window has a larger maxCount, so a stale (too large) maxCount just makes the window slide instead of shrink. That keeps it O(n).',
+        title: 'Too many changes? Shrink from the left',
+        text: '"AABAB" has length 5 and three A\'s: 2 changes, more than k = 1. Drop the left letter.',
+        sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 0, to: 4, tone: 'danger', label: '5 − 3 = 2 > k' }] }] },
       },
     ],
-    brute: { idea: 'From every start, extend while the window still needs at most k changes.', cost: 'O(n²)', waste: 'Counts are rebuilt for each start.' },
+    brute: { idea: 'From every start, extend while the window needs at most k changes.', cost: 'O(n²)', waste: 'Letter counts are rebuilt for every start.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A longest window with a validity rule (length − maxCount ≤ k) and O(1) updates: O(n).',
+      why: 'The longest window satisfying length − (most common count) ≤ k, with counts updated in one step as letters enter and leave: O(n).',
       not: [
-        { id: 'dp-strings', why: 'There is no second string or position-pair recursion; one window suffices.' },
-        { id: 'hashing', why: 'The letter counts are a hash table, but the window decides which range to look at.' },
+        { id: 'dp-strings', why: 'There is no second string and no table over positions; one window is enough.' },
+        { id: 'hashing', why: 'The letter counts are a table, but the window decides which range to look at.' },
       ],
     },
     watch: {
       frames: [
-        { title: '"ABAB", k = 2', text: 'The whole string: length 4, most common count 2, changes needed 2 ≤ k. Valid.', sketch: { kind: 'array', rows: [{ items: ['A', 'B', 'A', 'B'], bands: [{ from: 0, to: 3, tone: 'success' }] }] } },
-        { title: 'Answer: 4', text: 'Change both B\'s (or both A\'s).' },
+        { title: '"AABA": 4 − 3 = 1 change', text: 'Within the budget k = 1. Best so far 4.', sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 0, to: 3, tone: 'success' }] }] } },
+        { title: '"AABAB": 2 changes, too many', text: 'Drop the first A: "ABAB" needs 4 − 2 = 2, still too many; drop another: "BAB" needs 1.', sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 2, to: 4, tone: 'accent' }], marks: { 0: 'dim', 1: 'dim' } }] } },
+        { title: '"BABB": 4 − 3 = 1 change', text: 'Another window of length 4 (change the A). Nothing reaches 5: the answer is 4.', sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 2, to: 5, tone: 'success' }] }] } },
       ],
     },
-    edges: ['k ≥ length: the whole string.', 'All the same letter.', 'k = 0: the longest run as it is.'],
+    edges: ['k at least the length: "ABC", k 3 → 3.', 'All the same letter: "AAAA", k 0 → 4.', 'k = 0: "AABBB" → 3 (the longest run as it is).'],
   },
 
   'permutation-in-string': {
+    aha: 'A rearrangement of s1 has exactly s1\'s letter counts and exactly its length. Slide a window of that length over s2, updating counts as one letter enters and one leaves; when the counts match, you found one.',
+    asks: {
+      observe: 'In "eidbaooo", which window of length 2 has the same letters as "ab"?',
+      pattern: 'Every candidate has the same length. What changes between one window and the next?',
+    },
     read: [
       { phrase: 'a rearrangement (a permutation) of `s1`', says: 'Same letters, same counts: compare counts, not order.' },
       { phrase: 'contiguous substring', says: 'A window of s2.' },
@@ -252,29 +297,35 @@ export default {
     budget: { from: 's1, s2 ≤ 10⁴ letters', n: 1e4, aim: 'O(n)', note: 'Sorting every window is O(n · m log m).' },
     observe: [
       {
-        title: 'A permutation has the same letter counts',
-        text: '"ba" is a permutation of "ab": one a, one b.',
+        title: 'A rearrangement has the same letter counts',
+        text: '"ba" is a rearrangement of "ab": one a and one b.',
         sketch: { kind: 'array', rows: [{ items: ['e', 'i', 'd', 'b', 'a', 'o', 'o', 'o'], bands: [{ from: 3, to: 4, tone: 'success', label: 'b, a' }] }] },
       },
       {
         title: 'Sliding changes two counts',
-        text: 'One letter enters, one leaves. Comparing 26 counts (or tracking how many match) is O(1) per step.',
+        text: 'One letter enters, one leaves. Updating two counts and comparing is quick, so each step is one move.',
+        sketch: { kind: 'array', rows: [{ items: ['e', 'i', 'd', 'b', 'a', 'o', 'o', 'o'], bands: [{ from: 2, to: 3, tone: 'accent' }], marks: { 1: 'dim', 3: 'cur' } }], caption: 'i leaves, b enters' },
       },
     ],
-    brute: { idea: 'Sort s1, then sort every window of s2 of the same length and compare.', cost: 'O(n · m log m)', waste: 'Each window is re-sorted, though it differs from the last by two letters.' },
+    brute: { idea: 'Sort s1, then sort every window of s2 of the same length and compare.', cost: 'O(n · m log m)', waste: 'Each window is sorted again, though it differs from the previous one by only two letters.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A fixed-size window over s2 with letter counts, updated in O(1) as it slides: O(n).',
+      why: 'A fixed-size window over s2 with letter counts, updated in one step per move: O(n).',
       not: [
-        { id: 'sorting-and-selection', why: 'Sorting each window works, but is O(m log m) per window.' },
-        { id: 'hashing', why: 'Counts are the state; the window is what makes each update O(1).' },
+        { id: 'sorting-and-selection', why: 'Sorting each window works, but costs a sort per window.' },
+        { id: 'hashing', why: 'Counts are the state; the window is what makes each update cheap.' },
       ],
     },
     watch: { viz: 'WindowCountsViz', inputs: [{ label: 's2 = "eidbaooo", s1 = "ab"', input: { mode: 'anagram', s: 'eidbaooo', p: 'ab' } }] },
-    edges: ['s1 longer than s2 → false.', 's1 equal to s2 → true.', 'Repeated letters in s1.'],
+    edges: ['s1 longer than s2: "abc", "ab" → false.', 's1 equal to s2: "ab", "ab" → true.', 'Repeated letters: "aab", "baaa" → true ("baa").'],
   },
 
   'find-all-anagrams-in-a-string': {
+    aha: 'Every candidate window has length |p|. Slide one window across s, keeping letter counts: each move adds one letter and removes one, and whenever the counts equal p\'s counts, record the start.',
+    asks: {
+      observe: 'In "cbaebabacd", which windows of length 3 use exactly the letters a, b and c?',
+      pattern: 'Windows of fixed length, compared by letter counts: what changes between neighbouring windows?',
+    },
     read: [
       { phrase: 'has length `p.length`', says: 'Fixed-size windows.' },
       { phrase: 'is an anagram (a rearrangement) of `p`', says: 'Compare letter counts.' },
@@ -284,69 +335,81 @@ export default {
     observe: [
       {
         title: 'Every window of length |p| is a candidate',
-        text: 'In "cbaebabacd", the windows starting at 0 ("cba") and 6 ("bac") match "abc".',
+        text: 'In "cbaebabacd", the windows starting at 0 ("cba") and 6 ("bac") use exactly a, b and c.',
         sketch: { kind: 'array', rows: [{ items: ['c', 'b', 'a', 'e', 'b', 'a', 'b', 'a', 'c', 'd'], bands: [{ from: 0, to: 2, tone: 'success' }, { from: 6, to: 8, tone: 'success' }] }] },
       },
       {
         title: 'One in, one out',
-        text: 'Each slide updates two counts; a "missing" counter says in O(1) whether the window matches.',
+        text: 'Each slide updates two counts; a running number of "letters still missing" says at once whether the window matches.',
+        sketch: { kind: 'array', rows: [{ items: ['c', 'b', 'a', 'e', 'b', 'a', 'b', 'a', 'c', 'd'], bands: [{ from: 1, to: 3, tone: 'accent' }], marks: { 0: 'dim', 3: 'bad' } }], caption: 'e enters: no longer a match' },
       },
     ],
-    brute: { idea: 'Sort p, then sort and compare every window of s.', cost: 'O(n · m log m)', waste: 'Re-sorting windows that differ by only two letters.' },
+    brute: { idea: 'Sort p, then sort and compare every window of s.', cost: 'O(n · m log m)', waste: 'Windows that differ by two letters are sorted from scratch.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'Fixed-size window with letter counts: each slide is O(1), so all start positions are found in O(n).',
+      why: 'A fixed-size window with letter counts: each slide is one step, so every start position is checked in O(n) total.',
       not: [
         { id: 'sorting-and-selection', why: 'Sorting each window is correct but slow.' },
         { id: 'string-matching', why: 'KMP finds exact copies of p; anagrams can be in any order.' },
       ],
     },
     watch: { viz: 'WindowCountsViz', inputs: [{ label: 's = "cbaebabacd", p = "abc"', input: { mode: 'anagram', s: 'cbaebabacd', p: 'abc' } }] },
-    edges: ['p longer than s → [].', 'Overlapping matches: "abab", p = "ab" → [0, 1, 2].', 'p of length 1.'],
+    edges: ['p longer than s: "ab", "abc" → [].', 'Overlapping matches: "abab", "ab" → [0, 1, 2].', 'p of length 1: "aba", "a" → [0, 2].'],
   },
 
   'find-k-closest-elements': {
+    aha: 'Because the array is sorted, the k closest values sit side by side: the answer is one window of k. To place it, compare the value just inside the window\'s left edge with the value just outside its right edge, and binary search the start.',
+    asks: {
+      observe: 'For [1, 2, 3, 4, 5], k = 4, x = 3: the window could start at 0 or 1. Which of 1 and 5 is closer to 3?',
+      pattern: 'If the answer is always one block of k neighbours, what single number do you actually need to find?',
+    },
     read: [
-      { phrase: '`arr` is sorted in ascending order', says: 'The k closest values sit together: they form one contiguous block.' },
-      { phrase: 'Return the `k` values of `arr` closest to `x`', says: 'A window of exactly k elements; we need its start.' },
+      { phrase: '`arr` is sorted in ascending order', says: 'The k closest values sit together: they form one block.' },
+      { phrase: 'Return the `k` values of `arr` closest to `x`', says: 'A window of exactly k values; we need its start.' },
       { phrase: 'if the distances are equal and `a < b`', says: 'Ties go to the smaller value, which is the left side.' },
     ],
     budget: { from: 'arr.length ≤ 10⁴', n: 1e4, aim: 'O(log n + k)', note: 'Sorting by distance is O(n log n): fine, but the sorted input allows much better.' },
     observe: [
       {
         title: 'The answer is a window of k',
-        text: 'If a value is in the answer, every value between it and x is closer, so it is in too. The answer is a contiguous block.',
+        text: 'If a value is in the answer, every value between it and x is even closer, so it is in too. The answer is one block.',
         sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], bands: [{ from: 0, to: 3, tone: 'success', label: 'k = 4' }], tags: { 2: [['x = 3', 'warn']] } }] },
       },
       {
         title: 'Compare the edges to choose the start',
-        text: 'For a start s, compare arr[s] (just inside) with arr[s + k] (just outside). If x − arr[s] > arr[s + k] − x, the window should move right. That test is monotone in s, so binary search the start.',
+        text: 'For a start s, compare arr[s] (just inside) with arr[s + k] (just outside). If the outside value is closer, the window should move right. That decision flips only once, so binary search the start.',
+        sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { 0: 'target', 4: 'target' }, tags: { 0: [['inside', 'warn']], 4: [['outside', 'warn']] } }], caption: '|1 − 3| = |5 − 3|: a tie keeps the left window' },
       },
     ],
-    brute: { idea: 'Sort all values by (distance, value), take the first k, sort them again.', cost: 'O(n log n)', waste: 'It ignores that the array is already sorted and the answer is a block.' },
+    brute: { idea: 'Sort all values by (distance, value), take the first k, then sort them back.', cost: 'O(n log n)', waste: 'It ignores that the array is already sorted and the answer is a single block.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'The answer is a fixed-size window; binary search its start by comparing the values just inside and just outside: O(log n + k).',
+      why: 'The answer is a fixed-size window; binary search its start by comparing the value just inside with the value just outside: O(log n + k).',
       not: [
-        { id: 'heap-patterns', why: 'A max-heap of size k by distance works in O(n log k), without using the sort.' },
-        { id: 'two-pointers', why: 'Shrinking from both ends (drop the farther end) is O(n − k): correct, slower.' },
+        { id: 'heap-patterns', why: 'A heap of size k by distance works in O(n log k), without using the sort.' },
+        { id: 'two-pointers', why: 'Shrinking from both ends (drop the farther end until k remain) is O(n − k): correct, slower.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Starts 0 or 1 for k = 4, x = 3', text: 'Start 0 covers [1 … 4]; start 1 covers [2 … 5].' },
-        { title: 'Compare 1 and 5', text: '|1 − 3| = 2 and |5 − 3| = 2: a tie, which goes to the smaller value, so stay at start 0.' },
-        { title: 'Answer [1, 2, 3, 4]', text: 'The window starting at 0.' },
+        { title: 'Possible starts: 0 or 1', text: 'With n = 5 and k = 4, the window starts at 0 ([1 … 4]) or 1 ([2 … 5]).', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], bands: [{ from: 0, to: 3, tone: 'ghost' }] }, { items: [1, 2, 3, 4, 5], bands: [{ from: 1, to: 4, tone: 'ghost' }] }] } },
+        { title: 'Compare 1 (inside) and 5 (outside)', text: 'Both are 2 away from 3: a tie goes to the smaller value, so keep start 0.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { 0: 'target', 4: 'target' } }] } },
+        { title: 'Answer [1, 2, 3, 4]', text: 'The window starting at 0.', sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], bands: [{ from: 0, to: 3, tone: 'success' }] }] } },
       ],
     },
-    edges: ['x below every value: the first k.', 'x above every value: the last k.', 'Ties between equal distances go left.'],
+    edges: ['x below every value: [1, 2, 3], k 2, x 0 → [1, 2].', 'x above every value: [1, 2, 3], k 2, x 9 → [2, 3].', 'A tie: [1, 3], k 1, x 2 → [1].'],
   },
 
   'minimum-window-substring': {
+    aha: 'Grow a window on the right until it contains all of t (a counter of "letters still missing" hits 0). Then shrink it from the left as long as it still contains all of t, recording the shortest. Repeat until the right end reaches the end.',
+    asks: {
+      observe: 'In "ADOBECODEBANC", what is the first window that contains A, B and C? Can its left end move without losing one of them?',
+      pattern: 'Once a window covers t, what is the only way it can get shorter?',
+    },
     read: [
       { phrase: 'the shortest contiguous substring of `s` that contains every character of `t`', says: 'Minimise a window that must cover a requirement: grow until it covers, shrink while it still does.' },
       { phrase: 'including repeats', says: 'Counts, not just presence: track how many of each letter are still needed.' },
-      { phrase: 'Letters are case-sensitive', says: '"a" and "A" are different keys.' },
+      { phrase: 'Letters are case-sensitive', says: '"a" and "A" are different letters.' },
     ],
     budget: { from: 's, t ≤ 10⁵', n: 1e5, aim: 'O(m + n)', note: 'Extending from every start is O(m²), 10¹⁰.' },
     observe: [
@@ -357,32 +420,38 @@ export default {
       },
       {
         title: 'Then shrink while it still covers',
-        text: 'Drop letters from the left until removing one would uncover t. Record the window, then keep growing.',
+        text: 'Drop letters from the left until removing one more would lose a needed letter. Record the window, then keep growing.',
         sketch: { kind: 'array', rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 9, to: 12, tone: 'success', label: 'BANC' }] }] },
       },
     ],
     brute: { idea: 'From every start, extend until all of t is covered.', cost: 'O(m²)', waste: 'Each start recounts letters the previous window already had.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'Variable window with a "missing" counter: expand until valid, shrink while valid, keep the shortest. Each letter enters and leaves once: O(m + n).',
+      why: 'A window with a "missing" counter: grow until it covers t, shrink while it still does, keep the shortest. Each letter enters and leaves once: O(m + n).',
       not: [
-        { id: 'hashing', why: 'The need counts are a map, but the window decides which ranges are tried.' },
-        { id: 'two-pointers', why: 'These are two same-direction pointers: a sliding window.' },
+        { id: 'hashing', why: 'The needed counts are a map, but the window decides which ranges are tried.' },
+        { id: 'two-pointers', why: 'These are two pointers moving the same way: a sliding window.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Grow to "ADOBEC"', text: 'Now A, B and C are all inside: missing = 0. Shortest so far: 6.' },
-        { title: 'Shrink: drop A', text: 'A is needed: missing becomes 1. Grow again.' },
-        { title: '… "BANC"', text: 'The last window that covers t and can\'t shrink further has length 4: "BANC".' },
+        { title: 'Grow to "ADOBEC"', text: 'Now A, B and C are all inside (missing = 0). Shortest so far: 6.', sketch: { kind: 'array', rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 0, to: 5, tone: 'success' }] }] } },
+        { title: 'Shrink: dropping A loses it', text: 'missing becomes 1. Grow again until another A arrives at index 10.', sketch: { kind: 'array', rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 1, to: 10, tone: 'accent' }], marks: { 0: 'dim' } }] } },
+        { title: 'Shrink as far as possible: "CODEBA"', text: 'From index 5 it still covers A, B, C: length 6, no better.', sketch: { kind: 'array', rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 5, to: 10, tone: 'accent' }] }] } },
+        { title: 'Grow to the last C, shrink → "BANC"', text: 'The window [9, 12] covers t and can\'t shrink further. The answer is "BANC" (length 4).', sketch: { kind: 'array', rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 9, to: 12, tone: 'success' }] }] } },
       ],
     },
-    edges: ['t longer than s → "".', 't with repeated letters ("AA").', 't is one letter.'],
+    edges: ['t longer than s: "a", "aa" → "".', 'Repeats in t: "aa", "aa" → "aa".', 't is one letter: "abc", "b" → "b".'],
   },
 
   'minimum-number-of-k-consecutive-bit-flips': {
+    aha: 'The leftmost 0 can only be fixed by a flip starting exactly there, so every flip is forced. Instead of flipping k cells each time, just count how many flips cover the current cell: an odd count means the bit is flipped.',
+    asks: {
+      observe: 'In [0, 0, 0, 1, 0, 1, 1, 0] with k = 3, which flip is forced first? Which cells does it cover?',
+      pattern: 'Flipping k cells each time is slow. What single number tells you whether the current cell has been flipped?',
+    },
     read: [
-      { phrase: 'subarray of length exactly `k`', says: 'Each operation is a fixed-size window.' },
+      { phrase: 'subarray of length exactly `k`', says: 'Each operation covers a fixed-size window.' },
       { phrase: 'flips every bit in it', says: 'Flipping twice cancels and order doesn\'t matter: each window is used once or not at all.' },
       { phrase: 'or `-1` if it is not possible', says: 'A zero near the end may have no window left to fix it.' },
     ],
@@ -394,57 +463,65 @@ export default {
         sketch: { kind: 'array', rows: [{ items: [0, 0, 0, 1, 0, 1, 1, 0], bands: [{ from: 0, to: 2, tone: 'accent', label: 'forced' }] }] },
       },
       {
-        title: 'Count flips instead of doing them',
-        text: 'Keep how many active flips cover index i; the bit is flipped if that count is odd. Each flip stops covering at i + k: record it and subtract it there.',
+        title: 'Count the flips covering each cell',
+        text: 'Keep "active" = how many flips cover the current cell. The bit is nums[i] if active is even and flipped if odd. A flip started at s stops counting at s + k.',
+        sketch: { kind: 'array', rows: [{ label: 'active flips per cell', items: [1, 1, 1, 0, 1, 2, 2, 1], marks: { 5: 'target', 6: 'target' } }], caption: 'cells 5 and 6 are covered twice: back to their original value' },
       },
     ],
-    brute: { idea: 'Scan left to right; at each 0, flip the next k bits for real.', cost: 'O(n · k)', waste: 'Each flip rewrites k cells, when a counter of active flips gives every bit\'s current value in O(1).' },
+    brute: { idea: 'Scan left to right; at each 0, flip the next k bits for real.', cost: 'O(n · k)', waste: 'Each flip rewrites k cells, when a count of active flips gives every bit\'s current value in one step.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'A window of active flips slides along: add a flip where a 0 forces it, expire it k later. O(n).',
+      why: 'A sliding count of active flips: add a flip where a 0 forces it, let it expire k cells later. O(n).',
       not: [
-        { id: 'greedy', why: 'The reasoning is greedy (each flip is forced), but the speed comes from the sliding count of active flips.' },
-        { id: 'prefix-sums', why: 'A difference array is exactly how flip ends are recorded; on its own it doesn\'t decide where to flip.' },
+        { id: 'greedy', why: 'The reasoning is greedy (each flip is forced), but the speed comes from counting active flips instead of flipping.' },
+        { id: 'prefix-sums', why: 'Recording where flips end is a difference-array idea; on its own it doesn\'t decide where to flip.' },
       ],
     },
     watch: { viz: 'FlipWindowViz', inputs: [{ label: '[0, 0, 0, 1, 0, 1, 1, 0], k = 3', input: { nums: [0, 0, 0, 1, 0, 1, 1, 0], k: 3 } }, { label: '[1, 1, 0], k = 2 (impossible)', input: { nums: [1, 1, 0], k: 2 } }] },
-    edges: ['k = 1: count the zeros.', 'k = n: all ones or all zeros, else −1.', 'A zero within the last k − 1 cells after flips → −1.'],
+    edges: ['k = 1: count the zeros, [0, 1, 0] → 2.', 'k = n: [0, 0, 0], k 3 → 1; [0, 1, 0], k 3 → −1.', 'A zero in the last k − 1 cells after the scan: [1, 1, 0], k 2 → −1.'],
   },
 
   'subarrays-with-k-different-integers': {
+    aha: '"Exactly k different values" is awkward to slide, but "at most k" is easy: for each right end, every start from l to r works. So count "at most k", subtract "at most k − 1", and what is left is "exactly k".',
+    asks: {
+      observe: 'For [1, 2, 1, 2, 3] and k = 2: how many subarrays have at most 2 different values? How many have at most 1?',
+      pattern: 'Why is "at most k" easier to slide than "exactly k"? What happens to each when the window shrinks?',
+    },
     read: [
-      { phrase: 'exactly `k` different values', says: '"Exactly" is not monotone: shrinking can drop below k. A plain window can\'t count it directly.' },
+      { phrase: 'exactly `k` different values', says: '"Exactly" is awkward: shrinking a window can drop it below k, so a plain window can\'t count it directly.' },
       { phrase: 'Count the good contiguous subarrays', says: 'Counting, not maximising: for each right end, how many starts work.' },
-      { phrase: 'the number with exactly k different values equals the number with at most k minus the number with at most k − 1', says: 'The trick: "at most" is monotone, so slide it twice and subtract.' },
+      { phrase: 'the number with exactly k different values equals the number with at most k minus the number with at most k − 1', says: 'The trick: "at most" only ever gets easier as the window shrinks, so slide it twice and subtract.' },
     ],
     budget: { from: 'nums.length ≤ 2 × 10⁴', n: 2e4, aim: 'O(n)', note: 'Extending from every start is O(n²) = 4 × 10⁸: risky.' },
     observe: [
       {
-        title: '"At most k distinct" is easy to slide',
-        text: 'Shrinking a window never adds distinct values. For each right end r, every start from l to r works: add r − l + 1.',
+        title: '"At most k" is easy to slide',
+        text: 'Shrinking a window never adds new values. For each right end r, shrink until at most k values remain; then every start from l to r works: add r − l + 1.',
+        sketch: { kind: 'array', rows: [{ label: 'at most 2, added per right end', items: [1, 2, 3, 4, 2], marks: { 0: 'kept', 1: 'kept', 2: 'kept', 3: 'kept', 4: 'kept' } }], caption: '1 + 2 + 3 + 4 + 2 = 12' },
       },
       {
         title: 'Exactly k = at most k − at most (k − 1)',
-        text: 'For [1, 2, 1, 2, 3] with k = 2: at most 2 gives 12 subarrays, at most 1 gives 5, so exactly 2 gives 7.',
-        sketch: { kind: 'array', rows: [{ label: 'at most 2, per right end', items: [1, 2, 3, 4, 2], marks: { 0: 'kept', 1: 'kept', 2: 'kept', 3: 'kept', 4: 'kept' } }, { label: 'at most 1, per right end', items: [1, 1, 1, 1, 1] }] },
+        text: 'At most 1 different value: no two neighbours are equal, so only the 5 single elements. 12 − 5 = 7.',
+        sketch: { kind: 'array', rows: [{ label: 'at most 1, added per right end', items: [1, 1, 1, 1, 1] }], caption: '12 − 5 = 7' },
       },
     ],
-    brute: { idea: 'From every start, extend while tracking distinct values, counting ends where there are exactly k.', cost: 'O(n²)', waste: 'Distinct counts are rebuilt for each start.' },
+    brute: { idea: 'From every start, extend while tracking the number of different values, counting ends with exactly k.', cost: 'O(n²)', waste: 'Value counts are rebuilt for each start.' },
     pattern: {
       pick: 'sliding-window',
-      why: 'Count "at most k" with a sliding window (adding r − l + 1 per end), do it for k and k − 1, and subtract: O(n).',
+      why: 'Count "at most k" with a sliding window (adding r − l + 1 per right end), do it for k and k − 1, and subtract: O(n).',
       not: [
-        { id: 'prefix-sums', why: 'Prefix sums count subarrays by sum; distinct values don\'t subtract like sums do.' },
-        { id: 'hashing', why: 'The value counts live in a map, but the window and the subtraction trick do the counting.' },
+        { id: 'prefix-sums', why: 'Prefix sums count subarrays by their sum; "different values" doesn\'t subtract like a sum.' },
+        { id: 'hashing', why: 'The value counts live in a map, but the window and the subtraction do the counting.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'at most 2 distinct: 12', text: 'Right ends add 1, 2, 3, 4, then 2 (the 3 forces the window down to [2, 3]).' },
-        { title: 'at most 1 distinct: 5', text: 'No two neighbours are equal, so only single elements: 5.' },
-        { title: 'Exactly 2: 12 − 5 = 7', text: 'The answer.' },
+        { title: 'At most 2: right ends 0 … 3', text: 'The window [1, 2, 1, 2] never has more than 2 values: add 1, 2, 3, 4.', sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 0, to: 3, tone: 'accent' }] }] } },
+        { title: 'Right end 4 brings a 3: shrink', text: 'Shrink until only 2 values remain: [2, 3]. Add 2. Total 12.', sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 3, to: 4, tone: 'accent' }], marks: { 0: 'dim', 1: 'dim', 2: 'dim' } }] } },
+        { title: 'At most 1: 5', text: 'Every window shrinks to one element: add 1 each time.', sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 4, to: 4, tone: 'accent' }] }] } },
+        { title: 'Exactly 2: 12 − 5 = 7', text: 'The answer.', sketch: { kind: 'array', rows: [{ label: 'answer', items: [7], marks: { 0: 'hit' } }] } },
       ],
     },
-    edges: ['k = 1: runs of equal values.', 'k larger than the number of distinct values → 0.', 'All values equal.'],
+    edges: ['k = 1: [1, 1, 2], k 1 → 4.', 'k larger than the number of different values: [1, 2], k 3 → 0.', 'All values equal: [5, 5, 5], k 1 → 6.'],
   },
 };
