@@ -29,5 +29,6 @@ export const POLISHED = [
   'sliding-window',
   'prefix-sums',
   'intervals',
+  'binary-search',
   'cyclic-sort',
 ];
