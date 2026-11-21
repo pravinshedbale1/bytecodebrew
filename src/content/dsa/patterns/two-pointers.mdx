@@ -144,6 +144,10 @@ O(n²) — the best possible for 3Sum in general. The same idea extends to 4Sum 
 
 Water above bar `i` = `min(highest bar to its left, highest to its right) − h[i]`. Move the pointer on the **lower** side: that side's maximum is the limiting wall, whatever lies beyond the other pointer.
 
+Step through it. The dashed lines are the tallest wall seen so far on each side. Whichever is lower decides the water above the next bar on its side, because the other side is already guaranteed to be at least that tall. (This version compares the two walls directly; the code below compares the current bars, which makes the same decision.)
+
+<TrapWaterViz examples={['lesson', 'right']} />
+
 ```java
 static int trap(int[] h) {
     int left = 0, right = h.length - 1, leftMax = 0, rightMax = 0, water = 0;

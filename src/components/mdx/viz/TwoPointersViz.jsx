@@ -385,7 +385,7 @@ export function DutchFlagViz(props) {
 function TrapStage({ step: f, input, width }) {
   const h = input.heights;
   const n = h.length;
-  const pitch = pitchFor(width - 8, n, 30, 52);
+  const pitch = pitchFor(width - 8, n, 19, 52);   // narrow bars on phones so 14 bars still fit
   const W = n * pitch;
   const max = Math.max(1, ...h);
   const unit = Math.max(12, Math.min(22, Math.floor(150 / max)));
