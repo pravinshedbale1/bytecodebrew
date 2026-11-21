@@ -10,4 +10,5 @@ export const COMPLETE = [
   'intervals',
   'binary-search',
   'binary-search-on-answer',
+  'sorting-and-selection',
 ];
