@@ -30,5 +30,6 @@ export const POLISHED = [
   'prefix-sums',
   'intervals',
   'binary-search',
+  'binary-search-on-answer',
   'cyclic-sort',
 ];
