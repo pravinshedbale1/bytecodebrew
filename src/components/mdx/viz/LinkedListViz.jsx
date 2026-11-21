@@ -6,6 +6,7 @@ import {
   DUMMY, FAST_SLOW, REVERSE, dummy, dummyCode, fastSlow, fastSlowCode, parseDummy, parseFastSlow, parseReverse,
   randomDummy, randomFastSlow, randomReverse, reverse, reverseCode,
 } from './models/linkedList';
+import { LIST_OPS, listOps, listOpsCode, parseListOps, randomListOps } from './models/listOps';
 
 /**
  * Linked-list step-throughs, drawn as real nodes and next-arrows:
@@ -30,6 +31,16 @@ const PTR = {
   tail: { icon: Link2, tone: 'accent' },
   a: { icon: Pointer, tone: 'interview' },
   b: { icon: Pointer, tone: 'warn' },
+  l1: { icon: Pointer, tone: 'interview' },
+  l2: { icon: Pointer, tone: 'warn' },
+  head: { icon: Hand, tone: 'accent' },
+  less: { icon: Link2, tone: 'interview' },
+  ge: { icon: Link2, tone: 'warn' },
+  newTail: { icon: Pin, tone: 'warn' },
+  gp: { icon: Anchor, tone: 'interview' },
+  kth: { icon: Flag, tone: 'warn' },
+  o: { icon: Pointer, tone: 'interview' },
+  c: { icon: Pointer, tone: 'warn' },
 };
 
 function pointersOf(ptrs, override = {}) {
@@ -100,7 +111,7 @@ function FastSlowStage({ step: f, input, width, seq, jump }) {
   const edges = ids.filter((id) => f.next[id] !== null && f.next[id] !== undefined && !(f.removed ?? []).includes(id)).map((id) => {
     const key = `${id}>${f.next[id]}`;
     const skip = Math.abs(ids.indexOf(f.next[id]) - ids.indexOf(id)) > 1 && pos < 0;
-    return { from: id, to: f.next[id], tone: trail.get(key) ?? (fresh.has(key) ? 'accent' : 'muted'), fresh: trail.has(key) || fresh.has(key), bend: C === 2 && ids.indexOf(id) >= pos && pos >= 0 ? 10 : skip ? -22 : 0 };
+    return { from: id, to: f.next[id], tone: trail.get(key) ?? (fresh.has(key) ? 'accent' : 'muted'), fresh: trail.has(key) || fresh.has(key), bend: C === 2 && ids.indexOf(id) >= pos && pos >= 0 ? (ids.indexOf(f.next[id]) > ids.indexOf(id) ? -10 : 10) : skip ? -22 : 0 };
   });
   const removed = f.removed ?? [];
   const nodes = f.nodes.map((n) => ({
@@ -345,3 +356,120 @@ export function DummyNodeViz(props) {
   return <StepViz spec={dummySpec} {...props} />;
 }
 
+
+// ---------------------------------------------------------------- list rewiring on a grid
+
+const MARK_ICON = { crown: Crown, flag: Flag, target: Target };
+const ROW_H = 118;
+
+function ListOpsStage({ step: f, input, width, seq, jump }) {
+  const ids = f.nodes.map((n) => n.id).filter((id) => f.place[id]);
+  const cols = Math.max(...ids.map((id) => f.place[id][0]));
+  const nRows = Math.max(...ids.map((id) => f.place[id][1])) + 1;
+  const side = width >= 560 && f.rows ? 78 : 0;                 // row names on the left when there is room
+  const m = side + (width < 480 ? 10 : 30);
+  const g = Math.max(58, Math.min(80, Math.floor((Math.min(width, 760) - m - 23 - 54) / Math.max(1, cols))));
+  const arcs = (f.extra ?? []).length > 0;                       // random pointers arc above and below the rows
+  const top = TOP - (side || !f.rows ? 0 : -14) + (arcs ? 60 : 0);
+  const pos = (id) => ({ x: m + 23 + f.place[id][0] * g, y: top + f.place[id][1] * ROW_H });
+  const between = (a, b) => {
+    const [ca, ra] = f.place[a], [cb, rb] = f.place[b];
+    return ra === rb && ids.some((id) => f.place[id][1] === ra && f.place[id][0] > Math.min(ca, cb) && f.place[id][0] < Math.max(ca, cb));
+  };
+  const fresh = new Set((f.fresh ?? []).map(([a, b]) => `${a}>${b}`));
+  const edges = ids.filter((id) => f.next[id] && f.place[f.next[id]]).map((id) => {
+    const to = f.next[id];
+    const key = `${id}>${to}`;
+    return { from: id, to, tone: fresh.has(key) ? 'accent' : 'muted', fresh: fresh.has(key), bend: between(id, to) ? -22 : 0 };
+  });
+  for (const e of f.extra ?? []) if (f.place[e.from] && f.place[e.to]) edges.push(e);
+  const nodes = f.nodes.filter((n) => f.place[n.id]).map((n) => ({ id: n.id, label: n.val, kind: n.kind, ...pos(n.id), cls: [...(f.cls?.[n.id] ?? nodeCls(n.id, f.ptrs))] }));
+  const marks = (f.marks ?? []).map((mk) => ({ ...mk, icon: MARK_ICON[mk.icon] ?? Flag }));
+  const snip = f.snipped && f.place[f.snipped[1]] ? { x: (pos(f.snipped[0]).x + pos(f.snipped[1]).x) / 2, y: pos(f.snipped[0]).y } : null;
+  const W = m + 23 + cols * g + 46 + (width < 480 ? 8 : 20);
+  const H = top + (nRows - 1) * ROW_H + (arcs ? 130 : 64);
+  return (
+    <div style={{ position: 'relative', width: W, margin: '0 auto' }}>
+      {Object.entries(f.rows ?? {}).filter(([r]) => Number(r) < nRows && ids.some((id) => f.place[id][1] === Number(r))).map(([r, text]) => (
+        <RowLabel key={r} x={side ? 0 : m - 10} y={top + Number(r) * ROW_H - (side ? 7 : 64)}>{text}</RowLabel>
+      ))}
+      <ListGraph width={W} height={H} nodes={nodes} edges={edges} pointers={pointersOf(f.ptrs)} marks={marks} snip={snip} seq={seq} jump={jump} label={describeOps(input)} />
+    </div>
+  );
+}
+
+function describeOps(input) {
+  switch (input.mode) {
+    case 'add': return `l1 = ${list(input.a)}, l2 = ${list(input.b)}`;
+    case 'partition': return `list = ${list(input.vals)}, x = ${input.x}`;
+    case 'rotate': return `list = ${list(input.vals)}, k = ${input.k}`;
+    case 'kgroup': return `list = ${list(input.vals)}, k = ${input.k}`;
+    case 'copy': return `list = [${input.list.map(([v, r]) => `[${v}, ${r === null ? 'null' : r}]`).join(', ')}]`;
+    default: return `list = ${list(input.vals)}`;
+  }
+}
+
+const OPS_RULE = {
+  add: 'Add digit + digit + carry; write s mod 10, carry s / 10.',
+  swap: 'prev.next = b, a.next = b.next, b.next = a; then prev = a.',
+  partition: 'Append each node to the < x list or the ≥ x list, then join them.',
+  rotate: 'Close the ring, then cut after node n − (k mod n) − 1.',
+  gcd: 'Insert gcd(cur, cur.next) after cur, then jump over it.',
+  copy: 'Copy after each node; copy.random = random.next; unzip.',
+  kgroup: 'For each full group, move every node after the first to the group\'s front.',
+};
+
+const listOpsSpec = {
+  title: 'Rewiring a linked list',
+  examples: LIST_OPS,
+  simulate: listOps,
+  code: (input) => listOpsCode[input.mode],
+  kinds: {
+    start: ['Start', 'neutral'], digit: ['Add a column', 'accent'], done: ['Answer', 'success'],
+    pair: ['Next pair', 'neutral'], swap: ['Rewire', 'accent'],
+    less: ['To "less"', 'interview'], ge: ['To "≥ x"', 'warn'], join: ['Join', 'success'],
+    len: ['Measure', 'neutral'], mod: ['k mod n', 'interview'], ring: ['Ring', 'accent'], walk: ['Walk', 'neutral'], cut: ['Cut', 'success'],
+    insert: ['Insert', 'accent'], skip: ['Skip', 'neutral'],
+    clone: ['Copy', 'accent'], random: ['Random', 'interview'], split: ['Unzip', 'warn'],
+    check: ['Next group', 'neutral'], move: ['Move to front', 'accent'], next: ['Group done', 'success'], stop: ['Leftover', 'muted'],
+  },
+  describe: describeOps,
+  rule: (input) => OPS_RULE[input.mode],
+  stats: () => [],
+  legend: (f, input) => [
+    [<Key shape="box" tone="accent">→</Key>, 'a link that just changed'],
+    ...(input.mode === 'copy' ? [[<Key shape="dashed">⇢</Key>, 'random pointers (dashed)']] : []),
+    ...(f.nodes.some((n) => n.kind === 'dummy') ? [[<Key shape="dashed">dummy</Key>, 'a placeholder in front of a head']] : []),
+  ],
+  fields: (input) => (input.mode === 'add'
+    ? [{ name: 'a', label: 'l1 (ones first)', placeholder: 'e.g. 2, 4, 3' }, { name: 'b', label: 'l2 (ones first)', placeholder: 'e.g. 5, 6, 4' }]
+    : input.mode === 'copy'
+      ? [{ name: 'vals', label: 'values (up to 5)', placeholder: 'e.g. 7, 13, 11' }, { name: 'random', label: 'random index per node', placeholder: 'e.g. null, 0, 1' }]
+      : [
+        { name: 'vals', label: 'list', placeholder: 'e.g. 1, 2, 3, 4, 5' },
+        ...(input.mode === 'partition' ? [{ name: 'x', label: 'x', placeholder: '3', short: true }] : []),
+        ...(input.mode === 'rotate' || input.mode === 'kgroup' ? [{ name: 'k', label: 'k', placeholder: '2', short: true }] : []),
+      ]),
+  values: (input) => (input.mode === 'add'
+    ? { a: input.a.join(', '), b: input.b.join(', ') }
+    : input.mode === 'copy'
+      ? { vals: input.list.map(([v]) => v).join(', '), random: input.list.map(([, r]) => (r === null ? 'null' : r)).join(', ') }
+      : { vals: input.vals.join(', '), ...(input.mode === 'partition' ? { x: String(input.x) } : {}), ...(input.mode === 'rotate' || input.mode === 'kgroup' ? { k: String(input.k) } : {}) }),
+  parse: parseListOps,
+  random: (input) => randomListOps(input),
+  hint: (input) => ({
+    add: 'Digits ones first: 9, 9 is 99. Try 99 + 1 for a carry at the end.',
+    swap: 'Try an odd length: the last node stays.',
+    partition: 'Try x smaller or larger than every value.',
+    rotate: 'k can be huge: try k = 1000000007.',
+    gcd: 'Values from 1 to 99, two to five of them.',
+    copy: 'One random index per node, or null. A node may point to itself.',
+    kgroup: 'Try k = 1 (nothing changes) or k = the length.',
+  })[input.mode],
+  delay: (f) => (f.kind === 'start' ? 2600 : 2200),
+  Stage: ListOpsStage,
+};
+
+export function ListOpsViz(props) {
+  return <StepViz spec={listOpsSpec} {...props} />;
+}

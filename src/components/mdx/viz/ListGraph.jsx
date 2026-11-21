@@ -39,6 +39,13 @@ function edgePath(a, b, bend) {
     return `M ${sx} ${sy - 4} C ${sx + 18} ${y - 36}, ${a.x - wa / 2 - 14} ${y - 36}, ${a.x - wa / 4} ${y - 1}`;
   }
   const sameRow = Math.abs(a.y - b.y) < 4;
+  if (sameRow && bend && (bend > 0 || b.x < a.x)) {           // an arc over (bend < 0) or under (bend > 0) the row
+    const dir = bend < 0 ? -1 : 1;
+    const depth = Math.abs(bend) * 2.2 * Math.min(2.2, 0.7 + Math.abs(b.x - a.x) / 180);
+    const ya = a.y + dir * (ha / 2 + 2), yb = b.y + dir * (hb / 2 + 2);
+    const off = b.x > a.x ? 6 : -6;
+    return `M ${a.x + off} ${ya} C ${a.x + off} ${ya + dir * depth}, ${b.x - off} ${yb + dir * depth}, ${b.x - off} ${yb}`;
+  }
   if (sameRow && b.x > a.x) {
     const ex = b.x - wb / 2 - 2;
     if (!bend) return `M ${sx} ${sy} L ${ex} ${b.y}`;

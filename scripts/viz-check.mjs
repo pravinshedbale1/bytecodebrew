@@ -30,6 +30,7 @@ import * as ct from '../src/components/mdx/viz/models/contribution.js';
 import * as qu from '../src/components/mdx/viz/models/queues.js';
 import * as sd from '../src/components/mdx/viz/models/sides.js';
 import * as dc from '../src/components/mdx/viz/models/divide.js';
+import * as lo from '../src/components/mdx/viz/models/listOps.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -832,6 +833,27 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- list rewiring (ListOpsViz)
+{
+  const kinds = ['start', 'digit', 'done', 'pair', 'swap', 'less', 'ge', 'join', 'len', 'mod', 'ring', 'walk', 'cut', 'insert', 'skip', 'clone', 'random', 'split', 'check', 'move', 'next', 'stop'];
+  const run = (input) => {
+    const steps = lo.listOps(input);
+    common(`listOps ${JSON.stringify(input)}`, steps, lo.listOpsCode[input.mode], kinds);
+    ok(steps.at(-1).answer === lo.listOpsAnswer(input), `listOps ${JSON.stringify(input)}: ${steps.at(-1).answer} ≠ ${lo.listOpsAnswer(input)}`);
+    steps.forEach((st) => {
+      const ids = new Set(st.nodes.map((n) => n.id));
+      for (const [from, to] of Object.entries(st.next)) ok(ids.has(from) && (to === null || ids.has(to)), 'listOps: next points at a real node');
+      for (const id of Object.values(st.ptrs)) ok(ids.has(id), 'listOps: pointers point at real nodes');
+      for (const id of Object.values(st.ptrs)) ok(st.place[id], `listOps ${input.mode}: pointers stand on drawn nodes`);
+      const spots = new Set(Object.values(st.place).map(([c, r]) => `${c},${r}`));
+      ok(spots.size === Object.keys(st.place).length, `listOps ${input.mode}: two nodes drawn on the same spot`);
+    });
+  };
+  Object.values(lo.LIST_OPS).forEach((e) => run(e.input));
+  for (let t = 0; t < 1500; t++) for (const mode of ['add', 'swap', 'partition', 'rotate', 'gcd', 'copy', 'kgroup']) run(lo.randomListOps({ mode }, rand));
+  ok(lo.listOps(lo.LIST_OPS.add.input).at(-1).answer === '[7, 0, 8]' && lo.listOps(lo.LIST_OPS.gcd.input).at(-1).answer === '[18, 6, 6, 2, 10, 1, 3]' && lo.listOps(lo.LIST_OPS.kgroup.input).at(-1).answer === '[2, 1, 4, 3, 5]' && lo.listOps(lo.LIST_OPS.partition.input).at(-1).answer === '[1, 2, 2, 4, 3, 5]', 'listOps: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- divide and conquer (DivideViz)

@@ -154,6 +154,10 @@ static ListNode reverseKGroup(ListNode head, int k) {
 
 Starting `prev` at `groupNext` (instead of `null`) is the trick: the reversed group automatically connects to what follows.
 
+The step-through below reverses each group the other common way: it keeps the group's first node as `cur` and moves every node after it to the front of the group, exactly as in Reverse a sub-list. Both are O(n) time and O(1) space.
+
+<ListOpsViz examples={['kgroup']} title="Reverse in groups of k, step by step" />
+
 ### Reorder list: L0 → Ln → L1 → Ln−1 → …
 
 Three patterns combined — and a common interview question for exactly that reason:
@@ -198,6 +202,8 @@ static ListNode addTwoNumbers(ListNode a, ListNode b) {
     return dummy.next;
 }
 ```
+
+<ListOpsViz examples={['add', 'add2']} title="Add two numbers, column by column" />
 
 <Callout type="tip" title="Draw it">
 For any pointer surgery, draw three or four boxes with arrows and update the drawing one assignment at a time. It takes thirty seconds and catches nearly every bug — interviewers like seeing it, too.

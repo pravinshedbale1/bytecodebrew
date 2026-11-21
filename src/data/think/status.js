@@ -14,6 +14,7 @@ export const COMPLETE = [
   'cyclic-sort',
   'divide-and-conquer',
   'fast-slow-pointers',
+  'linked-list-manipulation',
 ];
 
 /**
@@ -37,4 +38,5 @@ export const POLISHED = [
   'cyclic-sort',
   'divide-and-conquer',
   'fast-slow-pointers',
+  'linked-list-manipulation',
 ];

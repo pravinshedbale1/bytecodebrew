@@ -119,6 +119,7 @@ const SegTreeViz = lazyViz(() => import('./viz/AdvancedViz'), 'SegTreeViz');
 const FastSlowViz = lazyViz(() => import('./viz/LinkedListViz'), 'FastSlowViz');
 const ReverseListViz = lazyViz(() => import('./viz/LinkedListViz'), 'ReverseListViz');
 const DummyNodeViz = lazyViz(() => import('./viz/LinkedListViz'), 'DummyNodeViz');
+const ListOpsViz = lazyViz(() => import('./viz/LinkedListViz'), 'ListOpsViz');
 
 // HLD step-throughs: premium while PREMIUM_CONTENT.hldVisuals is on (free users see what the visual does)
 const hld = (load, name, title, blurb) => lazyViz(load, name, { premium: 'hldVisuals', title, blurb });
@@ -284,6 +285,7 @@ export const mdxComponents = {
   FastSlowViz,
   ReverseListViz,
   DummyNodeViz,
+  ListOpsViz,
   BracketsViz,
   AsteroidViz,
   NextGreaterViz,
