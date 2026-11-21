@@ -33,6 +33,7 @@ import * as dc from '../src/components/mdx/viz/models/divide.js';
 import * as lo from '../src/components/mdx/viz/models/listOps.js';
 import * as tks from '../src/components/mdx/viz/models/tokenStack.js';
 import * as dqd from '../src/components/mdx/viz/models/dpDeque.js';
+import * as hsm from '../src/components/mdx/viz/models/heapSim.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -836,6 +837,28 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- repeatedly take the best (HeapSimViz)
+{
+  const kinds = ['start', 'smash', 'both', 'push', 'replace', 'reject', 'run', 'idle', 'arrive', 'take', 'fail', 'use', 'second', 'stop', 'unlock', 'done'];
+  const run = (input) => {
+    const steps = hsm.heapSim(input);
+    common(`heapSim ${JSON.stringify(input)}`, steps, hsm.heapSimCode[input.mode], kinds);
+    const got = steps.at(-1).answer, want = hsm.heapSimAnswer(input);
+    if (input.mode === 'reorg') {
+      if (want === '""') ok(got === '""', `reorg ${input.s}: should be impossible`);
+      else { const r = got.slice(1, -1); ok(r.length === input.s.length && [...r].sort().join() === [...input.s].sort().join() && [...r].every((c, i) => i === 0 || c !== r[i - 1]), `reorg ${input.s}: ${got} is not a valid arrangement`); }
+    } else if (input.mode === 'happy') {
+      const r = got.slice(1, -1);
+      ok(String(r.length) === want && !/aaa|bbb|ccc/.test(r) && [...r].filter((c) => c === 'a').length <= input.a && [...r].filter((c) => c === 'b').length <= input.b && [...r].filter((c) => c === 'c').length <= input.c, `happy ${JSON.stringify(input)}: "${r}" (want length ${want})`);
+    } else ok(got === want, `heapSim ${JSON.stringify(input)}: ${got} ≠ ${want}`);
+    steps.forEach((st) => ok(new Set(st.heap.items.map((x) => x.id)).size === st.heap.items.length, 'heapSim: heap items have their own ids'));
+  };
+  Object.values(hsm.HEAP_SIM).forEach((e) => run(e.input));
+  for (let t = 0; t < 1500; t++) for (const mode of Object.keys(hsm.heapSimCode)) run(hsm.randomHeapSim({ mode }, rand));
+  const a = (k) => hsm.heapSim(hsm.HEAP_SIM[k].input).at(-1).answer;
+  ok(a('stones') === '1' && a('tasks') === '8' && a('cpu') === '[0, 2, 3, 1]' && a('ipo') === '4' && hsm.heapSim({ mode: 'reorg', s: 'aaab' }).at(-1).answer === '""' && hsm.heapSim({ mode: 'happy', a: 1, b: 1, c: 7 }).at(-1).answer.length - 2 === 8, 'heapSim: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

@@ -170,6 +170,10 @@ static int lastStoneWeight(int[] stones) {
 
 Task scheduling, connecting ropes at minimum cost, and Dijkstra's algorithm all have this shape.
 
+Step through a few of them. The heap is drawn best-first; a second lane holds what is not ready yet (tasks cooling down, tasks not arrived, projects you can't afford), and the bottom row is the output so far.
+
+<HeapSimViz examples={['stones', 'tasks', 'cpu', 'reorg', 'ipo']} title="Repeatedly take the best, step by step" />
+
 <Callout type="warning" title="Common mistakes">
 
 - **Wrong heap direction for top-k:** k largest needs a **min**-heap of size k.

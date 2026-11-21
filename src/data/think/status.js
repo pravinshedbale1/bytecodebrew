@@ -17,6 +17,7 @@ export const COMPLETE = [
   'linked-list-manipulation',
   'stack-patterns',
   'monotonic-stack',
+  'heap-patterns',
 ];
 
 /**
@@ -43,4 +44,5 @@ export const POLISHED = [
   'linked-list-manipulation',
   'stack-patterns',
   'monotonic-stack',
+  'heap-patterns',
 ];

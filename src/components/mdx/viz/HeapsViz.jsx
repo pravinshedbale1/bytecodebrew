@@ -1,6 +1,9 @@
 import { StepViz, Key } from './StepViz';
 import { ArrayStrip, Float, RowLabel, Stage, pitchFor } from './prims';
 import styles from './HeapsViz.module.css';
+import { CmpCard, Lane } from './sideKit';
+import kit from './sideKit.module.css';
+import { HEAP_SIM, heapSim, heapSimCode, parseHeapSim, randomHeapSim } from './models/heapSim';
 import {
   KWAY, LIST_NAMES, MEDIAN, TOPK, kway, kwayCode, median, medianCode, ordinal, parseKway, parseMedian, parseTopK, randomKway, randomMedian,
   randomTopK, topK, topKCode,
@@ -259,4 +262,99 @@ const medianSpec = {
 
 export function MedianViz(props) {
   return <StepViz spec={medianSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- repeatedly take the best
+
+function HeapSimStage({ step: f, width, seq, jump }) {
+  const toks = f.tokens;
+  const outItems = f.out.items;
+  const pitchT = toks ? pitchFor(width - 8, toks.length, 56, 72) : 0;
+  const pitchO = pitchFor(width - 8, Math.max(1, outItems.length), outItems.some((x) => String(x).length > 3) ? 48 : 30, 52);
+  return (
+    <div>
+      {toks && (
+        <Stage width={toks.length * pitchT} height={6 + 40 + 6 + 22} jump={jump} label={`input ${toks.join(' ')}`}>
+          <ArrayStrip
+            items={toks} y={6} pitch={pitchT} h={40} index={false}
+            tags={f.i !== null && f.i !== undefined ? { [f.i]: [{ label: 'now', tone: 'accent' }] } : {}}
+            cls={(k) => [k === f.i && 'cur', f.i !== null && f.i !== undefined && k > f.i && 'dim'].filter(Boolean).join(' ')}
+          />
+        </Stage>
+      )}
+      <div className={kit.sideRow}>
+        <Lane label={f.heap.label} front="top" back="" seq={seq} items={f.heap.items} empty="empty" />
+        {f.side && <Lane label={f.side.label} front="" back="" seq={seq} items={f.side.items} empty="none" />}
+        {f.card && <CmpCard {...f.card} style={{ minWidth: 150 }} />}
+      </div>
+      <Stage width={Math.max(1, outItems.length) * pitchO} height={22 + 40 + 8} jump={jump} label={`${f.out.label}: ${outItems.join(' ')}`}>
+        <RowLabel x={0} y={0}>{f.out.label}</RowLabel>
+        <ArrayStrip items={outItems.length ? outItems : ['·']} y={22} pitch={pitchO} h={40} index={false} cls={(k) => (!outItems.length ? 'dim' : k === outItems.length - 1 && f.kind !== 'done' ? 'hit' : '')} />
+      </Stage>
+    </div>
+  );
+}
+
+const HS_DESCRIBE = {
+  stones: (i) => `stones = [${i.stones.join(', ')}]`,
+  closest: (i) => `points = ${i.points.map(([x, y]) => `[${x},${y}]`).join(' ')}, k = ${i.k}`,
+  tasks: (i) => `tasks = "${i.tasks}", n = ${i.n}`,
+  cpu: (i) => `tasks = ${i.tasks.map(([e, p]) => `[${e},${p}]`).join(' ')}`,
+  reorg: (i) => `s = "${i.s}"`,
+  happy: (i) => `a = ${i.a}, b = ${i.b}, c = ${i.c}`,
+  ipo: (i) => `k = ${i.k}, w = ${i.w}, profits = [${i.profits.join(', ')}], capital = [${i.capital.join(', ')}]`,
+};
+const HS_RULE = {
+  stones: 'Pop the two heaviest; push back the difference if it is not 0.',
+  closest: 'Push each point; once the heap holds k + 1, pop the farthest.',
+  tasks: 'Each interval run the available task with the most copies left; it then cools down n intervals.',
+  cpu: 'Move arrived tasks into the heap; when free, run the shortest (ties: smaller index).',
+  reorg: 'Write the letter with the most copies left; it sits out the next turn.',
+  happy: 'Use the most plentiful letter unless it would make three in a row; then the next one.',
+  ipo: 'Unlock every affordable project; take the most profitable; repeat k times.',
+};
+const HS_FIELDS = {
+  stones: [{ name: 'stones', label: 'stones', placeholder: 'e.g. 2, 7, 4, 1, 8, 1' }],
+  closest: [{ name: 'points', label: 'points as x, y pairs', placeholder: 'e.g. 3, 3, 5, -1, -2, 4' }, { name: 'k', label: 'k', placeholder: '2', short: true }],
+  tasks: [{ name: 'tasks', label: 'tasks', placeholder: 'e.g. AAABBB' }, { name: 'n', label: 'n', placeholder: '2', short: true }],
+  cpu: [{ name: 'tasks', label: 'tasks as enqueue, processing pairs', placeholder: 'e.g. 1, 2, 2, 4, 3, 2, 4, 1' }],
+  reorg: [{ name: 's', label: 's', placeholder: 'e.g. aaabc' }],
+  happy: [{ name: 'a', label: 'a', placeholder: '1', short: true }, { name: 'b', label: 'b', placeholder: '1', short: true }, { name: 'c', label: 'c', placeholder: '7', short: true }],
+  ipo: [{ name: 'k', label: 'k', placeholder: '2', short: true }, { name: 'w', label: 'w', placeholder: '0', short: true }, { name: 'profits', label: 'profits', placeholder: 'e.g. 1, 2, 3' }, { name: 'capital', label: 'capital', placeholder: 'e.g. 0, 1, 1' }],
+};
+const hsValues = (i) => ({
+  stones: () => ({ stones: i.stones.join(', ') }),
+  closest: () => ({ points: i.points.flat().join(', '), k: String(i.k) }),
+  tasks: () => ({ tasks: i.tasks, n: String(i.n) }),
+  cpu: () => ({ tasks: i.tasks.flat().join(', ') }),
+  reorg: () => ({ s: i.s }),
+  happy: () => ({ a: String(i.a), b: String(i.b), c: String(i.c) }),
+  ipo: () => ({ k: String(i.k), w: String(i.w), profits: i.profits.join(', '), capital: i.capital.join(', ') }),
+})[i.mode]();
+
+const heapSimSpec = {
+  title: 'Repeatedly take the best, with a heap',
+  examples: HEAP_SIM,
+  simulate: heapSim,
+  code: (input) => heapSimCode[input.mode],
+  kinds: {
+    start: ['Start', 'neutral'], smash: ['Smash', 'accent'], both: ['Both gone', 'danger'], push: ['Push', 'accent'], replace: ['Pop the farthest', 'warn'],
+    reject: ['Drop it', 'muted'], run: ['Run', 'success'], idle: ['Idle', 'muted'], arrive: ['Arrive', 'neutral'], take: ['Take', 'success'],
+    fail: ['Impossible', 'danger'], use: ['Use', 'accent'], second: ['Blocked', 'warn'], stop: ['Stop', 'muted'], unlock: ['Unlock', 'neutral'], done: ['Answer', 'success'],
+  },
+  describe: (input) => HS_DESCRIBE[input.mode](input),
+  rule: (input) => HS_RULE[input.mode],
+  stats: (f) => f.stats ?? [],
+  legend: () => [[<Key tone="warn">top</Key>, 'the heap\'s best: what gets taken next']],
+  fields: (input) => HS_FIELDS[input.mode],
+  values: hsValues,
+  parse: parseHeapSim,
+  random: (input) => randomHeapSim(input),
+  hint: (input) => HS_RULE[input.mode],
+  delay: (f) => (f.kind === 'start' ? 2600 : 2000),
+  Stage: HeapSimStage,
+};
+
+export function HeapSimViz(props) {
+  return <StepViz spec={heapSimSpec} {...props} />;
 }
