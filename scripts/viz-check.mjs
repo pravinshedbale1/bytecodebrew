@@ -29,6 +29,7 @@ import * as adv from '../src/components/mdx/viz/models/advanced.js';
 import * as ct from '../src/components/mdx/viz/models/contribution.js';
 import * as qu from '../src/components/mdx/viz/models/queues.js';
 import * as sd from '../src/components/mdx/viz/models/sides.js';
+import * as dc from '../src/components/mdx/viz/models/divide.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -824,6 +825,27 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- divide and conquer (DivideViz)
+{
+  const kinds = ['start', 'split', 'base', 'merge', 'short', 'valid', 'best', 'number', 'memo', 'combine', 'store', 'done'];
+  const run = (input) => {
+    const steps = dc.divide(input);
+    common(`divide ${JSON.stringify(input)}`, steps, dc.divideCode(input.mode), kinds);
+    ok(steps.at(-1).answer === dc.divideAnswer(input), `divide ${JSON.stringify(input)}: answer ${steps.at(-1).answer} ≠ ${dc.divideAnswer(input)}`);
+    const last = steps.at(-1).nodes;
+    ok(last.every((n) => n.state === 'done' || n.state === 'memo'), `divide ${JSON.stringify(input)}: every call finishes`);
+    steps.forEach((s) => s.nodes.forEach((n, k) => ok(k === 0 || n.depth <= s.nodes[k - 1].depth + 1, 'divide: outline nests one level at a time')));
+    steps.forEach((s) => ok(new Set(s.nodes.map((n) => n.id)).size === s.nodes.length, 'divide: every call has its own id'));
+    steps.forEach((s) => ok(s.cur === null || s.nodes.filter((n) => n.id === s.cur).length === 1, 'divide: the running call is one row'));
+  };
+  Object.values(dc.DIVIDE).forEach((e) => run(e.input));
+  let seed = 7;
+  const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  for (let t = 0; t < 1500; t++) for (const mode of ['merge', 'bad', 'ops']) run(dc.randomDivide({ mode }, rand));
+  ok(dc.divide(dc.DIVIDE.list.input).at(-1).answer === '[1, 2, 3, 4]' && dc.divide(dc.DIVIDE.bad.input).at(-1).answer === '3' && dc.divide(dc.DIVIDE.ops.input).at(-1).answer === '[2, 0]' && JSON.parse(dc.divide(dc.DIVIDE.ops2.input).at(-1).answer).sort((a, b) => a - b).join() === '-34,-14,-10,-10,10', 'divide: LeetCode examples');
+  ok(!dc.parseDivide({ expr: '2*3-4*5' }, { mode: 'ops' }).error && dc.parseDivide({ s: 'AB', k: '2' }, { mode: 'bad' }).error, 'divide: parsing');
 }
 
 // ---------------------------------------------------------------- 42 trapping rain water

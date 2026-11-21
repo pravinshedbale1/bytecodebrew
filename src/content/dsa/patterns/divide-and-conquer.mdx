@@ -133,6 +133,10 @@ static int longestSubstring(char[] s, int lo, int hi, int k) {   // the answer i
 
 Why it's fast: a letter that's bad in a range is absent from every piece below it, so each level of recursion removes at least one of the 26 letters. The depth is at most 26, and each level does O(n) work in total: O(26 · n).
 
+Watch the cuts happen. Each row is one call, indented under the call that made it; it shows what it returned once it finishes. In the second example, b is common enough in the whole string but rare inside the first piece, so that piece is cut again.
+
+<DivideViz examples={['bad2', 'bad']} />
+
 This problem is a known trap for sliding windows: adding a character can make a window invalid **or** valid again, so the usual "shrink while invalid" logic fails. (A sliding window does work if you fix the number of distinct letters, 1 to 26, and run one window per value. Both solutions are on the problem's Solution tab.)
 
 ## Pattern 4: choose the last operation
@@ -156,6 +160,10 @@ static List<Integer> diffWays(String e, Map<String, List<Integer>> memo) {
 }
 ```
 
+Step through it below: each operator takes its turn as the last one, both sides are solved, and every left value meets every right value. In `2*3-4*5`, `4*5` is needed under two different splits; the second time it comes straight from the memo.
+
+<DivideViz examples={['ops', 'ops2']} />
+
 The pieces **overlap** (the middle sub-expression appears under several splits), so memoisation helps. That's the moment divide and conquer turns into dynamic programming: this "split on the last operation" structure is exactly **interval DP**, as in Burst Balloons and Matrix Chain Multiplication (see [Tree & Interval DP](/dsa/patterns/dp-trees-intervals)).
 
 ## Pattern 5: sort what you can't index
@@ -165,6 +173,8 @@ Merge sort needs only sequential access, which makes it the natural O(n log n) s
 1. **Divide:** find the middle with slow and fast pointers. Start `fast` one node ahead (`fast = head.next`) so that `slow` stops at the end of the first half even for two nodes, then cut the list after `slow`.
 2. **Conquer:** sort both halves.
 3. **Combine:** merge two sorted lists by relinking nodes behind a dummy head.
+
+<DivideViz examples={['list', 'list5']} />
 
 That's O(n log n) time and O(log n) recursion stack. For a strict O(1) extra space follow-up, do it **bottom-up**: merge adjacent runs of length 1, then 2, 4, 8, … iteratively, with no recursion.
 

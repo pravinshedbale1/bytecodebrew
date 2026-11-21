@@ -1,0 +1,28 @@
+/* Divide and conquer outline (DivideViz.jsx): one row per call, indented under its caller. */
+
+.cardRow { display: flex; justify-content: center; margin: var(--space-2) 0; }
+.cardRow > * { max-width: 100%; }
+
+.outline { list-style: none; margin: var(--space-2) 0 0; padding: 0 4px; display: grid; gap: 4px; }
+.row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0;
+  padding: 5px 10px; border: 1px solid var(--color-border); border-radius: 8px;
+  background: var(--color-surface); font-size: 13px; position: relative;
+  transition: background 0.2s, border-color 0.2s;
+}
+.row::before {   /* the link to the caller */
+  content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--color-border-strong);
+}
+.outline > .row:first-child::before { display: none; }
+.via { font-size: 11px; color: var(--color-text-subtle); }
+.label { font-family: var(--font-mono); font-weight: 650; overflow-wrap: anywhere; }
+.res { margin-left: auto; font-family: var(--font-mono); color: var(--color-success); overflow-wrap: anywhere; }
+.wait { margin-left: auto; font-size: 11px; color: var(--color-text-subtle); }
+
+.s_wait { border-style: dashed; background: none; }
+.s_wait .label { color: var(--color-text-muted); }
+.s_run { border-color: var(--color-accent); }
+.s_memo { border-color: var(--color-warn); background: var(--color-warn-soft); }
+.s_memo .res { color: var(--color-warn); }
+.cur { background: var(--color-accent-soft); border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent-soft); }
+.cur.s_done .res, .cur .res { font-weight: 700; }

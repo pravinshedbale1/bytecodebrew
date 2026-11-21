@@ -12,6 +12,7 @@ export const COMPLETE = [
   'binary-search-on-answer',
   'sorting-and-selection',
   'cyclic-sort',
+  'divide-and-conquer',
 ];
 
 /**
@@ -33,4 +34,5 @@ export const POLISHED = [
   'binary-search-on-answer',
   'sorting-and-selection',
   'cyclic-sort',
+  'divide-and-conquer',
 ];
