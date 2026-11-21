@@ -63,14 +63,14 @@ const TOP = 96;                                          // room for pointer cha
 // ---------------------------------------------------------------- fast and slow
 
 function FastSlowStage({ step: f, input, width, seq, jump }) {
-  const ids = f.nodes.map((n) => n.id);
-  const pos = input.mode === 'cycle' ? input.pos : -1;
+  const ids = f.order ?? f.nodes.map((n) => n.id);
+  const pos = f.pos ?? -1;
   const label = `list ${list(f.nodes.map((n) => n.val))}`;
   let place = {};
   let W, H;
   if (pos >= 0) {
     const C = ids.length - pos;
-    const g = gapFor(width, pos + Math.max(2, C / 2) + 1, 62, 78);
+    const g = gapFor(width, pos + Math.max(2, C / 2) + 1, 52, 78);
     const R = C === 1 ? 0 : Math.max(46, (g * C * 1.08) / (2 * Math.PI));
     const m = 30;
     const cy = TOP + R;
@@ -87,7 +87,8 @@ function FastSlowStage({ step: f, input, width, seq, jump }) {
   } else {
     const g = gapFor(width, ids.length + 0.5);
     const m = 30;
-    const xs = rowX(f.nodes, g, m);
+    const byId = new Map(f.nodes.map((n) => [n.id, n]));
+    const xs = rowX(ids.map((id) => byId.get(id)), g, m);
     ids.forEach((id, k) => { place[id] = { x: xs[k], y: TOP }; });
     for (const id of f.removed ?? []) place[id] = { ...place[id], y: TOP + 58 };
     W = xs.at(-1) + m + 10;
@@ -104,7 +105,7 @@ function FastSlowStage({ step: f, input, width, seq, jump }) {
   const removed = f.removed ?? [];
   const nodes = f.nodes.map((n) => ({
     id: n.id, label: n.val, kind: n.kind, x: place[n.id].x, y: place[n.id].y,
-    cls: [...(f.flag === n.id || f.target === n.id ? ['hit'] : nodeCls(n.id, f.ptrs)), ...(removed.includes(n.id) ? ['out', 'fallen'] : [])],
+    cls: [...(f.flag === n.id || f.target === n.id || f.matched?.includes(n.id) ? ['hit'] : nodeCls(n.id, f.ptrs)), ...(removed.includes(n.id) || f.bad?.includes(n.id) ? ['out'] : []), ...(removed.includes(n.id) ? ['fallen'] : [])],
   }));
   const marks = [
     ...(f.flag ? [{ at: f.flag, icon: Flag, label: 'entrance', tone: 'success' }] : []),
@@ -133,28 +134,43 @@ const fastSlowSpec = {
     gap: ['Open the gap', 'warn'],
     both: ['Move together', 'accent'],
     unlink: ['Unlink', 'success'],
+    cut: ['Cut', 'warn'],
+    flip: ['Reverse', 'interview'],
+    compare: ['Match', 'success'],
+    differ: ['Mismatch', 'danger'],
+    weave: ['Weave', 'accent'],
   },
-  describe: (input) => (input.mode === 'cycle' ? `list = ${list(input.vals)}, pos = ${input.pos}` : input.mode === 'nth' ? `list = ${list(input.vals)}, n = ${input.n}` : `list = ${list(input.vals)}`),
+  describe: (input) => (input.mode === 'cycle' || input.mode === 'detect' ? `list = ${list(input.vals)}, pos = ${input.pos}` : input.mode === 'nth' ? `list = ${list(input.vals)}, n = ${input.n}` : input.mode === 'happy' ? `n = ${input.n}` : input.mode === 'dup' ? `nums = ${list(input.nums)}` : `list = ${list(input.vals)}`),
   rule: (input) => ({
     cycle: input.pos >= 0 ? `The last node links back to index ${input.pos}. slow moves 1, fast moves 2.` : 'No cycle: the last node points to null.',
+    detect: input.pos >= 0 ? `The last node links back to index ${input.pos}. slow moves 1, fast moves 2.` : 'No cycle: the last node points to null.',
+    happy: 'Each number points to the sum of the squares of its digits.',
+    dup: 'Index i points to index nums[i]; start at index 0.',
+    palin: 'Find the middle, reverse the second half, compare the halves.',
+    reorder: 'Find the middle, reverse the second half, weave the halves.',
     middle: 'slow moves 1, fast moves 2: when fast stops, slow is halfway.',
     nth: 'lead goes n + 1 ahead of lag, then both move until lead falls off.',
   })[input.mode],
-  stats: (f) => (f.phase ? [['phase', f.phase === 1 ? '1: detect' : '2: find the entrance']] : []),
+  stats: (f, input) => (f.phase && input.mode !== 'detect' && input.mode !== 'happy' ? [['phase', f.phase === 1 ? '1: detect' : '2: find the entrance']] : []),
   legend: (f, input) => (input.mode === 'nth'
     ? [[<Key tone="accent">{icon(Footprints)} lag</Key>, 'stops before the target'], [<Key tone="warn">{icon(Compass)} lead</Key>, 'n + 1 ahead'], [<Key shape="box" tone="danger">x</Key>, 'unlinked']]
-    : [[<Key tone="accent">{icon(Turtle)} slow</Key>, 'the tortoise: 1 step'], [<Key tone="warn">{icon(Rabbit)} fast</Key>, 'the hare: 2 steps (orange arrows)'], ...(input.mode === 'cycle' ? [[<Key tone="interview">{icon(Footprints)} p</Key>, 'phase 2, from the head']] : [])]),
-  fields: (input) => [
+    : [[<Key tone="accent">{icon(Turtle)} slow</Key>, 'the tortoise: 1 step'], [<Key tone="warn">{icon(Rabbit)} fast</Key>, 'the hare: 2 steps (orange arrows)'], ...(input.mode === 'cycle' || input.mode === 'dup' ? [[<Key tone="interview">{icon(Footprints)} p</Key>, 'phase 2, from the head']] : []), ...(input.mode === 'palin' || input.mode === 'reorder' ? [[<Key tone="interview">{icon(History)} prev</Key>, 'reversing the second half'], [<Key tone="interview">{icon(Pointer)} a</Key>, 'first half'], [<Key tone="warn">{icon(Pointer)} b</Key>, 'reversed second half']] : [])]),
+  fields: (input) => (input.mode === 'happy' ? [{ name: 'n', label: 'n', placeholder: '19', short: true }] : input.mode === 'dup' ? [{ name: 'nums', label: 'nums (up to 9)', placeholder: 'e.g. 1, 3, 4, 2, 2' }] : [
     { name: 'vals', label: 'list (up to 9 values)', placeholder: 'e.g. 3, 2, 0, -4' },
-    ...(input.mode === 'cycle' ? [{ name: 'pos', label: 'pos (−1 = none)', placeholder: '1', short: true }] : []),
+    ...(input.mode === 'cycle' || input.mode === 'detect' ? [{ name: 'pos', label: 'pos (−1 = none)', placeholder: '1', short: true }] : []),
     ...(input.mode === 'nth' ? [{ name: 'n', label: 'n', placeholder: '2', short: true }] : []),
-  ],
-  values: (input) => ({ vals: input.vals.join(', '), ...(input.mode === 'cycle' ? { pos: String(input.pos) } : {}), ...(input.mode === 'nth' ? { n: String(input.n) } : {}) }),
+  ]),
+  values: (input) => (input.mode === 'happy' ? { n: String(input.n) } : input.mode === 'dup' ? { nums: input.nums.join(', ') } : { vals: input.vals.join(', '), ...(input.mode === 'cycle' || input.mode === 'detect' ? { pos: String(input.pos) } : {}), ...(input.mode === 'nth' ? { n: String(input.n) } : {}) }),
   parse: parseFastSlow,
   random: (input) => randomFastSlow(input),
   hint: (input) => ({
     cycle: 'pos is the index the last node links back to, or −1 for no cycle. Try pos = 0 (the whole list is a loop).',
     middle: 'Try an odd and an even length.',
+    detect: 'pos is the index the last node links back to, or −1 for no cycle.',
+    happy: 'Try 7 (happy) or 4 (not). Numbers whose sequence repeats within 10 steps fit the picture.',
+    dup: 'n + 1 numbers between 1 and n, exactly one value repeated (maybe more than twice).',
+    palin: 'Try an odd length, or change one value.',
+    reorder: 'Try an even and an odd length.',
     nth: 'n counts from the end: n = 1 removes the last node, n = length removes the head.',
   })[input.mode],
   delay: () => 2200,
@@ -242,7 +258,8 @@ function DummyStage({ step: f, input, width, seq, jump }) {
     const ids = f.nodes.map((n) => n.id);
     const g = gapFor(width, ids.length + 0.5, 62, 80);
     const m = 46;
-    const xs = rowX(f.nodes, g, m);
+    const byId = new Map(f.nodes.map((n) => [n.id, n]));
+    const xs = rowX(ids.map((id) => byId.get(id)), g, m);
     const place = Object.fromEntries(ids.map((id, k) => [id, { x: xs[k], y: TOP + 6 }]));
     for (const id of f.removed) place[id] = { ...place[id], y: TOP + 70 };
     const edges = ids.filter((id) => !f.removed.includes(id) && f.next[id] !== null).map((id) => {

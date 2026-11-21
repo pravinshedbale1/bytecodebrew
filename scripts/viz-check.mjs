@@ -396,15 +396,22 @@ function common(name, steps, code, kinds) {
   };
   const runF = (input) => {
     const steps = ll.fastSlow(input);
-    common(`fastSlow ${JSON.stringify(input)}`, steps, ll.fastSlowCode[input.mode], ['start', 'move', 'meet', 'phase2', 'walk', 'found', 'none', 'done', 'gap', 'both', 'unlink']);
+    common(`fastSlow ${JSON.stringify(input)}`, steps, ll.fastSlowCode[input.mode], ['start', 'move', 'meet', 'phase2', 'walk', 'found', 'none', 'done', 'gap', 'both', 'unlink', 'cut', 'flip', 'compare', 'differ', 'weave']);
     steps.forEach((st) => sane('fastSlow', st));
     const last = steps.at(-1);
     if (input.mode === 'cycle') ok(last.answer === (input.pos < 0 ? 'no cycle' : `cycle starts at node ${input.vals[input.pos]} (index ${input.pos})`), `cycle ${JSON.stringify(input)}: ${last.answer}`);
     if (input.mode === 'middle') ok(last.answer === `middle = ${input.vals[Math.floor(input.vals.length / 2)]}`, `middle ${input.vals}`);
+    if (input.mode === 'detect') ok(last.answer === String(input.pos >= 0), `detect ${JSON.stringify(input)}`);
+    if (input.mode === 'happy') { let x = input.n; const seen = new Set(); while (x !== 1 && !seen.has(x)) { seen.add(x); x = ll.digitSquares(x); } ok(last.answer === String(x === 1), `happy ${input.n}: ${last.answer}`); }
+    if (input.mode === 'dup') { const d = input.nums.find((v, i) => input.nums.indexOf(v) !== i); ok(last.answer === `duplicate = ${d}`, `dup ${input.nums}: ${last.answer}`); }
+    if (input.mode === 'palin') ok(last.answer === String(input.vals.join() === [...input.vals].reverse().join()), `palin ${input.vals}: ${last.answer}`);
+    if (input.mode === 'reorder') { const v = input.vals, want = []; for (let i = 0, j = v.length - 1; i <= j; i++, j--) { want.push(v[i]); if (i !== j) want.push(v[j]); } ok(last.answer === `[${want.join(', ')}]`, `reorder ${v}: ${last.answer}`); }
     if (input.mode === 'nth') { const want = [...input.vals]; want.splice(input.vals.length - input.n, 1); ok(last.answer === `[${want.join(', ')}]`, `nth ${JSON.stringify(input)}`); }
   };
   for (const ex of Object.values(ll.FAST_SLOW)) runF(ex.input);
-  for (let t = 0; t < 1500; t++) for (const mode of ['cycle', 'middle', 'nth']) runF(ll.randomFastSlow({ mode }, rand));
+  for (let t = 0; t < 1500; t++) for (const mode of ['cycle', 'middle', 'nth', 'detect', 'happy', 'dup', 'palin', 'reorder']) runF(ll.randomFastSlow({ mode }, rand));
+  for (let n = 1; n <= 999; n++) if (ll.happyChain(n).seq.length <= 10) runF({ mode: 'happy', n });
+  ok(ll.fastSlow(ll.FAST_SLOW.detect.input).at(-1).answer === 'true' && ll.fastSlow(ll.FAST_SLOW.happy.input).at(-1).answer === 'true' && ll.fastSlow(ll.FAST_SLOW.unhappy.input).at(-1).answer === 'false' && ll.fastSlow(ll.FAST_SLOW.dup.input).at(-1).answer === 'duplicate = 2' && ll.fastSlow(ll.FAST_SLOW.reorder.input).at(-1).answer === '[1, 5, 2, 4, 3]', 'fast/slow: LeetCode examples');
   for (let n = 1; n <= 9; n++) for (let pos = -1; pos < n; pos++) runF({ mode: 'cycle', vals: Array.from({ length: n }, (_, k) => k + 1), pos });
 
   const runR = (input) => {

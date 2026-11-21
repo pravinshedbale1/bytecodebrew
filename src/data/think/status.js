@@ -13,6 +13,7 @@ export const COMPLETE = [
   'sorting-and-selection',
   'cyclic-sort',
   'divide-and-conquer',
+  'fast-slow-pointers',
 ];
 
 /**
@@ -35,4 +36,5 @@ export const POLISHED = [
   'sorting-and-selection',
   'cyclic-sort',
   'divide-and-conquer',
+  'fast-slow-pointers',
 ];

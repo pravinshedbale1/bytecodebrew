@@ -112,6 +112,10 @@ static boolean isPalindrome(ListNode head) {
 }
 ```
 
+Step through it below. The step-through stops slow at the end of the first half and cuts there (for an odd length the middle stays in the first half); reversing from `slow` as in the code above works just as well, because the middle is compared with itself.
+
+<FastSlowViz examples={['palin', 'reorder']} title="Middle, reverse, then compare or weave" />
+
 ### Happy number — a cycle in a number sequence
 
 > Replace a number by the sum of the squares of its digits. Does it reach 1, or loop forever?
@@ -129,6 +133,8 @@ static boolean isHappy(int n) {
 }
 ```
 
+<FastSlowViz examples={['happy', 'unhappy']} title="Happy number: the sequence as a list" />
+
 ### Find the duplicate number — a cycle in an array
 
 > `n + 1` numbers, each in `[1, n]`, exactly one value repeated (possibly many times). O(1) extra space, don't modify the array.
@@ -144,6 +150,8 @@ static int findDuplicate(int[] nums) {
     return p;
 }
 ```
+
+<FastSlowViz examples={['dup']} title="The array as a linked list" />
 
 This one is famous because the pattern is so well hidden. The signal: "values are valid indexes" + "O(1) space" + "a repeat".
 

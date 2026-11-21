@@ -19,6 +19,12 @@ export const FAST_SLOW = {
   nocycle: { label: 'No cycle', input: { mode: 'cycle', vals: [1, 2, 3, 4, 5], pos: -1 } },
   middle: { label: 'Middle of the list', input: { mode: 'middle', vals: [1, 2, 3, 4, 5, 6] } },
   nth: { label: 'Remove n-th from end', input: { mode: 'nth', vals: [1, 2, 3, 4, 5], n: 2 } },
+  detect: { label: 'Is there a cycle?', input: { mode: 'detect', vals: [3, 2, 0, -4], pos: 1 } },
+  happy: { label: 'Happy number: 19', input: { mode: 'happy', n: 19 } },
+  unhappy: { label: 'Not happy: 2', input: { mode: 'happy', n: 2 } },
+  dup: { label: 'Find the duplicate', input: { mode: 'dup', nums: [1, 3, 4, 2, 2] } },
+  palin: { label: 'Palindrome list', input: { mode: 'palin', vals: [1, 2, 2, 1] } },
+  reorder: { label: 'Reorder list', input: { mode: 'reorder', vals: [1, 2, 3, 4, 5] } },
 };
 
 export const fastSlowCode = {
@@ -41,6 +47,53 @@ export const fastSlowCode = {
     ['end', '}'],
     ['ret', 'return slow;                             // the (second) middle'],
   ],
+  detect: [
+    ['init', 'ListNode slow = head, fast = head;'],
+    ['loop', 'while (fast != null && fast.next != null) {'],
+    ['move', '    slow = slow.next; fast = fast.next.next;'],
+    ['meet', '    if (slow == fast) return true;         // fast lapped slow'],
+    ['end', '}'],
+    ['none', 'return false;                           // fast fell off: no cycle'],
+  ],
+  happy: [
+    ['sig', 'int next(int n)   // the sum of the squares of n\'s digits'],
+    ['init', 'int slow = n, fast = n;'],
+    ['loop', 'while (true) {'],
+    ['move', '    slow = next(slow); fast = next(next(fast));'],
+    ['meet', '    if (slow == fast) return slow == 1;   // which loop did they meet in?'],
+    ['end', '}'],
+  ],
+  dup: [
+    ['init', 'int slow = 0, fast = 0;   // index i links to index nums[i]'],
+    ['loop', 'do {'],
+    ['move', '    slow = nums[slow]; fast = nums[nums[fast]];'],
+    ['meet', '} while (slow != fast);'],
+    ['p', 'int p = 0;'],
+    ['walk', 'while (p != slow) { p = nums[p]; slow = nums[slow]; }'],
+    ['ret', 'return p;                 // the loop\'s entrance = the duplicate'],
+  ],
+  palin: [
+    ['init', 'ListNode slow = head, fast = head;'],
+    ['loop', 'while (fast.next != null && fast.next.next != null) {'],
+    ['move', '    slow = slow.next; fast = fast.next.next;   // slow ends the first half'],
+    ['end', '}'],
+    ['cut', 'ListNode cur = slow.next, prev = null; slow.next = null;   // cut'],
+    ['flip', 'while (cur != null) { ListNode nx = cur.next; cur.next = prev; prev = cur; cur = nx; }'],
+    ['cmp', 'for (ListNode a = head, b = prev; b != null; a = a.next, b = b.next)'],
+    ['diff', '    if (a.val != b.val) return false;'],
+    ['ret', 'return true;   // then reverse the second half back to restore the list'],
+  ],
+  reorder: [
+    ['init', 'ListNode slow = head, fast = head;'],
+    ['loop', 'while (fast.next != null && fast.next.next != null) {'],
+    ['move', '    slow = slow.next; fast = fast.next.next;   // slow ends the first half'],
+    ['end', '}'],
+    ['cut', 'ListNode cur = slow.next, prev = null; slow.next = null;   // cut'],
+    ['flip', 'while (cur != null) { ListNode nx = cur.next; cur.next = prev; prev = cur; cur = nx; }'],
+    ['weave', 'for (ListNode a = head, b = prev; b != null; ) {'],
+    ['link', '    ListNode an = a.next, bn = b.next; a.next = b; b.next = an; a = an; b = bn;'],
+    ['close', '}'],
+  ],
   nth: [
     ['init', 'ListNode dummy = new ListNode(0, head), lead = dummy, lag = dummy;'],
     ['gap', 'for (int i = 0; i <= n; i++) lead = lead.next;   // gap of n + 1'],
@@ -60,7 +113,7 @@ function chain(nodes, tail = null) {
   return next;
 }
 
-function cycleRun({ vals, pos }) {
+function cycleRun({ vals, pos, detect = false }) {
   const nodes = nodesFrom(vals);
   const n = nodes.length;
   const next = chain(nodes, pos >= 0 ? nodes[pos].id : null);
@@ -81,11 +134,12 @@ function cycleRun({ vals, pos }) {
   for (;;) {
     if (fast === null || next[fast] === null) {
       snap({
-        kind: 'none', ptrs: fast === null ? { slow } : { slow, fast }, phase: 1, lines: ['loop', 'none'], answer: 'no cycle',
+        kind: 'none', ptrs: fast === null ? { slow } : { slow, fast }, phase: 1, lines: ['loop', 'none'], answer: detect ? 'false' : 'no cycle',
         title: 'fast reached the end: no cycle',
         text: `${fast === null ? 'fast stepped off the last node and is null' : `fast is on the last node, ${val(fast)}, and fast.next is null`}: the list ends, so it cannot loop. Without a cycle fast always gets there first, after about n/2 steps. Return null.`,
         calc: [fast === null ? 'fast == null' : 'fast.next == null', 'return null'],
       });
+      if (detect) { steps.at(-1).text = steps.at(-1).text.replace('Return null.', 'Return false.'); steps.at(-1).calc[1] = 'return false'; }
       return steps;
     }
     const sFrom = slow, f0 = fast, f1 = next[fast], f2 = next[f1];
@@ -108,6 +162,11 @@ function cycleRun({ vals, pos }) {
             : `Both are on the loop now. fast is ${plural(g, 'node')} behind slow (counting forward). Each step slow moves 1 and fast moves 2, so the gap shrinks by exactly 1: it can't jump over 0, so they must meet within ${plural(g, 'more step')}.`,
       calc: [`slow = slow.next → ${val(slow)}`, `fast = fast.next.next → ${fast === null ? 'null' : val(fast)}`, ...(g !== null && !met ? [`gap (fast to slow) = ${g}`] : []), ...(met ? ['slow == fast → cycle'] : [])],
     });
+    if (met && detect) {
+      Object.assign(steps.at(-1), { answer: 'true', lines: ['move', 'meet'] });
+      steps.at(-1).calc.push('return true');
+      return steps;
+    }
     if (met) break;
   }
   let p = nodes[0].id;
@@ -212,19 +271,167 @@ function nthRun({ vals, n }) {
   return steps;
 }
 
+/** The sum of the squares of the digits (Happy Number's next). */
+export const digitSquares = (x) => String(x).split('').reduce((t, d) => t + Number(d) * Number(d), 0);
+
+/** A sequence x → step(x) as list values up to its first repeat, and where the repeat joins (the cycle's pos). */
+function rho(start, step) {
+  const seq = [];
+  const at = new Map();
+  let x = start;
+  while (!at.has(x)) { at.set(x, seq.length); seq.push(x); x = step(x); }
+  return { seq, pos: at.get(x) };
+}
+
+export const happyChain = (n) => rho(n, digitSquares);
+export const dupChain = (nums) => rho(0, (i) => nums[i]);
+
+function happyRun({ n }) {
+  const { seq, pos } = happyChain(n);
+  const steps = cycleRun({ vals: seq, pos, detect: true });
+  const sq = (x) => String(x).split('').map((d) => `${d}²`).join(' + ');
+  Object.assign(steps[0], {
+    title: `Follow ${n} → ${digitSquares(n)} → …`,
+    text: `Each number points to the sum of the squares of its digits (${n} → ${sq(n)} = ${digitSquares(n)}), so the numbers form a linked list. The sums stay small, so a number must repeat sooner or later: the list always ends in a loop. n is happy when that loop is 1 → 1. Run slow and fast; where they meet says which loop it is.`,
+    calc: [`next(${n}) = ${sq(n)} = ${digitSquares(n)}`, 'slow = fast = n'],
+  });
+  const meet = steps.at(-1);
+  const v = seq[seq.findIndex((_, k) => `n${k}` === meet.ptrs.slow)];
+  Object.assign(meet, {
+    answer: v === 1 ? 'true' : 'false',
+    title: v === 1 ? 'They meet at 1: happy' : `They meet at ${v}, not 1: not happy`,
+    text: v === 1
+      ? 'slow and fast meet at 1, and 1 only ever leads back to 1 (1² = 1). The sequence reaches 1, so n is happy. No set of seen numbers was needed.'
+      : `slow and fast meet at ${v}, inside a loop that never visits 1 (${seq.slice(pos).join(' → ')} → ${seq[pos]}). The sequence goes round it forever, so n is not happy.`,
+    calc: [`slow == fast == ${v}`, `return ${v} == 1 → ${v === 1}`],
+  });
+  return steps;
+}
+
+function dupRun({ nums }) {
+  const { seq, pos } = dupChain(nums);
+  const steps = cycleRun({ vals: seq, pos });
+  Object.assign(steps[0], {
+    title: `Read [${nums.join(', ')}] as a linked list`,
+    text: `Each box is an index i, and its arrow goes to index nums[i]. No value is 0, so nothing points back to index 0: start there. The duplicate value sits in two places, so two arrows enter the same box: that box is where the loop starts, and its index is the duplicate.`,
+    calc: nums.map((v, i) => `${i} → ${v}`).slice(0, 6).concat(nums.length > 6 ? ['…'] : []),
+  });
+  const last = steps.at(-1);
+  last.answer = `duplicate = ${seq[pos]}`;
+  last.title = `The loop starts at index ${seq[pos]}: the duplicate is ${seq[pos]}`;
+  last.text = `Two different indexes hold the value ${seq[pos]}, so two arrows point into box ${seq[pos]}: one from the path, one from inside the loop. That is exactly the entrance Floyd's phase 2 finds. O(n) time, O(1) space, and the array was never changed.`;
+  return steps;
+}
+
+/** Middle, cut, reverse the second half, then compare (palin) or weave (reorder). */
+function halvesRun({ vals, mode }) {
+  const nodes = nodesFrom(vals);
+  const next = chain(nodes);
+  const steps = [];
+  const val = (id) => (id === null ? 'null' : nodes.find((x) => x.id === id).val);
+  const snap = (s) => steps.push({ nodes, next: { ...next }, pos: -1, ...s });
+  const head = nodes[0].id;
+  let slow = head, fast = head;
+  snap({
+    kind: 'start', ptrs: { slow, fast }, lines: ['init'],
+    title: mode === 'palin' ? 'A singly linked list can\'t be read backwards' : 'The new order takes from the front and the back',
+    text: mode === 'palin'
+      ? 'To compare the first value with the last, the second with the second-last, and so on, make the second half readable backwards: find the middle, reverse the second half, then walk both halves together.'
+      : 'L0, Ln, L1, Ln−1, …: the first half interleaved with the second half read backwards. So find the middle, reverse the second half, then weave the two halves together.',
+    calc: ['slow = head, fast = head'],
+  });
+  while (next[fast] !== null && next[next[fast]] !== null) {
+    const sf = slow, f0 = fast, f1 = next[fast];
+    slow = next[slow];
+    fast = next[f1];
+    snap({ kind: 'move', ptrs: { slow, fast }, trails: [[sf, slow, 'accent'], [f0, f1, 'warn'], [f1, fast, 'warn']], lines: ['loop', 'move'], title: `slow → ${val(slow)}, fast → ${val(fast)}`, text: 'slow takes one step and fast two. When fast can\'t take two more, slow is at the end of the first half.', calc: [`slow = ${val(slow)}`, `fast = ${val(fast)}`] });
+  }
+  const second = next[slow];
+  next[slow] = null;
+  const half = nodes.findIndex((x) => x.id === slow) + 1;
+  snap({
+    kind: 'cut', ptrs: { slow, ...(second ? { cur: second } : {}) }, snipped: second ? [slow, second] : undefined, lines: ['loop', 'end', 'cut'],
+    title: second ? `Cut after ${val(slow)}: two halves` : 'One node: nothing to cut',
+    text: second
+      ? `The first half is the first ${half} node${half === 1 ? '' : 's'} (with an odd length it keeps the middle). Cut the link after slow; the second half starts at ${val(second)}.`
+      : 'A single node has no second half.',
+    calc: [`first half: ${vals.slice(0, half).join(' → ')}`, `second half: ${second ? vals.slice(half).join(' → ') : 'empty'}`],
+  });
+  let prev = null, cur = second;
+  while (cur !== null) {
+    const nx = next[cur];
+    next[cur] = prev;
+    const flipped = cur;
+    prev = cur;
+    cur = nx;
+    snap({
+      kind: 'flip', ptrs: { prev, ...(cur ? { cur } : {}) }, fresh: next[flipped] ? [[flipped, next[flipped]]] : [], lines: ['flip'],
+      title: `Flip ${val(flipped)}: it now points to ${next[flipped] === null ? 'null' : val(next[flipped])}`,
+      text: cur ? 'Save the next node, point this one backwards, and move on.' : `The second half is reversed: it now reads ${walk(next, prev).map(val).join(' → ')}, from the old tail.`,
+      calc: [`${val(flipped)}.next = ${next[flipped] === null ? 'null' : val(next[flipped])}`, `prev = ${val(prev)}`, `cur = ${val(cur)}`],
+    });
+  }
+  let a = head, b = prev;
+  if (mode === 'palin') {
+    const matched = [];
+    while (b !== null) {
+      if (val(a) !== val(b)) {
+        snap({ kind: 'differ', ptrs: { a, b }, matched: [...matched], bad: [a, b], lines: ['cmp', 'diff'], answer: 'false', title: `${val(a)} ≠ ${val(b)}: not a palindrome`, text: 'A value and its mirror differ, so the list doesn\'t read the same backwards. Return false (after reversing the second half back, if the list must be left as it was).', calc: [`${val(a)} != ${val(b)} → return false`] });
+        return steps;
+      }
+      matched.push(a, b);
+      snap({ kind: 'compare', ptrs: { a, b }, matched: [...matched], lines: ['cmp'], title: `${val(a)} = ${val(b)}`, text: 'a walks the first half from the front, b walks the reversed second half from the old tail: each value meets its mirror.', calc: [`a = ${val(a)}, b = ${val(b)} → equal`] });
+      a = next[a];
+      b = next[b];
+    }
+    snap({ kind: 'done', ptrs: {}, matched: [...matched], lines: ['ret'], answer: 'true', title: 'Every value matched its mirror: a palindrome', text: `b ran out${vals.length % 2 ? ' (the middle node has no partner and needs none)' : ''}. Return true. O(n) time and O(1) extra space; reversing the second half back restores the list.`, calc: ['b == null → return true'] });
+    return steps;
+  }
+  while (b !== null) {
+    const an = next[a], bn = next[b];
+    next[a] = b;
+    next[b] = an;
+    snap({ kind: 'weave', ptrs: { a, b }, fresh: [[a, b], ...(an ? [[b, an]] : [])], lines: ['weave', 'link'], title: `${val(a)} → ${val(b)}${an ? ` → ${val(an)}` : ''}`, text: 'Slot the next node of the reversed half in after a, then move a and b on.', calc: [`${val(a)}.next = ${val(b)}`, `${val(b)}.next = ${val(an)}`] });
+    a = an;
+    b = bn;
+  }
+  const order = walk(next, head);
+  snap({ kind: 'done', ptrs: {}, order, lines: ['close'], answer: `[${order.map(val).join(', ')}]`, title: `Reordered: ${order.map(val).join(' → ')}`, text: 'The second half has been woven in. Only next pointers changed: no values moved, no new nodes. O(n) time, O(1) extra space.', calc: [`list = ${order.map(val).join(' → ')}`] });
+  return steps;
+}
+
 export function fastSlow(input) {
   if (input.mode === 'cycle') return cycleRun(input);
+  if (input.mode === 'detect') return cycleRun({ ...input, detect: true });
+  if (input.mode === 'happy') return happyRun(input);
+  if (input.mode === 'dup') return dupRun(input);
+  if (input.mode === 'palin' || input.mode === 'reorder') return halvesRun(input);
   if (input.mode === 'middle') return middleRun(input);
   return nthRun(input);
 }
 
 export function parseFastSlow(values, input) {
+  if (input.mode === 'happy') {
+    const n = parseInt1(values.n, { min: 1, max: 999, name: 'n' });
+    if (n.error) return { error: 'n must be a whole number from 1 to 999.' };
+    const len = happyChain(n.v).seq.length;
+    return len > 10 ? { error: `${n.v} takes ${len} numbers before it repeats; pick one that repeats within 10 (try 2, 7, 19, 20 or 100).` } : { input: { mode: 'happy', n: n.v } };
+  }
+  if (input.mode === 'dup') {
+    const d = parseInts(values.nums, { min: 1, max: 8, minLen: 2, maxLen: 9, name: 'nums' });
+    if (d.error) return d;
+    const m = d.arr.length;
+    if (d.arr.some((v) => v > m - 1)) return { error: `With ${m} numbers, every value must be between 1 and ${m - 1}.` };
+    const reps = new Set(d.arr.filter((v, i) => d.arr.indexOf(v) !== i));
+    return reps.size !== 1 ? { error: 'Exactly one value should repeat.' } : { input: { mode: 'dup', nums: d.arr } };
+  }
   const a = parseInts(values.vals, { min: -99, max: 99, minLen: 1, maxLen: 9, name: 'list' });
   if (a.error) return a;
-  if (input.mode === 'cycle') {
+  if (input.mode === 'cycle' || input.mode === 'detect') {
     const p = parseInt1(values.pos, { min: -1, max: a.arr.length - 1, name: 'pos' });
-    return p.error ? { error: `pos must be −1 (no cycle) or an index from 0 to ${a.arr.length - 1}.` } : { input: { mode: 'cycle', vals: a.arr, pos: p.v } };
+    return p.error ? { error: `pos must be −1 (no cycle) or an index from 0 to ${a.arr.length - 1}.` } : { input: { mode: input.mode, vals: a.arr, pos: p.v } };
   }
+  if (input.mode === 'palin' || input.mode === 'reorder') return { input: { mode: input.mode, vals: a.arr } };
   if (input.mode === 'middle') return { input: { mode: 'middle', vals: a.arr } };
   const n = parseInt1(values.n, { min: 1, max: a.arr.length, name: 'n' });
   return n.error ? { error: `n must be between 1 and ${a.arr.length}.` } : { input: { mode: 'nth', vals: a.arr, n: n.v } };
@@ -233,7 +440,25 @@ export function parseFastSlow(values, input) {
 export function randomFastSlow(input, rand = Math.random) {
   const g = rng(rand);
   const vals = Array.from({ length: g.int(input.mode === 'cycle' ? 3 : 2, 9) }, (_, k) => k + 1);
-  if (input.mode === 'cycle') return { mode: 'cycle', vals, pos: g.bool(0.8) ? g.int(0, vals.length - 1) : -1 };
+  if (input.mode === 'cycle' || input.mode === 'detect') return { mode: input.mode, vals, pos: g.bool(0.8) ? g.int(0, vals.length - 1) : -1 };
+  if (input.mode === 'happy') { let n; do n = g.int(1, 999); while (happyChain(n).seq.length > 10); return { mode: 'happy', n }; }
+  if (input.mode === 'dup') {
+    const m = g.int(2, 9);
+    const d = g.int(1, m - 1);
+    const pool = Array.from({ length: m - 1 }, (_, k) => k + 1).filter((v) => v !== d);
+    const others = pool.sort(() => rand() - 0.5).slice(0, m - 1 - g.int(1, Math.min(3, m - 1)));
+    const nums = [...others];
+    while (nums.length < m) nums.push(d);
+    return { mode: 'dup', nums: nums.sort(() => rand() - 0.5) };
+  }
+  if (input.mode === 'palin') {
+    const h = Array.from({ length: g.int(0, 4) }, () => g.int(1, 3));
+    const mid = g.bool(0.5) ? [g.int(1, 3)] : [];
+    const v = [...h, ...mid, ...[...h].reverse()];
+    if (g.bool(0.4) && v.length > 1) v[g.int(0, v.length - 1)] = 9;
+    return { mode: 'palin', vals: v.length ? v : [1] };
+  }
+  if (input.mode === 'reorder') return { mode: 'reorder', vals };
   if (input.mode === 'middle') return { mode: 'middle', vals };
   return { mode: 'nth', vals, n: g.int(1, vals.length) };
 }
