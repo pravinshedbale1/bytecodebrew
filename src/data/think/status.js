@@ -15,6 +15,7 @@ export const COMPLETE = [
   'divide-and-conquer',
   'fast-slow-pointers',
   'linked-list-manipulation',
+  'stack-patterns',
 ];
 
 /**
@@ -39,4 +40,5 @@ export const POLISHED = [
   'divide-and-conquer',
   'fast-slow-pointers',
   'linked-list-manipulation',
+  'stack-patterns',
 ];

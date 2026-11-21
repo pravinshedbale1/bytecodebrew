@@ -31,6 +31,7 @@ import * as qu from '../src/components/mdx/viz/models/queues.js';
 import * as sd from '../src/components/mdx/viz/models/sides.js';
 import * as dc from '../src/components/mdx/viz/models/divide.js';
 import * as lo from '../src/components/mdx/viz/models/listOps.js';
+import * as tks from '../src/components/mdx/viz/models/tokenStack.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -833,6 +834,26 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- token by token with a stack (TokenStackViz)
+{
+  const kinds = ['start', 'push', 'cancel', 'done', 'back', 'noop', 'double', 'plus', 'op', 'skip', 'up', 'root', 'add', 'sub', 'mul', 'div', 'sum', 'digit', 'open', 'close', 'letter', 'base', 'match', 'merge', 'fleet'];
+  const run = (input) => {
+    const steps = tks.tokenStack(input);
+    common(`tokenStack ${JSON.stringify(input)}`, steps, tks.tokenStackCode[input.mode], kinds);
+    ok(steps.at(-1).answer === tks.tokenStackAnswer(input), `tokenStack ${JSON.stringify(input)}: ${steps.at(-1).answer} ≠ ${tks.tokenStackAnswer(input)}`);
+    steps.forEach((st) => {
+      ok(new Set(st.stack.map((x) => x.id)).size === st.stack.length, 'tokenStack: plates have their own ids');
+      ok(st.stack.length <= st.depth, 'tokenStack: the pile is tall enough');
+      ok(st.i === null || (st.i >= 0 && st.i < st.tokens.length), 'tokenStack: the cursor is on a token');
+    });
+  };
+  Object.values(tks.TOKEN_STACK).forEach((e) => run(e.input));
+  for (let t = 0; t < 1500; t++) for (const mode of Object.keys(tks.tokenStackCode)) run(tks.randomTokenStack({ mode }, rand));
+  const ans = (k) => tks.tokenStack(tks.TOKEN_STACK[k].input).at(-1).answer;
+  ok(ans('dups') === '"ca"' && ans('backspace') === 'true' && ans('baseball') === '30' && ans('rpn') === '9' && ans('path') === '"/c"' && ans('calc') === '7' && ans('decode') === '"accaccacc"' && ans('lvp') === '4' && ans('fleet') === '3', 'tokenStack: LeetCode examples');
+  ok(tks.tokenStack({ mode: 'calc', s: '14-3/2' }).at(-1).answer === '13' && tks.tokenStack({ mode: 'rpn', tokens: ['4', '13', '5', '/', '+'] }).at(-1).answer === '6', 'tokenStack: truncation');
 }
 
 // ---------------------------------------------------------------- list rewiring (ListOpsViz)

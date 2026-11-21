@@ -67,6 +67,7 @@ const QuickselectViz = lazyViz(() => import('./viz/SortingViz'), 'QuickselectViz
 const BucketViz = lazyViz(() => import('./viz/SortingViz'), 'BucketViz');
 const BracketsViz = lazyViz(() => import('./viz/StacksViz'), 'BracketsViz');
 const AsteroidViz = lazyViz(() => import('./viz/StacksViz'), 'AsteroidViz');
+const TokenStackViz = lazyViz(() => import('./viz/StacksViz'), 'TokenStackViz');
 const NextGreaterViz = lazyViz(() => import('./viz/StacksViz'), 'NextGreaterViz');
 const StackSideViz = lazyViz(() => import('./viz/StacksViz'), 'StackSideViz');
 const DequeSideViz = lazyViz(() => import('./viz/SideViz'), 'DequeSideViz');
@@ -288,6 +289,7 @@ export const mdxComponents = {
   ListOpsViz,
   BracketsViz,
   AsteroidViz,
+  TokenStackViz,
   NextGreaterViz,
   StackSideViz,
   DequeSideViz,

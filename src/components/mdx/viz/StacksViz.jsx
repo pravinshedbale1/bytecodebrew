@@ -1,7 +1,9 @@
 import { StepViz, Key } from './StepViz';
 import { Arcs, ArrayStrip, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
 import styles from './StacksViz.module.css';
-import { CmpCard } from './sideKit';
+import { CmpCard, Pile } from './sideKit';
+import kit from './sideKit.module.css';
+import { TOKEN_STACK, parseTokenStack, randomTokenStack, tokenStack, tokenStackCode } from './models/tokenStack';
 import {
   ASTEROIDS, BRACKETS, HISTOGRAM, MONO, SLIDE, asteroidCode, asteroids, brackets, bracketsCode, histogram, histogramCode, mono, monoCode,
   parseAsteroids, parseBrackets, parseHistogram, parseMono, parseSlide, randomAsteroids, randomBrackets, randomHistogram, randomMono,
@@ -497,4 +499,108 @@ const stackSideSpec = {
 
 export function StackSideViz(props) {
   return <StepViz spec={stackSideSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- token by token, with a stack
+
+const TS_LABEL = {
+  dups: 'kept letters', backspace: 'the screen', baseball: 'the record', rpn: 'values waiting', path: 'folders, root at the bottom',
+  calc: 'terms', decode: 'saved (text, × k)', lvp: 'indexes', fleet: 'fleets (arrival time)',
+};
+const TS_RULE = {
+  dups: 'Equal to the top → both vanish; otherwise push.',
+  backspace: 'A letter pushes; # pops (if anything is there).',
+  baseball: 'Numbers, D and + push; C pops.',
+  rpn: 'Numbers push; an operator pops two and pushes the result.',
+  path: 'A name pushes, ".." pops, "." and empty parts are skipped.',
+  calc: '+x and −x push a term; ×x and ÷x change the top term.',
+  decode: '"[" saves (text, k); "]" repeats the inside and joins.',
+  lvp: '( pushes its index; ) pops, then measures from the new top.',
+  fleet: 'Closest car first: a later arrival time starts a new fleet.',
+};
+
+function TokenStackStage({ step: f, input, width, seq, jump }) {
+  const n = f.tokens.length;
+  const long = Math.max(...f.tokens.map((t) => String(t).length));
+  const pitch = pitchFor(width - 8, n, long > 3 ? 44 : long > 1 ? 34 : 26, 56);
+  const index = input.mode === 'lvp';
+  const sub = input.mode === 'fleet';
+  const h = 42;
+  const tags = f.i !== null && f.i !== undefined ? { [f.i]: [{ label: 'now', tone: 'accent' }] } : {};
+  const height = 6 + h + (index ? 24 : 6) + (sub ? 26 : 0) + 22;
+  const items = f.stack.map((it) => ({ ...it, isNew: it.id === f.pushed }));
+  return (
+    <div>
+      <Stage width={n * pitch} height={height} jump={jump} label={`input ${f.tokens.join(' ')}`}>
+        <ArrayStrip
+          items={f.tokens.map((t, k) => ({ v: t, id: `${k}-${t}` }))} y={6} pitch={pitch} h={h} index={index} tags={tags}
+          bands={f.band ? [{ from: f.band[0], to: f.band[1], tone: 'success' }] : []}
+          sub={sub ? (k) => ({ text: `${f.subs?.[k]}h` }) : undefined}
+          cls={(k) => [k === f.i && 'cur', f.marks?.[k], f.i !== null && f.i !== undefined && k > f.i && 'dim'].filter(Boolean).join(' ')}
+        />
+      </Stage>
+      <div className={kit.sideRow}>
+        <Pile items={items} depth={f.depth} leaving={f.leaving} seq={seq} label={`stack: ${TS_LABEL[input.mode]}`} width={input.mode === 'path' || input.mode === 'decode' || input.mode === 'fleet' ? 150 : 124} />
+        {f.card && <CmpCard {...f.card} style={{ minWidth: 150 }} />}
+      </div>
+    </div>
+  );
+}
+
+const tsDescribe = (input) => ({
+  dups: () => `s = "${input.s}"`,
+  backspace: () => `s = "${input.s}", t = "${input.t}"`,
+  baseball: () => `operations = [${input.ops.join(', ')}]`,
+  rpn: () => `tokens = [${input.tokens.join(', ')}]`,
+  path: () => `path = "${input.path}"`,
+  calc: () => `s = "${input.s}"`,
+  decode: () => `s = "${input.s}"`,
+  lvp: () => `s = "${input.s}"`,
+  fleet: () => `target = ${input.target}, position = [${input.position.join(', ')}], speed = [${input.speed.join(', ')}]`,
+})[input.mode]();
+
+const TS_FIELDS = {
+  dups: [{ name: 's', label: 's', placeholder: 'e.g. abbaca' }],
+  backspace: [{ name: 's', label: 's', placeholder: 'e.g. ab#c' }, { name: 't', label: 't', placeholder: 'e.g. ad#c' }],
+  baseball: [{ name: 'ops', label: 'operations', placeholder: 'e.g. 5, 2, C, D, +' }],
+  rpn: [{ name: 'tokens', label: 'tokens', placeholder: 'e.g. 4, 13, 5, /, +' }],
+  path: [{ name: 'path', label: 'path', placeholder: 'e.g. /a/./b/../../c/' }],
+  calc: [{ name: 's', label: 'expression', placeholder: 'e.g. 3+5/2' }],
+  decode: [{ name: 's', label: 's', placeholder: 'e.g. 2[abc]3[cd]ef' }],
+  lvp: [{ name: 's', label: 's', placeholder: 'e.g. )()())' }],
+  fleet: [{ name: 'target', label: 'target', placeholder: '12', short: true }, { name: 'position', label: 'positions', placeholder: 'e.g. 10, 8, 0, 5, 3' }, { name: 'speed', label: 'speeds', placeholder: 'e.g. 2, 4, 1, 1, 3' }],
+};
+
+const tokenStackSpec = {
+  title: 'Read left to right, with a stack',
+  examples: TOKEN_STACK,
+  simulate: tokenStack,
+  code: (input) => tokenStackCode[input.mode],
+  kinds: {
+    start: ['Start', 'neutral'], push: ['Push', 'accent'], cancel: ['Pop', 'danger'], done: ['Answer', 'success'],
+    back: ['Backspace', 'danger'], noop: ['Nothing to delete', 'muted'], double: ['Double', 'accent'], plus: ['Add two', 'accent'],
+    op: ['Apply', 'success'], skip: ['Skip', 'muted'], up: ['Up', 'danger'], root: ['At the root', 'muted'],
+    add: ['New term', 'accent'], sub: ['New term', 'accent'], mul: ['Multiply', 'success'], div: ['Divide', 'success'], sum: ['Sum', 'success'],
+    digit: ['Count', 'neutral'], open: ['Open', 'accent'], close: ['Close', 'success'], letter: ['Letter', 'neutral'],
+    base: ['New base', 'warn'], match: ['Match', 'success'], merge: ['Joins a fleet', 'success'], fleet: ['New fleet', 'accent'],
+  },
+  describe: tsDescribe,
+  rule: (input) => TS_RULE[input.mode],
+  stats: (f) => f.stats ?? [],
+  legend: () => [[<Key shape="box" tone="accent">x</Key>, 'the token being read'], [<Key shape="box">x</Key>, 'top of the stack: the most recent one still pending']],
+  fields: (input) => TS_FIELDS[input.mode],
+  values: (input) => ({
+    dups: { s: input.s }, backspace: { s: input.s, t: input.t }, baseball: { ops: input.ops?.join(', ') }, rpn: { tokens: input.tokens?.join(', ') },
+    path: { path: input.path }, calc: { s: input.s }, decode: { s: input.s }, lvp: { s: input.s },
+    fleet: { target: String(input.target), position: input.position?.join(', '), speed: input.speed?.join(', ') },
+  })[input.mode],
+  parse: parseTokenStack,
+  random: (input) => randomTokenStack(input),
+  hint: (input) => TS_RULE[input.mode],
+  delay: (f) => (f.kind === 'start' || f.kind === 'done' ? 2600 : 1900),
+  Stage: TokenStackStage,
+};
+
+export function TokenStackViz(props) {
+  return <StepViz spec={tokenStackSpec} {...props} />;
 }
