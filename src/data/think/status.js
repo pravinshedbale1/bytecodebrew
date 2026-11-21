@@ -27,5 +27,6 @@ export const POLISHED = [
   'hashing',
   'two-pointers',
   'sliding-window',
+  'prefix-sums',
   'cyclic-sort',
 ];

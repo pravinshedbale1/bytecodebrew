@@ -2,74 +2,92 @@
 export default {
   'running-sum-of-1d-array': {
     free: true,
+    aha: 'Each running total is the previous total plus one new number. Carry the total forward in one pass instead of re-adding the whole prefix every time.',
+    asks: {
+      observe: 'If the running sum up to index 1 is 3, what one addition gives the running sum up to index 2?',
+      pattern: 'Why re-add nums[0] … nums[i] when the previous answer already holds most of that sum?',
+    },
     read: [
-      { phrase: '`nums[0] + nums[1] + … + nums[i]`', says: 'Element i is the sum of a prefix: a prefix sum.' },
-      { phrase: 'Each element is the previous running sum plus the current value', says: 'Each answer builds on the one before: one pass, O(1) work per element.' },
+      { phrase: '`nums[0] + nums[1] + … + nums[i]`', says: 'Element i is the sum of everything up to i: a prefix sum.' },
+      { phrase: 'Each element is the previous running sum plus the current value', says: 'Each answer builds on the one before: one pass, one addition per element.' },
     ],
     budget: { from: 'nums.length ≤ 1000', n: 1000, aim: 'O(n)', note: 'Re-adding every prefix is O(n²); carrying the total forward is O(n).' },
     observe: [
       {
-        title: 'Each total is the previous total plus one value',
+        title: 'Each total is the previous total plus one number',
         text: 'running[i] = running[i − 1] + nums[i]. Nothing needs to be re-added.',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 2, 3, 4] }, { label: 'running', items: [1, 3, 6, 10], marks: { 2: 'cur', 1: 'target' } }], caption: '6 = 3 + 3' },
+        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 2, 3, 4], marks: { 2: 'cur' } }, { label: 'running', items: [1, 3, 6, 10], marks: { 2: 'hit', 1: 'target' } }], caption: '6 = 3 + 3' },
       },
       {
         title: 'It can even be done in place',
         text: 'Overwrite nums[i] with nums[i − 1] + nums[i], left to right.',
+        sketch: { kind: 'array', rows: [{ label: 'nums after the pass', items: [1, 3, 6, 10], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit' } }] },
       },
     ],
-    brute: { idea: 'For every i, add up nums[0 … i] from scratch.', cost: 'O(n²)', waste: 'Each prefix is re-added, though it is the previous prefix plus one value.' },
+    brute: { idea: 'For every i, add up nums[0 … i] from scratch.', cost: 'O(n²)', waste: 'Each prefix is re-added, though it is the previous prefix plus one number.' },
     pattern: {
       pick: 'prefix-sums',
       why: 'This is the prefix sum itself, the building block of every other problem in this pattern.',
       not: [
         { id: 'sliding-window', why: 'Nothing leaves on the left; every total starts at index 0.' },
-        { id: 'dp-linear', why: 'It is technically a one-line DP (each answer from the previous), and that is exactly a prefix sum.' },
+        { id: 'dp-linear', why: 'It is technically a tiny DP (each answer from the previous one), and that DP is exactly a prefix sum.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'running[0] = 1', text: 'The first total is the first value.', sketch: { kind: 'array', rows: [{ items: [1, '·', '·', '·'], marks: { 0: 'hit' } }] } },
-        { title: 'Add as you go', text: '1 + 2 = 3, 3 + 3 = 6, 6 + 4 = 10.', sketch: { kind: 'array', rows: [{ items: [1, 3, 6, 10], marks: { 1: 'hit', 2: 'hit', 3: 'hit' } }] } },
+        { title: 'running[0] = 1', text: 'The first total is the first number.', sketch: { kind: 'array', rows: [{ items: [1, '·', '·', '·'], marks: { 0: 'hit' } }] } },
+        { title: 'running[1] = 1 + 2 = 3', text: 'Previous total plus the new number.', sketch: { kind: 'array', rows: [{ items: [1, 3, '·', '·'], marks: { 1: 'hit' } }] } },
+        { title: 'running[2] = 6, running[3] = 10', text: '3 + 3 = 6, then 6 + 4 = 10: [1, 3, 6, 10].', sketch: { kind: 'array', rows: [{ items: [1, 3, 6, 10], marks: { 2: 'hit', 3: 'hit' } }] } },
       ],
     },
-    edges: ['A single value.', 'Negative values (totals can go down).'],
+    edges: ['A single value: [5] → [5].', 'Negative values: [3, −1, −2] → [3, 2, 0].'],
   },
 
   'range-sum-query-immutable': {
+    aha: 'Store prefix[i] = the sum of the first i numbers once. Then any range sum is one subtraction: sum(left … right) = prefix[right + 1] − prefix[left].',
+    asks: {
+      observe: 'How could you get the sum of nums[2 … 5] from "the sum of the first 6" and "the sum of the first 2"?',
+      pattern: 'The array never changes and there are many queries. What could you compute once and reuse every time?',
+    },
     read: [
       { phrase: 'The array never changes after construction', says: 'Work done once in the constructor is reused by every query: precompute.' },
-      { phrase: '`sumRange` may be called many times, so each query should be fast', says: 'Aim for O(1) per query.' },
-      { phrase: '(both ends inclusive)', says: 'sum(left … right) = prefix[right + 1] − prefix[left], with prefix[i] = the sum of the first i values.' },
+      { phrase: '`sumRange` may be called many times, so each query should be fast', says: 'Aim for one step per query.' },
+      { phrase: '(both ends inclusive)', says: 'sum(left … right) = prefix[right + 1] − prefix[left], with prefix[i] = the sum of the first i numbers.' },
     ],
-    budget: { from: 'nums ≤ 10⁴, up to 10⁴ queries', rows: [['loop over the range each query', '10⁴ × 10⁴ = 10⁸', 'warn'], ['prefix sums, O(1) per query', '10⁴ + 10⁴', 'ok']], aim: 'O(1) per query', note: 'The loop is borderline; with more queries it would not pass. Precomputing makes queries free.' },
+    budget: { from: 'nums ≤ 10⁴, up to 10⁴ queries', rows: [['loop over the range each query', '10⁴ × 10⁴ = 10⁸', 'warn'], ['prefix sums, one step per query', '10⁴ + 10⁴', 'ok']], aim: 'O(1) per query', note: 'The loop is borderline; with more queries it would fail. Precomputing makes queries almost free.' },
     observe: [
       {
         title: 'A range is a difference of two prefixes',
-        text: 'The sum of [2, 5] is (sum of the first 6) − (sum of the first 2).',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [-2, 0, 3, -5, 2, -1], bands: [{ from: 2, to: 5, tone: 'accent', label: 'range' }] }, { label: 'prefix', items: [0, -2, -2, 1, -4, -2, -3], marks: { 2: 'target', 6: 'hit' } }], caption: '−3 − (−2) = −1' },
+        text: 'The sum of [2, 5] is (sum of the first 6) − (sum of the first 2) = −3 − (−2) = −1.',
+        sketch: { kind: 'array', rows: [{ label: 'nums', items: [-2, 0, 3, -5, 2, -1], bands: [{ from: 2, to: 5, tone: 'accent', label: 'range' }] }, { label: 'prefix', items: [0, -2, -2, 1, -4, -2, -3], marks: { 2: 'target', 6: 'hit' } }] },
       },
       {
         title: 'Store one extra slot',
-        text: 'prefix has n + 1 entries, with prefix[0] = 0, so ranges starting at 0 need no special case.',
+        text: 'prefix has n + 1 entries with prefix[0] = 0, so ranges starting at index 0 need no special case.',
+        sketch: { kind: 'array', rows: [{ label: 'prefix', items: [0, -2, -2, 1, -4, -2, -3], marks: { 0: 'target' }, tags: { 0: [['empty prefix', 'warn']] } }] },
       },
     ],
     brute: { idea: 'Keep the array and add up nums[left … right] on every call.', cost: 'O(n) per query', waste: 'Overlapping ranges are re-added on every query, though the array never changes.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Precompute prefix sums once (O(n)); each range sum is then one subtraction (O(1)).',
+      why: 'Precompute prefix sums once (O(n)); each range sum is then one subtraction.',
       not: [
-        { id: 'range-queries', why: 'A Fenwick or segment tree supports updates too; with an immutable array, plain prefix sums are enough.' },
+        { id: 'range-queries', why: 'A Fenwick or segment tree also supports updates; with an array that never changes, plain prefix sums are enough.' },
         { id: 'sliding-window', why: 'Queries jump around; there is no window that moves step by step.' },
       ],
     },
     watch: { viz: 'PrefixQueryViz', inputs: [{ label: 'sumRange(2, 5)', input: { nums: [-2, 0, 3, -5, 2, -1], l: 2, r: 5 } }, { label: 'sumRange(0, 2)', input: { nums: [-2, 0, 3, -5, 2, -1], l: 0, r: 2 } }] },
-    edges: ['left = right: a single value.', 'left = 0 (uses prefix[0] = 0).', 'The whole array.'],
+    edges: ['left = right: sumRange(1, 1) on [5, 7] → 7.', 'Starting at 0: sumRange(0, 2) on the example → 1.', 'The whole array: sumRange(0, 5) on the example → −3.'],
   },
 
   'find-pivot-index': {
+    aha: 'Compute the total once. Walking left to right with a running left sum, the right sum is simply total − left − nums[i], so each index is checked in one step.',
+    asks: {
+      observe: 'In [1, 7, 3, 6, 5, 6] the total is 28. At index 3, the left sum is 11. What is the right sum, without adding anything up?',
+      pattern: 'If you know the total and the left sum, do you still need to compute the right sum separately?',
+    },
     read: [
-      { phrase: 'the sum of all values strictly to its left equals the sum of all values strictly to its right', says: 'Left sum and right sum at every index: the left is a running prefix, and the right is the total minus the rest.' },
+      { phrase: 'the sum of all values strictly to its left equals the sum of all values strictly to its right', says: 'A left sum and a right sum at every index: the left is a running total, the right is "total minus the rest".' },
       { phrase: 'Return the leftmost pivot index', says: 'Scan left to right and stop at the first match.' },
       { phrase: 'or `-1` if there is none', says: 'The scan may end without a match.' },
     ],
@@ -77,104 +95,122 @@ export default {
     observe: [
       {
         title: 'The right sum comes from the total',
-        text: 'Knowing the total, right = total − left − nums[i]. So only the left sum needs tracking.',
-        sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], bands: [{ from: 0, to: 2, tone: 'accent', label: 'left 11' }, { from: 4, to: 5, tone: 'ghost', label: 'right 11' }], marks: { 3: 'hit' } }], caption: 'total 28: right = 28 − 11 − 6 = 11' },
+        text: 'right = total − left − nums[i]. At index 3: 28 − 11 − 6 = 11, which equals the left sum.',
+        sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], bands: [{ from: 0, to: 2, tone: 'accent', label: 'left 11' }, { from: 4, to: 5, tone: 'ghost', label: 'right 11' }], marks: { 3: 'hit' } }] },
       },
       {
-        title: 'One running sum',
+        title: 'One running sum is enough',
         text: 'Check left == total − left − nums[i], then add nums[i] to left and move on.',
+        sketch: { kind: 'array', rows: [{ label: 'left sum before each index', items: [0, 1, 8, 11, 17, 22], marks: { 3: 'hit' } }] },
       },
     ],
-    brute: { idea: 'For each index, add up everything on its left and everything on its right.', cost: 'O(n²)', waste: 'The sums change by one value per step but are recomputed from scratch.' },
+    brute: { idea: 'For each index, add up everything on its left and everything on its right.', cost: 'O(n²)', waste: 'The sums change by one number per step but are recomputed from scratch.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'A running prefix sum gives the left side; the total gives the right side for free: O(n), O(1) space.',
+      why: 'A running prefix sum gives the left side and the total gives the right side for free: O(n), O(1) space.',
       not: [
-        { id: 'two-pointers', why: 'Balancing two pointers from both ends fails with negative values.' },
-        { id: 'sliding-window', why: 'There is no window; both sides always reach the array\'s ends.' },
+        { id: 'two-pointers', why: 'Balancing pointers from both ends fails with negative values.' },
+        { id: 'sliding-window', why: 'There is no window; both sides always reach the ends of the array.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'total = 28', text: 'One pass to sum everything.' },
-        { title: 'i = 0, 1, 2: no balance', text: 'left = 0, 1, 8; right = 27, 20, 17.' },
-        { title: 'i = 3: left 11, right 11', text: 'Balanced: the answer is 3.', sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], marks: { 3: 'hit' } }] } },
+        { title: 'total = 28', text: 'One pass to add everything up.', sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6] }] } },
+        { title: 'Indexes 0, 1, 2: no balance', text: 'Left 0, 1, 8 against right 27, 20, 17.', sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], marks: { 0: 'dim', 1: 'dim', 2: 'dim' } }] } },
+        { title: 'Index 3: left 11, right 11 → 3', text: 'Balanced: the answer is 3.', sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], marks: { 3: 'hit' } }] } },
       ],
     },
-    edges: ['Index 0 is the pivot when the rest sums to 0.', 'The last index is the pivot when everything before sums to 0.', 'No pivot → −1.'],
+    edges: ['Index 0 when the rest sums to 0: [2, 1, −1] → 0.', 'No pivot: [1, 2, 3] → −1.', 'The last index: [−1, 1, 5] → 2.'],
   },
 
   'subarray-sum-equals-k': {
+    aha: 'A subarray sum is a difference of two prefix sums. A subarray ending here sums to k once for every earlier prefix equal to (current prefix − k), so keep a map counting how often each prefix has appeared.',
+    asks: {
+      observe: 'For [1, 1, 1] with k = 2, the prefix sums are 0, 1, 2, 3. Which pairs of them differ by exactly 2?',
+      pattern: 'Values can be negative, so a window can\'t tell which end to move. What can you look up instead?',
+    },
     read: [
-      { phrase: 'contiguous, non-empty subarrays of `nums` whose values add up to exactly `k`', says: 'Count ranges with a given sum: sum(i, j] = prefix[j] − prefix[i].' },
-      { phrase: 'Values can be negative, so a growing window does not always mean a growing sum', says: 'A sliding window won\'t work: validity is not monotone.' },
-      { phrase: 'a hash map counting how often each prefix sum has appeared', says: 'For each j, count earlier prefixes equal to prefix[j] − k in O(1).' },
+      { phrase: 'contiguous, non-empty subarrays of `nums` whose values add up to exactly `k`', says: 'Count ranges with a given sum: sum of (i, j] = prefix[j] − prefix[i].' },
+      { phrase: 'Values can be negative, so a growing window does not always mean a growing sum', says: 'A sliding window won\'t work: adding a number can lower the sum.' },
+      { phrase: 'a hash map counting how often each prefix sum has appeared', says: 'For each position, count earlier prefixes equal to prefix − k in one lookup.' },
     ],
     budget: { from: 'nums.length ≤ 2 × 10⁴', n: 2e4, aim: 'O(n)', note: 'Every subarray with a running sum is O(n²) = 4 × 10⁸: risky.' },
     observe: [
       {
         title: 'A subarray sum is a difference of prefixes',
         text: 'The subarray ending at j sums to k exactly when some earlier prefix equals prefix[j] − k.',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 1, 1] }, { label: 'prefix', items: [0, 1, 2, 3], marks: { 3: 'cur', 1: 'hit' } }], caption: 'at the end: 3 − 2 = 1 appeared once → one subarray [1, 1]' },
+        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 1, 1] }, { label: 'prefix', items: [0, 1, 2, 3], marks: { 3: 'cur', 1: 'hit' } }], caption: 'at the end: 3 − 2 = 1 appeared once → the subarray [1, 1]' },
       },
       {
         title: 'Count, don\'t search',
-        text: 'Keep a map from prefix value to how many times it appeared, starting with {0: 1}. Each step adds count[prefix − k] to the answer.',
+        text: 'Keep a map from prefix value to how many times it has appeared, starting with {0: 1}. Each step adds count[prefix − k] to the answer.',
+        sketch: { kind: 'array', rows: [{ label: 'map after the last step', items: ['0: 1', '1: 1', '2: 1', '3: 1'] }], caption: 'two lookups found a match: answer 2' },
       },
     ],
     brute: { idea: 'For every start, extend with a running sum and count the ends where it equals k.', cost: 'O(n²)', waste: 'For each end, the matching starts are exactly the earlier prefixes equal to prefix − k, which a map counts instantly.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Prefix sums turn "subarray sums to k" into "two prefixes differ by k"; a hash map of prefix counts answers it in one pass. O(n).',
+      why: 'Prefix sums turn "a subarray sums to k" into "two prefixes differ by k", and a map of prefix counts answers that in one pass. O(n).',
       not: [
         { id: 'sliding-window', why: 'With negative values, shrinking a window can increase its sum, so the window logic breaks.' },
         { id: 'hashing', why: 'The map is the tool, but it only works on prefix sums.' },
       ],
     },
     watch: { viz: 'SubarraySumViz', inputs: [{ label: '[1, 1, 1], k = 2', input: { nums: [1, 1, 1], k: 2 } }, { label: '[2, 1, −1, 3, −2, 2], k = 3', input: { nums: [2, 1, -1, 3, -2, 2], k: 3 } }] },
-    edges: ['k = 0 with zeros and cancelling values.', 'Negative values.', 'The map must start with {0: 1} (subarrays starting at index 0).'],
+    edges: ['k = 0 with cancelling values: [1, −1, 0], k 0 → 3.', 'Negative values: [−1, −1, 1], k 0 → 1.', 'The map must start with {0: 1}: [3], k 3 → 1.'],
   },
 
   'subarray-sums-divisible-by-k': {
+    aha: 'A subarray sum is prefix[j] − prefix[i], and that difference is divisible by k exactly when the two prefixes leave the same remainder. So count how many prefixes share each remainder.',
+    asks: {
+      observe: 'For [4, 5, 0, −2, −3, 1] and k = 5, the prefix sums are 0, 4, 9, 9, 7, 4, 5. What are their remainders when divided by 5?',
+      pattern: 'When is a − b divisible by k, in terms of a\'s and b\'s remainders?',
+    },
     read: [
       { phrase: 'whose sum is divisible by `k`', says: 'A range sum with a property: prefix differences again.' },
       { phrase: 'Values may be negative.', says: 'Remainders can come out negative in Java: normalise them.' },
-      { phrase: 'Two prefix sums with the same remainder modulo `k`', says: 'Divisible differences means equal remainders: count pairs of equal remainders.' },
+      { phrase: 'Two prefix sums with the same remainder modulo `k`', says: 'A divisible difference means equal remainders: count pairs of equal remainders.' },
     ],
     budget: { from: 'nums.length ≤ 3 × 10⁴', n: 3e4, aim: 'O(n + k)', note: 'Every subarray is O(n²) = 9 × 10⁸: too slow.' },
     observe: [
       {
         title: 'Equal remainders bound a divisible subarray',
-        text: 'prefix[j] − prefix[i] is divisible by k exactly when both prefixes leave the same remainder.',
-        sketch: { kind: 'array', rows: [{ label: 'prefix', items: [0, 4, 9, 9, 7, 4, 5] }, { label: 'mod 5', items: [0, 4, 4, 4, 2, 4, 0], marks: { 1: 'hit', 2: 'hit', 3: 'hit', 5: 'hit', 0: 'target', 6: 'target' } }] },
+        text: 'Prefixes 4 and 9 both leave remainder 4, so the numbers between them (5) sum to a multiple of 5.',
+        sketch: { kind: 'array', rows: [{ label: 'prefix', items: [0, 4, 9, 9, 7, 4, 5] }, { label: 'remainder', items: [0, 4, 4, 4, 2, 4, 0], marks: { 1: 'hit', 2: 'hit', 3: 'hit', 5: 'hit', 0: 'target', 6: 'target' } }] },
       },
       {
         title: 'Count pairs as you go',
         text: 'Each new prefix pairs with every earlier prefix of the same remainder: add count[r], then increase it.',
+        sketch: { kind: 'array', rows: [{ label: 'remainder counts at the end', items: ['0: 2', '2: 1', '4: 4'] }], caption: '1 pair + 0 + 6 pairs = 7' },
       },
     ],
-    brute: { idea: 'From every start, extend with a running sum and count the sums divisible by k.', cost: 'O(n²)', waste: 'Only remainders matter, and equal remainders can be counted instead of enumerated.' },
+    brute: { idea: 'From every start, extend with a running sum and count the sums divisible by k.', cost: 'O(n²)', waste: 'Only remainders matter, and equal remainders can be counted instead of listed.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Prefix sums modulo k, with a count per remainder: each new prefix adds the number of earlier prefixes with the same remainder. O(n + k).',
+      why: 'Prefix sums taken modulo k, with a count per remainder: each new prefix adds the number of earlier prefixes with the same remainder. O(n + k).',
       not: [
-        { id: 'sliding-window', why: 'Divisibility isn\'t monotone in the window length.' },
+        { id: 'sliding-window', why: 'Divisibility doesn\'t get easier or harder as a window grows, so no window rule works.' },
         { id: 'hashing', why: 'The counts are a table, but the insight is about prefix remainders.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Remainders: 0, 4, 4, 4, 2, 4, 0', text: 'Prefix sums 0, 4, 9, 9, 7, 4, 5 taken mod 5.' },
-        { title: 'Pairs', text: 'Remainder 0 appears twice (1 pair), remainder 4 four times (6 pairs), remainder 2 once (0 pairs).' },
-        { title: 'Answer: 7', text: '1 + 6 = 7 subarrays.' },
+        { title: 'Prefix sums', text: '0, 4, 9, 9, 7, 4, 5.', sketch: { kind: 'array', rows: [{ items: [0, 4, 9, 9, 7, 4, 5] }] } },
+        { title: 'Remainders mod 5', text: '0, 4, 4, 4, 2, 4, 0.', sketch: { kind: 'array', rows: [{ items: [0, 4, 4, 4, 2, 4, 0], marks: { 1: 'hit', 2: 'hit', 3: 'hit', 5: 'hit' } }] } },
+        { title: 'Pairs of equal remainders → 7', text: 'Remainder 0 twice: 1 pair. Remainder 4 four times: 6 pairs. 1 + 6 = 7.', sketch: { kind: 'array', rows: [{ items: ['0: 1 pair', '4: 6 pairs'], marks: { 0: 'hit', 1: 'hit' } }] } },
       ],
     },
-    edges: ['Negative sums: use ((s % k) + k) % k.', 'All zeros: every subarray counts.', 'k larger than every value.'],
+    edges: ['Negative sums: use ((s % k) + k) % k, e.g. [−1, 2, 9], k 2 → 2.', 'All zeros: [0, 0], k 3 → 3.', 'Nothing divisible: [1], k 2 → 0.'],
   },
 
   'contiguous-array': {
+    aha: 'Count a 0 as −1 and a 1 as +1. A stretch with equal 0s and 1s then sums to 0, which happens exactly between two positions with the same running balance. Remember where each balance first appeared.',
+    asks: {
+      observe: 'For [0, 0, 1, 0, 1, 1], write the running balance (0 → −1, 1 → +1), starting from 0. Where does a balance repeat?',
+      pattern: 'If the balance is the same at two positions, what is true about everything between them?',
+    },
     read: [
-      { phrase: 'an equal number of `0`s and `1`s', says: 'A balance condition on a range.' },
+      { phrase: 'an equal number of `0`s and `1`s', says: 'A balance condition on a stretch of the array.' },
       { phrase: 'Count a 0 as -1 and a 1 as +1', says: 'Then "balanced" means "sums to 0": a prefix-sum question.' },
       { phrase: 'two equal prefix sums as far apart as possible', says: 'Remember the first index of each balance; later equal balances give candidate lengths.' },
     ],
@@ -182,168 +218,195 @@ export default {
     observe: [
       {
         title: 'Turn 0 into −1',
-        text: 'A subarray with as many 0s as 1s now sums to 0.',
+        text: 'A stretch with as many 0s as 1s now sums to 0.',
         sketch: { kind: 'array', rows: [{ label: 'nums', items: [0, 0, 1, 0, 1, 1] }, { label: 'as ±1', items: [-1, -1, 1, -1, 1, 1] }] },
       },
       {
-        title: 'Equal running balances bound a balanced subarray',
-        text: 'If the balance is the same at two positions, everything between them sums to 0. For the longest, pair each position with the first time its balance appeared.',
-        sketch: { kind: 'array', rows: [{ label: 'balance (start = 0)', items: [0, -1, -2, -1, -2, -1, 0], marks: { 0: 'hit', 6: 'hit' } }], caption: 'balance 0 at the start and the end: length 6' },
+        title: 'Equal balances bound a balanced stretch',
+        text: 'The balance is 0 before the first number and 0 again after the last, so the whole array is balanced: length 6.',
+        sketch: { kind: 'array', rows: [{ label: 'balance (start = 0)', items: [0, -1, -2, -1, -2, -1, 0], marks: { 0: 'hit', 6: 'hit' } }] },
       },
     ],
-    brute: { idea: 'For each start, extend while counting 0s and 1s; record lengths where they are equal.', cost: 'O(n²)', waste: 'Only the running balance matters, and its first occurrence can be looked up.' },
+    brute: { idea: 'For each start, extend while counting 0s and 1s; record lengths where they are equal.', cost: 'O(n²)', waste: 'Only the running balance matters, and where it first appeared can be looked up.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Map 0 to −1, keep a running balance, and remember where each balance first appeared: the longest zero-sum subarray in O(n).',
+      why: 'Turn 0 into −1, keep a running balance, and remember where each balance first appeared: the longest zero-sum stretch in O(n).',
       not: [
-        { id: 'sliding-window', why: 'Balance isn\'t monotone in the window size, so you can\'t decide which end to move.' },
-        { id: 'hashing', why: 'The first-index map is a hash map, but it works on prefix balances.' },
+        { id: 'sliding-window', why: 'Balance doesn\'t improve steadily as a window grows, so you can\'t decide which end to move.' },
+        { id: 'hashing', why: 'The first-position map is a hash map, but it works on prefix balances.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Balance 0 at index −1', text: 'Seed the map with {0: −1} so balanced prefixes count.' },
-        { title: '[0, 1]: balances −1, 0', text: 'At index 1 the balance is 0 again: length 1 − (−1) = 2.', sketch: { kind: 'array', rows: [{ items: [0, 1], bands: [{ from: 0, to: 1, tone: 'success' }] }] } },
+        { title: 'Seed: balance 0 at index −1', text: 'So a balanced stretch starting at index 0 is found too.', sketch: { kind: 'array', rows: [{ label: 'first seen', items: ['0 → −1'] }] } },
+        { title: 'Balances −1, −2, −1, −2, −1', text: '−1 first appears at index 0 and −2 at index 1. Repeats give lengths: 2 − 0 = 2, 3 − 1 = 2, 4 − 0 = 4.', sketch: { kind: 'array', rows: [{ items: [-1, -2, -1, -2, -1], marks: { 0: 'target', 2: 'hit', 4: 'hit' } }] } },
+        { title: 'Index 5: balance 0 again → 6', text: '5 − (−1) = 6: the whole array.', sketch: { kind: 'array', rows: [{ items: [0, 0, 1, 0, 1, 1], bands: [{ from: 0, to: 5, tone: 'success' }] }] } },
       ],
     },
-    edges: ['All 0s or all 1s → 0.', 'The whole array is balanced.', 'Only the first occurrence of each balance is stored.'],
+    edges: ['All 0s: [0, 0] → 0.', '[0, 1] → 2.', 'Only the first position of each balance is stored: [0, 1, 0] → 2.'],
   },
 
   'product-of-array-except-self': {
+    aha: 'The product of everything except nums[i] is (the product of everything to its left) × (the product of everything to its right). Build the left products in one pass and multiply in the right products on a second pass from the end.',
+    asks: {
+      observe: 'For [1, 2, 3, 4] at index 2, what is the product of the numbers on its left? On its right?',
+      pattern: 'Division is not allowed. How can "everything except me" be split into two parts you can build up as you go?',
+    },
     read: [
-      { phrase: 'the product of every element of `nums` except `nums[i]`', says: 'Everything to the left of i times everything to the right of i: prefix and suffix products.' },
+      { phrase: 'the product of every element of `nums` except `nums[i]`', says: 'Everything to the left of i times everything to the right of i.' },
       { phrase: 'Do not use division', says: 'Total ÷ nums[i] is ruled out (and breaks on zeros).' },
-      { phrase: 'run in O(n) time', says: 'Multiplying all others for each i would be O(n²).' },
+      { phrase: 'run in O(n) time', says: 'Multiplying all the others for each i would be O(n²).' },
     ],
     budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'The nested product is 10¹⁰.' },
     observe: [
       {
         title: 'Left product × right product',
-        text: 'For [1, 2, 3, 4] at index 2: left = 1 · 2 = 2, right = 4, answer 8.',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 2, 3, 4], marks: { 2: 'cur' } }, { label: 'prefix (left of i)', items: [1, 1, 2, 6], marks: { 2: 'hit' } }, { label: 'suffix (right of i)', items: [24, 12, 4, 1], marks: { 2: 'hit' } }], caption: '2 × 4 = 8' },
+        text: 'At index 2 of [1, 2, 3, 4]: left = 1 · 2 = 2, right = 4, answer 8.',
+        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, 2, 3, 4], marks: { 2: 'cur' } }, { label: 'left of i', items: [1, 1, 2, 6], marks: { 2: 'hit' } }, { label: 'right of i', items: [24, 12, 4, 1], marks: { 2: 'hit' } }], caption: '2 × 4 = 8' },
       },
       {
-        title: 'One output array, one running product',
-        text: 'Write the prefix products into the answer, then sweep from the right with a single running suffix product.',
+        title: 'One answer array, one running number',
+        text: 'Write the left products straight into the answer, then sweep from the right keeping a single running right product.',
+        sketch: { kind: 'array', rows: [{ label: 'answer', items: [24, 12, 8, 6], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit' } }] },
       },
     ],
-    brute: { idea: 'For each index, multiply every other element.', cost: 'O(n²)', waste: 'Neighbouring answers share almost all of their factors.' },
+    brute: { idea: 'For each index, multiply every other number.', cost: 'O(n²)', waste: 'Neighbouring answers share almost all of their factors.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Prefix and suffix products (the multiplicative version of prefix sums) give every answer in O(n), with O(1) extra space.',
+      why: 'Prefix and suffix products (prefix sums, but multiplying) give every answer in O(n) with O(1) extra space.',
       not: [
         { id: 'dp-linear', why: 'The two passes are simple DPs; they are exactly prefix and suffix products.' },
-        { id: 'sliding-window', why: 'The excluded element moves, but the "window" is everything else, which a prefix and a suffix describe.' },
+        { id: 'sliding-window', why: 'The excluded number moves, but "everything else" is one prefix plus one suffix, not a window.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Left pass', text: 'answer = [1, 1, 2, 6] (products to the left).' },
-        { title: 'Right pass', text: 'Multiply by the running product to the right: 4 → 24, 4, … answer = [24, 12, 8, 6].', sketch: { kind: 'array', rows: [{ items: [24, 12, 8, 6], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit' } }] } },
+        { title: 'Left pass', text: 'answer[i] = product of everything left of i: [1, 1, 2, 6].', sketch: { kind: 'array', rows: [{ items: [1, 1, 2, 6], marks: { 0: 'kept', 1: 'kept', 2: 'kept', 3: 'kept' } }] } },
+        { title: 'Right pass starts at the end', text: 'right = 1: answer[3] = 6 · 1 = 6. Then right = 4.', sketch: { kind: 'array', rows: [{ items: [1, 1, 2, 6], marks: { 3: 'hit' } }] } },
+        { title: 'Finish: [24, 12, 8, 6]', text: 'answer[2] = 2 · 4 = 8, answer[1] = 1 · 12 = 12, answer[0] = 1 · 24 = 24.', sketch: { kind: 'array', rows: [{ items: [24, 12, 8, 6], marks: { 0: 'hit', 1: 'hit', 2: 'hit' } }] } },
       ],
     },
-    edges: ['One zero: only its position is non-zero.', 'Two zeros: every answer is 0.', 'Negative values.'],
+    edges: ['One zero: [1, 0, 3] → [0, 3, 0].', 'Two zeros: [0, 0, 2] → [0, 0, 0].', 'Negative values: [−1, 2] → [2, −1].'],
   },
 
   'range-sum-query-2d-immutable': {
+    aha: 'Store P[r][c] = the sum of the whole rectangle from the top-left corner to just before (r, c). Any rectangle is then four lookups: the big corner, minus the strip above, minus the strip to the left, plus the overlap you subtracted twice.',
+    asks: {
+      observe: 'If you know the sums of every rectangle that starts at the top-left corner, how can you get a rectangle in the middle?',
+      pattern: 'In 1D, a range is a difference of two prefixes. What is the 2D version of that?',
+    },
     read: [
-      { phrase: 'Each `sumRegion` call should take O(1) time', says: 'Precompute: a 2D prefix-sum table.' },
-      { phrase: 'both inclusive', says: 'Careful with off-by-one: store P with an extra row and column of zeros.' },
+      { phrase: 'Each `sumRegion` call should take O(1) time', says: 'Precompute: a 2D table of prefix sums.' },
+      { phrase: 'both inclusive', says: 'Careful with off-by-one: give P an extra row and column of zeros.' },
     ],
-    budget: { from: '200 × 200 grid, up to 10⁴ queries', rows: [['sum each rectangle', '4 × 10⁴ × 10⁴ = 4 × 10⁸', 'warn'], ['2D prefix sums', '4 × 10⁴ + 10⁴', 'ok']], aim: 'O(1) per query', note: 'Building the table is O(m · n) once.' },
+    budget: { from: '200 × 200 grid, up to 10⁴ queries', rows: [['add up each rectangle', '4 × 10⁴ × 10⁴ = 4 × 10⁸', 'warn'], ['2D prefix sums', '4 × 10⁴ + 10⁴', 'ok']], aim: 'O(1) per query', note: 'Building the table is O(m · n) once.' },
     observe: [
       {
-        title: 'P[r][c] is the sum of the top-left rectangle',
-        text: 'Let P[r][c] be the sum of everything above and to the left of (r, c). Build it with P[r][c] = cell + P[r−1][c] + P[r][c−1] − P[r−1][c−1].',
+        title: 'P holds every top-left rectangle',
+        text: 'Build it with P[r][c] = cell + P[r − 1][c] + P[r][c − 1] − P[r − 1][c − 1]: the cell, plus the rectangle above, plus the one on the left, minus their overlap.',
+        sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 0, 0], [0, 0, 0]], marks: { '2,2': 'cur', '0,0': 'ring', '0,1': 'ring', '0,2': 'ring', '1,0': 'ring', '1,1': 'ring', '1,2': 'ring', '2,0': 'ring', '2,1': 'ring' }, caption: 'P at the bottom-right = the whole shaded block' },
       },
       {
         title: 'Any rectangle is four corners',
         text: 'Big corner, minus the strip above, minus the strip to the left, plus the overlap that was subtracted twice.',
-        sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 1, 1], [0, 1, 1]], marks: { '1,1': 'hit', '1,2': 'hit', '2,1': 'hit', '2,2': 'hit', '0,0': 'cur' }, labels: { '0,0': '+', '0,1': '−', '1,0': '−' }, caption: 'inclusion–exclusion over the corners' },
+        sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 1, 1], [0, 1, 1]], marks: { '1,1': 'hit', '1,2': 'hit', '2,1': 'hit', '2,2': 'hit', '0,0': 'cur' }, labels: { '0,0': '+', '0,1': '−', '0,2': '−', '1,0': '−', '2,0': '−' }, caption: 'the shaded rectangle = big − top − left + corner' },
       },
     ],
     brute: { idea: 'Loop over every cell of the rectangle on each call.', cost: 'O(m · n) per query', waste: 'Overlapping rectangles are re-added on every query, though the grid never changes.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'A 2D prefix-sum table answers any rectangle with four lookups: O(1) per query after O(m · n) setup.',
+      why: 'A 2D prefix-sum table answers any rectangle with four lookups: one step per query after O(m · n) setup.',
       not: [
-        { id: 'range-queries', why: 'A 2D Fenwick tree supports updates; with an immutable grid, prefix sums are simpler.' },
+        { id: 'range-queries', why: 'A 2D Fenwick tree supports updates too; with a grid that never changes, prefix sums are simpler.' },
         { id: 'dp-grid', why: 'Building P looks like a grid DP, but it is just a 2D prefix sum.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Build P', text: 'One pass over the grid with the recurrence; P has one extra row and column of zeros.' },
-        { title: 'sumRegion(2, 1, 4, 3)', text: 'P[5][4] − P[2][4] − P[5][1] + P[2][1] = 8.' },
+        { title: 'Build P once', text: 'One pass over the grid with the formula; P gets an extra row and column of zeros.', sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 3, 3], [0, 8, 14]], labels: { '1,1': '3', '1,2': '3', '2,1': '8', '2,2': '14' }, caption: 'the top-left 2 × 2 of P for the example' } },
+        { title: 'Query (2, 1) to (4, 3)', text: 'Take P[5][4], subtract P[2][4] and P[5][1], add back P[2][1].', sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 1, 1], [0, 1, 1]], marks: { '1,1': 'hit', '1,2': 'hit', '2,1': 'hit', '2,2': 'hit' } } },
+        { title: 'Result: 8', text: 'Four lookups, whatever the rectangle\'s size.', sketch: { kind: 'array', rows: [{ items: [8], marks: { 0: 'hit' } }] } },
       ],
     },
-    edges: ['A single cell.', 'Rectangles touching row 0 or column 0 (the zero padding handles them).', 'The whole grid.'],
+    edges: ['A single cell: sumRegion(0, 0, 0, 0) → that cell.', 'Rectangles touching row 0 or column 0 use the zero padding: sumRegion(0, 0, 1, 1) on the example → 14.', 'The whole grid → the sum of every cell.'],
   },
 
   'corporate-flight-bookings': {
+    aha: 'Instead of adding seats to every flight in a booking, mark only where the booking starts (+seats) and where it stops (−seats just after). One running sum at the end turns those marks into every flight\'s total.',
+    asks: {
+      observe: 'For the booking [2, 5, 25], which two positions would you mark so that a running sum adds 25 to flights 2 … 5 only?',
+      pattern: 'Many "add to a whole range" updates, read once at the end: what lets each update cost one step?',
+    },
     read: [
       { phrase: 'reserves `seats` seats on every flight from `first` to `last` inclusive', says: 'Many range updates (add v to a whole range), read once at the end: a difference array.' },
-      { phrase: 'element `i` is the total number of seats booked on flight `i + 1`', says: 'Flights are 1-based; the answer is 0-based.' },
+      { phrase: 'element `i` is the total number of seats booked on flight `i + 1`', says: 'Flights are numbered from 1; the answer array from 0.' },
     ],
-    budget: { from: 'n, bookings ≤ 2 × 10⁴', rows: [['add to every flight of each booking', '2 × 10⁴ × 2 × 10⁴ = 4 × 10⁸', 'warn'], ['difference array + one prefix sum', '4 × 10⁴', 'ok']], aim: 'O(n + bookings)', note: 'Each booking can cover every flight, so the naive way is quadratic.' },
+    budget: { from: 'n, bookings ≤ 2 × 10⁴', rows: [['add to every flight of each booking', '2 × 10⁴ × 2 × 10⁴ = 4 × 10⁸', 'warn'], ['difference array + one running sum', '4 × 10⁴', 'ok']], aim: 'O(n + bookings)', note: 'Each booking can cover every flight, so the direct way is quadratic.' },
     observe: [
       {
         title: 'Mark where each booking starts and stops',
         text: '+seats at the first flight and −seats just after the last. Everything in between is implied.',
-        sketch: { kind: 'array', rows: [{ label: 'diff after [2, 5, 25]', items: [0, 25, 0, 0, 0, '−25'], marks: { 1: 'hit', 5: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'marks for [2, 5, 25]', items: [0, 25, 0, 0, 0, '−25'], marks: { 1: 'hit', 5: 'bad' } }] },
       },
       {
-        title: 'One prefix sum rebuilds every flight',
-        text: 'Running the marks left to right adds each booking exactly to its range.',
+        title: 'One running sum rebuilds every flight',
+        text: 'Adding the marks up from left to right applies each booking exactly to its range.',
+        sketch: { kind: 'array', rows: [{ label: 'all marks', items: [10, 45, -10, -20, 0, -25] }, { label: 'running sum', items: [10, 55, 45, 25, 25], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit', 4: 'hit' } }] },
       },
     ],
-    brute: { idea: 'For each booking, add seats to every flight from first to last.', cost: 'O(b · n)', waste: 'Each booking touches its whole range, though only its two ends carry information.' },
+    brute: { idea: 'For each booking, add seats to every flight from first to last.', cost: 'O(b · n)', waste: 'Each booking touches its whole range, though only its two ends carry new information.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'A difference array makes each range update O(1); one prefix sum at the end gives every total. O(n + b).',
+      why: 'A difference array makes each range update one step; one running sum at the end gives every total. O(n + b).',
       not: [
-        { id: 'range-queries', why: 'A segment tree with lazy updates works, but there are no queries in between, so it is overkill.' },
-        { id: 'intervals', why: 'Sorting the intervals and sweeping works too, with an extra sort.' },
+        { id: 'range-queries', why: 'A segment tree with range updates works, but there are no questions in between, so it is overkill.' },
+        { id: 'intervals', why: 'Sorting the bookings and sweeping works too, with an extra sort.' },
       ],
     },
     watch: { viz: 'DifferenceArrayViz', inputs: [{ label: '5 flights, bookings [1,2,10], [2,3,20], [2,5,25] (0-based here)', input: { n: 5, updates: [[0, 1, 10], [1, 2, 20], [1, 4, 25]] } }] },
-    edges: ['A booking ending at the last flight (no −seats slot needed, or one extra slot).', 'A single flight.', 'Overlapping bookings.'],
+    edges: ['A booking ending at the last flight needs no −seats inside the array: [[1, 2, 5]], n 2 → [5, 5].', 'A single flight: [[1, 1, 7]], n 1 → [7].', 'Overlapping bookings add up: [[1, 2, 1], [2, 2, 1]], n 2 → [1, 2].'],
   },
 
   'number-of-submatrices-that-sum-to-target': {
+    aha: 'Fix a top row and a bottom row. Each column then contributes one number (its sum between those rows), and rectangles in that band are just subarrays of that row of numbers: count them with prefix sums and a map, like Subarray Sum Equals K.',
+    asks: {
+      observe: 'Between rows 0 and 1 of [[0, 1, 0], [1, 1, 1], [0, 1, 0]], what is each column\'s sum? Which stretches of those sums add to 0?',
+      pattern: 'Have you already solved "count stretches of a 1D array that sum to a target"? How could a grid become a 1D array?',
+    },
     read: [
       { phrase: 'rectangular submatrices of `matrix` whose values add up to `target`', says: 'The 2D version of Subarray Sum Equals K.' },
       { phrase: 'Fix a pair of rows, collapse the columns between them into one array of sums', says: 'Reduce 2D to 1D: for each pair of rows, the columns become one array.' },
-      { phrase: 'using prefix sums and a hash map', says: 'Then count subarrays summing to target, exactly as in the 1D problem.' },
+      { phrase: 'using prefix sums and a hash map', says: 'Then count stretches summing to the target, exactly as in the 1D problem.' },
     ],
-    budget: { from: 'up to 100 × 100', rows: [['every rectangle with 2D prefix sums', '(100²)² = 10⁸', 'warn'], ['row pairs × 1D count', '100² × 100 = 10⁶', 'ok']], aim: 'O(m² · n)', note: 'Enumerating all rectangles is borderline; the reduction is 100 times faster.' },
+    budget: { from: 'up to 100 × 100', rows: [['every rectangle with 2D prefix sums', '(100²)² = 10⁸', 'warn'], ['row pairs × 1D count', '100² × 100 = 10⁶', 'ok']], aim: 'O(m² · n)', note: 'Listing every rectangle is borderline; the reduction is 100 times faster.' },
     observe: [
       {
         title: 'Two rows turn the grid into one array',
-        text: 'Between rows r1 and r2, each column contributes one number: its sum over those rows. Rectangles in that band are subarrays of this array.',
+        text: 'Between rows 0 and 1, each column\'s sum is 1, 2, 1. Rectangles in that band are stretches of [1, 2, 1].',
         sketch: { kind: 'grid', grid: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], marks: { '0,0': 'ring', '0,1': 'ring', '0,2': 'ring', '1,0': 'ring', '1,1': 'ring', '1,2': 'ring' }, caption: 'rows 0–1 collapse to [1, 2, 1]' },
       },
       {
         title: 'Count with prefix sums + a map',
-        text: 'For each band, run the 1D "subarray sum equals k" count. Sum the counts over all row pairs.',
+        text: 'For each band, run the 1D "subarray sum equals k" count, then add up the counts over all pairs of rows.',
+        sketch: { kind: 'array', rows: [{ label: 'band rows 0–0', items: [0, 1, 0], marks: { 0: 'hit', 2: 'hit' } }], caption: 'two zero-sum stretches: [0] and [0]' },
       },
     ],
-    brute: { idea: 'Enumerate every rectangle by its two corners and get each sum from a 2D prefix table.', cost: 'O(m² · n²)', waste: 'For a fixed pair of rows, the column choices are counted pair by pair instead of with one hash-map pass.' },
+    brute: { idea: 'List every rectangle by its two corners and get each sum from a 2D prefix table.', cost: 'O(m² · n²)', waste: 'For a fixed pair of rows, column choices are tried pair by pair instead of with one map pass.' },
     pattern: {
       pick: 'prefix-sums',
-      why: 'Fix two rows, collapse columns into one array, then count subarrays with the target sum using prefix sums and a hash map: O(m² · n).',
+      why: 'Fix two rows, collapse the columns into one array, then count stretches with the target sum using prefix sums and a map: O(m² · n).',
       not: [
         { id: 'sliding-window', why: 'Values can be negative, so no window rule works.' },
-        { id: 'dp-grid', why: 'There is no path or optimal choice; we count rectangles by their sums.' },
+        { id: 'dp-grid', why: 'There is no path or best choice; we count rectangles by their sums.' },
       ],
     },
     watch: {
       frames: [
-        { title: 'Single rows', text: '[0, 1, 0]: two zero-sum subarrays ([0] twice). [1, 1, 1]: none. [0, 1, 0]: two more.' },
-        { title: 'Bands of two or three rows', text: 'Column sums [1, 2, 1] or [1, 3, 1]: none sum to 0.' },
-        { title: 'Total: 4', text: 'The four single zero cells.' },
+        { title: 'Single rows', text: 'Row 0 [0, 1, 0]: two zero-sum stretches. Row 1 [1, 1, 1]: none. Row 2 [0, 1, 0]: two more.', sketch: { kind: 'grid', grid: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], marks: { '0,0': 'hit', '0,2': 'hit', '2,0': 'hit', '2,2': 'hit' } } },
+        { title: 'Bands of two or three rows', text: 'Column sums [1, 2, 1] or [1, 3, 1]: no stretch sums to 0.', sketch: { kind: 'array', rows: [{ label: 'rows 0–1 and 1–2', items: [1, 2, 1] }, { label: 'rows 0–2', items: [1, 3, 1] }] } },
+        { title: 'Total: 4', text: 'The four single zero cells are the only rectangles that sum to 0.', sketch: { kind: 'grid', grid: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], marks: { '0,0': 'hit', '0,2': 'hit', '2,0': 'hit', '2,2': 'hit' }, labels: { '0,0': '✓', '0,2': '✓', '2,0': '✓', '2,2': '✓' } } },
       ],
     },
-    edges: ['A 1 × 1 grid.', 'Negative values.', 'target = 0 with many zeros.'],
+    edges: ['A 1 × 1 grid: [[5]], target 5 → 1.', 'Negative values: [[1, −1]], target 0 → 1.', 'All zeros: [[0, 0]], target 0 → 3.'],
   },
 };
