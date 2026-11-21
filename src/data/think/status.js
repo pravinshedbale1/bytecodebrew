@@ -11,4 +11,18 @@ export const COMPLETE = [
   'binary-search',
   'binary-search-on-answer',
   'sorting-and-selection',
+  'cyclic-sort',
+];
+
+/**
+ * Patterns brought up to the full standard (checked strictly by scripts/think-check.mjs):
+ *   - `aha`: the key idea in one plain sentence
+ *   - `asks`: this problem's own question for the observe and pattern steps (others optional)
+ *   - every observation has a sketch of the example
+ *   - watch: an engine, or at least 3 frames, every one with a sketch, ending at the answer
+ *   - every edge case states its expected result (contains →)
+ *   - no unexplained jargon (monotone, invariant, canonical, amortised)
+ */
+export const POLISHED = [
+  'cyclic-sort',
 ];

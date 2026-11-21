@@ -7,6 +7,7 @@
  *   - the picked pattern is the problem's lesson; every "why not" pattern exists and differs from it
  *   - every engine named in `watch` exists in the lesson components; every sketch points at real cells
  *   - patterns listed in src/data/think/status.js (COMPLETE) have a walkthrough for every problem
+ *   - patterns in POLISHED meet the full standard (see status.js)
  *   - src/data/thinkIndex.js is current (regenerate with --write)
  * Prints coverage per pattern, in curriculum order.
  *
@@ -17,7 +18,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PATTERNS } from '../src/lib/coach/patterns.js';
-import { COMPLETE } from '../src/data/think/status.js';
+import { COMPLETE, POLISHED } from '../src/data/think/status.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WRITE = process.argv.includes('--write');
@@ -101,6 +102,23 @@ for (const [slug, t] of Object.entries(THINK)) {
   if (w.viz && !w.inputs?.length) fail(`${at}: ${w.viz} needs inputs`);
   (w.frames ?? []).forEach((f, k) => { if (!f.title || !f.text) fail(`${at}: frame ${k + 1} needs a title and text`); checkSketch(`${at} frame ${k + 1}`, f.sketch); });
   if (!(t.edges?.length >= 2)) fail(`${at}: at least two edge cases`);
+  if (POLISHED.includes(index[slug])) polishedRules(at, t);
+}
+
+/** The full standard, for patterns listed in status.js POLISHED. */
+function polishedRules(at, t) {
+  if (!t.aha?.trim()) fail(`${at}: needs an aha (the key idea in one sentence)`);
+  for (const k of ['observe', 'pattern']) if (!t.asks?.[k]?.trim()) fail(`${at}: needs its own asks.${k} question`);
+  for (const k of Object.keys(t.asks ?? {})) if (!['read', 'budget', 'observe', 'brute', 'pattern', 'watch'].includes(k)) fail(`${at}: unknown asks.${k}`);
+  (t.observe ?? []).forEach((o, k) => { if (!o.sketch) fail(`${at}: observation ${k + 1} needs a sketch of the example`); });
+  const w = t.watch ?? {};
+  if (!w.viz) {
+    if (!(w.frames?.length >= 3)) fail(`${at}: watch needs an engine or at least 3 frames`);
+    (w.frames ?? []).forEach((f, k) => { if (!f.sketch) fail(`${at}: frame ${k + 1} needs a sketch`); });
+  }
+  for (const e of t.edges ?? []) if (!e.includes('→')) fail(`${at}: edge case "${e}" should state its expected result (→)`);
+  const text = JSON.stringify(t).toLowerCase();
+  for (const word of ['monotone', 'invariant', 'canonical', 'amortised']) if (text.includes(word)) fail(`${at}: "${word}" is jargon: say it in plain words`);
 }
 for (const [lesson, list] of Object.entries(freeBy)) if (list.length > 1) fail(`${lesson}: one free walkthrough per pattern, not ${list.length} (${list.join(', ')})`);
 
@@ -132,5 +150,5 @@ else if (readFileSync(genPath, 'utf8') !== gen) fail('src/data/thinkIndex.js is 
 
 if (errors.length) { for (const e of errors) console.error(`✗ ${e}`); process.exit(1); }
 const total = rows.reduce((s, r) => s + r[2], 0), done = rows.reduce((s, r) => s + r[1], 0);
-if (process.argv.includes('--progress')) for (const [l, d, n] of rows) console.log(`  ${d === n ? '✓' : d ? '…' : ' '} ${l.padEnd(26)} ${String(d).padStart(2)}/${n}`);
-console.log(`✓ Practice thinking: ${done}/${total} walkthroughs (${COMPLETE.length}/${ORDER.length} patterns complete); clues, patterns, engines and sketches check out`);
+if (process.argv.includes('--progress')) for (const [l, d, n] of rows) console.log(`  ${POLISHED.includes(l) ? '★' : d === n ? '✓' : d ? '…' : ' '} ${l.padEnd(26)} ${String(d).padStart(2)}/${n}`);
+console.log(`✓ Practice thinking: ${done}/${total} walkthroughs (${COMPLETE.length}/${ORDER.length} patterns complete, ${POLISHED.length} polished); clues, patterns, engines and sketches check out`);

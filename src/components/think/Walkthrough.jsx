@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { BookOpen, ChevronDown, Eye, Gauge, Play, RotateCcw, Search, Shapes, Swords } from 'lucide-react';
+import { BookOpen, ChevronDown, Eye, Gauge, Lightbulb, Play, RotateCcw, Search, Shapes, Swords } from 'lucide-react';
 import { Inline } from '../solve/Inline';
 import { mdxComponents } from '../mdx/components';
 import { PATTERNS } from '../../lib/coach/patterns';
@@ -57,7 +57,7 @@ export function Walkthrough({ problem, think, lesson }) {
               <Icon size={16} aria-hidden="true" />
               <span className={styles.headText}>
                 <span className={styles.headTitle}>{st.title}</span>
-                {!isOpen && <span className={styles.headAsk}>{st.ask}</span>}
+                {!isOpen && <span className={styles.headAsk}><Inline text={think.asks?.[st.id] ?? st.ask} /></span>}
               </span>
               <ChevronDown size={16} className={styles.chev} aria-hidden="true" />
             </button>
@@ -101,6 +101,7 @@ function StageBody({ id, think, problem, lesson }) {
     const pick = think.pattern.pick;
     return (
       <div>
+        {think.aha && <p className={styles.aha}><Lightbulb size={15} aria-hidden="true" /><span><b>The key idea.</b> <Inline text={think.aha} /></span></p>}
         <div className={styles.pick}>
           <p className={styles.pickName}>{PATTERNS[pick]?.name ?? pick}</p>
           <p><Inline text={think.pattern.why} /></p>
