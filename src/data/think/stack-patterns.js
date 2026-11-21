@@ -2,6 +2,8 @@
 export default {
   'valid-parentheses': {
     free: true,
+    aha: "Every closing bracket must match the most recent opening bracket that is still open: last opened, first closed. Push openers on a stack; each closer must match the top, and the stack must be empty at the end.",
+    asks: { observe: "In \"([)]\", when the ) arrives, which opener is the most recent one still open? Does it match?", pattern: "Which structure gives you \"the most recently opened, still unclosed\" bracket in one step?" },
     read: [
       { phrase: 'closed by a bracket of the same type', says: 'When a closer arrives, we must know which opener it is closing: remember the openers.' },
       { phrase: 'the most recently opened one first', says: 'Last opened, first closed: last in, first out. That is exactly a stack.' },
@@ -35,6 +37,6 @@ export default {
       ],
     },
     watch: { viz: 'BracketsViz', inputs: [{ label: '"{[()]()}" (valid)', input: { s: '{[()]()}' } }, { label: '"([)]" (crossed)', input: { s: '([)]' } }] },
-    edges: ['A single character, like "(" or "]".', 'Starts with a closer: ")(".', 'Odd length can never be valid (a quick early exit).'],
+    edges: ["A single character: \"(\" → false.", "Starts with a closer: \")(\" → false.", "Odd length can never be valid: \"(()\" → false."],
   },
 };

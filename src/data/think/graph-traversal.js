@@ -1,6 +1,8 @@
 /** Practice thinking walkthroughs: graph-traversal (format: src/data/think/index.js). */
 export default {
   'rotting-oranges': {
+    aha: "All rotten oranges spread at the same time, one step per minute. Put every rotten orange in a queue at minute 0 and run one breadth-first search from all of them together: minute t is level t, and any fresh orange left at the end is unreachable.",
+    asks: { observe: "In [[2, 1, 1], [1, 1, 0], [0, 1, 1]], which oranges rot at minute 1? Which one rots last?", pattern: "Spreading one step per minute from several starting points at once: which search visits cells in order of distance?" },
     read: [
       { phrase: 'Every minute', says: 'Time moves in rounds, and the rot spreads one step per round: levels of a breadth-first search.' },
       { phrase: 'next to a rotten one (up, down, left or right)', says: 'A grid where each cell has 4 neighbours: a graph.' },
@@ -36,6 +38,6 @@ export default {
       ],
     },
     watch: { viz: 'GridBfsViz', inputs: [{ label: 'the example grid', input: { mode: 'oranges', grid: [[2, 1, 1], [1, 1, 0], [0, 1, 1]] } }, { label: 'an orange out of reach', input: { mode: 'oranges', grid: [[2, 1, 1], [0, 1, 1], [1, 0, 1]] } }] },
-    edges: ['No fresh oranges at all → 0 (even with no rotten ones).', 'Fresh oranges but nothing rotten → −1.', 'Several rotten oranges far apart: they must all start at minute 0.'],
+    edges: ["No fresh oranges: [[0, 2]] → 0.", "Fresh but nothing rotten: [[1]] → −1.", "An orange cut off: [[2, 1, 1], [0, 1, 1], [1, 0, 1]] → −1."],
   },
 };

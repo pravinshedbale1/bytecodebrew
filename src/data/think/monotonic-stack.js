@@ -1,6 +1,8 @@
 /** Practice thinking walkthroughs: monotonic-stack (format: src/data/think/index.js). */
 export default {
   'daily-temperatures': {
+    aha: "Days still waiting for a warmer day form a falling staircase. Keep them on a stack: each new day pops every colder waiting day (it is their answer, i − j days later), then waits itself. Every day is pushed and popped at most once.",
+    asks: { observe: "In [73, 74, 75, 71, 69, 72, 76, 73], which days are still waiting when 72 arrives? Which of them does 72 answer?", pattern: "Waiting days are always colder than the waiting day before them. Which one can a new warm day answer first?" },
     read: [
       { phrase: 'the number of days you have to wait after day `i`', says: 'For each day, the distance to something on its right: a "next ..." question. Distances mean we keep indexes, not values.' },
       { phrase: 'strictly warmer', says: 'The next strictly greater element. An equal temperature does not count.' },
@@ -35,14 +37,16 @@ export default {
       ],
     },
     watch: { viz: 'StackSideViz', inputs: [{ label: '[73, 74, 75, 71, 69, 72, 76, 73]', input: { a: [73, 74, 75, 71, 69, 72, 76, 73], want: 'ng', store: 'index', dist: true } }] },
-    edges: ['Strictly falling temperatures: every answer is 0.', 'Equal temperatures are not warmer: [70, 70] → [0, 0].', 'A single day → [0].'],
+    edges: ["Always falling: [5, 4, 3] → [0, 0, 0].", "Equal is not warmer: [70, 70] → [0, 0].", "A single day: [50] → [0]."],
   },
 
   'sliding-window-maximum': {
+    aha: "A value that is older and not bigger than a newer value can never be a window maximum again. Keep only the candidates in a deque (biggest at the front): drop beaten values from the back, drop expired ones from the front, and read the maximum at the front.",
+    asks: { observe: "Once 3 arrives after 1 in [1, 3, −1, …], can the 1 ever be the maximum of a window again?", pattern: "You need the maximum while values enter on the right and leave on the left. Which values are worth keeping?" },
     read: [
       { phrase: 'A window of size `k` slides', says: 'A fixed-size sliding window: one element enters on the right and one leaves on the left at every step.' },
       { phrase: 'the maximum value inside the window', says: 'We need the max of a set that changes at both ends. Adding is easy; removing the max is the hard part.' },
-      { phrase: 'Aim for O(n) time', says: 'A heap (O(n log n)) is not enough: each element should be handled in O(1) amortised.' },
+      { phrase: 'Aim for O(n) time', says: 'A heap (O(n log n)) is not enough: each value should enter and leave the structure only once, for O(n) in total.' },
     ],
     budget: { from: 'nums.length ≤ 10⁵, k ≤ n', n: 1e5, aim: 'O(n)', note: 'Recomputing each window is O(nk), up to 10¹⁰ when k is about n/2.' },
     observe: [
@@ -73,6 +77,6 @@ export default {
       ],
     },
     watch: { viz: 'DequeSideViz', inputs: [{ label: '[1, 3, −1, −3, 5, 3, 6, 7], k = 3', input: { a: [1, 3, -1, -3, 5, 3, 6, 7], k: 3, mode: 'max' } }] },
-    edges: ['k = 1: the answer is the array itself.', 'k = n: one window, the overall maximum.', 'Equal values: pop with <= (or keep both; just be consistent).'],
+    edges: ["k = 1: [4, 2] → [4, 2].", "k = n: [1, 3, 2], k 3 → [3].", "A falling array: [5, 4, 3], k 2 → [5, 4]."],
   },
 };

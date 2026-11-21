@@ -1,6 +1,8 @@
 /** Practice thinking walkthroughs: dp-linear (format: src/data/think/index.js). */
 export default {
   'house-robber': {
+    aha: "At each house there are only two options: skip it (keep the best so far) or rob it (its money plus the best up to two houses back). best(i) = max(best(i − 1), nums[i] + best(i − 2)), and only the last two answers need remembering.",
+    asks: { observe: "In [2, 1, 1, 2], does robbing every other house give the best total? What does?", pattern: "The best total up to house i depends only on which two earlier answers?" },
     read: [
       { phrase: 'You cannot rob two adjacent houses', says: 'Each choice limits the next one: decisions interact, so a simple greedy is suspicious.' },
       { phrase: 'Return the maximum amount of money', says: 'An optimisation over many possible plans: a dynamic programming candidate.' },
@@ -42,6 +44,6 @@ export default {
         { title: 'best(4) = max(11, 1 + 11) = 12', text: 'Rob house 4 → 1 + best(2) = 12. The answer is 12 (houses 0, 2 and 4).', sketch: { kind: 'array', rows: [{ label: 'nums', items: [2, 7, 9, 3, 1], marks: { 0: 'hit', 2: 'hit', 4: 'hit' } }, { label: 'best', items: [2, 7, 11, 11, 12], marks: { 4: 'hit' } }] } },
       ],
     },
-    edges: ['One house → its money.', 'Two houses → the richer one.', 'Zeros everywhere → 0.'],
+    edges: ["One house: [5] → 5.", "Two houses: [2, 7] → 7.", "All zeros: [0, 0, 0] → 0."],
   },
 };
