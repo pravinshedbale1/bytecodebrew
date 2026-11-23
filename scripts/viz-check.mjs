@@ -558,9 +558,21 @@ function common(name, steps, code, kinds) {
 
   const runBfs = (input) => {
     const steps = tr.treeBfs(input);
-    common(`tree bfs ${JSON.stringify(input)}`, steps, tr.treeBfsCode(input.mode), ['start', 'level', 'visit', 'found', 'done']);
+    common(`tree bfs ${JSON.stringify(input)}`, steps, tr.treeBfsCode(input.mode), ['start', 'level', 'visit', 'wire', 'link', 'found', 'done']);
     const want = tr.treeBfsAnswer(input);
-    const got = input.mode === 'min' ? Number(steps.at(-1).answer.split('= ')[1]) : input.mode === 'right' ? steps.at(-1).out : steps.at(-1).out;
+    const last = steps.at(-1);
+    let got = last.out;
+    if (input.mode === 'min') got = Number(last.answer.split('= ')[1]);
+    if (input.mode === 'width') got = Math.max(...last.out);
+    if (input.mode === 'next') {
+      const t = tr.buildTree(input.tree);
+      got = [];
+      for (let lm = t.root; lm !== null; lm = t.nodes[lm].left) {
+        for (let h = lm; h !== null && h !== undefined; h = last.next[h]) got.push(String(t.nodes[h].v));
+        got.push('#');
+      }
+      ok(Object.keys(last.next).length === Object.keys(t.nodes).length, `tree bfs next ${JSON.stringify(input)}: every node linked`);
+    }
     ok(same(got, want), `tree bfs ${JSON.stringify(input)}: answer`);
   };
   for (const e of Object.values(tr.TREE_BFS)) runBfs(e.input);

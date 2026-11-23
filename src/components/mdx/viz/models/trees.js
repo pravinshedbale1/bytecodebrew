@@ -353,22 +353,49 @@ export function treeDfs({ mode, tree, target, p, q }) {
 
 export const TREE_BFS = {
   level: { label: 'Level order', input: { mode: 'level', tree: [3, 9, 20, null, null, 15, 7] } },
+  avg: { label: 'Average of levels', input: { mode: 'avg', tree: [3, 9, 20, null, null, 15, 7] } },
+  max: { label: 'Largest per row', input: { mode: 'max', tree: [1, 3, 2, 5, 3, null, 9] } },
   right: { label: 'Right side view', input: { mode: 'right', tree: [1, 2, 3, null, 5, null, 4] } },
   min: { label: 'Minimum depth', input: { mode: 'min', tree: [3, 9, 20, null, null, 15, 7] } },
   zigzag: { label: 'Zigzag', input: { mode: 'zigzag', tree: [1, 2, 3, 4, 5, 6, 7] } },
+  width: { label: 'Maximum width', input: { mode: 'width', tree: [1, 3, 2, 5, 3, null, 9] } },
+  next: { label: 'Next pointers', input: { mode: 'next', tree: [1, 2, 3, 4, 5, 6, 7] } },
 };
 
-export const treeBfsCode = (mode) => [
-  ['size', 'int size = queue.size();                 // everything in the queue now = one level'],
-  ['poll', 'for (i < size) { n = queue.poll();'],
-  ['use', {
-    level: '  level.add(n.val);',
-    right: '  if (i == size - 1) out.add(n.val);      // last of the level is visible from the right',
-    min: '  if (n is a leaf) return depth;           // the first leaf is the shallowest',
-    zigzag: '  leftToRight ? level.addLast(n.val) : level.addFirst(n.val);',
-  }[mode]],
-  ['kids', '  offer(n.left); offer(n.right); }      // children belong to the next level'],
-];
+export const treeBfsCode = (mode) => {
+  if (mode === 'next') {
+    return [
+      ['level', 'while (leftmost.left != null) {        // the level below still needs links'],
+      ['walk', '  for (head = leftmost; head != null; head = head.next) {   // walk this level like a list'],
+      ['inside', '    head.left.next = head.right;          // siblings: one parent knows both'],
+      ['across', '    if (head.next != null) head.right.next = head.next.left; }   // cousins, via the parent\'s next'],
+      ['down', '  leftmost = leftmost.left; }             // that level is linked: move down'],
+    ];
+  }
+  return [
+    ['size', {
+      width: 'int size = queue.size(); first = queue.peek().pos;   // re-base: this level starts at 0',
+    }[mode] ?? 'int size = queue.size();                 // everything in the queue now = one level'],
+    ['poll', 'for (i < size) { n = queue.poll();'],
+    ['use', {
+      level: '  level.add(n.val);',
+      avg: '  sum += n.val;                          // a long (or double): values reach 2³¹',
+      max: '  best = (i == 0) ? n.val : max(best, n.val);   // start from the first node, not 0',
+      right: '  if (i == size - 1) out.add(n.val);      // last of the level is visible from the right',
+      min: '  if (n is a leaf) return depth;           // the first leaf is the shallowest',
+      zigzag: '  leftToRight ? level.addLast(n.val) : level.addFirst(n.val);',
+      width: '  p = n.pos - first; last = p;',
+    }[mode]],
+    ['kids', mode === 'width'
+      ? '  offer(n.left, 2p); offer(n.right, 2p + 1); }   // heap positions'
+      : '  offer(n.left); offer(n.right); }      // children belong to the next level'],
+    ...(mode === 'avg' ? [['end', 'out.add(sum / size);']] : []),
+    ...(mode === 'max' ? [['end', 'out.add(best);']] : []),
+    ...(mode === 'width' ? [['end', 'best = max(best, last + 1);              // width = last − first + 1, first is 0']] : []),
+  ];
+};
+
+const fmt = (x) => (Number.isInteger(x) ? `${x}.0` : String(Math.round(x * 1e5) / 1e5));
 
 export function treeBfsAnswer({ mode, tree }) {
   const t = buildTree(tree);
@@ -376,8 +403,20 @@ export function treeBfsAnswer({ mode, tree }) {
   let q = t.root === null ? [] : [t.root];
   while (q.length) { levels.push(q.map((id) => t.nodes[id].v)); q = q.flatMap((id) => [t.nodes[id].left, t.nodes[id].right].filter((x) => x !== null)); }
   if (mode === 'level') return levels;
+  if (mode === 'avg') return levels.map((l) => l.reduce((a, b) => a + b, 0) / l.length);
+  if (mode === 'max') return levels.map((l) => Math.max(...l));
   if (mode === 'right') return levels.map((l) => l.at(-1));
   if (mode === 'zigzag') return levels.map((l, k) => (k % 2 ? [...l].reverse() : l));
+  if (mode === 'next') return levels.flatMap((l) => [...l.map(String), '#']);
+  if (mode === 'width') {
+    let best = 0;
+    let lv = [[t.root, 0]];
+    while (lv.length) {
+      best = Math.max(best, lv.at(-1)[1] - lv[0][1] + 1);
+      lv = lv.flatMap(([id, p]) => [[t.nodes[id].left, 2 * p], [t.nodes[id].right, 2 * p + 1]].filter(([c]) => c !== null));
+    }
+    return best;
+  }
   let qq = [t.root];
   for (let d = 1; ; d++) {
     const nx = [];
@@ -386,21 +425,103 @@ export function treeBfsAnswer({ mode, tree }) {
   }
 }
 
+/** Populating next pointers in a perfect tree: each linked level is walked like a list to wire the one below. */
+function treeNext(tree) {
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const next = {};             // id → id | null, once set
+  const out = [[N[t.root].v]]; // levels read through next pointers
+  const fresh = [];
+  const steps = [];
+  next[t.root] = null;
+  const snap = (x) => steps.push({ tree, queue: [], status: {}, levelOf: {}, posOf: {}, next: { ...next }, out: out.map((l) => [...l]), fresh: [...fresh], ...x });
+  snap({
+    kind: 'start', cur: null, lines: [],
+    title: 'Link every node to its right neighbour',
+    text: 'The tree is perfect: every parent has two children and the leaves share one level. The root is a level on its own, so its next is already null. From then on, a level whose next pointers are set can be walked like a linked list, and that walk is all you need to wire the level below. No queue.',
+    calc: [`tree: ${showTree(tree)}`, 'root.next = null'],
+  });
+  let leftmost = t.root;
+  let depth = 1;
+  while (N[leftmost].left !== null) {
+    const row = [];
+    for (let h = leftmost; h !== null; h = next[h]) row.push(h);
+    fresh.length = 0;
+    snap({
+      kind: 'level', cur: leftmost, depth, lines: ['level'], walk: row,
+      title: `Level ${depth} is linked: walk it`,
+      text: `Level ${depth} reads ${row.map((id) => N[id].v).join(' → ')} → null through its next pointers. Walk it from the leftmost node, ${N[leftmost].v}. Every node on it is a parent, and while you stand on a parent you can reach both its children and its neighbour's children.`,
+      calc: [`leftmost = ${N[leftmost].v}`],
+    });
+    for (const h of row) {
+      const n = N[h];
+      fresh.length = 0;
+      next[n.left] = n.right;
+      fresh.push(n.left);
+      const last = next[h] === null;
+      if (last) next[n.right] = null;
+      snap({
+        kind: 'wire', cur: h, depth, lines: ['walk', 'inside'], walk: row, kids: [n.left, n.right],
+        title: `${n.v}.left.next = ${n.v}.right: ${N[n.left].v} → ${N[n.right].v}`,
+        text: `Standing on ${n.v}. Its two children are side by side on the next level, and ${n.v} knows both, so ${N[n.left].v}.next = ${N[n.right].v}.${last ? ` ${n.v}.next is null: ${n.v} is the last node of its level, so ${N[n.right].v} is the last of the level below and its next stays null.` : ''}`,
+        calc: [`${N[n.left].v}.next = ${N[n.right].v}`, ...(last ? [`${N[n.right].v}.next = null`] : [])],
+      });
+      if (!last) {
+        const nb = N[next[h]];
+        fresh.length = 0;
+        next[n.right] = nb.left;
+        fresh.push(n.right);
+        snap({
+          kind: 'link', cur: h, depth, lines: ['across'], walk: row, kids: [n.right, nb.left], via: next[h],
+          title: `${n.v}.right.next = ${n.v}.next.left: ${N[n.right].v} → ${N[nb.left].v}`,
+          text: `${N[n.right].v} and ${N[nb.left].v} are neighbours with different parents, so neither parent alone knows both. But ${n.v}.next is ${nb.v} (set on the level before), and ${nb.v}'s left child is ${N[nb.left].v}. That one hop across the level above bridges the gap.`,
+          calc: [`${N[n.right].v}.next = ${N[nb.left].v}`],
+        });
+      }
+    }
+    const below = [];
+    for (let h = N[leftmost].left; h !== null; h = next[h]) below.push(N[h].v);
+    out.push(below);
+    fresh.length = 0;
+    snap({
+      kind: 'found', cur: N[leftmost].left, depth: depth + 1, lines: ['down'], walk: [],
+      title: `Level ${depth + 1} is linked: ${below.join(' → ')} → null`,
+      text: `Every node on level ${depth + 1} now points at its right neighbour. Move down: leftmost = ${N[leftmost].v}.left = ${N[N[leftmost].left].v}.${N[N[leftmost].left].left === null ? ' It has no children, so this was the last level.' : ' This level is now the linked list that wires the next one.'}`,
+      calc: [`leftmost = ${N[N[leftmost].left].v}`],
+    });
+    leftmost = N[leftmost].left;
+    depth++;
+  }
+  const ans = out.map((l) => `${l.join(' ')} #`).join(' ');
+  snap({
+    kind: 'done', cur: null, lines: [], answer: ans,
+    title: `Done: ${ans}`,
+    text: 'Each node was stood on once and each pointer set once: O(n) time. The only extra memory was two pointers (leftmost and head), O(1), because the next pointers built on one level did the queue\'s job for the level below.',
+    calc: [ans],
+  });
+  return steps;
+}
+
 export function treeBfs({ mode, tree }) {
+  if (mode === 'next') return treeNext(tree);
   const t = buildTree(tree);
   const N = t.nodes;
   const queue = [t.root];
   const status = {};          // id → queued | done
   const levelOf = {};
-  const out = [];             // levels so far (arrays of values) or the visible values
+  const posOf = {};           // width: heap position, re-based on its level
+  const raw = { [t.root]: 0 };
+  const out = [];             // levels so far (arrays of values), visible values, or one number per level
   const steps = [];
-  const snap = (x) => steps.push({ tree, queue: [...queue], status: { ...status }, levelOf: { ...levelOf }, out: JSON.parse(JSON.stringify(out)), ...x });
+  const snap = (x) => steps.push({ tree, queue: [...queue], status: { ...status }, levelOf: { ...levelOf }, posOf: { ...posOf }, out: JSON.parse(JSON.stringify(out)), ...x });
   status[t.root] = 'queued';
   snap({
     kind: 'start', cur: null, lines: [],
-    title: { level: 'Level-order traversal', right: 'What do you see from the right?', min: 'The shallowest leaf', zigzag: 'Zigzag level order' }[mode],
-    text: 'A queue hands out nodes in the order they arrived, so children (added at the back) come out after everything on the current level. The trick is to freeze the queue\'s size at the start of each round: exactly that many nodes are the current level.',
-    calc: [`tree: ${showTree(tree)}`, 'queue: [root]'],
+    title: { level: 'Level-order traversal', avg: 'Average of each level', max: 'Largest value in each row', right: 'What do you see from the right?', min: 'The shallowest leaf', zigzag: 'Zigzag level order', width: 'The widest level, gaps included' }[mode],
+    text: mode === 'width'
+      ? 'Give every node the position it would have in a complete tree, like an array heap: the root is 0, and a node at p has children 2p and 2p + 1. A level\'s width is then its last position − its first + 1, gaps included. Positions double every level, so re-base them: subtract the level\'s first position before using them.'
+      : 'A queue hands out nodes in the order they arrived, so children (added at the back) come out after everything on the current level. The trick is to freeze the queue\'s size at the start of each round: exactly that many nodes are the current level.',
+    calc: [`tree: ${showTree(tree)}`, mode === 'width' ? 'queue: [(root, 0)]' : 'queue: [root]'],
   });
   let depth = 0;
   while (queue.length) {
@@ -408,11 +529,15 @@ export function treeBfs({ mode, tree }) {
     const size = queue.length;
     const level = [];
     const ltr = depth % 2 === 1;
+    const first = raw[queue[0]];
+    let sum = 0;
+    let best = null;
+    let last = 0;
     snap({
       kind: 'level', cur: null, depth, lines: ['size'], size,
       title: `Level ${depth}: size = ${size}`,
-      text: `The queue holds ${plural(size, 'node')} (${queue.map((id) => N[id].v).join(', ')}): that is the whole of level ${depth}. Process exactly ${size}; anything added meanwhile waits for the next round.${mode === 'zigzag' ? ` This level is written ${ltr ? 'left to right' : 'right to left'}.` : ''}`,
-      calc: [`size = ${size}`],
+      text: `The queue holds ${plural(size, 'node')} (${queue.map((id) => N[id].v).join(', ')}): that is the whole of level ${depth}. Process exactly ${size}; anything added meanwhile waits for the next round.${mode === 'zigzag' ? ` This level is written ${ltr ? 'left to right' : 'right to left'}.` : ''}${mode === 'width' && depth > 1 ? ` The first node on it, ${N[queue[0]].v}, was given position ${first}; subtracting ${first} from every position on this level makes it start at 0.` : ''}${mode === 'avg' ? ' Start this level\'s sum at 0.' : ''}`,
+      calc: [`size = ${size}`, ...(mode === 'width' ? [`first = ${first}`] : [])],
     });
     for (let i = 0; i < size; i++) {
       const id = queue.shift();
@@ -429,29 +554,61 @@ export function treeBfs({ mode, tree }) {
         });
         return steps;
       }
+      const p = raw[id] - first;
+      if (mode === 'width') { posOf[id] = p; last = p; }
       const kids = [n.left, n.right].filter((x) => x !== null);
-      kids.forEach((k) => { queue.push(k); status[k] = 'queued'; });
+      kids.forEach((k) => { queue.push(k); status[k] = 'queued'; raw[k] = k === n.left ? 2 * p : 2 * p + 1; });
       let use = '';
       if (mode === 'level') { level.push(n.v); use = `Add ${n.v} to level ${depth}.`; }
+      if (mode === 'avg') { sum += n.v; use = `Add ${n.v} to the sum: ${sum}.`; }
+      if (mode === 'max') {
+        const was = best;
+        best = i === 0 ? n.v : Math.max(best, n.v);
+        use = i === 0 ? `${n.v} is the first node on the level, so it starts the maximum (not 0: values can be negative).` : n.v > was ? `${n.v} beats ${was}: the maximum is now ${n.v}.` : `${n.v} does not beat ${was}.`;
+      }
       if (mode === 'zigzag') { if (ltr) level.push(n.v); else level.unshift(n.v); use = `Write ${n.v} at the ${ltr ? 'end' : 'front'} of this level's list.`; }
+      if (mode === 'width') {
+        use = `${n.v} sits at position ${p}${i === 0 ? ', the first on its level' : ''}.${kids.length ? ` ${kids.map((k) => `${N[k].v} gets ${raw[k]}`).join(' and ')} (2p = ${2 * p}${kids.length === 1 && kids[0] === n.right ? ', so a right-only child is 2p + 1' : ''}).` : ''}`;
+      }
       const visible = mode === 'right' && i === size - 1;
       if (visible) { out.push(n.v); use = `${n.v} is the last node of level ${depth}, so it is the one you see from the right.`; }
       if (mode === 'right' && !visible) use = `${n.v} is not the last of its level: something to its right hides it.`;
       if (mode === 'level' || mode === 'zigzag') out[depth - 1] = [...level];
+      const kidsText = mode === 'width' ? (kids.length ? '' : ` ${n.v} has no children to queue.`)
+        : kids.length === 2 ? ` Its children ${kids.map((k) => N[k].v).join(' and ')} join the back of the queue: they belong to level ${depth + 1}.` : kids.length === 1 ? ` Its child ${N[kids[0]].v} joins the back of the queue: it belongs to level ${depth + 1}.` : ` ${n.v} has no children to queue.`;
       snap({
         kind: visible ? 'found' : 'visit', cur: id, depth, lines: ['poll', 'use', 'kids'], i, size,
         title: `poll ${n.v}${kids.length ? `, queue ${kids.length === 1 ? 'its child' : 'its children'} ${kids.map((k) => N[k].v).join(', ')}` : ''}`,
-        text: `${use} ${kids.length === 2 ? `Its children ${kids.map((k) => N[k].v).join(' and ')} join the back of the queue: they belong to level ${depth + 1}.` : kids.length === 1 ? `Its child ${N[kids[0]].v} joins the back of the queue: it belongs to level ${depth + 1}.` : `${n.v} has no children to queue.`} (${i + 1} of ${size} on this level.)`,
-        calc: [`queue: ${list(queue.map((x) => N[x].v))}`, mode === 'right' ? `visible: ${list(out)}` : `level ${depth}: ${list(level)}`],
+        text: `${use}${kidsText} (${i + 1} of ${size} on this level.)`,
+        calc: [
+          `queue: ${list(queue.map((x) => (mode === 'width' ? `${N[x].v}@${raw[x]}` : N[x].v)))}`,
+          {
+            right: `visible: ${list(out)}`, avg: `sum = ${sum}`, max: `best = ${best}`, width: `last = ${last}`,
+          }[mode] ?? `level ${depth}: ${list(level)}`,
+        ],
       });
     }
-    if (mode === 'min') continue;
+    if (mode === 'avg' || mode === 'max' || mode === 'width') {
+      const val = mode === 'avg' ? sum / size : mode === 'max' ? best : last + 1;
+      out.push(val);
+      const shown = mode === 'avg' ? fmt(val) : String(val);
+      snap({
+        kind: 'found', cur: null, depth, lines: ['end'], answer: shown,
+        title: { avg: `Level ${depth}: ${sum} / ${size} = ${shown}`, max: `Level ${depth}: largest is ${val}`, width: `Level ${depth}: width ${last} − 0 + 1 = ${val}` }[mode],
+        text: {
+          avg: `All ${plural(size, 'node')} of level ${depth} are counted, so the average is the sum divided by size, the number frozen at the start of the round. The children queued meanwhile don't affect it.`,
+          max: `The level is finished, so ${val} is its largest value. The next level starts its own maximum from scratch.`,
+          width: `The level spans positions 0 to ${last}, counting ${last + 1 - size === 0 ? 'no gaps' : `${plural(last + 1 - size, 'empty position')} between its nodes`}: width ${val}.${Math.max(...out) === val && out.length > 1 && out.slice(0, -1).every((w) => w < val) ? ' The widest so far.' : ''}`,
+        }[mode],
+        calc: [mode === 'width' ? `widths: ${list(out)}, best = ${Math.max(...out)}` : `out: ${list(mode === 'avg' ? out.map(fmt) : out)}`],
+      });
+    }
   }
-  const ans = mode === 'right' ? list(out) : out.map((l) => list(l)).join(' ');
+  const ans = mode === 'right' ? list(out) : mode === 'avg' ? list(out.map(fmt)) : mode === 'max' ? list(out) : mode === 'width' ? `max width = ${Math.max(...out)}` : out.map((l) => list(l)).join(' ');
   snap({
     kind: 'done', cur: null, lines: [], answer: ans,
     title: `Done: ${ans}`,
-    text: `${mode === 'zigzag' ? 'The traversal order never changed; only where each value was written in its level\'s list. ' : ''}Every node went into the queue once and came out once: O(n) time, and the queue never holds more than one level and a bit, O(width).`,
+    text: `${mode === 'zigzag' ? 'The traversal order never changed; only where each value was written in its level\'s list. ' : ''}${mode === 'width' ? 'Re-basing kept every position below the level\'s width instead of doubling every level, so nothing overflows even on a deep, thin tree. ' : ''}Every node went into the queue once and came out once: O(n) time, and the queue never holds more than one level and a bit, O(width).`,
     calc: [ans],
   });
   return steps;
@@ -677,13 +834,22 @@ export function randomTreeDfs(input, rand = Math.random) {
   return { mode: input.mode, tree };
 }
 
+const PERFECT = [1, 3, 7, 15];
+
 export function parseTreeBfs(values, input) {
   const tr = parseTreeText(values.tree);
-  return tr.error ? tr : { input: { mode: input.mode, tree: tr.arr } };
+  if (tr.error) return tr;
+  if (input.mode === 'next' && (!PERFECT.includes(tr.arr.length) || tr.arr.includes(null) || tr.arr.length < 3)) {
+    return { error: 'This problem\'s tree is perfect: give 3, 7 or 15 values with no nulls, e.g. 1, 2, 3, 4, 5, 6, 7.' };
+  }
+  return { input: { mode: input.mode, tree: tr.arr } };
 }
 
 export function randomTreeBfs(input, rand = Math.random) {
-  return { mode: input.mode, tree: randomTreeArr(rand, { n: rng(rand).int(5, 11), lo: 1, hi: 9 }) };
+  const g = rng(rand);
+  if (input.mode === 'next') return { mode: 'next', tree: Array.from({ length: g.pick([3, 7, 7, 15]) }, () => g.int(1, 20)) };
+  const neg = input.mode === 'max' || input.mode === 'avg';
+  return { mode: input.mode, tree: randomTreeArr(rand, { n: g.int(5, 11), lo: neg ? -9 : 1, hi: 9 }) };
 }
 
 export { showTree };

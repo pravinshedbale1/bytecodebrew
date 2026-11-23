@@ -26,16 +26,16 @@ function layout(t, W) {
   const walk = (id, d) => { if (id === null) return; depth[id] = d; walk(t.nodes[id].left, d + 1); walk(t.nodes[id].right, d + 1); };
   walk(t.root, 0);
   const n = order.length;
-  const gap = n > 1 ? Math.min(60, (W - NODE - 8) / (n - 1)) : 0;
+  const gap = n > 1 ? Math.min(60, (W - NODE - 44) / (n - 1)) : 0;
   const span = gap * (n - 1);
-  const x0 = (W - span) / 2;
+  const x0 = (W - span) / 2 - 10;   // badges hang off the right of a node: keep room for them
   const pos = {};
   order.forEach((id, k) => { pos[id] = { x: x0 + k * gap, y: 30 + depth[id] * LEVEL_H }; });
   const levels = Math.max(0, ...Object.values(depth)) + 1;
   return { pos, height: 30 + (levels - 1) * LEVEL_H + 52, levels };
 }
 
-export function TreeGraph({ t, width, cls, badge, tag, edge, label }) {
+export function TreeGraph({ t, width, cls, badge, tag, edge, label, links }) {
   const W = Math.max(280, Math.min(width, 620));
   const { pos, height } = layout(t, W);
   const ids = Object.keys(t.nodes).filter((id) => pos[id]);
@@ -45,6 +45,21 @@ export function TreeGraph({ t, width, cls, badge, tag, edge, label }) {
         {ids.flatMap((id) => [t.nodes[id].left, t.nodes[id].right].filter((c) => c !== null && pos[c]).map((c) => (
           <line key={`${id}-${c}`} x1={pos[id].x} y1={pos[id].y} x2={pos[c].x} y2={pos[c].y} className={styles[`edge_${edge?.(id, c) ?? 'plain'}`]} />
         )))}
+        {links?.length > 0 && (
+          <defs>
+            {['on', 'seen'].map((tone) => (
+              <marker key={tone} id={`tg-arrow-${tone}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" className={styles[`arrow_${tone}`]} />
+              </marker>
+            ))}
+          </defs>
+        )}
+        {links?.filter(([a, b]) => pos[a] && pos[b]).map(([a, b, tone = 'seen']) => (
+          <line
+            key={`ln-${a}-${b}`} x1={pos[a].x + 19} y1={pos[a].y} x2={pos[b].x - 21} y2={pos[b].y}
+            className={styles[`link_${tone}`]} markerEnd={`url(#tg-arrow-${tone})`}
+          />
+        ))}
       </svg>
       {ids.map((id) => {
         const b = badge?.(id);
@@ -135,11 +150,59 @@ export function TreeDfsViz(props) {
 
 // ---------------------------------------------------------------- tree BFS
 
+function TreeNextStage({ step: f, width }) {
+  const t = buildTree(f.tree);
+  const N = t.nodes;
+  const walk = new Set(f.walk ?? []);
+  const kids = new Set(f.kids ?? []);
+  const fresh = new Set(f.fresh);
+  const links = Object.entries(f.next).filter(([, b]) => b !== null).map(([a, b]) => [a, b, fresh.has(a) ? 'on' : 'seen']);
+  return (
+    <div className={styles.wrap}>
+      <TreeGraph
+        t={t} width={width} label={`tree ${showTree(f.tree)} with next pointers`} links={links}
+        cls={(id) => [
+          id in f.next && !walk.has(id) && 'done',
+          walk.has(id) && 'active',
+          kids.has(id) && 'queued',
+          id === f.via && 'target',
+          id === f.cur && 'cur',
+        ]}
+        badge={(id) => (f.next[id] === null ? { text: '→ null', tone: 'muted' } : null)}
+      />
+      <Chips
+        label="levels read through next"
+        chips={f.out.map((lv, k) => ({ key: k, text: `${lv.join(' → ')} → null`, note: `L${k + 1}`, tone: k === f.out.length - 1 && f.kind === 'found' ? 'accent' : undefined }))}
+        empty="none yet"
+      />
+    </div>
+  );
+}
+
+function WidthSlots({ f, N }) {
+  const d = f.depth;
+  const here = Object.keys(f.posOf).filter((id) => f.levelOf[id] === d).sort((a, b) => f.posOf[a] - f.posOf[b]);
+  if (!here.length) return null;
+  const top = f.posOf[here.at(-1)];
+  const at = Object.fromEntries(here.map((id) => [f.posOf[id], id]));
+  return (
+    <Chips
+      label={`level ${d} positions`}
+      chips={Array.from({ length: top + 1 }, (_, p) => ({ key: p, text: at[p] !== undefined ? String(N[at[p]].v) : '·', note: String(p), tone: at[p] !== undefined ? 'accent' : undefined }))}
+      empty="—"
+    />
+  );
+}
+
 function TreeBfsStage({ step: f, input, width }) {
+  if (input.mode === 'next') return <TreeNextStage step={f} width={width} />;
   const t = buildTree(f.tree);
   const N = t.nodes;
   const curLeft = f.kind === 'level' ? f.queue.length : f.kind === 'visit' || f.kind === 'found' ? Math.max(0, f.size - f.i - 1) : 0;
-  const levelChips = input.mode === 'right'
+  const num = input.mode === 'avg' || input.mode === 'max' || input.mode === 'width';
+  const levelChips = num
+    ? f.out.map((v, k) => ({ key: k, text: input.mode === 'avg' ? (Number.isInteger(v) ? `${v}.0` : String(Math.round(v * 1e5) / 1e5)) : String(v), note: `L${k + 1}`, tone: k === f.out.length - 1 && f.kind === 'found' ? 'success' : undefined }))
+    : input.mode === 'right'
     ? f.out.map((v, k) => ({ key: k, text: String(v), tone: 'success', isNew: k === f.out.length - 1 && f.kind === 'found' }))
     : f.out.map((lv, k) => ({ key: k, text: `[${lv.join(', ')}]`, note: `L${k + 1}`, tone: k === f.out.length - 1 && f.kind !== 'done' ? 'accent' : undefined }));
   return (
@@ -151,7 +214,7 @@ function TreeBfsStage({ step: f, input, width }) {
           f.status[id] === 'done' && 'done',
           id === f.cur && (f.kind === 'found' ? 'hit' : 'cur'),
         ]}
-        badge={(id) => (f.levelOf[id] ? { text: `L${f.levelOf[id]}`, tone: 'muted' } : null)}
+        badge={(id) => (input.mode === 'width' && id in f.posOf ? { text: `#${f.posOf[id]}`, tone: 'muted' } : f.levelOf[id] ? { text: `L${f.levelOf[id]}`, tone: 'muted' } : null)}
         edge={(a, b) => (f.status[b] ? 'seen' : 'plain')}
       />
       <Chips
@@ -159,7 +222,8 @@ function TreeBfsStage({ step: f, input, width }) {
         chips={f.queue.map((id, k) => ({ key: id, text: String(N[id].v), tone: k < curLeft ? 'accent' : undefined, note: k < curLeft ? 'this level' : 'next' }))}
         empty="empty"
       />
-      <Chips label={input.mode === 'right' ? 'visible from the right' : input.mode === 'min' ? 'levels finished' : 'levels so far'} chips={levelChips} empty="none yet" />
+      {input.mode === 'width' && f.depth && <WidthSlots f={f} N={N} />}
+      <Chips label={{ right: 'visible from the right', min: 'levels finished', avg: 'averages', max: 'largest per level', width: 'widths' }[input.mode] ?? 'levels so far'} chips={levelChips} empty="none yet" />
     </div>
   );
 }
@@ -169,20 +233,28 @@ const treeBfsSpec = {
   examples: TREE_BFS,
   simulate: treeBfs,
   code: (input) => treeBfsCode(input.mode),
-  kinds: { start: ['Start', 'neutral'], level: ['New level', 'interview'], visit: ['Poll', 'accent'], found: ['Found', 'success'], done: ['Answer', 'success'] },
+  kinds: { start: ['Start', 'neutral'], level: ['New level', 'interview'], visit: ['Poll', 'accent'], wire: ['Siblings', 'accent'], link: ['Cousins', 'interview'], found: ['Found', 'success'], done: ['Answer', 'success'] },
   describe: (input) => `tree = [${showTree(input.tree)}]`,
-  rule: () => 'Freeze size = queue.size(); poll exactly that many; their children are the next level.',
-  stats: (f) => [['queue', f.queue.length], ['level', f.depth ?? '—']],
-  legend: () => [
+  rule: (input) => (input.mode === 'next'
+    ? 'Walk a linked level through next; wire its children: left → right, right → next.left.'
+    : input.mode === 'width'
+      ? 'Children of p are 2p and 2p + 1; re-base each level so it starts at 0; width = last + 1.'
+      : 'Freeze size = queue.size(); poll exactly that many; their children are the next level.'),
+  stats: (f, input) => (input.mode === 'next' ? [['level', f.depth ?? '—']] : [['queue', f.queue.length], ['level', f.depth ?? '—']]),
+  legend: (f, input) => (input.mode === 'next' ? [
+    [<Key shape="box" tone="accent">2</Key>, 'level being walked'],
+    [<Key shape="box" tone="warn">3</Key>, 'standing here'],
+    [<Key shape="box" tone="success">5</Key>, 'next is set'],
+  ] : [
     [<Key shape="box" tone="accent">9</Key>, 'in the queue'],
     [<Key shape="box" tone="warn">3</Key>, 'being polled'],
-    [<Key shape="box" tone="success">2</Key>, 'done (L = its level)'],
-  ],
+    [<Key shape="box" tone="success">2</Key>, input.mode === 'width' ? 'done (# = its position)' : 'done (L = its level)'],
+  ]),
   fields: () => [{ name: 'tree', label: 'tree (level order, null for gaps)', placeholder: 'e.g. 1, 2, 3, null, 5, null, 4' }],
   values: (input) => ({ tree: showTree(input.tree) }),
   parse: parseTreeBfs,
   random: (input) => randomTreeBfs(input),
-  hint: () => 'Level order like LeetCode: up to 15 nodes and 5 levels; null marks a missing child.',
+  hint: (input) => (input.mode === 'next' ? 'A perfect tree: 3, 7 or 15 values, no nulls.' : 'Level order like LeetCode: up to 15 nodes and 5 levels; null marks a missing child.'),
   delay: () => 2400,
   Stage: TreeBfsStage,
 };

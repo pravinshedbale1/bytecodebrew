@@ -22,7 +22,7 @@ A queue naturally gives level order: children are added to the back while the cu
 
 Step through it. The queue is shown under the tree, split into this level and the next; each round starts by freezing its size. The other examples change only the one line inside the loop.
 
-<TreeBfsViz examples={['level', 'right', 'min', 'zigzag']} />
+<TreeBfsViz examples={['level', 'avg', 'max', 'right', 'min', 'zigzag']} />
 
 ```java
 static List<List<Integer>> levelOrder(TreeNode root) {
@@ -173,11 +173,15 @@ Store each node **with its position** as if the tree were a complete binary tree
 
 </Practice>
 
+<TreeBfsViz examples={['width']} />
+
 <Practice task="Connect each node to the next node on its right in the same level (next pointers), using O(1) extra space for a perfect binary tree. How can the previous level replace the queue?">
 
 Once a level's `next` pointers are set, that level **is** a linked list you can walk. Walk level i using `next`, and for each node set `left.next = right` and `right.next = node.next == null ? null : node.next.left`. Then move down to the leftmost node of the next level. No queue needed — the level you just built serves as one.
 
 </Practice>
+
+<TreeBfsViz examples={['next']} />
 
 <Takeaways>
 
