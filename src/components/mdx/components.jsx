@@ -83,6 +83,7 @@ const KWayMergeViz = lazyViz(() => import('./viz/HeapsViz'), 'KWayMergeViz');
 const HeapSimViz = lazyViz(() => import('./viz/HeapsViz'), 'HeapSimViz');
 const MedianViz = lazyViz(() => import('./viz/HeapsViz'), 'MedianViz');
 const TreeDfsViz = lazyViz(() => import('./viz/TreesViz'), 'TreeDfsViz');
+const TreeWalkViz = lazyViz(() => import('./viz/TreesViz'), 'TreeWalkViz');
 const TreeBfsViz = lazyViz(() => import('./viz/TreesViz'), 'TreeBfsViz');
 const BstViz = lazyViz(() => import('./viz/TreesViz'), 'BstViz');
 const IslandsViz = lazyViz(() => import('./viz/GraphsViz'), 'IslandsViz');
@@ -307,6 +308,7 @@ export const mdxComponents = {
   HeapSimViz,
   MedianViz,
   TreeDfsViz,
+  TreeWalkViz,
   TreeBfsViz,
   BstViz,
   IslandsViz,

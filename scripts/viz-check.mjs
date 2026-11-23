@@ -34,6 +34,7 @@ import * as lo from '../src/components/mdx/viz/models/listOps.js';
 import * as tks from '../src/components/mdx/viz/models/tokenStack.js';
 import * as dqd from '../src/components/mdx/viz/models/dpDeque.js';
 import * as hsm from '../src/components/mdx/viz/models/heapSim.js';
+import * as tw from '../src/components/mdx/viz/models/treeWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -837,6 +838,32 @@ function common(name, steps, code, kinds) {
   for (const e of Object.values(qu.PARTITION_K)) P(e.input);
   for (let t = 0; t < 2000; t++) P(qu.randomPartitionK({}, rand));
   ok(qu.partitionK(qu.PARTITION_K.lesson.input).at(-1).answer === '2' && qu.partitionK(qu.PARTITION_K.zero.input).at(-1).answer === '3', 'partitionK: LeetCode 2294 examples');
+}
+
+// ---------------------------------------------------------------- tree DFS, more (TreeWalkViz)
+{
+  const kinds = ['start', 'match', 'differ', 'swap', 'height', 'unbalanced', 'pass', 'record', 'try', 'root', 'remove', 'keep', 'write', 'null', 'read', 'readnull', 'done'];
+  const run = (input) => {
+    const steps = tw.treeWalk(input);
+    common(`treeWalk ${JSON.stringify(input)}`, steps, tw.treeWalkCode(input), kinds);
+    const got = steps.at(-1).answer;
+    if (input.mode === 'build') {
+      const t = steps.at(-1).trees[0].t, pre = [], ino = [];
+      const w = (id) => { if (id === null) return; pre.push(t.nodes[id].v); w(t.nodes[id].left); ino.push(t.nodes[id].v); w(t.nodes[id].right); };
+      w(t.root);
+      ok(pre.join() === input.pre.join() && ino.join() === input.ino.join(), `treeWalk build ${JSON.stringify(input)}: traversals of the result differ`);
+    } else ok(got === tw.treeWalkAnswer(input), `treeWalk ${JSON.stringify(input)}: ${got} ≠ ${tw.treeWalkAnswer(input)}`);
+    steps.forEach((st) => st.trees.forEach((tr) => {
+      const ids = new Set(Object.keys(tr.t.nodes));
+      Object.values(tr.t.nodes).forEach((nd) => ok((nd.left === null || ids.has(nd.left)) && (nd.right === null || ids.has(nd.right)), 'treeWalk: children are real nodes'));
+      ok(tr.t.root === null || ids.has(tr.t.root), 'treeWalk: the root is a real node');
+    }));
+  };
+  Object.values(tw.TREE_WALK).forEach((e) => run(e.input));
+  for (let t = 0; t < 1200; t++) for (const mode of ['same', 'symmetric', 'invert', 'balanced', 'order', 'subtree', 'build', 'delete', 'serialize']) run(tw.randomTreeWalk({ mode }, rand));
+  const a = (k) => tw.treeWalk(tw.TREE_WALK[k].input).at(-1).answer;
+  ok(a('same') === 'true' && a('differ') === 'false' && a('symmetric') === 'true' && a('invert') === '[4,7,2,9,6,3,1]' && a('balanced') === 'false' && a('subtree') === 'true' && a('delete') === '[1,null,3,null,4]' && a('build') === '[3,9,20,null,null,15,7]', 'treeWalk: LeetCode examples');
+  ok(tw.treeWalk({ mode: 'order', which: 'in', tree: [1, null, 2, 3] }).at(-1).answer === '[1, 3, 2]' && tw.treeWalk({ mode: 'order', which: 'post', tree: [1, null, 2, 3] }).at(-1).answer === '[3, 2, 1]', 'treeWalk: traversal examples');
 }
 
 // ---------------------------------------------------------------- repeatedly take the best (HeapSimViz)

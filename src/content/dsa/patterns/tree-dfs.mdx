@@ -70,6 +70,8 @@ static TreeNode invertTree(TreeNode root) {
 }
 ```
 
+<TreeWalkViz examples={['same', 'differ', 'symmetric', 'invert']} title="Two trees in step, mirrors, and swaps" />
+
 ### Balanced tree — return a sentinel for "already failed"
 
 A tree is balanced if every node's subtrees differ in height by at most 1. Computing the height separately at every node is O(n²). Instead, return the height, or **−1 to mean "unbalanced somewhere below"** — one pass, O(n):
@@ -84,6 +86,8 @@ static int height(TreeNode n) {
     return 1 + Math.max(l, r);
 }
 ```
+
+<TreeWalkViz examples={['balanced']} title="Heights bottom-up, −1 passed straight up" />
 
 ## Direction 2: pass context down (top-down)
 
@@ -207,6 +211,8 @@ static TreeNode build(int[] pre, Map<Integer, Integer> where, int lo, int hi) {
 }
 ```
 
+<TreeWalkViz examples={['build']} title="Preorder gives the root, inorder splits the rest" />
+
 ### Serialise and deserialise
 
 Preorder **with null markers** describes a tree uniquely — without the markers, different shapes would produce the same string.
@@ -228,6 +234,8 @@ static TreeNode des(Deque<String> tokens) {            // read back in the same 
     return n;
 }
 ```
+
+<TreeWalkViz examples={['serialize']} title="Preorder with # markers, written and read back" />
 
 ## Which direction?
 

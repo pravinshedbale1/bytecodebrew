@@ -18,6 +18,7 @@ export const COMPLETE = [
   'stack-patterns',
   'monotonic-stack',
   'heap-patterns',
+  'tree-dfs',
 ];
 
 /**
@@ -45,4 +46,5 @@ export const POLISHED = [
   'stack-patterns',
   'monotonic-stack',
   'heap-patterns',
+  'tree-dfs',
 ];

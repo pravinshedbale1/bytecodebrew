@@ -1,5 +1,8 @@
 import { StepViz, Key } from './StepViz';
-import { Chips, Float } from './prims';
+import { ArrayStrip, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
+import { CmpCard } from './sideKit';
+import kit from './sideKit.module.css';
+import { TREE_WALK, parseTreeWalk, randomTreeWalk, treeWalk, treeWalkCode } from './models/treeWalk';
 import styles from './TreesViz.module.css';
 import {
   BST, TREE_BFS, TREE_DFS, bst, bstCode, buildTree, inorder, parseBst, parseTreeBfs, parseTreeDfs, randomBst, randomTreeBfs, randomTreeDfs,
@@ -261,4 +264,103 @@ const bstSpec = {
 
 export function BstViz(props) {
   return <StepViz spec={bstSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- comparing, changing and rebuilding trees
+
+function WalkStrip({ strip, width, jump }) {
+  const n = strip.items.length;
+  const pitch = pitchFor(width - 8, n, 26, 50);
+  return (
+    <Stage width={n * pitch} height={22 + 40 + 24} jump={jump} label={`${strip.label}: ${strip.items.join(' ')}`}>
+      <RowLabel x={0} y={0}>{strip.label}</RowLabel>
+      <ArrayStrip
+        items={strip.items} y={22} pitch={pitch} h={40} index={false}
+        tags={strip.cur !== null && strip.cur !== undefined ? { [strip.cur]: [{ label: 'now', tone: 'accent' }] } : {}}
+        bands={strip.band ? [{ from: strip.band[0], to: strip.band[1], tone: 'accent' }] : []}
+        cls={(k) => [k === strip.cur && 'cur', strip.marks?.[k]].filter(Boolean).join(' ')}
+      />
+    </Stage>
+  );
+}
+
+function TreeWalkStage({ step: f, width, jump }) {
+  const two = f.trees.length > 1;
+  const side = two && width >= 640;
+  const tw = side ? Math.floor(width / 2) - 12 : width;
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center' }}>
+        {f.trees.map((tr) => (
+          <div key={tr.label} style={{ minWidth: 0 }}>
+            <p className={kit.label} style={{ textAlign: 'center' }}>{tr.label}</p>
+            {tr.t.root === null
+              ? <p className={kit.label} style={{ textAlign: 'center', opacity: 0.7 }}>(empty)</p>
+              : <TreeGraph t={tr.t} width={tw} cls={(id) => tr.cls[id] ?? []} badge={(id) => tr.badge[id]} label={tr.label} />}
+          </div>
+        ))}
+      </div>
+      {(f.strips ?? []).map((st) => <WalkStrip key={st.label} strip={st} width={width} jump={jump} />)}
+      {f.card && <div className={kit.sideRow} style={{ justifyContent: 'center' }}><CmpCard {...f.card} style={{ minWidth: 160 }} /></div>}
+    </div>
+  );
+}
+
+const TW_DESCRIBE = (i) => ({
+  same: () => `p = [${i.p.join(', ')}], q = [${i.q.join(', ')}]`,
+  subtree: () => `root = [${i.tree.join(', ')}], subRoot = [${i.sub.join(', ')}]`,
+  build: () => `preorder = [${i.pre.join(', ')}], inorder = [${i.ino.join(', ')}]`,
+  delete: () => `root = [${i.tree.join(', ')}], target = ${i.target}`,
+})[i.mode]?.() ?? `root = [${i.tree.join(', ')}]`;
+
+const TW_RULE = {
+  same: 'Equal values, and the left pair and the right pair both match.',
+  symmetric: 'Compare outside with outside and inside with inside.',
+  invert: 'Children first, then swap the node\'s two children.',
+  balanced: 'Height = 1 + max(l, r); −1 means unbalanced and travels straight up.',
+  order: 'Same walk every time; only the moment the node is written changes.',
+  subtree: 'Try every node of root as the start of subRoot.',
+  build: 'Next preorder value = root; its inorder position splits left and right.',
+  delete: 'Clean the children first; then delete the node if it is now a target leaf.',
+  serialize: 'Preorder with # for every null; read it back in the same order.',
+};
+
+const TW_FIELDS = {
+  same: [{ name: 'p', label: 'p (level order)', placeholder: '1, 2' }, { name: 'q', label: 'q (level order)', placeholder: '1, null, 2' }],
+  subtree: [{ name: 'tree', label: 'root (level order)', placeholder: '3, 4, 5, 1, 2' }, { name: 'sub', label: 'subRoot', placeholder: '4, 1, 2' }],
+  build: [{ name: 'pre', label: 'preorder', placeholder: '3, 9, 20, 15, 7' }, { name: 'ino', label: 'inorder', placeholder: '9, 3, 15, 20, 7' }],
+  delete: [{ name: 'tree', label: 'root (level order)', placeholder: '1, 2, 3, 2, null, 2, 4' }, { name: 'target', label: 'target', placeholder: '2', short: true }],
+};
+
+const treeWalkSpec = {
+  title: 'Tree DFS, one decision at a time',
+  examples: TREE_WALK,
+  simulate: treeWalk,
+  code: (input) => treeWalkCode(input),
+  kinds: {
+    start: ['Start', 'neutral'], match: ['Match', 'success'], differ: ['Differ', 'danger'], swap: ['Swap', 'accent'],
+    height: ['Height', 'success'], unbalanced: ['Unbalanced', 'danger'], pass: ['Pass −1 up', 'muted'], record: ['Write', 'accent'],
+    try: ['Try here', 'neutral'], root: ['Root', 'accent'], remove: ['Delete', 'danger'], keep: ['Keep', 'warn'],
+    write: ['Write', 'accent'], null: ['#', 'muted'], read: ['Read', 'success'], readnull: ['#', 'muted'], done: ['Answer', 'success'],
+  },
+  describe: TW_DESCRIBE,
+  rule: (input) => TW_RULE[input.mode],
+  stats: () => [],
+  legend: () => [[<Key shape="box" tone="warn">·</Key>, 'the node being decided'], [<Key shape="box" tone="success">·</Key>, 'done']],
+  fields: (input) => TW_FIELDS[input.mode] ?? [{ name: 'tree', label: 'root (level order)', placeholder: '1, 2, 3, null, 4' }],
+  values: (input) => ({
+    same: { p: input.p?.join(', '), q: input.q?.join(', ') },
+    subtree: { tree: input.tree?.join(', '), sub: input.sub?.join(', ') },
+    build: { pre: input.pre?.join(', '), ino: input.ino?.join(', ') },
+    delete: { tree: input.tree?.join(', '), target: String(input.target) },
+  })[input.mode] ?? { tree: input.tree.join(', ') },
+  parse: parseTreeWalk,
+  random: (input) => randomTreeWalk(input),
+  hint: () => 'Trees in level order with null for a missing child, up to 11 entries.',
+  delay: (f) => (f.kind === 'start' ? 2600 : 1900),
+  Stage: TreeWalkStage,
+};
+
+export function TreeWalkViz(props) {
+  return <StepViz spec={treeWalkSpec} {...props} />;
 }
