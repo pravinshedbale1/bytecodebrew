@@ -109,7 +109,7 @@ export function islands({ mode, grid }) {
       calc: mode === 'count' ? [`count = ${count}`] : [`area ${area}`, `best = ${best}`],
     });
   }
-  const answer = mode === 'count' ? `${count} islands` : `biggest area = ${best}`;
+  const answer = mode === 'count' ? plural(count, 'island') : `biggest area = ${best}`;
   snap({
     kind: 'done', cur: null, lines: [], answer,
     title: answer,

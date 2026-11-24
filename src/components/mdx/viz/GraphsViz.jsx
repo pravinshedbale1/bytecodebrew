@@ -21,9 +21,9 @@ const ISLAND_TONES = ['accent', 'note', 'interview', 'warn', 'success'];
 
 // ---------------------------------------------------------------- grids
 
-export function GridCells({ grid, width, cell: cellFn }) {
+export function GridCells({ grid, width, cell: cellFn, min = 30 }) {
   const R = grid.length, C = grid[0].length;
-  const size = Math.max(30, Math.min(52, Math.floor((width - 8) / C)));
+  const size = Math.max(min, Math.min(52, Math.floor((width - 8 - 3 * (C - 1)) / C)));
   return (
     <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${C}, ${size}px)`, gridAutoRows: `${size}px` }}>
       {grid.flatMap((row, r) => row.map((_, c) => {
@@ -143,7 +143,7 @@ export function GridBfsViz(props) {
 
 const R_NODE = 19;
 
-function Arrow({ a, b, cls, label, bend = 0, id }) {
+export function Arrow({ a, b, cls, label, bend = 0, id }) {
   const dx = b.x - a.x, dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len, uy = dy / len;
@@ -158,7 +158,7 @@ function Arrow({ a, b, cls, label, bend = 0, id }) {
   );
 }
 
-function ArrowDefs({ id }) {
+export function ArrowDefs({ id }) {
   return (
     <defs>
       {['plain', 'on', 'good', 'faded', 'bad'].map((t) => (

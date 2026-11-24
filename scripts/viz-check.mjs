@@ -35,6 +35,7 @@ import * as tks from '../src/components/mdx/viz/models/tokenStack.js';
 import * as dqd from '../src/components/mdx/viz/models/dpDeque.js';
 import * as hsm from '../src/components/mdx/viz/models/heapSim.js';
 import * as tw from '../src/components/mdx/viz/models/treeWalk.js';
+import * as gw from '../src/components/mdx/viz/models/graphWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -610,7 +611,7 @@ function common(name, steps, code, kinds) {
     const steps = gr.islands(input);
     common(`islands ${JSON.stringify(input)}`, steps, gr.islandsCode(input.mode), ['start', 'found', 'visit', 'island', 'done']);
     const want = gr.islandsAnswer(input);
-    ok(steps.at(-1).answer === (input.mode === 'count' ? `${want} islands` : `biggest area = ${want}`), `islands ${JSON.stringify(input)}: answer`);
+    ok(steps.at(-1).answer === (input.mode === 'count' ? `${want} island${want === 1 ? '' : 's'}` : `biggest area = ${want}`), `islands ${JSON.stringify(input)}: answer`);
     const last = steps.at(-1);
     input.grid.forEach((row, r) => row.forEach((v, c) => ok((v === 1) === (last.owner[r][c] > 0), 'islands: every land cell, and only land, is marked')));
   };
@@ -907,6 +908,30 @@ function common(name, steps, code, kinds) {
   for (let t = 0; t < 1500; t++) for (const mode of Object.keys(hsm.heapSimCode)) run(hsm.randomHeapSim({ mode }, rand));
   const a = (k) => hsm.heapSim(hsm.HEAP_SIM[k].input).at(-1).answer;
   ok(a('stones') === '1' && a('tasks') === '8' && a('cpu') === '[0, 2, 3, 1]' && a('ipo') === '4' && hsm.heapSim({ mode: 'reorg', s: 'aaab' }).at(-1).answer === '""' && hsm.heapSim({ mode: 'happy', a: 1, b: 1, c: 7 }).at(-1).answer.length - 2 === 8, 'heapSim: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- graph traversal problems (GraphWalkViz)
+{
+  const kinds = ['start', 'paint', 'count', 'pair', 'found', 'visit', 'make', 'reuse', 'wire', 'ring', 'safe', 'flip', 'pac', 'atl', 'ask', 'step', 'hit', 'miss', 'expand', 'go', 'stuck', 'done'];
+  const result = (input, steps) => {
+    const last = steps.at(-1);
+    if (['flood', 'surrounded', 'zeros', 'gates', 'pacific', 'clone', 'division'].includes(input.mode)) return last.out;
+    if (input.mode === 'itinerary') return last.answer.split(' ');
+    if (input.mode === 'perimeter') return Number(last.answer.split('= ')[1]);
+    if (input.mode === 'provinces') return Number(last.answer.split(' ')[0]);
+    return Number(last.answer);
+  };
+  const run = (input) => {
+    const steps = gw.graphWalk(input);
+    common(`graphWalk ${JSON.stringify(input)}`, steps, gw.graphWalkCode(input.mode), kinds);
+    ok(same(result(input, steps), gw.graphWalkAnswer(input)), `graphWalk ${JSON.stringify(input)}: answer`);
+  };
+  Object.values(gw.GRAPH_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(gw.GRAPH_WALK).map((e) => e.input.mode))) for (let t = 0; t < 800; t++) run(gw.randomGraphWalk({ mode }, rand));
+  const a = (k) => gw.graphWalkAnswer(gw.GRAPH_WALK[k].input);
+  ok(a('perimeter') === 16 && a('judge') === 3 && a('provinces') === 3 && a('ladder') === 5 && same(a('division'), [6, 0.5, -1, 1, -1]) && same(a('itinerary'), ['JFK', 'ATL', 'JFK', 'SFO', 'ATL', 'SFO']), 'graphWalk: LeetCode examples');
+  ok(same(a('pacific'), [[0, 4], [1, 3], [1, 4], [2, 2], [3, 0], [3, 1], [4, 0]]), 'graphWalk: pacific example');
+  ok(gw.parseGraphWalk({ grid: '1001' }, { mode: 'perimeter' }).error && gw.parseGraphWalk({ tickets: 'JFK>SFO, ATL>LAX' }, { mode: 'itinerary' }).error, 'graphWalk: bad inputs refused');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

@@ -87,6 +87,7 @@ const TreeWalkViz = lazyViz(() => import('./viz/TreesViz'), 'TreeWalkViz');
 const TreeBfsViz = lazyViz(() => import('./viz/TreesViz'), 'TreeBfsViz');
 const BstViz = lazyViz(() => import('./viz/TreesViz'), 'BstViz');
 const IslandsViz = lazyViz(() => import('./viz/GraphsViz'), 'IslandsViz');
+const GraphWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'GraphWalkViz');
 const GridBfsViz = lazyViz(() => import('./viz/GraphsViz'), 'GridBfsViz');
 const TopoViz = lazyViz(() => import('./viz/GraphsViz'), 'TopoViz');
 const UnionFindViz = lazyViz(() => import('./viz/GraphsViz'), 'UnionFindViz');
@@ -299,6 +300,7 @@ export const mdxComponents = {
   DpDequeViz,
   WindowCountsViz,
   BfsQueueViz,
+  GraphWalkViz,
   CallStackViz,
   StackQueueViz,
   HistogramViz,

@@ -21,6 +21,7 @@ export const COMPLETE = [
   'tree-dfs',
   'tree-bfs',
   'bst-patterns',
+  'graph-traversal',
 ];
 
 /**
@@ -51,4 +52,5 @@ export const POLISHED = [
   'tree-dfs',
   'tree-bfs',
   'bst-patterns',
+  'graph-traversal',
 ];

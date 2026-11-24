@@ -140,3 +140,37 @@
   .draw path { stroke-dasharray: none; stroke-dashoffset: 0; }
   .node { transition: none; }
 }
+
+/* ---- graph traversal walkthroughs (GraphWalkViz) */
+
+.col_0 { background: var(--color-surface-muted); border: 1px solid var(--color-border-strong); }
+.col_1 { background: var(--color-note-soft); border: 1px solid var(--color-note); color: var(--color-note); }
+.col_2 { background: var(--color-success-soft); border: 1px solid var(--color-success); color: var(--color-success); }
+.col_3 { background: var(--color-interview-soft, var(--color-accent-soft)); border: 1px solid var(--color-interview); color: var(--color-interview); }
+.col_4 { background: var(--color-warn-soft); border: 1px solid var(--color-warn); color: var(--color-warn); }
+.col_5 { background: var(--color-danger-soft); border: 1px solid var(--color-danger); color: var(--color-danger); }
+.painted { box-shadow: inset 0 0 0 2px currentColor; }
+.start { outline: 2px dashed var(--color-text); outline-offset: -5px; }
+.counted { background: var(--color-warn); color: var(--color-surface); }
+.src { background: var(--color-text); border: 1px solid var(--color-text); color: var(--color-surface); }
+.gate { background: var(--color-success); border: 1px solid var(--color-success); color: var(--color-surface); }
+.target { outline: 2px dashed var(--color-interview); outline-offset: -4px; }
+.oCell { background: var(--color-warn-soft); border: 1.5px solid var(--color-warn); color: var(--color-warn); }
+.xCell { background: var(--color-surface-muted); border: 1px solid var(--color-border); color: var(--color-text-subtle); }
+.safe { background: var(--color-success-soft); border: 1.5px solid var(--color-success); color: var(--color-success); }
+.flipped { background: var(--color-danger-soft); border: 1.5px solid var(--color-danger); color: var(--color-danger); animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.border { border-style: solid; }
+.pac { background: var(--color-accent-soft); border: 1.5px solid var(--color-accent); color: var(--color-accent); }
+.atl { background: var(--color-note-soft); border: 1.5px solid var(--color-note); color: var(--color-note); }
+.pacAtl { background: linear-gradient(135deg, var(--color-accent-soft) 50%, var(--color-note-soft) 50%); border: 1.5px solid var(--color-text-subtle); }
+.both { background: var(--color-success); border: 1.5px solid var(--color-success); color: var(--color-surface); }
+
+.prov_0 { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.prov_1 { border-color: var(--color-note); background: var(--color-note-soft); }
+.prov_2 { border-color: var(--color-interview); background: var(--color-warn-soft); }
+.prov_3 { border-color: var(--color-success); background: var(--color-success-soft); }
+.prov_4 { border-color: var(--color-danger); background: var(--color-danger-soft); }
+.ghost { opacity: 0.25; border-style: dashed; }
+.graphLabel { margin: 0 0 2px; font-size: 11px; font-weight: 650; color: var(--color-text-muted); text-align: center; }
+.graphs { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; }
+.undirected path { fill: none; stroke-width: 1.8; }

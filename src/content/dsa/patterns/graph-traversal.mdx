@@ -56,6 +56,10 @@ static void sink(char[][] g, int r, int c) {
 
 Marking visited **by modifying the grid** saves memory; if you mustn't modify the input, use a `boolean[][] visited`.
 
+Flood fill is the same search from one given start, and painting is the visited mark. That is why a fill whose new colour equals the old one must return at once:
+
+<GraphWalkViz examples={['flood', 'floodBig']} />
+
 ### Returning something from DFS: max area of an island
 
 ```java
@@ -160,6 +164,8 @@ static int orangesRotting(int[][] grid) {
 
 The same trick solves "distance of every cell to the nearest 0", "walls and gates", and "as far from land as possible": start from all the targets and expand outward, instead of running a BFS from every cell.
 
+<GraphWalkViz examples={['zeros', 'gates']} />
+
 ## Thinking in reverse
 
 Some problems are much easier from the **other end**:
@@ -168,6 +174,8 @@ Some problems are much easier from the **other end**:
 - **Pacific Atlantic water flow** — instead of asking, for every cell, whether water can flow to both oceans, run BFS **uphill** from each ocean's edge and intersect the two reachable sets.
 
 If "from every cell" means repeating a search n times, ask whether one search from the targets answers the same question.
+
+<GraphWalkViz examples={['surrounded', 'pacific']} />
 
 ## DFS or BFS?
 
@@ -229,11 +237,15 @@ Nodes are words; an edge joins words that differ in exactly one letter. Shortest
 
 </Practice>
 
+<GraphWalkViz examples={['ladder', 'lock']} />
+
 <Practice task="Clone a connected undirected graph. Why do you need a map, and what does it double as?">
 
 Traverse (BFS or DFS) from the given node. Keep a `Map<Node, Node>` from each original node to its copy. When visiting a neighbour that isn't in the map yet, create its copy and schedule it; either way, link the current copy to the neighbour's copy. The map **is** the visited set — and it's also what stops cycles from creating duplicate copies.
 
 </Practice>
+
+<GraphWalkViz examples={['clone', 'itinerary', 'division']} />
 
 <Takeaways>
 
