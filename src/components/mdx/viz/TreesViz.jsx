@@ -265,10 +265,41 @@ export function TreeBfsViz(props) {
 
 // ---------------------------------------------------------------- binary search trees
 
-function BstStage({ step: f, input, width }) {
+function BstStage({ step: f, input, width, jump }) {
   const t = f.t;
   const N = t.nodes;
   const order = Object.fromEntries(f.visit.map((id, k) => [id, k + 1]));
+  if (['sorted', 'delete', 'iter', 'recover'].includes(input.mode)) {
+    return (
+      <div className={styles.wrap}>
+        {input.mode === 'delete' && <Float x={0} y={0} anchor="right" tone="accent">{`deleting ${input.x}`}</Float>}
+        {t.root === null
+          ? <p className={kit.label} style={{ textAlign: 'center', opacity: 0.7, minHeight: 60, paddingTop: 20 }}>(empty tree)</p>
+          : (
+            <TreeGraph
+              t={t} width={width} label="binary search tree"
+              cls={(id) => [
+                f.status[id] === 'path' && 'active',
+                f.status[id] === 'done' && 'done',
+                f.status[id] === 'bad' && 'bad',
+                f.status[id] === 'hit' && 'hit',
+                id === f.cur && !['hit', 'bad'].includes(f.status[id]) && 'cur',
+                f.fresh === id && 'fresh',
+              ]}
+              badge={(id) => (input.mode === 'iter' && order[id] ? { text: `#${order[id]}`, tone: 'muted' } : null)}
+              edge={(a, b) => (f.status[a] === 'path' && f.status[b] ? 'on' : 'plain')}
+            />
+          )}
+        {f.strip && <WalkStrip strip={f.strip} width={width} jump={jump} />}
+        {input.mode === 'iter' && (
+          <>
+            <Chips label="stack (top →)" chips={f.stack.map((id, k) => ({ key: id, text: String(N[id].v), tone: k === f.stack.length - 1 ? 'accent' : undefined, note: k === f.stack.length - 1 ? 'next' : undefined }))} empty="empty" />
+            <Chips label="returned by next()" chips={f.visit.map((id, k) => ({ key: id, text: String(N[id].v), tone: k === f.visit.length - 1 && f.kind === 'call' ? 'success' : undefined }))} empty="none yet" />
+          </>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={styles.wrap}>
       {(input.mode === 'search' || input.mode === 'insert') && <Float x={0} y={0} anchor="right" tone="accent">{`${input.mode === 'search' ? 'looking for' : 'inserting'} ${input.x}`}</Float>}
@@ -306,30 +337,46 @@ const bstSpec = {
   kinds: {
     start: ['Start', 'neutral'], go: ['Go', 'accent'], found: ['Found', 'success'], missing: ['Not there', 'warn'], insert: ['Insert', 'success'],
     check: ['Fits', 'accent'], fail: ['Not a BST', 'danger'], left: ['Go left', 'accent'], visit: ['Visit', 'note'], done: ['Answer', 'success'],
+    mid: ['Middle', 'accent'], splice: ['Splice', 'success'], call: ['next()', 'interview'], drop: ['Drop', 'danger'], swap: ['Swap back', 'success'],
   },
-  describe: (input) => `tree = [${showTree(input.tree)}]${input.mode === 'lca' ? `, p = ${input.p}, q = ${input.q}` : input.mode === 'validate' ? '' : `, ${input.mode === 'kth' ? 'k' : 'x'} = ${input.x}`}`,
+  describe: (input) => (input.mode === 'sorted' ? `nums = [${input.nums.join(', ')}]` : input.mode === 'iter' || input.mode === 'recover' ? `tree = [${showTree(input.tree)}]` : input.mode === 'delete' ? `tree = [${showTree(input.tree)}], key = ${input.x}` : `tree = [${showTree(input.tree)}]${input.mode === 'lca' ? `, p = ${input.p}, q = ${input.q}` : input.mode === 'validate' ? '' : `, ${input.mode === 'kth' ? 'k' : 'x'} = ${input.x}`}`),
   rule: (input) => ({
     search: 'Smaller: go left. Bigger: go right.',
     insert: 'Search for it; attach it where the search falls off.',
     validate: 'Each node must fit the (lo, hi) range handed down by its ancestors.',
     kth: 'In-order is sorted: go left, visit, go right, count to k.',
     lca: 'Both smaller: left. Both bigger: right. Otherwise: here.',
+    sorted: 'The middle of the range is the root; each half builds a subtree.',
+    delete: 'At most one child: the child takes its place. Two: copy the successor up, delete it below.',
+    iter: 'The stack holds a left path; next() pops one and pushes the left path of its right child.',
+    recover: 'Inorder must increase: first = prev at the first drop, second = cur at the last; swap them.',
   })[input.mode],
   stats: () => [],
-  legend: (f, input) => [
+  legend: (f, input) => ({
+    sorted: [[<Key shape="box" tone="success">0</Key>, 'just placed'], [<Key shape="box" tone="accent">5</Key>, 'range being split']],
+    delete: [[<Key shape="box" tone="accent">8</Key>, 'on the path'], [<Key shape="box" tone="danger">3</Key>, 'to delete'], [<Key shape="box" tone="success">4</Key>, 'takes its place']],
+    iter: [[<Key shape="box" tone="accent">7</Key>, 'on the stack'], [<Key shape="box" tone="success">3</Key>, 'returned (# = call)']],
+    recover: [[<Key shape="box" tone="danger">10</Key>, 'out of place'], [<Key shape="box" tone="success">6</Key>, 'swapped back']],
+  })[input.mode] ?? [
     [<Key shape="box" tone="accent">8</Key>, input.mode === 'kth' ? 'on the stack' : 'on the path'],
     [<Key shape="box" tone="success">6</Key>, 'the answer'],
     ...(input.mode === 'validate' ? [[<Key shape="box" tone="note">(5, 8)</Key>, 'allowed range']] : []),
     ...(input.mode === 'kth' ? [[<Key shape="box">#2</Key>, 'visit order']] : []),
   ],
-  fields: (input) => [
+  fields: (input) => (input.mode === 'sorted' ? [{ name: 'nums', label: 'nums (strictly increasing)', placeholder: 'e.g. -10, -3, 0, 5, 9' }]
+    : input.mode === 'iter' || input.mode === 'recover' ? [{ name: 'tree', label: input.mode === 'recover' ? 'tree (a BST with two values swapped)' : 'tree (level order)', placeholder: input.mode === 'recover' ? 'e.g. 3, 1, 4, null, null, 2' : 'e.g. 7, 3, 15, null, null, 9, 20' }]
+      : input.mode === 'delete' ? [{ name: 'tree', label: 'tree (level order)', placeholder: 'e.g. 5, 3, 6, 2, 4, null, 7' }, { name: 'x', label: 'key', placeholder: '3', short: true }] : [
     { name: 'tree', label: 'tree (level order)', placeholder: 'e.g. 8, 3, 10, 1, 6, null, 14' },
     ...(input.mode === 'lca' ? [{ name: 'p', label: 'p', placeholder: '4', short: true }, { name: 'q', label: 'q', placeholder: '7', short: true }] : input.mode === 'validate' ? [] : [{ name: 'x', label: input.mode === 'kth' ? 'k' : 'x', placeholder: '3', short: true }]),
-  ],
-  values: (input) => ({ tree: showTree(input.tree), ...(input.mode === 'lca' ? { p: String(input.p), q: String(input.q) } : input.mode === 'validate' ? {} : { x: String(input.x) }) }),
+  ]),
+  values: (input) => (input.mode === 'sorted' ? { nums: input.nums.join(', ') } : input.mode === 'iter' || input.mode === 'recover' ? { tree: showTree(input.tree) } : input.mode === 'delete' ? { tree: showTree(input.tree), x: String(input.x) } : { tree: showTree(input.tree), ...(input.mode === 'lca' ? { p: String(input.p), q: String(input.q) } : input.mode === 'validate' ? {} : { x: String(input.x) }) }),
   parse: parseBst,
   random: (input) => randomBst(input),
-  hint: (input) => (input.mode === 'validate' ? 'Any tree in level order (up to 13 nodes); try one that breaks the rule deep down.' : 'A BST in level order (up to 13 nodes, distinct values).'),
+  hint: (input) => ({
+    validate: 'Any tree in level order (up to 13 nodes); try one that breaks the rule deep down.',
+    sorted: 'Up to 13 strictly increasing values.',
+    recover: 'A BST in level order with exactly two values swapped (up to 13 nodes).',
+  })[input.mode] ?? 'A BST in level order (up to 13 nodes, distinct values).',
   delay: () => 2400,
   Stage: BstStage,
 };

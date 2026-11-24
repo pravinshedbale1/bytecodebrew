@@ -2,7 +2,7 @@
  * Tree step-throughs (models for <TreeDfsViz>, <TreeBfsViz> and <BstViz>). Trees are given in
  * LeetCode's level order ("3, 9, 20, null, null, 15, 7"). Pure, so scripts/viz-check.mjs can test them.
  */
-import { list, parseInt1, plural, rng } from './util.js';
+import { list, parseInt1, parseInts, plural, rng } from './util.js';
 
 // ---------------------------------------------------------------- building trees
 
@@ -624,9 +624,16 @@ export const BST = {
   validate: { label: 'Validate', input: { mode: 'validate', tree: [5, 3, 8, null, null, 4, 9] } },
   kth: { label: '3rd smallest', input: { mode: 'kth', tree: BST_TREE, x: 3 } },
   lca: { label: 'LCA of 4 and 7', input: { mode: 'lca', tree: BST_TREE, p: 4, q: 7 } },
+  sorted: { label: 'From sorted array', input: { mode: 'sorted', nums: [-10, -3, 0, 5, 9] } },
+  sorted7: { label: 'Seven values', input: { mode: 'sorted', nums: [1, 2, 3, 4, 5, 6, 7] } },
+  delete: { label: 'Delete 3', input: { mode: 'delete', tree: BST_TREE, x: 3 } },
+  deleteOne: { label: 'Delete 10', input: { mode: 'delete', tree: BST_TREE, x: 10 } },
+  iter: { label: 'Iterator', input: { mode: 'iter', tree: [7, 3, 15, null, null, 9, 20] } },
+  recover: { label: 'Recover (2 drops)', input: { mode: 'recover', tree: [8, 3, 6, 1, 10, null, 14, null, null, 4, 7] } },
+  recoverAdj: { label: 'Recover (1 drop)', input: { mode: 'recover', tree: [3, 1, 4, null, null, 2] } },
 };
 
-export const bstCode = (mode) => ({
+export const bstCode = (mode) => BST_MORE_CODE[mode] ?? ({
   search: [['cmp', 'while (n != null && n.val != x)'], ['go', '  n = x < n.val ? n.left : n.right;      // only one side can hold x'], ['end', 'return n;']],
   insert: [['cmp', 'if (n == null) return new TreeNode(x);     // the empty spot'], ['go', 'if (x < n.val) n.left = insert(n.left, x); else n.right = insert(n.right, x);']],
   validate: [['range', 'if (n.val <= lo || n.val >= hi) return false;   // must fit the range from above'], ['go', 'return valid(n.left, lo, n.val) && valid(n.right, n.val, hi);']],
@@ -636,7 +643,9 @@ export const bstCode = (mode) => ({
 
 const inf = (v) => (v === Infinity ? '∞' : v === -Infinity ? '−∞' : v);
 
-export function bstAnswer({ mode, tree, x, p, q }) {
+export function bstAnswer(input) {
+  if (MORE.includes(input.mode)) return bstMoreAnswer(input);
+  const { mode, tree, x, p, q } = input;
   const t = buildTree(tree);
   const vals = inorder(t).map((id) => t.nodes[id].v);
   if (mode === 'search') return vals.includes(x);
@@ -648,7 +657,11 @@ export function bstAnswer({ mode, tree, x, p, q }) {
   for (;;) { const v = t.nodes[cur].v; if (hi < v) cur = t.nodes[cur].left; else if (lo > v) cur = t.nodes[cur].right; else return v; }
 }
 
-export function bst({ mode, tree, x, p, q }) {
+const MORE = ['sorted', 'delete', 'iter', 'recover'];
+
+export function bst(input) {
+  if (MORE.includes(input.mode)) return bstMore(input);
+  const { mode, tree, x, p, q } = input;
   const t = buildTree(tree);
   const N = t.nodes;
   const status = {};        // id → path | bad | done | skip
@@ -766,15 +779,289 @@ export function bst({ mode, tree, x, p, q }) {
   }
 }
 
+// ---------------------------------------------------------------- binary search trees: build, delete, iterate, recover
+
+export const BST_MORE_CODE = {
+  sorted: [
+    ['base', 'if (lo > hi) return null;                  // an empty range is an empty subtree'],
+    ['mid', 'int mid = (lo + hi) / 2;  node = new TreeNode(nums[mid]);   // the middle splits the rest evenly'],
+    ['kids', 'node.left = build(lo, mid − 1);  node.right = build(mid + 1, hi);  return node;'],
+  ],
+  delete: [
+    ['go', 'while (n.val != key) n = key < n.val ? n.left : n.right;   // find it like a search'],
+    ['one', 'if (n.left == null || n.right == null) replace n with its child (or null);'],
+    ['succ', 's = n.right;  while (s.left != null) s = s.left;   // the next value up: smallest on the right'],
+    ['copy', 'n.val = s.val;  replace s with s.right;          // s has no left child: the easy case'],
+  ],
+  iter: [
+    ['init', 'BSTIterator(root) { pushLeft(root); }       // the stack ends at the smallest value'],
+    ['left', 'pushLeft(n) { while (n != null) { stack.push(n); n = n.left; } }'],
+    ['next', 'next() { n = stack.pop(); pushLeft(n.right); return n.val; }'],
+    ['has', 'hasNext() { return !stack.isEmpty(); }'],
+  ],
+  recover: [
+    ['walk', 'inorder: if (prev != null && prev.val > n.val) {   // a drop: the order breaks here'],
+    ['first', '  if (first == null) first = prev;               // first drop: the too-big value'],
+    ['second', '  second = n; }                                   // last drop: the too-small value'],
+    ['prev', 'prev = n;'],
+    ['swap', 'swap(first.val, second.val);'],
+  ],
+};
+
+const isBalanced = (t) => {
+  let ok = true;
+  const h = (id) => { if (id === null) return 0; const a = h(t.nodes[id].left); const b = h(t.nodes[id].right); if (Math.abs(a - b) > 1) ok = false; return 1 + Math.max(a, b); };
+  h(t.root);
+  return ok;
+};
+export { isBalanced };
+
+export function bstMoreAnswer({ mode, tree, nums, x }) {
+  if (mode === 'sorted') return nums;
+  const t = buildTree(tree);
+  const vals = inorder(t).map((id) => t.nodes[id].v);
+  if (mode === 'delete') return vals.filter((v) => v !== x);
+  return [...vals].sort((a, b) => a - b);
+}
+
+function bstSorted(nums) {
+  const t = { root: null, nodes: {} };
+  const N = t.nodes;
+  const status = {};
+  const placed = {};          // index → node id
+  const steps = [];
+  let next = 0;
+  const snap = ({ strip, ...s }) => steps.push({ t: cloneTree(t), status: { ...status }, tags: {}, visit: [], stack: [], ...s, strip: { label: 'nums', items: nums, marks: Object.fromEntries(Object.keys(placed).map((k) => [k, 'kept'])), ...strip } });
+  snap({
+    kind: 'start', cur: null, lines: [], strip: {},
+    title: 'Build a balanced BST from a sorted array',
+    text: 'Any value can be the root of a BST: smaller values go left, bigger go right. To keep it balanced, pick the value with as many values below it as above it: the middle one. Then do the same for each half.',
+    calc: [`nums = ${list(nums)}`],
+  });
+  const build = (lo, hi, parent, side) => {
+    if (lo > hi) return null;
+    const mid = Math.floor((lo + hi) / 2);
+    const id = `b${next++}`;
+    N[id] = { id, v: nums[mid], left: null, right: null };
+    if (parent === null) t.root = id; else N[parent][side] = id;
+    placed[mid] = id;
+    status[id] = 'hit';
+    const nl = mid - lo, nr = hi - mid;
+    snap({
+      kind: 'mid', cur: id, fresh: id, lines: ['mid'], strip: { band: [lo, hi], cur: mid },
+      title: `Range ${lo}..${hi}: the middle is ${nums[mid]}`,
+      text: `${parent === null ? 'The root' : `${N[parent].v}'s ${side} child`} is the middle of nums[${lo}..${hi}], index ${mid}: ${nums[mid]}. ${nl === 0 && nr === 0 ? 'Nothing is left on either side, so it is a leaf.' : `${plural(nl, 'value')} smaller go to its left, ${plural(nr, 'value')} bigger to its right${Math.abs(nl - nr) <= 1 ? ': the two sides differ by at most one' : ''}.`}`,
+      calc: [`mid = (${lo} + ${hi}) / 2 = ${mid}`, `${parent === null ? 'root' : `${N[parent].v}.${side}`} = ${nums[mid]}`],
+    });
+    status[id] = 'done';
+    build(lo, mid - 1, id, 'left');
+    build(mid + 1, hi, id, 'right');
+    return id;
+  };
+  build(0, nums.length - 1, null, null);
+  snap({
+    kind: 'done', cur: null, lines: [], strip: {}, answer: `[${showTree(toLevelOrder(t))}]`,
+    title: `Done: [${showTree(toLevelOrder(t))}]`,
+    text: 'Inorder reads the array back in order, so it is a BST; every node split its range in half, so the two sides of every node differ by at most one value and the height is about log₂ n. Each value was placed once: O(n) time, O(log n) recursion.',
+    calc: [`height = ${depthOf(t)}`],
+  });
+  return steps;
+}
+
+function bstDelete(tree, key) {
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const status = {};
+  const steps = [];
+  const snap = (s) => steps.push({ t: cloneTree(t), status: { ...status }, tags: {}, visit: [], stack: [], ...s });
+  const parentOf = (id) => Object.keys(N).find((p) => N[p].left === id || N[p].right === id) ?? null;
+  const replace = (id, child) => {
+    const p = parentOf(id);
+    if (p === null) t.root = child; else if (N[p].left === id) N[p].left = child; else N[p].right = child;
+    delete N[id];
+    delete status[id];
+    return p;
+  };
+  snap({
+    kind: 'start', cur: null, lines: [],
+    title: `Delete ${key}`,
+    text: `First find ${key} exactly like a search. How to remove it depends on its children: with at most one, its child simply takes its place. With two, borrow the next value up (the smallest in its right subtree): it fits between the two sides, and removing it from there is the easy case.`,
+    calc: [`tree: ${showTree(tree)}`],
+  });
+  let cur = t.root;
+  while (cur !== null && N[cur].v !== key) {
+    const n = N[cur];
+    status[cur] = 'path';
+    const side = key < n.v ? 'left' : 'right';
+    snap({ kind: 'go', cur, lines: ['go'], title: `${key} ${key < n.v ? '<' : '>'} ${n.v}: go ${side}`, text: `${key} can only be in ${n.v}'s ${side} subtree. ${n[side] === null ? `There is no ${side} child.` : `Move to ${N[n[side]].v}.`}`, calc: [`${key} ${key < n.v ? '<' : '>'} ${n.v} → ${side}`] });
+    cur = n[side];
+  }
+  if (cur === null) {
+    snap({ kind: 'missing', cur: null, lines: ['go'], answer: `${key} is not in the tree`, title: `${key} is not in the tree`, text: `The search fell off the tree, so there is nothing to delete: return the root unchanged.`, calc: ['return root'] });
+    return steps;
+  }
+  const n = N[cur];
+  status[cur] = 'bad';
+  const kids = [n.left, n.right].filter((c) => c !== null);
+  if (kids.length < 2) {
+    snap({ kind: 'found', cur, lines: ['go', 'one'], title: `Found ${key}: ${kids.length ? 'one child' : 'a leaf'}`, text: kids.length ? `${key} has only one child, ${N[kids[0]].v}. Everything under ${N[kids[0]].v} is on the same side of ${key}'s parent as ${key} was, so ${N[kids[0]].v} can take ${key}'s place directly.` : `${key} has no children: just cut it off.`, calc: [`${key}: ${kids.length} child${kids.length === 1 ? '' : 'ren'}`] });
+    const child = kids[0] ?? null;
+    const p = replace(cur, child);
+    if (child !== null) status[child] = 'hit';
+    snap({ kind: 'splice', cur: child, lines: ['one'], answer: `[${showTree(toLevelOrder(t))}]`, title: child !== null ? `${N[child].v} takes ${key}'s place` : `${key} removed`, text: `${p === null ? 'The root is replaced.' : `${N[p].v} now points ${child === null ? 'at nothing there' : `at ${N[child].v}`}.`} Inorder reads ${list(inorder(t).map((k) => N[k].v))}: still sorted. Cost: the length of the path, O(h).`, calc: [`[${showTree(toLevelOrder(t))}]`] });
+    return steps;
+  }
+  snap({ kind: 'found', cur, lines: ['go', 'one'], title: `Found ${key}: two children`, text: `${key} has two subtrees, and only one node can sit in its place. It must be bigger than everything on the left and smaller than everything on the right: the smallest value in the right subtree fits exactly.`, calc: [`${key}: 2 children`] });
+  let s = n.right;
+  const walk = [];
+  for (;;) {
+    status[s] = 'path';
+    walk.push(N[s].v);
+    if (N[s].left === null) break;
+    snap({ kind: 'go', cur: s, lines: ['succ'], title: `${N[s].v} has a left child: keep going left`, text: `Something smaller than ${N[s].v} is still in ${key}'s right subtree. The smallest is at the end of the left turns.`, calc: [`s = ${N[s].v} → ${N[N[s].left].v}`] });
+    s = N[s].left;
+  }
+  status[s] = 'hit';
+  snap({ kind: 'go', cur: s, lines: ['succ'], title: `Successor: ${N[s].v}`, text: `${N[s].v} has no left child, so it is the smallest value right of ${key}: the next value up in sorted order. It is bigger than all of ${key}'s left side and smaller than the rest of its right side.`, calc: [`successor = ${N[s].v}`] });
+  const sv = N[s].v;
+  n.v = sv;
+  status[cur] = 'hit';
+  const sr = N[s].right;
+  replace(s, sr);
+  if (sr !== null) status[sr] = 'path';
+  snap({ kind: 'splice', cur, lines: ['copy'], answer: `[${showTree(toLevelOrder(t))}]`, title: `Copy ${sv} up, then remove the old ${sv}`, text: `${key}'s node now holds ${sv}. The old ${sv} had no left child, so removing it is the easy case: ${sr === null ? 'it was a leaf, just cut it' : `its right child ${N[sr].v} takes its place`}. Inorder reads ${list(inorder(t).map((k) => N[k].v))}: still sorted. Cost: one path down, O(h).`, calc: [`[${showTree(toLevelOrder(t))}]`] });
+  return steps;
+}
+
+function bstIter(tree) {
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const status = {};
+  const stack = [];
+  const visit = [];
+  const steps = [];
+  let pushes = 0;
+  const snap = (s) => steps.push({ t: cloneTree(t), status: { ...status }, tags: {}, visit: [...visit], stack: [...stack], pushes, ...s });
+  const pushLeft = (id) => { const got = []; while (id !== null) { stack.push(id); status[id] = 'path'; got.push(N[id].v); pushes++; id = N[id].left; } return got; };
+  snap({
+    kind: 'start', cur: null, lines: [],
+    title: 'An inorder walk you can pause',
+    text: 'Recursion can\'t stop halfway and resume on the next call. An explicit stack can: it holds the nodes whose left side is done but which haven\'t been returned yet. The top is always the next smallest value.',
+    calc: [`tree: ${showTree(tree)}`],
+  });
+  const got = pushLeft(t.root);
+  snap({ kind: 'left', cur: stack.at(-1), lines: ['init', 'left'], title: `Constructor: push ${got.join(', ')}`, text: `Walk left from the root, pushing every node. The last one, ${got.at(-1)}, has no left child: it is the smallest value. Nothing else is touched yet: the stack holds one path, at most h nodes.`, calc: [`stack: ${list(stack.map((id) => N[id].v))}`] });
+  while (stack.length) {
+    const id = stack.pop();
+    visit.push(id);
+    status[id] = 'done';
+    const r = N[id].right;
+    snap({ kind: 'call', cur: id, lines: ['next'], title: `next() → ${N[id].v}`, text: `Pop ${N[id].v}: everything smaller was returned already. ${r === null ? `It has no right subtree, so the new top${stack.length ? `, ${N[stack.at(-1)].v},` : ''} is the next value.` : `Its right subtree holds the values just above it, so before returning, push the left path starting at ${N[r].v}.`}`, calc: [`return ${N[id].v}`, `hasNext() = ${stack.length > 0 || r !== null}`] });
+    if (r !== null) {
+      const g = pushLeft(r);
+      snap({ kind: 'left', cur: stack.at(-1), lines: ['next', 'left'], title: `Push ${g.join(', ')} from ${N[id].v}'s right`, text: `${g.at(-1)} is now on top: the smallest value bigger than ${N[id].v}. The next call pops it.`, calc: [`stack: ${list(stack.map((x) => N[x].v))}`] });
+    }
+  }
+  const n = Object.keys(N).length;
+  snap({
+    kind: 'done', cur: null, lines: ['has'], answer: list(visit.map((id) => N[id].v)),
+    title: `hasNext() = false: ${list(visit.map((id) => N[id].v))}`,
+    text: `${n} calls to next() pushed ${n} nodes in total and popped each once. One call may push a whole path, but over all calls that is 2n stack operations for n calls: O(1) per call on average. The stack never held more than one root-to-leaf path: O(h) memory.`,
+    calc: [`${n} next() calls, ${pushes} pushes`],
+  });
+  return steps;
+}
+
+function bstRecover(tree) {
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const status = {};
+  const order = inorder(t);
+  const steps = [];
+  const marks = {};
+  const snap = ({ strip, ...s }) => steps.push({ t: cloneTree(t), status: { ...status }, tags: {}, visit: [], stack: [], ...s, strip: { label: 'inorder', items: order.map((id) => N[id].v), marks: { ...marks }, ...strip } });
+  snap({
+    kind: 'start', cur: null, lines: [], strip: {},
+    title: 'Two values were swapped',
+    text: 'Inorder lists a BST in increasing order. Swapping two values breaks that order in one or two places: a drop, where a value is smaller than the one before it. Walk inorder keeping the previous node and note the drops.',
+    calc: [`inorder: ${list(order.map((id) => N[id].v))}`],
+  });
+  let first = null, second = null, prev = null;
+  order.forEach((id, k) => {
+    const drop = prev !== null && N[prev].v > N[id].v;
+    status[id] = 'done';
+    if (drop) {
+      const isFirst = first === null;
+      if (isFirst) first = prev;
+      second = id;
+      Object.keys(marks).forEach((m) => { if (marks[m] === 'bad' && order[m] !== first) delete marks[m]; });
+      marks[order.indexOf(first)] = 'bad';
+      marks[k] = 'bad';
+      status[first] = 'bad';
+      Object.keys(status).forEach((x) => { if (status[x] === 'bad' && x !== first) status[x] = 'done'; });
+      status[id] = 'bad';
+      snap({
+        kind: 'drop', cur: id, lines: isFirst ? ['walk', 'first', 'second'] : ['walk', 'second'], strip: { cur: k },
+        title: `Drop: ${N[prev].v} > ${N[id].v}`,
+        text: isFirst
+          ? `${N[prev].v} comes before ${N[id].v} but is bigger. At the first drop, the earlier value is the one out of place (a too-big value moved left): first = ${N[prev].v}. Keep second = ${N[id].v} for now, in case there is no other drop.`
+          : `A second drop. Here the later value is the one out of place (a too-small value moved right): second = ${N[id].v}, replacing the candidate from the first drop. first stays ${N[first].v}.`,
+        calc: [`first = ${N[first].v}`, `second = ${N[id].v}`],
+      });
+    } else if (prev !== null) {
+      snap({ kind: 'check', cur: id, lines: ['walk', 'prev'], strip: { cur: k }, title: `${N[prev].v} < ${N[id].v}: in order`, text: `${N[id].v} is bigger than the value before it, as inorder should be. Move on.`, calc: [`prev = ${N[id].v}`] });
+    } else {
+      snap({ kind: 'check', cur: id, lines: ['prev'], strip: { cur: k }, title: `Start at ${N[id].v}`, text: `${N[id].v} is the leftmost node, first in inorder. Nothing to compare with yet.`, calc: [`prev = ${N[id].v}`] });
+    }
+    prev = id;
+  });
+  const a = N[first].v, b = N[second].v;
+  N[first].v = b;
+  N[second].v = a;
+  status[first] = 'hit';
+  status[second] = 'hit';
+  Object.keys(marks).forEach((m) => delete marks[m]);
+  marks[order.indexOf(first)] = 'hit';
+  marks[order.indexOf(second)] = 'hit';
+  const adjacent = order.indexOf(second) === order.indexOf(first) + 1;
+  snap({
+    kind: 'swap', cur: null, lines: ['swap'], strip: {}, answer: `[${showTree(toLevelOrder(t))}]`,
+    title: `Swap ${a} and ${b} back`,
+    text: `${adjacent ? 'There was only one drop: the two swapped values were neighbours in sorted order, so first and second came from the same drop.' : 'Two drops: the too-big value was at the first, the too-small one at the second.'} Swapping their values back makes inorder sorted again, without moving any node. O(n) time; O(h) for the walk, or O(1) with Morris traversal.`,
+    calc: [`inorder: ${list(order.map((id) => N[id].v))}`],
+  });
+  return steps;
+}
+
+export function bstMore(input) {
+  if (input.mode === 'sorted') return bstSorted(input.nums);
+  if (input.mode === 'delete') return bstDelete(input.tree, input.x);
+  if (input.mode === 'iter') return bstIter(input.tree);
+  return bstRecover(input.tree);
+}
+
 export function parseBst(values, input) {
+  if (input.mode === 'sorted') {
+    const r = parseInts(values.nums, { min: -99, max: 99, minLen: 1, maxLen: 13, name: 'nums' });
+    if (r.error) return r;
+    if (r.arr.some((v, k) => k > 0 && v <= r.arr[k - 1])) return { error: 'nums must be strictly increasing.' };
+    return { input: { mode: 'sorted', nums: r.arr } };
+  }
   const tr = parseTreeText(values.tree, { maxNodes: 13, maxDepth: 5 });
   if (tr.error) return tr;
   const t = buildTree(tr.arr);
   const vals = inorder(t).map((id) => t.nodes[id].v);
+  if (input.mode === 'recover') {
+    if (new Set(vals).size !== vals.length) return { error: 'Use distinct values.' };
+    const sorted = [...vals].sort((a, b) => a - b);
+    const off = vals.filter((v, k) => v !== sorted[k]).length;
+    if (off !== 2) return { error: 'Give a BST with exactly two values swapped (inorder sorted except for two values).' };
+    return { input: { mode: 'recover', tree: tr.arr } };
+  }
   if (input.mode !== 'validate') {
     if (!isBst(t)) return { error: 'That tree is not a BST (in-order must be strictly increasing). Try the Validate example for broken trees.' };
   }
-  if (input.mode === 'validate') return { input: { mode: 'validate', tree: tr.arr } };
+  if (input.mode === 'validate' || input.mode === 'iter') return { input: { mode: input.mode, tree: tr.arr } };
   if (input.mode === 'lca') {
     const p = parseInt1(values.p, { min: -99, max: 99, name: 'p' }); if (p.error) return p;
     const q = parseInt1(values.q, { min: -99, max: 99, name: 'q' }); if (q.error) return q;
@@ -787,6 +1074,26 @@ export function parseBst(values, input) {
 
 export function randomBst(input, rand = Math.random) {
   const g = rng(rand);
+  if (input.mode === 'sorted') {
+    const vals = g.shuffle(Array.from({ length: 50 }, (_, k) => k - 20)).slice(0, g.int(3, 12)).sort((a, b) => a - b);
+    return { mode: 'sorted', nums: vals };
+  }
+  if (input.mode === 'iter') return { mode: 'iter', tree: randomTreeArr(rand, { n: g.int(4, 10), lo: 1, hi: 30, bst: true, maxDepth: 4 }) };
+  if (input.mode === 'recover') {
+    const tr = buildTree(randomTreeArr(rand, { n: g.int(3, 10), lo: 1, hi: 30, bst: true, maxDepth: 4 }));
+    const ids = inorder(tr);
+    const a = g.int(0, ids.length - 2);
+    const b = g.bool(0.35) ? a + 1 : g.int(a + 1, ids.length - 1);
+    const va = tr.nodes[ids[a]].v;
+    tr.nodes[ids[a]].v = tr.nodes[ids[b]].v;
+    tr.nodes[ids[b]].v = va;
+    return { mode: 'recover', tree: toLevelOrder(tr) };
+  }
+  if (input.mode === 'delete') {
+    const tree = randomTreeArr(rand, { n: g.int(4, 10), lo: 1, hi: 30, bst: true, maxDepth: 4 });
+    const vals = inorder(buildTree(tree)).map((id) => buildTree(tree).nodes[id].v);
+    return { mode: 'delete', tree, x: g.bool(0.85) ? g.pick(vals) : g.int(1, 30) };
+  }
   const tree = randomTreeArr(rand, { n: g.int(6, 9), lo: 1, hi: 30, bst: input.mode !== 'validate', maxDepth: 4 });
   if (input.mode === 'validate') return { mode: 'validate', tree: g.bool(0.5) ? randomTreeArr(rand, { n: 7, lo: 1, hi: 30, bst: true }) : tree };
   const vals = inorder(buildTree(tree)).map((id) => buildTree(tree).nodes[id].v);

@@ -20,6 +20,7 @@ export const COMPLETE = [
   'heap-patterns',
   'tree-dfs',
   'tree-bfs',
+  'bst-patterns',
 ];
 
 /**
@@ -49,4 +50,5 @@ export const POLISHED = [
   'heap-patterns',
   'tree-dfs',
   'tree-bfs',
+  'bst-patterns',
 ];

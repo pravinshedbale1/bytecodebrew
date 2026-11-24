@@ -580,7 +580,7 @@ function common(name, steps, code, kinds) {
 
   const runBst = (input) => {
     const steps = tr.bst(input);
-    common(`bst ${JSON.stringify(input)}`, steps, tr.bstCode(input.mode), ['start', 'go', 'found', 'missing', 'insert', 'check', 'fail', 'left', 'visit', 'done']);
+    common(`bst ${JSON.stringify(input)}`, steps, tr.bstCode(input.mode), ['start', 'go', 'found', 'missing', 'insert', 'check', 'fail', 'left', 'visit', 'done', 'mid', 'splice', 'call', 'drop', 'swap']);
     const want = tr.bstAnswer(input);
     const last = steps.at(-1);
     if (input.mode === 'search') ok((last.kind === 'found') === want, `bst search ${JSON.stringify(input)}`);
@@ -588,9 +588,18 @@ function common(name, steps, code, kinds) {
     if (input.mode === 'validate') ok((last.kind !== 'fail') === want, `bst validate ${JSON.stringify(input)}`);
     if (input.mode === 'kth') ok(last.answer.endsWith(`= ${want}`), `bst kth ${JSON.stringify(input)}`);
     if (input.mode === 'lca') ok(last.answer === `LCA = ${want}`, `bst lca ${JSON.stringify(input)}`);
+    if (['sorted', 'delete', 'iter', 'recover'].includes(input.mode)) {
+      const t = last.t;
+      const vals = tr.inorder(t).map((id) => t.nodes[id].v);
+      if (input.mode === 'iter') ok(same(last.visit.map((id) => t.nodes[id].v), want), `bst iter ${JSON.stringify(input)}`);
+      else ok(same(vals, want), `bst ${input.mode} ${JSON.stringify(input)}: inorder`);
+      if (input.mode === 'sorted') ok(tr.isBalanced(t), `bst sorted ${JSON.stringify(input)}: balanced`);
+      if (input.mode !== 'iter') ok(tr.isBst(t), `bst ${input.mode} ${JSON.stringify(input)}: still a BST`);
+      if (input.mode === 'sorted' || input.mode === 'recover') ok(steps.every((st) => Array.isArray(st.strip?.items) && st.strip.items.length > 0), `bst ${input.mode}: every step has its strip`);
+    }
   };
   for (const e of Object.values(tr.BST)) runBst(e.input);
-  for (const mode of Object.keys(tr.BST)) for (let t = 0; t < 600; t++) runBst(tr.randomBst({ mode }, rand));
+  for (const mode of new Set(Object.values(tr.BST).map((e) => e.input.mode))) for (let t = 0; t < 600; t++) runBst(tr.randomBst({ mode }, rand));
   ok(tr.parseBst({ tree: '5, 3, 8, null, null, 4, 9', x: '4' }, { mode: 'search' }).error, 'bst: a non-BST is refused for search');
   ok(tr.parseTreeText('1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16').error, 'trees: too many nodes refused');
 }
