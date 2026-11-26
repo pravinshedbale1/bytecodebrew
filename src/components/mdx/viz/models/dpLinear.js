@@ -3,7 +3,7 @@
  * and points at the cells each value reads (deps). Pure, so scripts/viz-check.mjs can compare every
  * mode with a brute force.
  */
-import { list, rng } from './util.js';
+import { list, plural, rng } from './util.js';
 
 export const LIN = {
   robber2: { label: 'House robber II (a circle)', input: { mode: 'robber2', a: [2, 3, 2, 5, 1] } },
@@ -16,7 +16,14 @@ export const LIN = {
   intbreak: { label: 'Integer break', input: { mode: 'intbreak', n: 10 } },
   envelopes: { label: 'Russian dolls', input: { mode: 'envelopes', env: [[5, 4], [6, 4], [6, 7], [2, 3], [7, 8], [3, 5]] } },
   stones: { label: 'Stone game III', input: { mode: 'stones', a: [1, 2, 3, -9, 4] } },
+  subset: { label: 'Partition equal subset sum', input: { mode: 'subset', a: [1, 5, 11, 5] } },
+  targetsum: { label: 'Target sum', input: { mode: 'targetsum', a: [1, 1, 1, 1, 1], target: 3 } },
+  stone2: { label: 'Last stone weight II', input: { mode: 'stone2', a: [2, 7, 4, 1, 8, 1] } },
+  combsum4: { label: 'Combination sum IV', input: { mode: 'combsum4', a: [1, 2, 3], target: 4 } },
+  squares: { label: 'Perfect squares', input: { mode: 'squares', n: 12 } },
+  ones: { label: 'Ones and zeroes', input: { mode: 'ones', strs: ['10', '0001', '111001', '1', '0'], m: 5, n: 3 } },
 };
+const KNAP = new Set(['subset', 'targetsum', 'stone2', 'combsum4', 'squares', 'ones']);
 
 export const linCode = (mode) => ({
   robber2: [['base', 'houses 0 and n − 1 touch: solve the line without the last house, and without the first'], ['fill', 'best[i] = max(best[i−1], best[i−2] + a[i]);       // the House Robber row'], ['pick', 'answer = max(the two runs)']],
@@ -29,6 +36,12 @@ export const linCode = (mode) => ({
   intbreak: [['base', 'dp[1] = 1;'], ['fill', 'dp[i] = max over j of max(j, dp[j]) · max(i − j, dp[i − j])     // break or keep each part']],
   envelopes: [['base', 'sort by width ascending, and by height DESCENDING when widths tie'], ['fill', 'dp[i] = 1 + max dp[j] for j < i with h[j] < h[i]           // LIS on heights'], ['pick', 'answer = max(dp)  (patience sorting makes it O(n log n))']],
   stones: [['base', 'dp[n] = 0;                                          // no stones left'], ['fill', 'dp[i] = max over k = 1..3 of (a[i] + … + a[i+k−1]) − dp[i+k]   // my take minus their best']],
+  subset: [['base', 'odd total → false;  can[0] = true;  half = total / 2'], ['fill', 'for each x: for s = half down to x: can[s] |= can[s − x]     // right to left: x used once'], ['pick', 'return can[half]']],
+  targetsum: [['base', 'P − N = target, P + N = total → P = (total + target) / 2;  ways[0] = 1'], ['fill', 'for each x: for s = P down to x: ways[s] += ways[s − x]'], ['pick', 'return ways[P]']],
+  stone2: [['base', 'smashing = splitting into two piles; answer = total − 2 · (best pile ≤ total / 2)'], ['fill', 'for each stone x: for s = half down to x: can[s] |= can[s − x]'], ['pick', 'best = largest reachable s ≤ half;  return total − 2·best']],
+  combsum4: [['base', 'dp[0] = 1;'], ['fill', 'for t = 1..target: for x in nums: dp[t] += dp[t − x]     // target outer: order matters']],
+  squares: [['base', 'dp[0] = 0;'], ['fill', 'dp[i] = 1 + min over squares k² ≤ i of dp[i − k²]']],
+  ones: [['base', 'dp[z][o] = most strings using ≤ z zeros and ≤ o ones;  all 0'], ['fill', 'for each string (z0 zeros, o1 ones): for z, o from high to low: dp[z][o] = max(dp[z][o], dp[z − z0][o − o1] + 1)'], ['pick', 'return dp[m][n]']],
 })[mode];
 
 // ---------------------------------------------------------------- brute forces
@@ -57,6 +70,12 @@ export function linAnswer(input) {
   }
   if (mode === 'intbreak') { const go = (n, parts) => { if (n === 0) return parts >= 2 ? 1 : -Infinity; let b = -Infinity; for (let k = 1; k <= n; k++) b = Math.max(b, k * go(n - k, parts + 1)); return b; }; return go(input.n, 0); }
   if (mode === 'envelopes') { const e = [...input.env].sort((x, y) => x[0] - y[0]); const dp = e.map(() => 1); e.forEach((x, i) => e.slice(0, i).forEach((y, j) => { if (y[0] < x[0] && y[1] < x[1]) dp[i] = Math.max(dp[i], dp[j] + 1); })); return Math.max(...dp); }
+  if (mode === 'subset') { const t = a.reduce((x, y) => x + y, 0); for (let m = 0; m < 1 << a.length; m++) if (2 * a.filter((_, i) => (m >> i) & 1).reduce((x, y) => x + y, 0) === t) return 'true'; return 'false'; }
+  if (mode === 'targetsum') { let c = 0; for (let m = 0; m < 1 << a.length; m++) if (a.reduce((acc, v, i) => acc + ((m >> i) & 1 ? v : -v), 0) === input.target) c++; return c; }
+  if (mode === 'stone2') { const t = a.reduce((x, y) => x + y, 0); let best = Infinity; for (let m = 0; m < 1 << a.length; m++) best = Math.min(best, Math.abs(t - 2 * a.filter((_, i) => (m >> i) & 1).reduce((x, y) => x + y, 0))); return best; }
+  if (mode === 'combsum4') { const go2 = (t) => (t === 0 ? 1 : a.reduce((acc, x) => acc + (x <= t ? go2(t - x) : 0), 0)); return go2(input.target); }
+  if (mode === 'squares') { const go2 = (n) => { if (n === 0) return 0; let b = Infinity; for (let k = 1; k * k <= n; k++) b = Math.min(b, 1 + go2(n - k * k)); return b; }; return go2(input.n); }
+  if (mode === 'ones') { let best = 0; const cnt = input.strs.map((s2) => [[...s2].filter((c) => c === '0').length, [...s2].filter((c) => c === '1').length]); for (let m = 0; m < 1 << cnt.length; m++) { let z = 0, o = 0, k = 0; cnt.forEach(([a0, a1], i) => { if ((m >> i) & 1) { z += a0; o += a1; k++; } }); if (z <= input.m && o <= input.n) best = Math.max(best, k); } return best; }
   const go = (i) => { if (i >= a.length) return 0; let b = -Infinity, s = 0; for (let k = 0; k < 3 && i + k < a.length; k++) { s += a[i + k]; b = Math.max(b, s - go(i + k + 1)); } return b; };
   const d = go(0);
   return d > 0 ? 'Alice' : d < 0 ? 'Bob' : 'Tie';
@@ -70,6 +89,7 @@ export function linSteps(input) {
   let rows, cols, cells, inputRows = [0];
   const snap = (x) => steps.push({ mode, rows, cols, cells: cells.map((r) => [...r]), deps: [], inputRows, ...x });
   const a = input.a;
+  if (KNAP.has(mode)) return knapSteps(input);
 
   if (mode === 'robber2') {
     const n = a.length;
@@ -258,6 +278,21 @@ export function linSteps(input) {
 export function linParse(values, input) {
   const { mode } = input;
   const ints = (t) => String(t ?? '').split(/[\s,]+/).filter(Boolean).map(Number);
+  if (mode === 'squares') { const n = Number(values.n); return Number.isInteger(n) && n >= 1 && n <= 20 ? { input: { mode, n } } : { error: 'n from 1 to 20.' }; }
+  if (mode === 'ones') {
+    const strs = String(values.strs ?? '').split(/[\s,]+/).filter(Boolean); const m = Number(values.m), n = Number(values.n);
+    if (!strs.length || strs.length > 6 || strs.some((x) => !/^[01]{1,6}$/.test(x)) || !Number.isInteger(m) || !Number.isInteger(n) || m < 0 || n < 0 || m > 6 || n > 6) return { error: 'Up to 6 binary strings; m and n from 0 to 6.' };
+    return { input: { mode, strs, m, n } };
+  }
+  if (KNAP.has(mode)) {
+    const a = ints(values.a);
+    if (!a.length || a.length > 6 || a.some((v) => !Number.isInteger(v) || v < 1 || v > 12)) return { error: '1 to 6 numbers from 1 to 12.' };
+    if (mode === 'subset' || mode === 'stone2') { if (a.reduce((x, y) => x + y, 0) > 40) return { error: 'Keep the total at most 40 so the table fits.' }; return { input: { mode, a } }; }
+    const target = Number(values.target);
+    if (!Number.isInteger(target) || Math.abs(target) > 20 || (mode === 'combsum4' && (target < 1 || target > 12))) return { error: mode === 'combsum4' ? 'target from 1 to 12.' : 'target from −20 to 20.' };
+    if (mode === 'targetsum' && a.length > 6) return { error: 'Up to 6 numbers.' };
+    return { input: { mode, a: mode === 'combsum4' ? [...new Set(a)] : a, target } };
+  }
   if (mode === 'decode') { const s = String(values.s ?? '').trim(); return /^\d{1,9}$/.test(s) ? { input: { mode, s } } : { error: 'A string of up to 9 digits.' }; }
   if (mode === 'wordbreak') { const s = String(values.s ?? '').trim(); const words = [...new Set(String(values.words ?? '').split(/[\s,]+/).filter(Boolean))]; return /^[a-z]{1,13}$/.test(s) && words.length && words.length <= 6 && words.every((w) => /^[a-z]{1,8}$/.test(w)) ? { input: { mode, s, words } } : { error: 's: up to 13 letters; up to 6 words.' }; }
   if (mode === 'intbreak') { const n = Number(values.n); return Number.isInteger(n) && n >= 2 && n <= 12 ? { input: { mode, n } } : { error: 'n from 2 to 12.' }; }
@@ -274,6 +309,11 @@ export function linParse(values, input) {
 export function linRandom(input, rand = Math.random) {
   const g = rng(rand);
   const { mode } = input;
+  if (mode === 'squares') return { mode, n: g.int(1, 20) };
+  if (mode === 'ones') return { mode, strs: Array.from({ length: g.int(1, 5) }, () => Array.from({ length: g.int(1, 4) }, () => g.pick(['0', '1'])).join('')), m: g.int(0, 4), n: g.int(0, 4) };
+  if (mode === 'subset' || mode === 'stone2') return { mode, a: Array.from({ length: g.int(1, 6) }, () => g.int(1, 6)) };
+  if (mode === 'targetsum') return { mode, a: Array.from({ length: g.int(1, 6) }, () => g.int(1, 4)), target: g.int(-6, 6) };
+  if (mode === 'combsum4') return { mode, a: [...new Set(Array.from({ length: g.int(1, 3) }, () => g.int(1, 4)))], target: g.int(1, 9) };
   const arr = (lo, hi) => Array.from({ length: g.int(1, 8) }, () => g.int(lo, hi));
   if (mode === 'decode') return { mode, s: Array.from({ length: g.int(1, 7) }, () => g.pick(['1', '2', '2', '6', '0', '3', '7'])).join('') };
   if (mode === 'wordbreak') { const words = g.shuffle(['a', 'ab', 'b', 'ba', 'aab', 'bb']).slice(0, g.int(1, 4)); return { mode, s: Array.from({ length: g.int(1, 9) }, () => g.pick(['a', 'b'])).join(''), words }; }
@@ -284,6 +324,12 @@ export function linRandom(input, rand = Math.random) {
 }
 
 export const linFields = (input) => ({
+  squares: [{ name: 'n', label: 'n (1 to 20)', placeholder: '12', short: true }],
+  ones: [{ name: 'strs', label: 'strs', placeholder: 'e.g. 10, 0001, 111001, 1, 0' }, { name: 'm', label: 'm (zeros)', placeholder: '5', short: true }, { name: 'n', label: 'n (ones)', placeholder: '3', short: true }],
+  subset: [{ name: 'a', label: 'nums', placeholder: 'e.g. 1, 5, 11, 5' }],
+  stone2: [{ name: 'a', label: 'stones', placeholder: 'e.g. 2, 7, 4, 1, 8, 1' }],
+  targetsum: [{ name: 'a', label: 'nums', placeholder: 'e.g. 1, 1, 1, 1, 1' }, { name: 'target', label: 'target', placeholder: '3', short: true }],
+  combsum4: [{ name: 'a', label: 'nums (distinct)', placeholder: 'e.g. 1, 2, 3' }, { name: 'target', label: 'target', placeholder: '4', short: true }],
   decode: [{ name: 's', label: 's (digits)', placeholder: '22603', short: true }],
   wordbreak: [{ name: 's', label: 's', placeholder: 'applepenapple' }, { name: 'words', label: 'wordDict', placeholder: 'e.g. apple, pen' }],
   intbreak: [{ name: 'n', label: 'n (2 to 12)', placeholder: '10', short: true }],
@@ -291,10 +337,14 @@ export const linFields = (input) => ({
 })[input.mode] ?? [{ name: 'a', label: input.mode === 'stones' ? 'stone values' : input.mode === 'robber2' ? 'money (houses in a circle)' : 'a', placeholder: 'e.g. 2, 3, -2, 4' }];
 
 export const linValues = (input) => ({
+  squares: { n: String(input.n) }, ones: { strs: (input.strs ?? []).join(', '), m: String(input.m), n: String(input.n) },
+  targetsum: { a: (input.a ?? []).join(', '), target: String(input.target) }, combsum4: { a: (input.a ?? []).join(', '), target: String(input.target) },
   decode: { s: input.s }, wordbreak: { s: input.s, words: (input.words ?? []).join(', ') }, intbreak: { n: String(input.n) }, envelopes: { env: (input.env ?? []).map((e) => e.join(',')).join('; ') },
 })[input.mode] ?? { a: input.a.join(', ') };
 
 export const linDescribe = (input) => ({
+  squares: `n = ${input.n}`, ones: `${(input.strs ?? []).length} strings, m = ${input.m}, n = ${input.n}`,
+  targetsum: `${list(input.a ?? [])}, target ${input.target}`, combsum4: `${list(input.a ?? [])}, target ${input.target}`,
   decode: `"${input.s}"`, wordbreak: `"${input.s}"`, intbreak: `n = ${input.n}`, envelopes: `${(input.env ?? []).length} envelopes`,
 })[input.mode] ?? list(input.a);
 
@@ -309,4 +359,118 @@ export const linRule = {
   intbreak: 'dp[i] = max over j of max(j, dp[j]) · max(i−j, dp[i−j])',
   envelopes: 'Sort by width, heights descending on ties; LIS on heights.',
   stones: 'dp[i] = max over k of (sum of k stones) − dp[i+k]',
+  subset: 'Each number: every reachable s also reaches s + x (fill right to left).',
+  targetsum: 'Count subsets summing to (total + target) / 2.',
+  stone2: 'Best pile ≤ total / 2; answer total − 2 · pile.',
+  combsum4: 'dp[t] = Σ dp[t − x]: target outside, numbers inside.',
+  squares: 'dp[i] = 1 + min dp[i − k²]',
+  ones: 'Each string: dp[z][o] = max(dp[z][o], 1 + dp[z − zeros][o − ones]).',
 };
+
+// ---------------------------------------------------------------- knapsack rows (one step per item, or per target)
+
+function knapSteps(input) {
+  const { mode } = input;
+  const a = input.a;
+  const steps = [];
+  let rows, cols, cells, inputRows = [];
+  const snap = (x) => steps.push({ mode, rows, cols, cells: cells.map((r) => [...r]), deps: [], inputRows, ...x });
+
+  if (mode === 'subset' || mode === 'targetsum' || mode === 'stone2') {
+    const total = a.reduce((x, y) => x + y, 0);
+    const count = mode === 'targetsum';
+    let cap;
+    if (mode === 'subset') cap = total / 2;
+    else if (mode === 'stone2') cap = Math.floor(total / 2);
+    else cap = (total + input.target) / 2;
+    const intro = {
+      subset: `Two groups with equal sums each hold half the total, ${total} / 2. So the question is: can some subset reach exactly ${Number.isInteger(cap) ? cap : `${total} / 2`}? Track which sums are reachable, adding one number at a time. Each row is "reachable using the numbers so far".`,
+      targetsum: `Call the numbers with + the set P and the rest N. Then P − N = ${input.target} and P + N = ${total}, so P = (${total} + ${input.target}) / 2 = ${Number.isInteger(cap) ? cap : 'not a whole number'}. Counting sign choices = counting subsets that sum to ${Number.isInteger(cap) ? cap : 'that'}. Each row counts the ways using the numbers so far.`,
+      stone2: `Smashing stones is the same as splitting them into two piles and subtracting: the last weight is |pile A − pile B|. To make that small, make one pile as close to half the total (${total} / 2) as possible without going over. Track reachable sums up to ${cap}.`,
+    }[mode];
+    if (mode !== 'stone2' && (!Number.isInteger(cap) || cap < 0)) {
+      rows = ['']; cols = ['—']; cells = [[null]];
+      snap({ kind: 'start', cur: null, lines: [], title: mode === 'subset' ? `Total ${total} is odd` : `No whole-number P`, text: intro, calc: [`total = ${total}`] });
+      snap({ kind: 'done', cur: null, lines: ['base'], answer: mode === 'subset' ? 'can = false' : 'ways = 0', title: mode === 'subset' ? 'Odd total: false' : 'No assignment: 0', text: mode === 'subset' ? 'Two equal whole-number halves need an even total.' : `(${total} + ${input.target}) must be even and non-negative for P to exist; it isn't, so no sign choice works.`, calc: [mode === 'subset' ? 'false' : '0'] });
+      return steps;
+    }
+    rows = ['start', ...a.map((x) => `+${x}`)];
+    cols = Array.from({ length: cap + 1 }, (_, s) => String(s));
+    cells = rows.map(() => Array(cap + 1).fill(null));
+    const val = (v) => (count ? v : v ? 'T' : '');
+    let cur = Array(cap + 1).fill(0); cur[0] = 1;
+    cells[0] = cur.map(val);
+    snap({ kind: 'start', cur: null, lines: [], title: { subset: `Can a subset of ${list(a)} reach ${cap}?`, targetsum: `Ways to make ${input.target} with ± signs`, stone2: `Stones ${list(a)}: piles as even as possible` }[mode], text: intro, calc: [`total = ${total}`, `${mode === 'targetsum' ? 'P' : 'target'} = ${cap}`] });
+    snap({ kind: 'base', cur: [0, 0], lines: ['base'], title: count ? 'ways[0] = 1' : 'Sum 0 is reachable', text: count ? 'There is one way to make 0: choose nothing.' : 'Choosing nothing gives sum 0; every other sum starts unreachable.', calc: [count ? 'ways[0] = 1' : 'can[0] = T'] });
+    a.forEach((x, k) => {
+      const nx = [...cur];
+      for (let s = cap; s >= x; s--) nx[s] = count ? nx[s] + cur[s - x] : (nx[s] || cur[s - x] ? 1 : 0);
+      const fresh = [];
+      for (let s = 0; s <= cap; s++) if (nx[s] !== cur[s]) fresh.push(s);
+      cur = nx;
+      cells[k + 1] = cur.map(val);
+      snap({
+        kind: 'fill', cur: [k + 1, cap], lines: ['fill'],
+        deps: fresh.map((s) => ({ r: k, c: s - x, tone: 'success', label: `+${x}` })),
+        title: `Add ${x}: ${fresh.length ? (count ? `${plural(fresh.length, 'count')} change` : `newly reachable ${fresh.join(', ')}`) : 'nothing new'}`,
+        text: count ? `Every subset so far either skips ${x} (the count above stays) or includes it (the count at s − ${x} moves up). Going from high sums to low means ${x} is counted at most once per subset.` : `Every sum reachable before stays reachable (skip ${x}); every reachable s gives s + ${x} (take ${x}). ${fresh.length ? `New: ${fresh.join(', ')}.` : 'Nothing new within the limit.'} Filling right to left in one array keeps ${x} from being used twice.`,
+        calc: [`${mode === 'targetsum' ? 'ways' : 'can'}[${cap}] = ${count ? cur[cap] : cur[cap] ? 'T' : 'F'}`],
+      });
+    });
+    if (mode === 'stone2') {
+      let best = cap; while (!cur[best]) best--;
+      const ans = total - 2 * best;
+      snap({ kind: 'done', cur: [a.length, best], lines: ['pick'], answer: `weight = ${ans}`, title: `Best pile ${best}: ${total} − 2·${best} = ${ans}`, text: `The largest reachable sum not above half is ${best}; the other pile is ${total - best}. Smashing them down leaves ${ans}. O(n · total) time.`, calc: [`= ${ans}`] });
+    } else {
+      const ans = count ? cur[cap] : cur[cap] ? 'true' : 'false';
+      snap({ kind: 'done', cur: [a.length, cap], lines: ['pick'], answer: count ? `ways = ${ans}` : `can = ${ans}`, title: count ? `${ans} way${ans === 1 ? '' : 's'}` : `Reach ${cap}: ${ans}`, text: count ? `Each of the ${ans} subsets summing to ${cap} gets +; the rest get −. O(n · P) time, one array.` : `${ans === 'true' ? `Some subset reaches ${cap}, and the rest make the other half.` : `No subset reaches ${cap}, so no equal split exists.`} O(n · total) time, O(total) memory.`, calc: [`= ${ans}`] });
+    }
+    return steps;
+  }
+
+  if (mode === 'combsum4' || mode === 'squares') {
+    const T = mode === 'combsum4' ? input.target : input.n;
+    const parts = mode === 'combsum4' ? [...a].sort((x, y) => x - y) : Array.from({ length: Math.floor(Math.sqrt(T)) }, (_, k) => (k + 1) ** 2);
+    rows = [mode === 'combsum4' ? 'ways' : 'fewest'];
+    cols = Array.from({ length: T + 1 }, (_, t) => String(t));
+    cells = [Array(T + 1).fill(null)];
+    snap({ kind: 'start', cur: null, lines: [], title: mode === 'combsum4' ? `Ordered ways to make ${T} from ${list(parts)}` : `Fewest squares summing to ${T}`, text: mode === 'combsum4' ? 'Order matters here, so think about the LAST number of a sequence: any x in nums, preceded by any sequence making t − x. dp[t] = sum of dp[t − x]. Because every t looks at every x, sequences in every order are counted (target in the outer loop; Coin Change II puts coins outside to avoid exactly that).' : `The squares up to ${T} are ${parts.join(', ')}. The last square used is one of them; before it, the best for i − square. dp[i] = 1 + min over those.`, calc: [`parts: ${parts.join(', ')}`] });
+    cells[0][0] = mode === 'combsum4' ? 1 : 0;
+    snap({ kind: 'base', cur: [0, 0], lines: ['base'], title: mode === 'combsum4' ? 'dp[0] = 1' : 'dp[0] = 0', text: mode === 'combsum4' ? 'The empty sequence is the one way to make 0.' : 'Zero needs no squares.', calc: [`dp[0] = ${cells[0][0]}`] });
+    for (let t = 1; t <= T; t++) {
+      const use = parts.filter((x) => x <= t);
+      if (mode === 'combsum4') cells[0][t] = use.reduce((acc, x) => acc + cells[0][t - x], 0);
+      else cells[0][t] = 1 + Math.min(...use.map((x) => cells[0][t - x]));
+      const bestX = mode === 'squares' ? use.find((x) => cells[0][t - x] + 1 === cells[0][t]) : null;
+      snap({
+        kind: 'fill', cur: [0, t], lines: ['fill'],
+        deps: use.map((x) => ({ r: 0, c: t - x, tone: mode === 'combsum4' || x === bestX ? 'success' : 'muted', label: `+${x}` })),
+        title: mode === 'combsum4' ? `dp[${t}] = ${use.map((x) => `dp[${t - x}]`).join(' + ') || '0'} = ${cells[0][t]}` : `dp[${t}] = 1 + dp[${t - bestX}] = ${cells[0][t]}`,
+        text: mode === 'combsum4' ? (use.length ? `A sequence making ${t} ends with ${use.join(' or ')}; before that it makes ${use.map((x) => t - x).join(' or ')}. Add those counts.` : 'No number is small enough.') : `Ending with ${bestX} (${Math.sqrt(bestX)}²) leaves ${t - bestX}, which needs ${cells[0][t - bestX]}. ${use.length > 1 ? `The other squares give ${use.filter((x) => x !== bestX).map((x) => 1 + cells[0][t - x]).join(', ')}.` : ''}`,
+        calc: [`dp[${t}] = ${cells[0][t]}`],
+      });
+    }
+    const ans = cells[0][T];
+    snap({ kind: 'done', cur: [0, T], lines: [], answer: `${mode === 'combsum4' ? 'ways' : 'squares'} = ${ans}`, title: mode === 'combsum4' ? `${ans} ordered sequences` : `${T} needs ${ans} square${ans === 1 ? '' : 's'}`, text: mode === 'combsum4' ? `O(target · n). Swap the loops (numbers outside) and you would count each combination once instead: Coin Change II.` : `O(n · √n). Lagrange: every number is a sum of at most 4 squares, so the answer is always 1 to 4.`, calc: [`= ${ans}`] });
+    return steps;
+  }
+
+  // ones and zeroes: a 2-D capacity table, one string at a time
+  const { strs, m, n } = input;
+  rows = Array.from({ length: m + 1 }, (_, z) => `${z} zeros`);
+  cols = Array.from({ length: n + 1 }, (_, o) => `${o}`);
+  let dp = rows.map(() => Array(n + 1).fill(0));
+  cells = dp.map((r) => [...r]);
+  snap({ kind: 'start', cur: null, lines: ['base'], title: `Most strings within ${m} zeros and ${n} ones`, text: 'A knapsack with two capacities. dp[z][o] = the most strings you can pick using at most z zeros and o ones (rows = zeros, columns = ones). For each string, either skip it or take it: take = 1 + the best with its zeros and ones removed from the budget.', calc: strs.map((s2) => `"${s2}": ${[...s2].filter((c) => c === '0').length} zeros, ${[...s2].filter((c) => c === '1').length} ones`) });
+  strs.forEach((s2) => {
+    const z0 = [...s2].filter((c) => c === '0').length, o1 = s2.length - z0;
+    const nx = dp.map((r) => [...r]);
+    const fresh = [];
+    for (let z = m; z >= z0; z--) for (let o = n; o >= o1; o--) if (dp[z - z0][o - o1] + 1 > nx[z][o]) { nx[z][o] = dp[z - z0][o - o1] + 1; fresh.push([z, o]); }
+    dp = nx;
+    cells = dp.map((r) => [...r]);
+    snap({ kind: 'fill', cur: [m, n], lines: ['fill'], deps: fresh.map(([z, o]) => ({ r: z, c: o, tone: 'success' })), title: `"${s2}" (${z0} zeros, ${o1} ones): ${plural(fresh.length, 'cell')} improve`, text: z0 > m || o1 > n ? `"${s2}" needs ${z0} zeros and ${o1} ones, more than the whole budget (${m} zeros, ${n} ones): it can never be chosen, and the table stays as it is.` : `For every budget with room for ${z0} zeros and ${o1} ones, taking "${s2}" gives 1 + the best for the budget left over. ${fresh.length ? 'Highlighted cells got better.' : 'It never beats what is already there.'} Going from big budgets to small keeps the string from being taken twice.`, calc: [`dp[${m}][${n}] = ${dp[m][n]}`] });
+  });
+  snap({ kind: 'done', cur: [m, n], lines: ['pick'], answer: `size = ${dp[m][n]}`, title: `Answer: ${dp[m][n]} strings`, text: `The full budget, ${m} zeros and ${n} ones, fits ${dp[m][n]} strings. O(strings · m · n).`, calc: [`= ${dp[m][n]}`] });
+  return steps;
+}

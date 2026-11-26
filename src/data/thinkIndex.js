@@ -280,6 +280,14 @@ export const THINK_INDEX = {
   "maximum-sum-circular-subarray": { title: "Maximum Sum Circular Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
   "longest-turbulent-subarray": { title: "Longest Turbulent Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
   "stone-game-iii": { title: "Stone Game III", level: 'Hard', lesson: 'dp-linear', free: false },
+  "partition-equal-subset-sum": { title: "Partition Equal Subset Sum", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "target-sum": { title: "Target Sum", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "last-stone-weight-ii": { title: "Last Stone Weight II", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "coin-change": { title: "Coin Change", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "coin-change-ii": { title: "Coin Change II", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "combination-sum-iv": { title: "Combination Sum IV", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "perfect-squares": { title: "Perfect Squares", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "ones-and-zeroes": { title: "Ones and Zeroes", level: 'Medium', lesson: 'dp-knapsack', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -309,7 +317,7 @@ export const PATTERN_ORDER = [
   ['backtracking', "Backtracking", 17, 17],
   ['dp-made-easy', "Basic DP (memo, then table)", 4, 4],
   ['dp-linear', "1D DP", 14, 14],
-  ['dp-knapsack', "Knapsack DP", 0, 8],
+  ['dp-knapsack', "Knapsack DP", 8, 8],
   ['dp-grid', "Grid DP", 0, 10],
   ['dp-strings', "String DP (two indexes)", 0, 9],
   ['dp-trees-intervals', "Tree & interval DP", 0, 11],

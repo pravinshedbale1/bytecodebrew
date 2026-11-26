@@ -81,6 +81,9 @@ static boolean canPartition(int[] nums) {
 }
 ```
 
+
+<Dp1dViz examples={['subset']} />
+
 ### Target sum — rewrite the problem first
 
 > Put + or − in front of each number to reach `target`. How many ways?
@@ -102,6 +105,9 @@ static int findTargetSumWays(int[] nums, int target) {
 
 The algebra step is the real insight — it turns a "two choices per number" search (2ⁿ) into a pseudo-polynomial DP. The reference solution checks it against trying every sign assignment, including zeros (each zero doubles the count, which this DP handles automatically).
 
+
+<Dp1dViz examples={['targetsum']} />
+
 ### Last stone weight II — closest split
 
 Smashing stones repeatedly leaves the difference between two groups. Minimise it: find the largest reachable subset sum not exceeding `total / 2`.
@@ -116,6 +122,9 @@ static int lastStoneWeightII(int[] stones) {
     return total;
 }
 ```
+
+
+<Dp1dViz examples={['stone2', 'ones']} />
 
 ## Unbounded problems
 
@@ -158,6 +167,11 @@ static int change(int amount, int[] coins) {
 Step through it with the coins as rows: each cell adds the ways without this coin and the ways with one more of it.
 
 <DpGridViz examples={['ways']} />
+
+
+Swap the loops (target outside, numbers inside) and every order counts separately: Combination Sum IV. Perfect Squares is Coin Change with the squares as coins.
+
+<Dp1dViz examples={['combsum4', 'squares']} />
 
 ## Choosing the template
 

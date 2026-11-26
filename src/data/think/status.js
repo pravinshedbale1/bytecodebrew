@@ -29,6 +29,7 @@ export const COMPLETE = [
   'backtracking',
   'dp-made-easy',
   'dp-linear',
+  'dp-knapsack',
 ];
 
 /**
@@ -67,4 +68,5 @@ export const POLISHED = [
   'backtracking',
   'dp-made-easy',
   'dp-linear',
+  'dp-knapsack',
 ];
