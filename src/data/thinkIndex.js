@@ -298,6 +298,15 @@ export const THINK_INDEX = {
   "dungeon-game": { title: "Dungeon Game", level: 'Hard', lesson: 'dp-grid', free: false },
   "cherry-pickup": { title: "Cherry Pickup", level: 'Hard', lesson: 'dp-grid', free: false },
   "longest-increasing-path-in-a-matrix": { title: "Longest Increasing Path in a Matrix", level: 'Hard', lesson: 'dp-grid', free: false },
+  "longest-common-subsequence": { title: "Longest Common Subsequence", level: 'Medium', lesson: 'dp-strings', free: false },
+  "delete-operation-for-two-strings": { title: "Delete Operation for Two Strings", level: 'Medium', lesson: 'dp-strings', free: false },
+  "longest-palindromic-substring": { title: "Longest Palindromic Substring", level: 'Medium', lesson: 'dp-strings', free: false },
+  "longest-palindromic-subsequence": { title: "Longest Palindromic Subsequence", level: 'Medium', lesson: 'dp-strings', free: false },
+  "palindromic-substrings": { title: "Palindromic Substrings", level: 'Medium', lesson: 'dp-strings', free: false },
+  "interleaving-string": { title: "Interleaving String", level: 'Medium', lesson: 'dp-strings', free: false },
+  "edit-distance": { title: "Edit Distance", level: 'Medium', lesson: 'dp-strings', free: false },
+  "distinct-subsequences": { title: "Distinct Subsequences", level: 'Hard', lesson: 'dp-strings', free: false },
+  "regular-expression-matching": { title: "Regular Expression Matching", level: 'Hard', lesson: 'dp-strings', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -329,7 +338,7 @@ export const PATTERN_ORDER = [
   ['dp-linear', "1D DP", 14, 14],
   ['dp-knapsack', "Knapsack DP", 8, 8],
   ['dp-grid', "Grid DP", 10, 10],
-  ['dp-strings', "String DP (two indexes)", 0, 9],
+  ['dp-strings', "String DP (two indexes)", 9, 9],
   ['dp-trees-intervals', "Tree & interval DP", 0, 11],
   ['dp-state-machine', "State-machine / bitmask DP", 0, 10],
   ['greedy', "Greedy", 0, 17],

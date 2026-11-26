@@ -37,6 +37,11 @@ static int longestCommonSubsequence(String a, String b) {
 
 Why is it safe to take the match greedily? If the last letters are equal, some LCS ends with that letter; pairing them can never be worse than leaving either unused.
 
+
+Delete Operation for Two Strings is the same table with costs instead of lengths (equivalently m + n − 2·LCS):
+
+<DpGridViz examples={['deletes']} />
+
 ## Edit distance — three operations, three neighbours
 
 > Minimum insertions, deletions and replacements to turn `a` into `b`.
@@ -90,6 +95,9 @@ static int numDistinct(String s, String t) {
 
 Counting problems **add** the choices; optimisation problems take **min/max**.
 
+
+<DpGridViz examples={['distinct']} />
+
 ### Interleaving string
 
 > Is `c` formed by interleaving `a` and `b`, keeping each one's order?
@@ -109,6 +117,13 @@ static boolean isInterleave(String a, String b, String c) {
     return dp[a.length()][b.length()];
 }
 ```
+
+
+<DpGridViz examples={['interleave']} />
+
+Regular expression matching uses the same prefix table; a star either matches zero copies (two columns left) or one more character (one row up):
+
+<DpGridViz examples={['regex']} />
 
 ## One string: palindromes
 
@@ -135,6 +150,9 @@ static int longestPalindromeSubseq(String s) {
 
 The fill order is the subtle part of interval DP: `dp[i][j]` needs `dp[i + 1][…]`, so `i` must run **backwards**.
 
+
+<DpGridViz examples={['lps']} />
+
 ### Longest palindromic substring — expand around centres
 
 A DP table works (O(n²) time and space), but expanding from each of the 2n − 1 centres is simpler and uses O(1) space:
@@ -154,6 +172,11 @@ static String longestPalindrome(String s) {
 ```
 
 Substring (contiguous) and subsequence (not contiguous) are different problems — read carefully.
+
+
+The table version marks every palindrome, which also counts them (Palindromic Substrings):
+
+<DpGridViz examples={['palsub', 'palcount']} />
 
 ## Transition cheat sheet
 

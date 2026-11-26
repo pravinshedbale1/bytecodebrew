@@ -31,6 +31,7 @@ export const COMPLETE = [
   'dp-linear',
   'dp-knapsack',
   'dp-grid',
+  'dp-strings',
 ];
 
 /**
@@ -71,4 +72,5 @@ export const POLISHED = [
   'dp-linear',
   'dp-knapsack',
   'dp-grid',
+  'dp-strings',
 ];
