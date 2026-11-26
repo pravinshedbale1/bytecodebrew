@@ -1,6 +1,7 @@
 import { StepViz, Key } from './StepViz';
 import { Chips } from './prims';
-import { Arrow, ArrowDefs, GridCells } from './GraphsViz';
+import { Arrow, ArrowDefs, GridCells, forest } from './GraphsViz';
+import { UF_WALK, parseUfWalk, randomUfWalk, ufWalk, ufWalkCode } from './models/ufWalk';
 import styles from './GraphsViz.module.css';
 import { GRAPH_WALK, graphWalk, graphWalkCode, gridToText, parseGraphWalk, randomGraphWalk } from './models/graphWalk';
 import { TOPO_WALK, parseTopoWalk, randomTopoWalk, topoWalk, topoWalkCode } from './models/topoWalk';
@@ -15,6 +16,7 @@ function Graph({ g, width, id }) {
   const n = g.nodes.length;
   const H = n <= 2 ? 120 : Math.min(250, Math.max(170, W * 0.55));
   const pos = Object.fromEntries(g.nodes.map((v, k) => {
+    if (v.px !== undefined) return [v.id, { x: 30 + v.px * (W - 60), y: 26 + v.py * (H - 52) }];
     if (n === 1) return [v.id, { x: W / 2, y: H / 2 }];
     const t = -Math.PI / 2 + (2 * Math.PI * k) / n;
     return [v.id, { x: W / 2 + (W / 2 - 40) * Math.cos(t), y: H / 2 + (H / 2 - 30) * Math.sin(t) }];
@@ -30,7 +32,12 @@ function Graph({ g, width, id }) {
             const tone = e.tone ?? 'plain';
             if (!e.dir) {
               const a = pos[e.a], b = pos[e.b];
-              return <g key={k} className={`${styles.edge} ${styles.undirected} ${styles[`edge_${tone}`]}`}><path d={`M${a.x},${a.y} L${b.x},${b.y}`} /></g>;
+              return (
+                <g key={k} className={`${styles.edge} ${styles.undirected} ${styles[`edge_${tone}`]}`}>
+                  <path d={`M${a.x},${a.y} L${b.x},${b.y}`} />
+                  {e.l !== undefined && <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 5} textAnchor="middle">{e.l}</text>}
+                </g>
+              );
             }
             const pair = `${e.a}>${e.b}`;
             const same = seen[pair] ?? 0;
@@ -58,6 +65,43 @@ function Graph({ g, width, id }) {
   );
 }
 
+function Forest({ fo, width }) {
+  const leaves = fo.ids.filter((i) => !fo.ids.some((j) => j !== i && fo.parent[j] === i)).length;
+  const W = Math.max(260, Math.min(width, 600), leaves * 46);   // never squeeze nodes together: scroll instead
+  const { pos, roots, height } = forest(fo.parent, fo.ids, W);
+  const H = Math.max(height + (fo.tag ? 14 : 0), 110);
+  const set = (k) => new Set((fo[k] ?? []).map(String));
+  const hot = set('hot'), bad = set('bad'), good = set('good'), prime = set('prime');
+  return (
+    <div style={{ maxWidth: '100%', overflowX: W > width ? 'auto' : undefined }}>
+      <p className={styles.graphLabel}>union-find trees: each node points to its parent; a root stands for its group</p>
+      <div className={styles.graph} style={{ width: W, height: H }}>
+        <svg className={styles.svg} width={W} height={H} aria-hidden="true">
+          <ArrowDefs id="fw" />
+          {fo.ids.filter((i) => fo.parent[i] !== i).map((i) => {
+            const tone = hot.has(String(i)) ? 'on' : 'plain';
+            return <Arrow key={`${i}-${fo.parent[i]}`} id={`fw-${tone}`} a={pos[i]} b={pos[fo.parent[i]]} cls={`${styles.edge} ${styles[`edge_${tone}`]}`} />;
+          })}
+        </svg>
+        {fo.ids.map((i) => {
+          const l = fo.label[i];
+          return (
+            <div
+              key={i}
+              className={[styles.node, roots.includes(i) && styles.nodeRoot, prime.has(String(i)) && styles.nodeReady, good.has(String(i)) && styles.nodeDone, bad.has(String(i)) && styles.nodeBad, hot.has(String(i)) && styles.nodeCur].filter(Boolean).join(' ')}
+              style={{ left: pos[i].x, top: pos[i].y, fontSize: l.length > 2 ? 11 : 13, ...(l.length > 3 ? { width: 'auto', minWidth: 38, padding: '0 7px', borderRadius: 19, margin: 0, transform: 'translate(-50%, -50%)' } : {}) }}
+            >
+              {l}
+              {roots.includes(i) && fo.size[i] > 1 && <i className={styles.deg}>{fo.size[i]}</i>}
+              {fo.tag?.[i] !== undefined && <i className={styles.dist}>{fo.tag[i]}</i>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function GraphWalkStage({ step: f, width, seq }) {
   const two = (f.graphs?.length ?? 0) > 1;
   const gw = two && width >= 560 ? Math.floor(width / 2) - 12 : width;
@@ -69,6 +113,7 @@ function GraphWalkStage({ step: f, width, seq }) {
           cell={(r, c) => ({ cls: f.grid[r][c].c.filter(Boolean), label: f.grid[r][c].l, pop: f.grid[r][c].c.includes('cellNew'), key: f.grid[r][c].c.includes('cellNew') ? `n${seq}` : 'v' })}
         />
       )}
+      {f.forest && <Forest fo={f.forest} width={width} />}
       {f.graphs && (
         <div className={styles.graphs}>
           {f.graphs.map((g, k) => <Graph key={k} g={g} width={gw} id={`gw${k}`} />)}
@@ -267,4 +312,91 @@ const topoSpec = {
 
 export function TopoWalkViz(props) {
   return <StepViz spec={topoSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- union-find problems (same stage, plus the forest)
+
+const UF_FIELDS = {
+  path: [{ name: 'n', label: 'n', placeholder: '6', short: true }, { name: 'edges', label: 'edges', placeholder: 'e.g. 0-1, 0-2, 3-5' }, { name: 'source', label: 'source', placeholder: '0', short: true }, { name: 'dest', label: 'destination', placeholder: '5', short: true }],
+  components: [{ name: 'n', label: 'n', placeholder: '5', short: true }, { name: 'edges', label: 'edges', placeholder: 'e.g. 0-1, 1-2, 3-4' }],
+  tree: [{ name: 'n', label: 'n', placeholder: '5', short: true }, { name: 'edges', label: 'edges', placeholder: 'e.g. 0-1, 0-2, 0-3, 1-4' }],
+  equations: [{ name: 'eqs', label: 'equations', placeholder: 'e.g. a==b, b!=c, c==a' }],
+  swaps: [{ name: 's', label: 's', placeholder: 'dcab', short: true }, { name: 'pairs', label: 'pairs', placeholder: 'e.g. 0-3, 1-2' }],
+  accounts: [{ name: 'accounts', label: 'name emails…; name emails…', placeholder: 'e.g. John js@m jny@m; John js@m j00@m; Mary mary@m' }],
+  mincost: [{ name: 'points', label: 'points (x,y; x,y …)', placeholder: 'e.g. 0,0; 2,2; 3,10; 5,2; 7,0' }],
+  slashes: [{ name: 'grid', label: 'rows separated by ; (. = space, b = backslash)', placeholder: 'e.g. ./; /.' }],
+  factor: [{ name: 'nums', label: 'nums (distinct)', placeholder: 'e.g. 4, 6, 15, 35' }],
+  gcd: [{ name: 'nums', label: 'nums', placeholder: 'e.g. 2, 3, 6' }],
+  critical: [{ name: 'n', label: 'n', placeholder: '5', short: true }, { name: 'edges', label: 'edges a-b:weight', placeholder: 'e.g. 0-1:1, 1-2:1, 2-3:2' }],
+};
+
+const UF_VALUES = {
+  path: (i) => ({ n: String(i.n), edges: i.edges.map((e) => e.join('-')).join(', '), source: String(i.source), dest: String(i.dest) }),
+  components: (i) => ({ n: String(i.n), edges: i.edges.map((e) => e.join('-')).join(', ') }),
+  tree: (i) => ({ n: String(i.n), edges: i.edges.map((e) => e.join('-')).join(', ') }),
+  equations: (i) => ({ eqs: i.eqs.join(', ') }),
+  swaps: (i) => ({ s: i.s, pairs: i.pairs.map((e) => e.join('-')).join(', ') }),
+  accounts: (i) => ({ accounts: i.accounts.map((a) => a.join(' ')).join('; ') }),
+  mincost: (i) => ({ points: i.points.map((p) => p.join(',')).join('; ') }),
+  slashes: (i) => ({ grid: i.grid.map((r) => r.replace(/ /g, '.').replace(/\\/g, 'b')).join('; ') }),
+  factor: (i) => ({ nums: i.nums.join(', ') }),
+  gcd: (i) => ({ nums: i.nums.join(', ') }),
+  critical: (i) => ({ n: String(i.n), edges: i.edges.map(([a, b, w]) => `${a}-${b}:${w}`).join(', ') }),
+};
+
+const UF_RULE = {
+  path: 'Union both ends of every edge; connected = same root.',
+  components: 'Start with n; every union that merges two roots removes one component.',
+  tree: 'Exactly n − 1 edges, and no edge whose ends already share a root.',
+  equations: 'All == first (union), then every != must span two roots.',
+  swaps: 'Indices that can swap form groups; sort the letters inside each group.',
+  accounts: 'A shared email unions two accounts; each root is one person.',
+  mincost: 'Cheapest edge first; take it only if its ends have different roots.',
+  slashes: 'Scale ×3, slashes block pixels; count connected free areas.',
+  factor: 'Union each number with its prime factors; count numbers per root.',
+  gcd: 'Union each index with its value\'s primes; all one root → true.',
+  critical: 'Without it heavier → critical; forced in and still minimal → pseudo-critical.',
+};
+
+const ufSpec = {
+  title: 'Union-Find problems, step by step',
+  examples: UF_WALK,
+  simulate: ufWalk,
+  code: (input) => ufWalkCode(input.mode),
+  kinds: {
+    start: ['Start', 'neutral'], union: ['Union', 'accent'], same: ['Same root', 'warn'], own: ['New owner', 'neutral'], fail: ['Impossible', 'danger'], check: ['Check', 'accent'],
+    sort: ['Sort group', 'success'], take: ['Take', 'success'], skip: ['Skip', 'warn'], region: ['Region', 'accent'], crit: ['Critical', 'danger'],
+    pseudo: ['Pseudo', 'warn'], neither: ['Neither', 'neutral'], done: ['Answer', 'success'],
+  },
+  describe: (input) => ({
+    path: () => `n = ${input.n}, ${input.source} → ${input.dest}`,
+    components: () => `n = ${input.n}, ${input.edges.length} edges`,
+    tree: () => `n = ${input.n}, ${input.edges.length} edges`,
+    equations: () => input.eqs.join(', '),
+    swaps: () => `"${input.s}"`,
+    accounts: () => `${input.accounts.length} accounts`,
+    mincost: () => `${input.points.length} points`,
+    slashes: () => `${input.grid.length} × ${input.grid.length} grid`,
+    factor: () => input.nums.join(', '),
+    gcd: () => input.nums.join(', '),
+    critical: () => `n = ${input.n}, ${input.edges.length} edges`,
+  })[input.mode](),
+  rule: (input) => UF_RULE[input.mode],
+  stats: () => [],
+  legend: (f, input) => (input.mode === 'mincost' || input.mode === 'critical'
+    ? [[<Key tone="success">—</Key>, input.mode === 'mincost' ? 'edges taken' : 'tree of this run'], [<Key tone="danger">—</Key>, input.mode === 'mincost' ? 'skipped: would close a cycle' : 'the edge being tested']]
+    : input.mode === 'slashes'
+      ? [[<Key shape="box">■</Key>, 'slash pixel'], [<Key shape="box" tone="accent">1</Key>, 'region number']]
+      : [[<Key shape="box" tone="accent">0</Key>, 'root (badge = group size)'], [<Key shape="box" tone="warn">3</Key>, 'involved now'], [<Key>→</Key>, 'points to its parent']]),
+  fields: (input) => UF_FIELDS[input.mode],
+  values: (input) => UF_VALUES[input.mode](input),
+  parse: parseUfWalk,
+  random: (input) => randomUfWalk(input),
+  hint: (input) => (input.mode === 'slashes' ? 'Up to 4 × 4 cells.' : 'Keep it small so it fits: up to about 8 nodes.'),
+  delay: () => 2400,
+  Stage: GraphWalkStage,
+};
+
+export function UfWalkViz(props) {
+  return <StepViz spec={ufSpec} {...props} />;
 }

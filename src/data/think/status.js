@@ -23,6 +23,7 @@ export const COMPLETE = [
   'bst-patterns',
   'graph-traversal',
   'topological-sort',
+  'union-find',
 ];
 
 /**
@@ -55,4 +56,5 @@ export const POLISHED = [
   'bst-patterns',
   'graph-traversal',
   'topological-sort',
+  'union-find',
 ];

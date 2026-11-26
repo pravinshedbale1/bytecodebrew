@@ -80,6 +80,9 @@ static int countComponents(int n, int[][] edges) {
 }
 ```
 
+
+<UfWalkViz examples={['components', 'path', 'tree', 'treeCycle']} />
+
 ### Redundant connection — the edge that closes a cycle
 
 > A tree plus one extra edge. Return that edge.
@@ -116,6 +119,9 @@ static boolean equationsPossible(String[] equations) {
 
 Order matters: all the "same" facts must be merged before checking any "different" facts.
 
+
+<UfWalkViz examples={['equations', 'equationsOk']} />
+
 ### Minimum spanning tree with Kruskal
 
 > Connect all points with the minimum total cost (cost = Manhattan distance).
@@ -139,9 +145,15 @@ static int minCostConnectPoints(int[][] p) {
 
 The reference solution checks Kruskal's total against Prim's algorithm on random point sets.
 
+
+<UfWalkViz examples={['mincost', 'critical']} />
+
 ### Grids with Union-Find
 
 Map cell `(r, c)` to the index `r * cols + c`, and union each land cell with its right and down neighbours. The number of islands is `components − water cells`. DFS is usually simpler for a static grid, but union-find wins when land is **added over time** (each addition is one or a few unions instead of a fresh search).
+
+
+<UfWalkViz examples={['slashes', 'slashesBig']} />
 
 ## Union-Find or BFS/DFS?
 
@@ -198,11 +210,15 @@ Give each email an index (a `Map<String, Integer>`) and **union all emails withi
 
 </Practice>
 
+<UfWalkViz examples={['accounts']} />
+
 <Practice task="Smallest string with swaps: you may swap characters at given index pairs any number of times. Return the lexicographically smallest string. Why does Union-Find fit?">
 
 Swaps are transitive: if you can swap (0,1) and (1,2), you can arrange positions 0, 1, 2 in **any** order. So union every pair; each group of indexes is a set of positions whose characters can be freely reordered. For each group, sort its characters and write them back into its sorted indexes. O(n log n).
 
 </Practice>
+
+<UfWalkViz examples={['swaps']} />
 
 <Takeaways>
 

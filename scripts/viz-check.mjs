@@ -37,6 +37,7 @@ import * as hsm from '../src/components/mdx/viz/models/heapSim.js';
 import * as tw from '../src/components/mdx/viz/models/treeWalk.js';
 import * as gw from '../src/components/mdx/viz/models/graphWalk.js';
 import * as tpw from '../src/components/mdx/viz/models/topoWalk.js';
+import * as ufw from '../src/components/mdx/viz/models/ufWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -956,6 +957,28 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(tpw.TOPO_WALK).map((e) => e.input.mode))) for (let t = 0; t < 800; t++) run(tpw.randomTopoWalk({ mode }, rand));
   const last = (k) => tpw.topoWalk(tpw.TOPO_WALK[k].input).at(-1);
   ok(last('alien').answer === 'wertf' && last('alienBad').answer === '""' && last('safe').answer === '[2, 4, 5, 6]' && last('mht').answer === '[2]' && last('mhtTwo').answer === '[3, 4]', 'topoWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- union-find problems (UfWalkViz)
+{
+  const kinds = ['start', 'union', 'same', 'own', 'fail', 'check', 'sort', 'take', 'skip', 'region', 'crit', 'pseudo', 'neither', 'done'];
+  const result = (input, steps) => {
+    const last = steps.at(-1);
+    if (input.mode === 'accounts' || input.mode === 'critical') return last.out;
+    if (['components', 'mincost', 'slashes', 'factor'].includes(input.mode)) return Number(last.answer);
+    if (input.mode === 'swaps') return last.answer;
+    return last.answer === 'true';
+  };
+  const run = (input) => {
+    const steps = ufw.ufWalk(input);
+    common(`ufWalk ${JSON.stringify(input)}`, steps, ufw.ufWalkCode(input.mode), kinds);
+    ok(same(result(input, steps), ufw.ufWalkAnswer(input)), `ufWalk ${JSON.stringify(input)}: answer`);
+    steps.forEach((st) => { if (st.forest) ok(st.forest.ids.every((i) => st.forest.parent[i] !== undefined), 'ufWalk: every forest node has a parent'); });
+  };
+  Object.values(ufw.UF_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(ufw.UF_WALK).map((e) => e.input.mode))) for (let t = 0; t < 600; t++) run(ufw.randomUfWalk({ mode }, rand));
+  const a = (k) => ufw.ufWalkAnswer(ufw.UF_WALK[k].input);
+  ok(a('mincost') === 20 && a('slashes') === 2 && a('factor') === 4 && a('gcd') === true && same(a('critical'), [[0, 1], [2, 3, 4, 5]]) && ufw.ufWalkAnswer({ mode: 'swaps', s: 'dcab', pairs: [[0, 3], [1, 2]] }) === 'bacd', 'ufWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

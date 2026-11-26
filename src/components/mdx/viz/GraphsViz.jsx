@@ -242,7 +242,7 @@ export function TopoViz(props) {
 // ---------------------------------------------------------------- union-find
 
 /** Trees from the parent array: roots side by side, each node centred over its children. */
-function forest(parent, ids, W) {
+export function forest(parent, ids, W) {
   const kids = Object.fromEntries(ids.map((i) => [i, []]));
   const roots = [];
   for (const i of ids) (parent[i] === i ? roots : kids[parent[i]]).push(i);
