@@ -86,7 +86,13 @@ static int maxProfitK(int k, int[] prices) {
 
 In `maxProfitK`, `sell[j]` may use the `buy[j]` updated on the **same** day. That amounts to buying and selling on the same day, which earns 0 and never beats the true answer, so it's harmless. The reference solution checks all three variants against an exhaustive search over buy/sell/wait sequences.
 
+Step through the family: two states (unlimited trades), the fee on the sell arrow, and the buy j / sell j chain for two or k trades.
+
+<DpGridViz examples={['stock2', 'fee', 'stock3', 'stockk']} />
+
 The same "states per position" idea counts **strings under rules**. For example, "attendance records with fewer than 2 absences and no 3 lates in a row" has one state per (absences so far, current run of lates), and each new character moves you between them.
+
+<DpGridViz examples={['attendance']} />
 
 ## Bitmask DP: the set of things done so far
 
@@ -123,6 +129,10 @@ static int tsp(int[][] d) {
 
 That's O(2ⁿ · n²): about 4 × 10⁸ for n = 20, against n! for brute force. Iterating `mask` in increasing order is a valid fill order, because adding a bit always makes the number bigger.
 
+**Shortest superstring** is this table in disguise: writing word j after word i adds |j| − overlap(i, j) letters, so `len[mask][j]` is the shortest string that contains the words in mask and ends with word j.
+
+<DpGridViz examples={['superstring']} />
+
 ### Partition into k equal-sum subsets
 
 Here the state can be even smaller. Fill the buckets **one at a time**, and store for each mask how full the current bucket is. When a bucket reaches the target, it wraps to 0 and the next bucket starts:
@@ -147,6 +157,10 @@ static boolean canPartitionKSubsets(int[] nums, int k) {
 ```
 
 That's O(2ⁿ · n). It works because the fill level of the current bucket is determined by the mask: the total of the used numbers modulo target.
+
+The same one-row-per-set table counts arrangements (the size of the set is the next position to fill) and packs tasks into sessions (keep the best pair of sessions used and hours in the current one):
+
+<DpGridViz examples={['partition', 'partitionNo', 'beautiful', 'sessions']} />
 
 ### BFS over (node, mask)
 
@@ -175,6 +189,8 @@ static int shortestPathLength(int[][] graph) {
 ```
 
 This is [multi-source BFS](/dsa/patterns/graph-traversal) on an expanded graph with n · 2ⁿ states. "Add the mask to the state" is a general trick for any search that must collect a set: keys in a maze, or nodes to visit.
+
+<DpGridViz examples={['visitall']} />
 
 <Callout type="warning" title="Common mistakes">
 

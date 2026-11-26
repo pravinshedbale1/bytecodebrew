@@ -318,6 +318,16 @@ export const THINK_INDEX = {
   "minimum-cost-to-cut-a-stick": { title: "Minimum Cost to Cut a Stick", level: 'Hard', lesson: 'dp-trees-intervals', free: false },
   "stone-game": { title: "Stone Game", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
   "stone-game-ii": { title: "Stone Game II", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "best-time-to-buy-and-sell-stock-ii": { title: "Best Time to Buy and Sell Stock II", level: 'Medium', lesson: 'dp-state-machine', free: false },
+  "best-time-to-buy-and-sell-stock-with-transaction-fee": { title: "Best Time to Buy and Sell Stock with Transaction Fee", level: 'Medium', lesson: 'dp-state-machine', free: false },
+  "best-time-to-buy-and-sell-stock-iii": { title: "Best Time to Buy and Sell Stock III", level: 'Hard', lesson: 'dp-state-machine', free: false },
+  "best-time-to-buy-and-sell-stock-iv": { title: "Best Time to Buy and Sell Stock IV", level: 'Hard', lesson: 'dp-state-machine', free: false },
+  "student-attendance-record-ii": { title: "Student Attendance Record II", level: 'Hard', lesson: 'dp-state-machine', free: false },
+  "beautiful-arrangement": { title: "Beautiful Arrangement", level: 'Medium', lesson: 'dp-state-machine', free: false },
+  "partition-to-k-equal-sum-subsets": { title: "Partition to K Equal Sum Subsets", level: 'Medium', lesson: 'dp-state-machine', free: false },
+  "minimum-number-of-work-sessions-to-finish-the-tasks": { title: "Minimum Number of Work Sessions to Finish the Tasks", level: 'Medium', lesson: 'dp-state-machine', free: false },
+  "shortest-path-visiting-all-nodes": { title: "Shortest Path Visiting All Nodes", level: 'Hard', lesson: 'dp-state-machine', free: false },
+  "find-the-shortest-superstring": { title: "Find the Shortest Superstring", level: 'Hard', lesson: 'dp-state-machine', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -351,7 +361,7 @@ export const PATTERN_ORDER = [
   ['dp-grid', "Grid DP", 10, 10],
   ['dp-strings', "String DP (two indexes)", 9, 9],
   ['dp-trees-intervals', "Tree & interval DP", 11, 11],
-  ['dp-state-machine', "State-machine / bitmask DP", 0, 10],
+  ['dp-state-machine', "State-machine / bitmask DP", 10, 10],
   ['greedy', "Greedy", 0, 17],
   ['tries', "Trie", 0, 8],
   ['bit-manipulation', "Bit manipulation", 0, 12],

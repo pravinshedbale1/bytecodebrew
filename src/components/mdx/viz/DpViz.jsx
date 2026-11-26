@@ -11,6 +11,7 @@ import { LIN, linDescribe, linFields, linRule, linValues } from './models/dpLine
 import { GRID, gridDescribe, gridFields, gridRule } from './models/dpGrid';
 import { STR, strDescribe, strFields, strRule } from './models/dpStrings';
 import { INTV, intvDescribe, intvFields, intvRule } from './models/dpInterval';
+import { STATE, stateDescribe, stateFields, stateLegend, stateRule } from './models/dpState';
 
 /**
  * Step-throughs for the Dynamic Programming module:
@@ -132,7 +133,7 @@ function DpTable({ f, width, inputRows = [] }) {
             key={`${r},${c}`}
             className={[
               styles.cell,
-              inputRows.includes(r) && styles.input,
+              (inputRows.includes(r) || f.inputCols?.includes(c)) && styles.input,
               f.blocked?.[r]?.[c] && styles.blocked,
               v === null && styles.empty,
               d && styles[`dep_${d.tone}`],
@@ -154,7 +155,7 @@ function DpTable({ f, width, inputRows = [] }) {
             </marker>
           ))}
         </defs>
-        {f.cur && f.col === undefined && (f.deps ?? []).map((d, k) => {
+        {f.cur && f.col === undefined && !f.noArrows && (f.deps ?? []).map((d, k) => {
           const x1 = cx(d.c), y1 = cy(d.r), x2 = cx(f.cur[1]), y2 = cy(f.cur[0]);
           const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
           const sx = x1 + (dx / len) * 12, sy = y1 + (dy / len) * 12, ex = x2 - (dx / len) * 14, ey = y2 - (dy / len) * 14;
@@ -250,7 +251,7 @@ const dp2dSpec = {
     edit: () => `"${input.a}" → "${input.b}"`,
     balloons: () => `balloons ${list(input.nums)}`,
     stock: () => `prices ${list(input.prices)}`,
-  })[input.mode]?.() ?? (INTV[input.mode] ? intvDescribe(input) : STR[input.mode] ? strDescribe(input) : gridDescribe(input)),
+  })[input.mode]?.() ?? (STATE[input.mode] ? stateDescribe(input) : INTV[input.mode] ? intvDescribe(input) : STR[input.mode] ? strDescribe(input) : gridDescribe(input)),
   rule: (input) => ({
     paths: 'ways = from above + from the left',
     obstacles: 'blocked → 0; otherwise above + left',
@@ -262,15 +263,15 @@ const dp2dSpec = {
     edit: 'match: diagonal; otherwise 1 + min(replace, delete, insert)',
     balloons: 'best k to burst last between l and r',
     stock: 'each state from yesterday\'s states',
-  })[input.mode] ?? gridRule[input.mode] ?? strRule[input.mode] ?? intvRule[input.mode],
+  })[input.mode] ?? gridRule[input.mode] ?? strRule[input.mode] ?? intvRule[input.mode] ?? stateRule[input.mode],
   stats: () => [],
-  legend: (f) => [
+  legend: (f) => (STATE[f.mode] ? stateLegend(f.mode).map(([tone, v, text]) => [<Key shape="box" tone={tone}>{v}</Key>, text]) : [
     [<Key shape="box" tone="warn">3</Key>, 'being filled'],
     [<Key shape="box" tone="success">→</Key>, 'used / the winning choice'],
     [<Key shape="box">→</Key>, 'considered, lost'],
     ...(f.given ? [[<Key shape="box"><small>5</small></Key>, 'small number: the input in that cell']] : []),
-  ],
-  fields: (input) => DP2D_FIELDS[input.mode] ?? (INTV[input.mode] ? intvFields(input) : STR[input.mode] ? strFields(input) : gridFields(input)),
+  ]),
+  fields: (input) => DP2D_FIELDS[input.mode] ?? (STATE[input.mode] ? stateFields(input) : INTV[input.mode] ? intvFields(input) : STR[input.mode] ? strFields(input) : gridFields(input)),
   values: dp2dValues,
   parse: parseDp2d,
   random: (input) => randomDp2d(input),
