@@ -40,6 +40,7 @@ import * as tpw from '../src/components/mdx/viz/models/topoWalk.js';
 import * as ufw from '../src/components/mdx/viz/models/ufWalk.js';
 import * as spw from '../src/components/mdx/viz/models/spWalk.js';
 import * as agw from '../src/components/mdx/viz/models/agWalk.js';
+import * as btw from '../src/components/mdx/viz/models/btWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1012,6 +1013,26 @@ function common(name, steps, code, kinds) {
   Object.values(agw.AG_WALK).forEach((e) => run(e.input));
   for (const inp of [{ mode: 'color', base: 0 }, { mode: 'color', base: 1 }, { mode: 'bridges' }, { mode: 'euler' }]) for (let t = 0; t < 800; t++) run(agw.randomAgWalk(inp, rand));
   ok(same(agw.agWalk(agw.AG_WALK.bridges.input).at(-1).out, [[1, 3]]) && same(agw.agWalk(agw.AG_WALK.euler.input).at(-1).out, [[11, 9], [9, 4], [4, 5], [5, 1]]), 'agWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- backtracking problems (BtWalkViz)
+{
+  const kinds = ['start', 'choose', 'record', 'back', 'prune', 'dup', 'dead', 'match', 'found', 'place', 'undo', 'done'];
+  const run = (input) => {
+    const steps = btw.btWalk(input);
+    common(`btWalk ${JSON.stringify(input)}`, steps, btw.btWalkCode(input.mode), kinds);
+    const last = steps.at(-1);
+    let good;
+    if (input.mode === 'sudoku') good = last.answer === 'solved' && btw.sudokuValid(input.board, last.out);
+    else if (['xor', 'matchsticks', 'wordsearch'].includes(input.mode)) good = last.answer === btw.btWalkAnswer(input);
+    else good = same([...last.found].sort(), btw.btWalkAnswer(input));
+    ok(good, `btWalk ${JSON.stringify(input)}: answer`);
+    if (last.nodes) ok(last.nodes.length <= 60, `btWalk ${input.mode}: tree small enough to draw`);
+  };
+  Object.values(btw.BT_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(btw.BT_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(btw.randomBtWalk({ mode }, rand));
+  const a = (k) => btw.btWalk(btw.BT_WALK[k].input).at(-1);
+  ok(a('xor').answer === '28' && a('parens').found.length === 5 && a('wordbreak').found.length === 2 && a('wordbreakNo').found.length === 0 && a('matchsticks').answer === 'true' && a('matchsticksNo').answer === 'false' && a('wordsearch').answer === 'true', 'btWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

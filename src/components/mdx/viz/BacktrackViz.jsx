@@ -3,6 +3,8 @@ import { StepViz, Key } from './StepViz';
 import { Chips } from './prims';
 import styles from './BacktrackViz.module.css';
 import { BACKTRACK, QUEENS, backtrack, backtrackCode, parseBacktrack, parseQueens, queens, queensCode, randomBacktrack } from './models/backtracking';
+import { BT_WALK, btWalk, btWalkCode, parseBtWalk, randomBtWalk } from './models/btWalk';
+import { GridCells } from './GraphsViz';
 
 /**
  * Step-throughs for the Backtracking lesson:
@@ -28,7 +30,7 @@ function treeLayout(nodes, W) {
   return { pos, height: 24 + Math.max(...nodes.map((n) => n.depth)) * 56 + 34, slot };
 }
 
-function TreeStage({ step: f, width }) {
+function DecisionTree({ f, width }) {
   const W = Math.max(300, Math.min(width, 640));
   const { pos, height, slot } = treeLayout(f.nodes, W);
   const shown = new Set(f.shown);
@@ -67,10 +69,90 @@ function TreeStage({ step: f, width }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function TreeStage({ step: f, width }) {
+  return (
+    <div className={styles.wrap}>
+      <DecisionTree f={f} width={width} />
       <Chips label="path" chips={(f.cur === null ? [] : f.nodes[f.cur].path).map((v, k) => ({ key: k, text: String(v), tone: 'accent' }))} empty="[ ]" />
       <Chips label="found" chips={f.found.map((p, k) => ({ key: k, text: list(p), tone: 'success', isNew: k === f.found.length - 1 && f.kind === 'record' }))} empty="none yet" />
     </div>
   );
+}
+
+// ---------------------------------------------------------------- the backtracking problems (same tree, plus grids)
+
+function BtWalkStage({ step: f, width, seq }) {
+  return (
+    <div className={styles.wrap}>
+      {f.grid
+        ? <GridCells grid={f.grid} width={Math.min(width, 360)} cell={(r, c) => ({ cls: f.grid[r][c].c.filter(Boolean), label: f.grid[r][c].l, badge: f.grid[r][c].b, pop: f.grid[r][c].c.includes('cellCur'), key: f.grid[r][c].c.includes('cellCur') ? `c${seq}` : 'v' })} />
+        : (
+          <>
+            <DecisionTree f={f} width={width} />
+            <Chips label="path" chips={(f.cur === null ? [] : f.nodes[f.cur].path).map((v, k) => ({ key: k, text: String(v), tone: 'accent' }))} empty="[ ]" />
+            <Chips label="found" chips={f.found.map((p, k) => ({ key: k, text: p, tone: 'success', isNew: k === f.found.length - 1 && f.kind === 'record' }))} empty="none yet" />
+          </>
+        )}
+      {f.rows?.map((row, k) => <Chips key={k} label={row.label} seq={seq} chips={row.chips.map((c, i) => ({ key: `${i}`, ...c }))} empty="—" />)}
+    </div>
+  );
+}
+
+const BT_FIELDS = {
+  xor: [{ name: 'nums', label: 'nums (up to 4)', placeholder: 'e.g. 5, 1, 6' }],
+  subsets2: [{ name: 'nums', label: 'nums (repeats allowed, up to 4)', placeholder: 'e.g. 1, 2, 2' }],
+  perms2: [{ name: 'nums', label: 'nums (repeats allowed, up to 4)', placeholder: 'e.g. 1, 1, 2' }],
+  combsum2: [{ name: 'nums', label: 'candidates (up to 5)', placeholder: 'e.g. 1, 2, 2, 5' }, { name: 'target', label: 'target', placeholder: '5', short: true }],
+  matchsticks: [{ name: 'nums', label: 'sticks (up to 6)', placeholder: 'e.g. 1, 1, 2, 2, 2' }],
+  combos: [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'k', label: 'k', placeholder: '2', short: true }],
+  letters: [{ name: 'digits', label: 'digits (up to 2)', placeholder: '23', short: true }],
+  parens: [{ name: 'n', label: 'n (1 to 3)', placeholder: '3', short: true }],
+  palin: [{ name: 's', label: 's (up to 5 letters)', placeholder: 'aabb', short: true }],
+  wordbreak: [{ name: 's', label: 's', placeholder: 'catsanddog' }, { name: 'words', label: 'wordDict', placeholder: 'e.g. cat, cats, and, sand, dog' }],
+  wordsearch: [{ name: 'board', label: 'board rows', placeholder: 'e.g. ABCE; SFCS; ADEE' }, { name: 'word', label: 'word', placeholder: 'ABCCED', short: true }],
+  sudoku: [{ name: 'board', label: '4 rows of 4 (. = empty)', placeholder: 'e.g. 1...; ..3.; .4..; ...2' }],
+};
+const BT_VALUES = {
+  xor: (i) => ({ nums: i.nums.join(', ') }), subsets2: (i) => ({ nums: i.nums.join(', ') }), perms2: (i) => ({ nums: i.nums.join(', ') }),
+  combsum2: (i) => ({ nums: i.nums.join(', '), target: String(i.target) }), matchsticks: (i) => ({ nums: i.sticks.join(', ') }),
+  combos: (i) => ({ n: String(i.n), k: String(i.k) }), letters: (i) => ({ digits: i.digits }), parens: (i) => ({ n: String(i.n) }), palin: (i) => ({ s: i.s }),
+  wordbreak: (i) => ({ s: i.s, words: i.words.join(', ') }), wordsearch: (i) => ({ board: i.board.join('; '), word: i.word }),
+  sudoku: (i) => ({ board: i.board.map((r) => r.map((v) => (v ? String(v) : '.')).join('')).join('; ') }),
+};
+const BT_RULE = {
+  xor: 'Every node is a subset; add up their XORs.', combos: 'Add only bigger numbers; stop when too few are left.', combsum2: 'Skip a value equal to the one before it at the same level.',
+  subsets2: 'Skip a repeated value at the same level; deeper is fine.', perms2: 'A copy may be placed only after its twin.', letters: 'One level per digit, one branch per letter.',
+  parens: '"(" while some are left; ")" only while something is open.', palin: 'Cut a palindrome off the front; recurse on the rest.', wordbreak: 'Take a dictionary word off the front; recurse on the rest.',
+  matchsticks: 'Longest first; skip overflowing sides and sides equal to one already tried.', wordsearch: 'Extend to a matching unused neighbour; un-choose on a dead end.', sudoku: 'Next empty cell, a digit that fits, recurse; undo on a dead end.',
+};
+
+const btWalkSpec = {
+  title: 'Backtracking problems, step by step',
+  examples: BT_WALK,
+  simulate: btWalk,
+  code: (input) => btWalkCode(input.mode),
+  kinds: { start: ['Start', 'neutral'], choose: ['Choose', 'accent'], record: ['Record', 'success'], back: ['Un-choose', 'note'], prune: ['Prune', 'danger'], dup: ['Skip twin', 'warn'], dead: ['Dead end', 'danger'], match: ['Match', 'accent'], found: ['Found', 'success'], place: ['Place', 'accent'], undo: ['Undo', 'note'], done: ['Done', 'success'] },
+  describe: (input) => ({ combos: `n = ${input.n}, k = ${input.k}`, letters: `"${input.digits}"`, parens: `n = ${input.n}`, palin: `"${input.s}"`, wordbreak: `"${input.s}"`, wordsearch: `"${input.word}"`, sudoku: '4 × 4', matchsticks: list(input.sticks ?? []), combsum2: `${list(input.nums ?? [])}, target ${input.target}` })[input.mode] ?? list(input.nums ?? []),
+  rule: (input) => BT_RULE[input.mode],
+  stats: (f) => (f.found ? [['found', f.found.length]] : []),
+  legend: (f, input) => (input.mode === 'wordsearch' || input.mode === 'sudoku'
+    ? [[<Key shape="box" tone="accent">A</Key>, input.mode === 'sudoku' ? 'placed' : 'on the path (badge = letter number)'], [<Key shape="box" tone="danger">E</Key>, input.mode === 'sudoku' ? 'undone' : 'dead end']]
+    : [[<Key shape="box" tone="accent">2</Key>, 'on the current path'], [<Key shape="box" tone="success">3 ✓</Key>, 'recorded'], [<Key shape="box" tone="danger">6✗</Key>, 'cut or skipped']]),
+  fields: (input) => BT_FIELDS[input.mode],
+  values: (input) => BT_VALUES[input.mode](input),
+  parse: parseBtWalk,
+  random: (input) => randomBtWalk(input),
+  hint: () => 'Inputs are kept small so the whole tree fits.',
+  delay: () => 2000,
+  Stage: BtWalkStage,
+};
+
+export function BtWalkViz(props) {
+  return <StepViz spec={btWalkSpec} {...props} />;
 }
 
 const backtrackSpec = {

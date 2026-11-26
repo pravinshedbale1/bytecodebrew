@@ -26,6 +26,7 @@ export const COMPLETE = [
   'union-find',
   'shortest-paths',
   'advanced-graphs',
+  'backtracking',
 ];
 
 /**
@@ -61,4 +62,5 @@ export const POLISHED = [
   'union-find',
   'shortest-paths',
   'advanced-graphs',
+  'backtracking',
 ];

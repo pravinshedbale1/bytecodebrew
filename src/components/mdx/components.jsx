@@ -98,6 +98,7 @@ const UnionFindViz = lazyViz(() => import('./viz/GraphsViz'), 'UnionFindViz');
 const DijkstraViz = lazyViz(() => import('./viz/GraphsViz'), 'DijkstraViz');
 const BacktrackViz = lazyViz(() => import('./viz/BacktrackViz'), 'BacktrackViz');
 const QueensViz = lazyViz(() => import('./viz/BacktrackViz'), 'QueensViz');
+const BtWalkViz = lazyViz(() => import('./viz/BacktrackViz'), 'BtWalkViz');
 const FibTreeViz = lazyViz(() => import('./viz/DpViz'), 'FibTreeViz');
 const Dp1dViz = lazyViz(() => import('./viz/DpViz'), 'Dp1dViz');
 const DpGridViz = lazyViz(() => import('./viz/DpViz'), 'DpGridViz');
@@ -309,6 +310,7 @@ export const mdxComponents = {
   UfWalkViz,
   SpWalkViz,
   AgWalkViz,
+  BtWalkViz,
   CallStackViz,
   StackQueueViz,
   HistogramViz,

@@ -81,6 +81,9 @@ static void dfsCombine(int start, int n, int k, List<Integer> path, List<List<In
 }
 ```
 
+
+<BtWalkViz examples={['combos']} />
+
 ### Combination sum — reuse allowed
 
 ```java
@@ -114,6 +117,9 @@ static void dfsDup(int[] nums, int start, List<Integer> path, List<List<Integer>
 ```
 
 The condition is `i > start`, not `i > 0`: using a duplicate **deeper** in the path (`[2, 2]`) is fine; using it **again at the same depth** is the duplicate.
+
+
+<BtWalkViz examples={['subsets2', 'combsum2', 'perms2']} />
 
 ## Permutations: track what's used
 
@@ -153,6 +159,9 @@ static void dfsParen(int n, int open, int close, StringBuilder sb, List<String> 
 
 That's **pruning by construction**: invalid branches are never created. The reference solution checks the counts against the Catalan numbers.
 
+
+<BtWalkViz examples={['parens', 'letters']} />
+
 ### Palindrome partitioning
 
 Choices at each step: where the next piece ends. Only continue if the piece is a palindrome.
@@ -168,6 +177,9 @@ static void dfsPart(String s, int start, List<String> path, List<List<String>> o
     }
 }
 ```
+
+
+<BtWalkViz examples={['palin', 'wordbreak', 'wordbreakNo']} />
 
 ## Constraint puzzles
 
@@ -187,6 +199,9 @@ static boolean search(char[][] b, String w, int i, int r, int c) {
     return found;
 }
 ```
+
+
+<BtWalkViz examples={['wordsearch', 'wordsearchBack', 'sudoku', 'matchsticks', 'matchsticksNo']} />
 
 ### N-Queens
 
