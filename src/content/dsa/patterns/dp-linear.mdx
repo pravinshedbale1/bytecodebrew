@@ -43,6 +43,9 @@ static int robCircular(int[] a) {
 
 "Break a circle into two lines" is a reusable trick.
 
+
+<Dp1dViz examples={['robber2']} />
+
 ## Shape 2: best ending here — Kadane's algorithm
 
 > Maximum sum of a contiguous subarray.
@@ -83,6 +86,9 @@ static int maxProduct(int[] a) {
     return best;
 }
 ```
+
+
+<Dp1dViz examples={['product', 'circular', 'turbulent']} />
 
 ## Shape 3: look back at all earlier positions — LIS
 
@@ -127,6 +133,9 @@ static int lisNlogN(int[] a) {
 
 `tails` is always sorted, which is why binary search works. Note that `tails` is **not** an actual subsequence — only its length is meaningful. The reference solution checks both versions against trying every subsequence.
 
+
+<Dp1dViz examples={['nlis', 'envelopes']} />
+
 ## Shape 4: segmenting a string
 
 ### Decode ways
@@ -153,6 +162,9 @@ static int numDecodings(String s) {
 
 Zeros are the whole difficulty: `'0'` alone is invalid, and `"06"` is not 6. Checking `two >= 10` handles the second case.
 
+
+<Dp1dViz examples={['decode']} />
+
 ### Word break
 
 > Can a string be split into dictionary words?
@@ -172,6 +184,9 @@ static boolean wordBreak(String s, List<String> words) {
 ```
 
 O(n²) substring checks (each O(n) to hash, so O(n³) worst case). Limiting `j` to `i − maxWordLength` speeds it up a lot in practice.
+
+
+<Dp1dViz examples={['wordbreak', 'intbreak', 'stones']} />
 
 ## Patterns at a glance
 

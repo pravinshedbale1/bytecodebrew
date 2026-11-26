@@ -267,6 +267,19 @@ export const THINK_INDEX = {
   "min-cost-climbing-stairs": { title: "Min Cost Climbing Stairs", level: 'Easy', lesson: 'dp-made-easy', free: false },
   "n-th-tribonacci-number": { title: "N-th Tribonacci Number", level: 'Easy', lesson: 'dp-made-easy', free: false },
   "house-robber": { title: "House Robber", level: 'Medium', lesson: 'dp-linear', free: false },
+  "house-robber-ii": { title: "House Robber II", level: 'Medium', lesson: 'dp-linear', free: false },
+  "maximum-subarray": { title: "Maximum Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
+  "maximum-product-subarray": { title: "Maximum Product Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
+  "decode-ways": { title: "Decode Ways", level: 'Medium', lesson: 'dp-linear', free: false },
+  "word-break": { title: "Word Break", level: 'Medium', lesson: 'dp-linear', free: false },
+  "longest-increasing-subsequence": { title: "Longest Increasing Subsequence", level: 'Medium', lesson: 'dp-linear', free: false },
+  "number-of-longest-increasing-subsequence": { title: "Number of Longest Increasing Subsequence", level: 'Medium', lesson: 'dp-linear', free: false },
+  "best-time-to-buy-and-sell-stock-with-cooldown": { title: "Best Time to Buy and Sell Stock with Cooldown", level: 'Medium', lesson: 'dp-linear', free: false },
+  "russian-doll-envelopes": { title: "Russian Doll Envelopes", level: 'Hard', lesson: 'dp-linear', free: false },
+  "integer-break": { title: "Integer Break", level: 'Medium', lesson: 'dp-linear', free: false },
+  "maximum-sum-circular-subarray": { title: "Maximum Sum Circular Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
+  "longest-turbulent-subarray": { title: "Longest Turbulent Subarray", level: 'Medium', lesson: 'dp-linear', free: false },
+  "stone-game-iii": { title: "Stone Game III", level: 'Hard', lesson: 'dp-linear', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -295,7 +308,7 @@ export const PATTERN_ORDER = [
   ['advanced-graphs', "Advanced graphs (two-colouring, bridges, Euler paths)", 4, 4],
   ['backtracking', "Backtracking", 17, 17],
   ['dp-made-easy', "Basic DP (memo, then table)", 4, 4],
-  ['dp-linear', "1D DP", 1, 14],
+  ['dp-linear', "1D DP", 14, 14],
   ['dp-knapsack', "Knapsack DP", 0, 8],
   ['dp-grid', "Grid DP", 0, 10],
   ['dp-strings', "String DP (two indexes)", 0, 9],

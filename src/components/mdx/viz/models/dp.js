@@ -4,6 +4,7 @@
  * draw the arrows. Pure, so scripts/viz-check.mjs can test them.
  */
 import { list, parseInt1, parseInts, plural, rng } from './util.js';
+import { LIN, linAnswer, linCode, linParse, linRandom, linSteps } from './dpLinear.js';
 import { buildTree, showTree } from './trees.js';
 
 // ---------------------------------------------------------------- the recursion tree: why plain recursion is slow
@@ -98,6 +99,7 @@ export const DP1D = {
   climb: { label: 'Climbing stairs', input: { mode: 'climb', n: 6 } },
   fib: { label: 'Fibonacci, bottom up', input: { mode: 'fib', n: 8 } },
   trib: { label: 'Tribonacci', input: { mode: 'trib', n: 7 } },
+  ...LIN,
 };
 
 const SEQ = {
@@ -116,9 +118,11 @@ export const dp1dCode = (mode) => ({
   climb: [['base', 'ways[0] = 1; ways[1] = 1;                          // standing still; one single step'], ['fill', SEQ.climb.rule], ['roll', 'only the last two are ever read → keep two variables']],
   fib: [['base', 'F[0] = 0; F[1] = 1;'], ['fill', SEQ.fib.rule], ['roll', 'only the last two are ever read → keep two variables']],
   trib: [['base', 'T[0] = 0; T[1] = 1; T[2] = 1;'], ['fill', SEQ.trib.rule], ['roll', 'only the last three are ever read → keep three variables']],
-})[mode];
+})[mode] ?? linCode(mode);
 
-export function dp1dAnswer({ mode, a, amount, n }) {
+export function dp1dAnswer(input) {
+  if (LIN[input.mode]) return linAnswer(input);
+  const { mode, a, amount, n } = input;
   if (SEQ[mode]) {
     if (mode === 'climb') { const go = (k) => (k <= 1 ? 1 : go(k - 1) + go(k - 2)); return go(n); }   // the plain recursion, as a check
     return seqAnswer(mode, n);
@@ -135,6 +139,7 @@ export function dp1dAnswer({ mode, a, amount, n }) {
 const show = (v) => (v === Infinity ? '∞' : v === null || v === undefined ? '' : v);
 
 export function dp1d(input) {
+  if (LIN[input.mode]) return linSteps(input);
   const { mode, a } = input;
   const steps = [];
   let rows, cols, cells;
@@ -287,6 +292,7 @@ export function dp1d(input) {
 }
 
 export function parseDp1d(values, input) {
+  if (LIN[input.mode]) return linParse(values, input);
   if (SEQ[input.mode]) {
     const t = parseInt1(values.n, { min: 0, max: 12, name: 'n' });
     return t.error ? t : { input: { mode: input.mode, n: t.v } };
@@ -305,6 +311,7 @@ export function parseDp1d(values, input) {
 export function randomDp1d(input, rand = Math.random) {
   const g = rng(rand);
   if (SEQ[input.mode]) return { mode: input.mode, n: g.int(0, 12) };
+  if (LIN[input.mode]) return linRandom(input, rand);
   const n = g.int(5, 8);
   if (input.mode === 'coins') return { mode: 'coins', a: g.shuffle([1, 2, 3, 4, 5, 6]).slice(0, g.int(2, 3)), amount: g.int(5, 11) };
   if (input.mode === 'kadane') return { mode: 'kadane', a: Array.from({ length: n }, () => g.int(-8, 8)) };

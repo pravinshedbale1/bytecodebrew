@@ -28,6 +28,7 @@ export const COMPLETE = [
   'advanced-graphs',
   'backtracking',
   'dp-made-easy',
+  'dp-linear',
 ];
 
 /**
@@ -65,4 +66,5 @@ export const POLISHED = [
   'advanced-graphs',
   'backtracking',
   'dp-made-easy',
+  'dp-linear',
 ];

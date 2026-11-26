@@ -7,6 +7,7 @@ import {
   DP1D, DP2D, FIB, ROBBER_TREE, dp1d, dp1dCode, dp2d, dp2dCode, dp2dValues, fib, fibCode, parseDp1d, parseDp2d, randomDp1d, randomDp2d,
   robberTree, robberTreeCode,
 } from './models/dp';
+import { LIN, linDescribe, linFields, linRule, linValues } from './models/dpLinear';
 
 /**
  * Step-throughs for the Dynamic Programming module:
@@ -169,7 +170,7 @@ function DpTable({ f, width, inputRows = [] }) {
 }
 
 function Dp1dStage({ step: f, width }) {
-  return <div className={styles.wrap}><DpTable f={f} width={width} inputRows={f.mode === 'coins' ? [] : [0]} /></div>;
+  return <div className={styles.wrap}><DpTable f={f} width={width} inputRows={f.inputRows ?? (['coins', 'climb', 'fib', 'trib'].includes(f.mode) ? [] : [0])} /></div>;
 }
 
 const dp1dSpec = {
@@ -178,7 +179,7 @@ const dp1dSpec = {
   simulate: dp1d,
   code: (input) => dp1dCode(input.mode),
   kinds: { start: ['Start', 'neutral'], base: ['Base case', 'note'], fill: ['Fill', 'accent'], restart: ['Start over', 'warn'], done: ['Answer', 'success'] },
-  describe: (input) => (input.n !== undefined ? `n = ${input.n}` : input.mode === 'coins' ? `coins ${list(input.a)}, amount ${input.amount}` : `${input.mode === 'stairs' ? 'cost' : 'a'} = ${list(input.a)}`),
+  describe: (input) => (LIN[input.mode] ? linDescribe(input) : input.n !== undefined ? `n = ${input.n}` : input.mode === 'coins' ? `coins ${list(input.a)}, amount ${input.amount}` : `${input.mode === 'stairs' ? 'cost' : 'a'} = ${list(input.a)}`),
   rule: (input) => ({
     stairs: 'dp[i] = min(dp[i−1] + cost[i−1], dp[i−2] + cost[i−2])',
     robber: 'best[i] = max(skip: best[i−1], take: best[i−2] + a[i])',
@@ -188,19 +189,19 @@ const dp1dSpec = {
     climb: 'ways[i] = ways[i−1] + ways[i−2]',
     fib: 'F[i] = F[i−1] + F[i−2]',
     trib: 'T[i] = T[i−1] + T[i−2] + T[i−3]',
-  })[input.mode],
+  })[input.mode] ?? linRule[input.mode],
   stats: () => [],
-  legend: (f, input) => (input.n !== undefined
+  legend: (f, input) => (input.n !== undefined && !LIN[input.mode]
     ? [[<Key shape="box" tone="warn">7</Key>, 'being filled'], [<Key shape="box" tone="success">→</Key>, 'added in']]
     : [
       [<Key shape="box" tone="warn">7</Key>, 'being filled'],
       [<Key shape="box" tone="success">→</Key>, 'the choice that won'],
       [<Key shape="box">→</Key>, 'considered, lost'],
     ]),
-  fields: (input) => (input.n !== undefined ? [{ name: 'n', label: 'n (0 to 12)', placeholder: '6', short: true }] : input.mode === 'coins'
+  fields: (input) => (LIN[input.mode] ? linFields(input) : input.n !== undefined ? [{ name: 'n', label: 'n (0 to 12)', placeholder: '6', short: true }] : input.mode === 'coins'
     ? [{ name: 'a', label: 'coins', placeholder: 'e.g. 1, 3, 4' }, { name: 'amount', label: 'amount (≤ 12)', placeholder: '6', short: true }]
     : [{ name: 'a', label: input.mode === 'stairs' ? 'cost' : 'a', placeholder: input.mode === 'kadane' ? 'e.g. -2, 1, -3, 4' : 'e.g. 2, 7, 9, 3, 1' }]),
-  values: (input) => (input.n !== undefined ? { n: String(input.n) } : input.mode === 'coins' ? { a: input.a.join(', '), amount: String(input.amount) } : { a: input.a.join(', ') }),
+  values: (input) => (LIN[input.mode] ? linValues(input) : input.n !== undefined ? { n: String(input.n) } : input.mode === 'coins' ? { a: input.a.join(', '), amount: String(input.amount) } : { a: input.a.join(', ') }),
   parse: parseDp1d,
   random: (input) => randomDp1d(input),
   hint: () => 'Up to 9 numbers.',
