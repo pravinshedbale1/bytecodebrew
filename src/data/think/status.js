@@ -27,6 +27,7 @@ export const COMPLETE = [
   'shortest-paths',
   'advanced-graphs',
   'backtracking',
+  'dp-made-easy',
 ];
 
 /**
@@ -63,4 +64,5 @@ export const POLISHED = [
   'shortest-paths',
   'advanced-graphs',
   'backtracking',
+  'dp-made-easy',
 ];

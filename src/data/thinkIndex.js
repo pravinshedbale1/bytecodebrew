@@ -262,6 +262,10 @@ export const THINK_INDEX = {
   "matchsticks-to-square": { title: "Matchsticks to Square", level: 'Medium', lesson: 'backtracking', free: false },
   "n-queens-ii": { title: "N-Queens II", level: 'Hard', lesson: 'backtracking', free: false },
   "word-break-ii": { title: "Word Break II", level: 'Hard', lesson: 'backtracking', free: false },
+  "fibonacci-number": { title: "Fibonacci Number", level: 'Easy', lesson: 'dp-made-easy', free: true },
+  "climbing-stairs": { title: "Climbing Stairs", level: 'Easy', lesson: 'dp-made-easy', free: false },
+  "min-cost-climbing-stairs": { title: "Min Cost Climbing Stairs", level: 'Easy', lesson: 'dp-made-easy', free: false },
+  "n-th-tribonacci-number": { title: "N-th Tribonacci Number", level: 'Easy', lesson: 'dp-made-easy', free: false },
   "house-robber": { title: "House Robber", level: 'Medium', lesson: 'dp-linear', free: false },
 };
 
@@ -290,7 +294,7 @@ export const PATTERN_ORDER = [
   ['shortest-paths', "Shortest paths (Dijkstra, 0-1 BFS)", 8, 8],
   ['advanced-graphs', "Advanced graphs (two-colouring, bridges, Euler paths)", 4, 4],
   ['backtracking', "Backtracking", 17, 17],
-  ['dp-made-easy', "Basic DP (memo, then table)", 0, 4],
+  ['dp-made-easy', "Basic DP (memo, then table)", 4, 4],
   ['dp-linear', "1D DP", 1, 14],
   ['dp-knapsack', "Knapsack DP", 0, 8],
   ['dp-grid', "Grid DP", 0, 10],

@@ -95,7 +95,17 @@ export const DP1D = {
   kadane: { label: 'Max subarray (Kadane)', input: { mode: 'kadane', a: [-2, 1, -3, 4, -1, 2, 1, -5, 4] } },
   lis: { label: 'Longest increasing (LIS)', input: { mode: 'lis', a: [10, 9, 2, 5, 3, 7, 101, 18] } },
   coins: { label: 'Coin change', input: { mode: 'coins', a: [1, 3, 4], amount: 6 } },
+  climb: { label: 'Climbing stairs', input: { mode: 'climb', n: 6 } },
+  fib: { label: 'Fibonacci, bottom up', input: { mode: 'fib', n: 8 } },
+  trib: { label: 'Tribonacci', input: { mode: 'trib', n: 7 } },
 };
+
+const SEQ = {
+  climb: { base: [1, 1], k: 2, name: 'ways', rule: 'ways[i] = ways[i-1] + ways[i-2];             // the last move was 1 or 2 steps' },
+  fib: { base: [0, 1], k: 2, name: 'F', rule: 'F[i] = F[i-1] + F[i-2];' },
+  trib: { base: [0, 1, 1], k: 3, name: 'T', rule: 'T[i] = T[i-1] + T[i-2] + T[i-3];' },
+};
+const seqAnswer = (mode, n) => { const { base, k } = SEQ[mode]; const v = [...base]; for (let i = base.length; i <= n; i++) v[i] = v.slice(i - k, i).reduce((a, b) => a + b, 0); return v[n]; };
 
 export const dp1dCode = (mode) => ({
   stairs: [['base', 'dp[0] = dp[1] = 0;                                  // start on step 0 or 1 for free'], ['fill', 'dp[i] = min(dp[i-1] + cost[i-1], dp[i-2] + cost[i-2]);   // came from one or two steps below']],
@@ -103,9 +113,16 @@ export const dp1dCode = (mode) => ({
   kadane: [['base', 'endingHere = best = a[0];'], ['fill', 'endingHere = max(a[i], endingHere + a[i]);         // start over, or extend'], ['best', 'best = max(best, endingHere);']],
   lis: [['base', 'dp[i] = 1;                                           // a[i] on its own'], ['fill', 'for j < i: if (a[j] < a[i]) dp[i] = max(dp[i], dp[j] + 1);   // extend an earlier one']],
   coins: [['base', 'dp[0] = 0;  dp[a] = ∞;'], ['fill', 'for each coin c ≤ a: dp[a] = min(dp[a], dp[a - c] + 1);      // c as the last coin']],
+  climb: [['base', 'ways[0] = 1; ways[1] = 1;                          // standing still; one single step'], ['fill', SEQ.climb.rule], ['roll', 'only the last two are ever read → keep two variables']],
+  fib: [['base', 'F[0] = 0; F[1] = 1;'], ['fill', SEQ.fib.rule], ['roll', 'only the last two are ever read → keep two variables']],
+  trib: [['base', 'T[0] = 0; T[1] = 1; T[2] = 1;'], ['fill', SEQ.trib.rule], ['roll', 'only the last three are ever read → keep three variables']],
 })[mode];
 
-export function dp1dAnswer({ mode, a, amount }) {
+export function dp1dAnswer({ mode, a, amount, n }) {
+  if (SEQ[mode]) {
+    if (mode === 'climb') { const go = (k) => (k <= 1 ? 1 : go(k - 1) + go(k - 2)); return go(n); }   // the plain recursion, as a check
+    return seqAnswer(mode, n);
+  }
   if (mode === 'stairs') { const dp = [0, 0]; for (let i = 2; i <= a.length; i++) dp[i] = Math.min(dp[i - 1] + a[i - 1], dp[i - 2] + a[i - 2]); return dp[a.length]; }
   if (mode === 'robber') { let p2 = 0, p1 = 0; for (const x of a) { const c = Math.max(p1, p2 + x); p2 = p1; p1 = c; } return p1; }
   if (mode === 'kadane') { let best = -Infinity; for (let i = 0; i < a.length; i++) { let s = 0; for (let j = i; j < a.length; j++) { s += a[j]; best = Math.max(best, s); } } return best; }
@@ -122,6 +139,34 @@ export function dp1d(input) {
   const steps = [];
   let rows, cols, cells;
   const snap = (x) => steps.push({ mode, rows, cols, cells: cells.map((r) => [...r]), deps: [], ...x });
+  if (SEQ[mode]) {
+    const { n } = input;
+    const { base, k, name } = SEQ[mode];
+    rows = [name];
+    cols = Array.from({ length: n + 1 }, (_, i) => String(i));
+    cells = [Array(n + 1).fill(null)];
+    const intro = {
+      climb: `To stand on step i, the last move came from step i − 1 (a 1-step) or step i − 2 (a 2-step). Every way to reach step i is a way to reach one of those, plus that last move. So ways[i] = ways[i − 1] + ways[i − 2]: count each smaller step once and reuse it.`,
+      fib: 'F(n) = F(n − 1) + F(n − 2). The recursion asks for the same values again and again. Bottom up, fill the table from the smallest index: when F(i) is computed, the two values it needs are already in the table.',
+      trib: 'Each term is the sum of the three before it. Fill the table left to right: every new term reads three finished cells.',
+    }[mode];
+    snap({ kind: 'start', cur: null, lines: [], title: { climb: `Ways to climb ${n} steps`, fib: `F(${n}) from the bottom up`, trib: `T(${n}) from the bottom up` }[mode], text: intro, calc: [`n = ${n}`] });
+    base.forEach((v, i) => { if (i <= n) cells[0][i] = v; });
+    snap({ kind: 'base', cur: [0, Math.min(base.length - 1, n)], lines: ['base'], title: `Base cases: ${base.slice(0, n + 1).map((v, i) => `${name}[${i}] = ${v}`).join(', ')}`, text: { climb: 'There is one way to be on step 0 (do nothing) and one way to reach step 1 (a single step). Everything else is built from these.', fib: 'F(0) = 0 and F(1) = 1 are given; every other value is built from them.', trib: 'T(0) = 0, T(1) = 1, T(2) = 1 are given; every other value is built from them.' }[mode], calc: base.slice(0, n + 1).map((v, i) => `${name}[${i}] = ${v}`) });
+    for (let i = base.length; i <= n; i++) {
+      const parts = Array.from({ length: k }, (_, j) => cells[0][i - 1 - j]);
+      cells[0][i] = parts.reduce((x, y) => x + y, 0);
+      snap({
+        kind: 'fill', cur: [0, i], lines: ['fill'],
+        deps: parts.map((_, j) => ({ r: 0, c: i - 1 - j, tone: 'success', label: mode === 'climb' ? `+${j + 1}` : '+' })),
+        title: `${name}[${i}] = ${parts.join(' + ')} = ${cells[0][i]}`,
+        text: mode === 'climb' ? `${parts[0]} ways end with a 1-step from step ${i - 1}, and ${parts[1]} ways end with a 2-step from step ${i - 2}: ${cells[0][i]} ways to reach step ${i}. Both counts were already in the table.` : `The ${k} values before it are finished, so ${name}(${i}) is just their sum: no recursion, nothing computed twice.`,
+        calc: [`${parts.join(' + ')} = ${cells[0][i]}`],
+      });
+    }
+    snap({ kind: 'done', cur: [0, n], lines: ['roll'], answer: `${name}(${n}) = ${cells[0][n]}`, title: `${mode === 'climb' ? `${cells[0][n]} ways` : `${name}(${n}) = ${cells[0][n]}`}`, text: `Each cell read only the ${k} cells before it, so the table can shrink to ${k} variables that slide forward: O(n) time, O(1) memory. The plain recursion would take ${mode === 'trib' ? 'about 3ⁿ' : 'about 2ⁿ'} calls for the same answer.`, calc: [`${name}(${n}) = ${cells[0][n]}`] });
+    return steps;
+  }
   if (mode === 'stairs') {
     const n = a.length;
     rows = ['cost', 'dp'];
@@ -242,6 +287,10 @@ export function dp1d(input) {
 }
 
 export function parseDp1d(values, input) {
+  if (SEQ[input.mode]) {
+    const t = parseInt1(values.n, { min: 0, max: 12, name: 'n' });
+    return t.error ? t : { input: { mode: input.mode, n: t.v } };
+  }
   if (input.mode === 'coins') {
     const r = parseInts(values.a, { min: 1, max: 12, minLen: 1, maxLen: 4, name: 'coins' });
     if (r.error) return r;
@@ -255,6 +304,7 @@ export function parseDp1d(values, input) {
 
 export function randomDp1d(input, rand = Math.random) {
   const g = rng(rand);
+  if (SEQ[input.mode]) return { mode: input.mode, n: g.int(0, 12) };
   const n = g.int(5, 8);
   if (input.mode === 'coins') return { mode: 'coins', a: g.shuffle([1, 2, 3, 4, 5, 6]).slice(0, g.int(2, 3)), amount: g.int(5, 11) };
   if (input.mode === 'kadane') return { mode: 'kadane', a: Array.from({ length: n }, () => g.int(-8, 8)) };
