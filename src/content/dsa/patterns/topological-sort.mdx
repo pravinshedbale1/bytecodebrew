@@ -133,6 +133,20 @@ Process Kahn's queue **level by level** (freeze the size, like [tree BFS](/dsa/p
 2. Watch the invalid case: a word followed by its own **prefix** (`"abc"` then `"ab"`) means no valid order exists.
 3. **Topologically sort** the letters; a cycle means no valid order.
 
+<TopoWalkViz examples={['alien', 'alienBad']} />
+
+### Peeling from the outside
+
+The same "take what is ready" loop works whenever something becomes available once all its requirements are met. In **Find All Possible Recipes**, a recipe waits for a count of missing ingredients. In **Find Eventual Safe States**, edges are reversed and a node becomes ready once all its out-edges lead to safe nodes. In **Minimum Height Trees**, the "ready" nodes are leaves, peeled layer by layer until the centre is left:
+
+<TopoWalkViz examples={['recipes', 'safe', 'mht', 'mhtTwo']} />
+
+### Two sorts at once
+
+**Build a Matrix with Conditions** sorts rows and columns independently; **Sort Items by Groups** sorts the groups and the items, then lays each group's items out in item order. **Course Schedule IV** asks about indirect prerequisites for many pairs: fill a reachability table once, with each course in turn as a middle step:
+
+<TopoWalkViz examples={['matrix', 'groups', 'reach']} />
+
 <Callout type="interview" title="Narrate the graph">
 Say explicitly: "nodes are courses, an edge goes from a prerequisite to the course that needs it, and an order exists if and only if the graph has no cycle." Establishing the model clearly is half the score on these problems.
 </Callout>

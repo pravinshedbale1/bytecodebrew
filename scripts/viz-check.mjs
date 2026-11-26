@@ -36,6 +36,7 @@ import * as dqd from '../src/components/mdx/viz/models/dpDeque.js';
 import * as hsm from '../src/components/mdx/viz/models/heapSim.js';
 import * as tw from '../src/components/mdx/viz/models/treeWalk.js';
 import * as gw from '../src/components/mdx/viz/models/graphWalk.js';
+import * as tpw from '../src/components/mdx/viz/models/topoWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -932,6 +933,29 @@ function common(name, steps, code, kinds) {
   ok(a('perimeter') === 16 && a('judge') === 3 && a('provinces') === 3 && a('ladder') === 5 && same(a('division'), [6, 0.5, -1, 1, -1]) && same(a('itinerary'), ['JFK', 'ATL', 'JFK', 'SFO', 'ATL', 'SFO']), 'graphWalk: LeetCode examples');
   ok(same(a('pacific'), [[0, 4], [1, 3], [1, 4], [2, 2], [3, 0], [3, 1], [4, 0]]), 'graphWalk: pacific example');
   ok(gw.parseGraphWalk({ grid: '1001' }, { mode: 'perimeter' }).error && gw.parseGraphWalk({ tickets: 'JFK>SFO, ATL>LAX' }, { mode: 'itinerary' }).error, 'graphWalk: bad inputs refused');
+}
+
+// ---------------------------------------------------------------- topological sort problems (TopoWalkViz)
+{
+  const kinds = ['start', 'mid', 'leaves', 'trim', 'init', 'peel', 'use', 'make', 'pair', 'kahn', 'take', 'fail', 'edges', 'gsort', 'isort', 'place', 'rsort', 'csort', 'done'];
+  const result = (input, steps) => {
+    const last = steps.at(-1);
+    if (input.mode === 'alien') return last.answer === '""' ? '' : last.answer;
+    if (input.mode === 'groups' || input.mode === 'matrix') return last.kind === 'fail' ? [] : last.out;
+    if (input.mode === 'mht') return JSON.parse(last.answer);
+    return last.out;
+  };
+  const run = (input) => {
+    const steps = tpw.topoWalk(input);
+    common(`topoWalk ${JSON.stringify(input)}`, steps, tpw.topoWalkCode(input.mode), kinds);
+    const got = result(input, steps);
+    const want = tpw.topoWalkAnswer(input);
+    ok(want === null ? tpw.topoWalkValid(input, got) : same(got, want), `topoWalk ${JSON.stringify(input)}: ${JSON.stringify(got)}`);
+  };
+  Object.values(tpw.TOPO_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(tpw.TOPO_WALK).map((e) => e.input.mode))) for (let t = 0; t < 800; t++) run(tpw.randomTopoWalk({ mode }, rand));
+  const last = (k) => tpw.topoWalk(tpw.TOPO_WALK[k].input).at(-1);
+  ok(last('alien').answer === 'wertf' && last('alienBad').answer === '""' && last('safe').answer === '[2, 4, 5, 6]' && last('mht').answer === '[2]' && last('mhtTwo').answer === '[3, 4]', 'topoWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

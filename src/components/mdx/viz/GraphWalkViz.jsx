@@ -3,6 +3,7 @@ import { Chips } from './prims';
 import { Arrow, ArrowDefs, GridCells } from './GraphsViz';
 import styles from './GraphsViz.module.css';
 import { GRAPH_WALK, graphWalk, graphWalkCode, gridToText, parseGraphWalk, randomGraphWalk } from './models/graphWalk';
+import { TOPO_WALK, parseTopoWalk, randomTopoWalk, topoWalk, topoWalkCode } from './models/topoWalk';
 
 /**
  * <GraphWalkViz /> — the graph traversal lesson's problems, one engine. A frame can show a grid of cells,
@@ -40,7 +41,14 @@ function Graph({ g, width, id }) {
           })}
         </svg>
         {g.nodes.map((v) => (
-          <div key={v.id} className={[styles.node, ...(v.c ?? []).filter(Boolean).map((c) => styles[c])].filter(Boolean).join(' ')} style={{ left: pos[v.id].x, top: pos[v.id].y, fontSize: v.l.length > 2 ? 11 : 13 }}>
+          <div
+            key={v.id}
+            className={[styles.node, ...(v.c ?? []).filter(Boolean).map((c) => styles[c])].filter(Boolean).join(' ')}
+            style={{
+              left: pos[v.id].x, top: pos[v.id].y, fontSize: v.l.length > 2 ? 11 : 13,
+              ...(v.l.length > 3 ? { width: 'auto', minWidth: 38, padding: '0 7px', borderRadius: 19, margin: 0, transform: 'translate(-50%, -50%)' } : {}),
+            }}
+          >
             {v.l}
             {v.badge !== undefined && <i key={v.badge} className={styles.deg}>{v.badge}</i>}
           </div>
@@ -179,4 +187,84 @@ const spec = {
 
 export function GraphWalkViz(props) {
   return <StepViz spec={spec} {...props} />;
+}
+
+// ---------------------------------------------------------------- topological sort problems (same stage)
+
+const pairs = (ps, sep = '>') => ps.map(([a, b]) => `${a}${sep}${b}`).join(', ');
+
+const TOPO_FIELDS = {
+  reach: [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'pre', label: 'prerequisites (a>b: a before b)', placeholder: 'e.g. 0>1, 1>2' }, { name: 'queries', label: 'queries (u>v)', placeholder: 'e.g. 0>2, 2>0' }],
+  mht: [{ name: 'n', label: 'n', placeholder: '6', short: true }, { name: 'edges', label: 'edges', placeholder: 'e.g. 3-0, 3-1, 3-2, 3-4, 5-4' }],
+  safe: [{ name: 'graph', label: 'graph[i] (lists separated by ;)', placeholder: 'e.g. 1,2; 2,3; 5; 0; 5; ; ' }],
+  recipes: [{ name: 'recipes', label: 'recipe: ingredients; …', placeholder: 'e.g. bread: yeast, flour; sandwich: bread, meat' }, { name: 'supplies', label: 'supplies', placeholder: 'e.g. yeast, flour, meat' }],
+  alien: [{ name: 'words', label: 'words (sorted in the alien order)', placeholder: 'e.g. wrt, wrf, er, ett, rftt' }],
+  groups: [{ name: 'm', label: 'm', placeholder: '2', short: true }, { name: 'group', label: 'group', placeholder: 'e.g. -1, -1, 1, 0, 0, 1, 0, -1' }, { name: 'before', label: 'beforeItems (lists separated by ;)', placeholder: 'e.g. ; 6; 5; 6; 3,6; ; ; ' }],
+  matrix: [{ name: 'k', label: 'k', placeholder: '3', short: true }, { name: 'rows', label: 'rowConditions (above>below)', placeholder: 'e.g. 1>2, 3>2' }, { name: 'cols', label: 'colConditions (left>right)', placeholder: 'e.g. 2>1, 3>2' }],
+};
+
+const TOPO_VALUES = {
+  reach: (i) => ({ n: String(i.n), pre: pairs(i.pre), queries: pairs(i.queries) }),
+  mht: (i) => ({ n: String(i.n), edges: pairs(i.edges, '-') }),
+  safe: (i) => ({ graph: i.graph.map((l) => l.join(',')).join('; ') }),
+  recipes: (i) => ({ recipes: i.recipes.map((r, k) => `${r}: ${i.ingredients[k].join(', ')}`).join('; '), supplies: i.supplies.join(', ') }),
+  alien: (i) => ({ words: i.words.join(', ') }),
+  groups: (i) => ({ m: String(i.m), group: i.group.join(', '), before: i.before.map((l) => l.join(',')).join('; ') }),
+  matrix: (i) => ({ k: String(i.k), rows: pairs(i.rows), cols: pairs(i.cols) }),
+};
+
+const TOPO_RULE = {
+  reach: 'Let each course in turn be a middle step: i before k and k before j means i before j.',
+  mht: 'Remove every leaf at once, again and again; the last 1 or 2 nodes are the centre.',
+  safe: 'Terminal nodes are safe; a node is safe once every out-edge leads to a safe node.',
+  recipes: 'Each available item takes one off the missing count of the recipes using it.',
+  alien: 'First differing letter of neighbouring words → a rule; then a topological sort.',
+  groups: 'Sort the groups, sort the items, then output each group\'s items in item order.',
+  matrix: 'Rows and columns are independent: one topological sort each.',
+};
+
+const TOPO_LEGEND = {
+  reach: [[<Key shape="box" tone="accent">✓</Key>, 'row comes before column'], [<Key shape="box" tone="warn">2</Key>, 'middle course now']],
+  mht: [[<Key shape="box">2</Key>, 'degree'], [<Key shape="box" tone="danger">5</Key>, 'leaves to remove'], [<Key shape="box" tone="success">3</Key>, 'centre']],
+  safe: [[<Key shape="box">1</Key>, 'out-edges still unknown'], [<Key shape="box" tone="success">5</Key>, 'safe'], [<Key shape="box" tone="danger">0</Key>, 'can reach a cycle']],
+  recipes: [[<Key shape="box" tone="accent">egg</Key>, 'supply'], [<Key shape="box">1</Key>, 'missing ingredients'], [<Key shape="box" tone="success">tea</Key>, 'cooked']],
+  alien: [[<Key tone="accent">→</Key>, 'comes before'], [<Key shape="box">1</Key>, 'rules into it'], [<Key shape="box" tone="success">#1</Key>, 'position']],
+  groups: [[<Key shape="box" tone="accent">G0</Key>, 'colour = group'], [<Key tone="accent">→</Key>, 'between groups']],
+  matrix: [[<Key shape="box" tone="accent">2</Key>, 'placed']],
+};
+
+const topoSpec = {
+  title: 'Topological sort problems, step by step',
+  examples: TOPO_WALK,
+  simulate: topoWalk,
+  code: (input) => topoWalkCode(input.mode),
+  kinds: {
+    start: ['Start', 'neutral'], mid: ['Middle', 'accent'], leaves: ['Leaves', 'interview'], trim: ['Trim', 'accent'], init: ['Start', 'interview'],
+    peel: ['Peel', 'accent'], use: ['Use', 'accent'], make: ['Cook', 'success'], pair: ['Compare', 'accent'], kahn: ['Sort', 'interview'],
+    take: ['Take', 'success'], fail: ['Impossible', 'danger'], edges: ['Rules', 'accent'], gsort: ['Groups', 'interview'], isort: ['Items', 'interview'],
+    place: ['Place', 'success'], rsort: ['Rows', 'interview'], csort: ['Columns', 'interview'], done: ['Answer', 'success'],
+  },
+  describe: (input) => ({
+    reach: () => `${input.n} courses, ${input.queries.length} queries`,
+    mht: () => `${input.n} nodes`,
+    safe: () => `${input.graph.length} nodes`,
+    recipes: () => `${input.recipes.length} recipes`,
+    alien: () => input.words.join(', '),
+    groups: () => `${input.n} items, ${input.m} groups`,
+    matrix: () => `k = ${input.k}`,
+  })[input.mode](),
+  rule: (input) => TOPO_RULE[input.mode],
+  stats: () => [],
+  legend: (f, input) => TOPO_LEGEND[input.mode],
+  fields: (input) => TOPO_FIELDS[input.mode],
+  values: (input) => TOPO_VALUES[input.mode](input),
+  parse: parseTopoWalk,
+  random: (input) => randomTopoWalk(input),
+  hint: () => 'Keep it small so it fits: up to about 8 nodes.',
+  delay: () => 2400,
+  Stage: GraphWalkStage,
+};
+
+export function TopoWalkViz(props) {
+  return <StepViz spec={topoSpec} {...props} />;
 }

@@ -22,6 +22,7 @@ export const COMPLETE = [
   'tree-bfs',
   'bst-patterns',
   'graph-traversal',
+  'topological-sort',
 ];
 
 /**
@@ -53,4 +54,5 @@ export const POLISHED = [
   'tree-bfs',
   'bst-patterns',
   'graph-traversal',
+  'topological-sort',
 ];
