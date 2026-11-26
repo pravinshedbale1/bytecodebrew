@@ -3,6 +3,7 @@ import { Chips } from './prims';
 import { Arrow, ArrowDefs, GridCells, forest } from './GraphsViz';
 import { UF_WALK, parseUfWalk, randomUfWalk, ufWalk, ufWalkCode } from './models/ufWalk';
 import { SP_WALK, parseSpWalk, randomSpWalk, spWalk, spWalkCode } from './models/spWalk';
+import { AG_WALK, agWalk, agWalkCode, parseAgWalk, randomAgWalk } from './models/agWalk';
 import styles from './GraphsViz.module.css';
 import { GRAPH_WALK, graphWalk, graphWalkCode, gridToText, parseGraphWalk, randomGraphWalk } from './models/graphWalk';
 import { TOPO_WALK, parseTopoWalk, randomTopoWalk, topoWalk, topoWalkCode } from './models/topoWalk';
@@ -464,4 +465,39 @@ const spSpec = {
 
 export function SpWalkViz(props) {
   return <StepViz spec={spSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- advanced graph problems (same stage)
+
+const agSpec = {
+  title: 'Advanced graph problems, step by step',
+  examples: AG_WALK,
+  simulate: agWalk,
+  code: (input) => agWalkCode(input.mode),
+  kinds: { start: ['Start', 'neutral'], seed: ['New part', 'interview'], paint: ['Colour', 'accent'], clash: ['Conflict', 'danger'], visit: ['Visit', 'accent'], back: ['Back edge', 'note'], child: ['Return', 'accent'], bridge: ['Bridge', 'danger'], go: ['Walk', 'accent'], stuck: ['Stuck', 'interview'], done: ['Answer', 'success'] },
+  describe: (input) => (input.mode === 'euler' ? `${input.pairs.length} pairs` : `n = ${input.n}, ${input.edges.length} edges`),
+  rule: (input) => ({
+    color: 'Neighbours get the opposite colour; an edge inside one colour means no split exists.',
+    bridges: 'Edge u–v (v a DFS child) is a bridge when low[v] > disc[u].',
+    euler: 'Start at out − in = +1; walk unused arrows; a stuck node goes to the front of the path.',
+  })[input.mode],
+  stats: () => [],
+  legend: (f, input) => ({
+    color: [[<Key shape="box" tone="accent">A</Key>, 'group A'], [<Key shape="box" tone="note">B</Key>, 'group B'], [<Key tone="danger">—</Key>, 'same colour on both ends']],
+    bridges: [[<Key shape="box">1/1</Key>, 'disc / low'], [<Key tone="accent">—</Key>, 'DFS tree edge'], [<Key tone="danger">—</Key>, 'bridge']],
+    euler: [[<Key tone="accent">→</Key>, 'used'], [<Key shape="box">+1</Key>, 'out − in']],
+  })[input.mode],
+  fields: (input) => (input.mode === 'euler'
+    ? [{ name: 'pairs', label: 'pairs (start>end)', placeholder: 'e.g. 5>1, 4>5, 11>9, 9>4' }]
+    : [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'edges', label: input.base ? 'dislikes (a-b)' : 'edges (a-b)', placeholder: input.base ? 'e.g. 1-2, 1-3, 2-4' : 'e.g. 0-1, 1-2, 2-0, 1-3' }]),
+  values: (input) => (input.mode === 'euler' ? { pairs: input.pairs.map((p) => p.join('>')).join(', ') } : { n: String(input.n), edges: input.edges.map((e) => e.join('-')).join(', ') }),
+  parse: parseAgWalk,
+  random: (input) => randomAgWalk(input),
+  hint: () => 'Keep it small so it fits: up to 8 nodes.',
+  delay: () => 2400,
+  Stage: GraphWalkStage,
+};
+
+export function AgWalkViz(props) {
+  return <StepViz spec={agSpec} {...props} />;
 }

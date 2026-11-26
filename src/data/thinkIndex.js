@@ -241,6 +241,10 @@ export const THINK_INDEX = {
   "minimum-cost-to-make-at-least-one-valid-path-in-a-grid": { title: "Minimum Cost to Make at Least One Valid Path in a Grid", level: 'Hard', lesson: 'shortest-paths', free: false },
   "swim-in-rising-water": { title: "Swim in Rising Water", level: 'Hard', lesson: 'shortest-paths', free: false },
   "find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance": { title: "Find the City With the Smallest Number of Neighbors at a Threshold Distance", level: 'Medium', lesson: 'shortest-paths', free: false },
+  "is-graph-bipartite": { title: "Is Graph Bipartite?", level: 'Medium', lesson: 'advanced-graphs', free: false },
+  "possible-bipartition": { title: "Possible Bipartition", level: 'Medium', lesson: 'advanced-graphs', free: false },
+  "critical-connections-in-a-network": { title: "Critical Connections in a Network", level: 'Hard', lesson: 'advanced-graphs', free: false },
+  "valid-arrangement-of-pairs": { title: "Valid Arrangement of Pairs", level: 'Hard', lesson: 'advanced-graphs', free: false },
   "house-robber": { title: "House Robber", level: 'Medium', lesson: 'dp-linear', free: false },
 };
 
@@ -267,7 +271,7 @@ export const PATTERN_ORDER = [
   ['topological-sort', "Topological sort", 9, 9],
   ['union-find', "Union-find", 12, 12],
   ['shortest-paths', "Shortest paths (Dijkstra, 0-1 BFS)", 8, 8],
-  ['advanced-graphs', "Advanced graphs (two-colouring, bridges, Euler paths)", 0, 4],
+  ['advanced-graphs', "Advanced graphs (two-colouring, bridges, Euler paths)", 4, 4],
   ['backtracking', "Backtracking", 0, 17],
   ['dp-made-easy', "Basic DP (memo, then table)", 0, 4],
   ['dp-linear', "1D DP", 1, 14],

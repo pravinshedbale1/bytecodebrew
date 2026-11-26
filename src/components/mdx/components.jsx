@@ -91,6 +91,7 @@ const GraphWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'GraphWalkViz')
 const TopoWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'TopoWalkViz');
 const UfWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'UfWalkViz');
 const SpWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'SpWalkViz');
+const AgWalkViz = lazyViz(() => import('./viz/GraphWalkViz'), 'AgWalkViz');
 const GridBfsViz = lazyViz(() => import('./viz/GraphsViz'), 'GridBfsViz');
 const TopoViz = lazyViz(() => import('./viz/GraphsViz'), 'TopoViz');
 const UnionFindViz = lazyViz(() => import('./viz/GraphsViz'), 'UnionFindViz');
@@ -307,6 +308,7 @@ export const mdxComponents = {
   TopoWalkViz,
   UfWalkViz,
   SpWalkViz,
+  AgWalkViz,
   CallStackViz,
   StackQueueViz,
   HistogramViz,

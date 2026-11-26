@@ -39,6 +39,7 @@ import * as gw from '../src/components/mdx/viz/models/graphWalk.js';
 import * as tpw from '../src/components/mdx/viz/models/topoWalk.js';
 import * as ufw from '../src/components/mdx/viz/models/ufWalk.js';
 import * as spw from '../src/components/mdx/viz/models/spWalk.js';
+import * as agw from '../src/components/mdx/viz/models/agWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -996,6 +997,21 @@ function common(name, steps, code, kinds) {
   ok(a({ mode: 'delay', n: 4, times: [[2, 1, 1], [2, 3, 1], [3, 4, 1]], k: 2 }) === 2 && a(spw.SP_WALK.flights.input) === 700 && a(spw.SP_WALK.effort.input) === 2
     && a({ mode: 'swim', grid: [[0, 2], [1, 3]] }) === 3 && a(spw.SP_WALK.obstacles.input) === 2 && a(spw.SP_WALK.signs.input) === 3 && a(spw.SP_WALK.city.input) === 3
     && Math.abs(a({ mode: 'prob', n: 3, edges: [[0, 1, 0.5], [1, 2, 0.5], [0, 2, 0.2]], start: 0, end: 2 }) - 0.25) < 1e-9, 'spWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- advanced graph problems (AgWalkViz)
+{
+  const kinds = ['start', 'seed', 'paint', 'clash', 'visit', 'back', 'child', 'bridge', 'go', 'stuck', 'done'];
+  const run = (input) => {
+    const steps = agw.agWalk(input);
+    common(`agWalk ${JSON.stringify(input)}`, steps, agw.agWalkCode(input.mode), kinds);
+    const last = steps.at(-1);
+    const good = input.mode === 'euler' ? agw.agWalkValid(input, last.out) : input.mode === 'bridges' ? same(last.out, agw.agWalkAnswer(input)) : (last.answer === 'true') === agw.agWalkAnswer(input);
+    ok(good, `agWalk ${JSON.stringify(input)}: answer`);
+  };
+  Object.values(agw.AG_WALK).forEach((e) => run(e.input));
+  for (const inp of [{ mode: 'color', base: 0 }, { mode: 'color', base: 1 }, { mode: 'bridges' }, { mode: 'euler' }]) for (let t = 0; t < 800; t++) run(agw.randomAgWalk(inp, rand));
+  ok(same(agw.agWalk(agw.AG_WALK.bridges.input).at(-1).out, [[1, 3]]) && same(agw.agWalk(agw.AG_WALK.euler.input).at(-1).out, [[11, 9], [9, 4], [4, 5], [5, 1]]), 'agWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

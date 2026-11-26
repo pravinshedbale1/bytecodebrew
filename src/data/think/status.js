@@ -25,6 +25,7 @@ export const COMPLETE = [
   'topological-sort',
   'union-find',
   'shortest-paths',
+  'advanced-graphs',
 ];
 
 /**
@@ -59,4 +60,5 @@ export const POLISHED = [
   'topological-sort',
   'union-find',
   'shortest-paths',
+  'advanced-graphs',
 ];
