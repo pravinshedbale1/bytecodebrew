@@ -442,6 +442,9 @@ const TW_RULE = {
   build: 'Next preorder value = root; its inorder position splits left and right.',
   delete: 'Clean the children first; then delete the node if it is now a target leaf.',
   serialize: 'Preorder with # for every null; read it back in the same order.',
+  zigzag: 'Turning extends the zigzag by 1; going straight restarts it at 1.',
+  maxpath: 'Gain = value + the better branch (≥ 0); best = value + both branches.',
+  cameras: 'Child needs cover → camera here; child has a camera → covered; else needs cover.',
 };
 
 const TW_FIELDS = {
@@ -460,7 +463,7 @@ const treeWalkSpec = {
     start: ['Start', 'neutral'], match: ['Match', 'success'], differ: ['Differ', 'danger'], swap: ['Swap', 'accent'],
     height: ['Height', 'success'], unbalanced: ['Unbalanced', 'danger'], pass: ['Pass −1 up', 'muted'], record: ['Write', 'accent'],
     try: ['Try here', 'neutral'], root: ['Root', 'accent'], remove: ['Delete', 'danger'], keep: ['Keep', 'warn'],
-    write: ['Write', 'accent'], null: ['#', 'muted'], read: ['Read', 'success'], readnull: ['#', 'muted'], done: ['Answer', 'success'],
+    write: ['Write', 'accent'], null: ['#', 'muted'], read: ['Read', 'success'], readnull: ['#', 'muted'], turn: ['Step down', 'accent'], gain: ['Gain', 'accent'], state: ['State', 'accent'], done: ['Answer', 'success'],
   },
   describe: TW_DESCRIBE,
   rule: (input) => TW_RULE[input.mode],

@@ -717,7 +717,7 @@ function common(name, steps, code, kinds) {
     ok(same(dp.parseDp2d(dp.dp2dValues(input), input).input, input) || input.mode === 'ways', `dp2d ${input.mode}: values parse back`);
   };
   for (const e of Object.values(dp.DP2D)) run2(e.input);
-  for (const mode of Object.keys(dp.DP2D)) for (let t = 0; t < 300; t++) run2(dp.randomDp2d({ mode }, rand));
+  for (const mode of new Set(Object.values(dp.DP2D).map((e) => e.input.mode))) for (let t = 0; t < 300; t++) run2(dp.randomDp2d({ mode }, rand));
   for (const e of Object.values(dp.ROBBER_TREE)) {
     const steps = dp.robberTree(e.input);
     common('robber tree', steps, dp.robberTreeCode, ['start', 'node', 'done']);
@@ -869,7 +869,7 @@ function common(name, steps, code, kinds) {
 
 // ---------------------------------------------------------------- tree DFS, more (TreeWalkViz)
 {
-  const kinds = ['start', 'match', 'differ', 'swap', 'height', 'unbalanced', 'pass', 'record', 'try', 'root', 'remove', 'keep', 'write', 'null', 'read', 'readnull', 'done'];
+  const kinds = ['start', 'match', 'differ', 'swap', 'height', 'unbalanced', 'pass', 'record', 'try', 'root', 'remove', 'keep', 'write', 'null', 'read', 'readnull', 'turn', 'gain', 'state', 'done'];
   const run = (input) => {
     const steps = tw.treeWalk(input);
     common(`treeWalk ${JSON.stringify(input)}`, steps, tw.treeWalkCode(input), kinds);
@@ -887,7 +887,7 @@ function common(name, steps, code, kinds) {
     }));
   };
   Object.values(tw.TREE_WALK).forEach((e) => run(e.input));
-  for (let t = 0; t < 1200; t++) for (const mode of ['same', 'symmetric', 'invert', 'balanced', 'order', 'subtree', 'build', 'delete', 'serialize']) run(tw.randomTreeWalk({ mode }, rand));
+  for (let t = 0; t < 1200; t++) for (const mode of ['same', 'symmetric', 'invert', 'balanced', 'order', 'subtree', 'build', 'delete', 'serialize', 'zigzag', 'maxpath', 'cameras']) run(tw.randomTreeWalk({ mode }, rand));
   const a = (k) => tw.treeWalk(tw.TREE_WALK[k].input).at(-1).answer;
   ok(a('same') === 'true' && a('differ') === 'false' && a('symmetric') === 'true' && a('invert') === '[4,7,2,9,6,3,1]' && a('balanced') === 'false' && a('subtree') === 'true' && a('delete') === '[1,null,3,null,4]' && a('build') === '[3,9,20,null,null,15,7]', 'treeWalk: LeetCode examples');
   ok(tw.treeWalk({ mode: 'order', which: 'in', tree: [1, null, 2, 3] }).at(-1).answer === '[1, 3, 2]' && tw.treeWalk({ mode: 'order', which: 'post', tree: [1, null, 2, 3] }).at(-1).answer === '[3, 2, 1]', 'treeWalk: traversal examples');

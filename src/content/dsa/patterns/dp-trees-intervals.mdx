@@ -54,6 +54,11 @@ Every node is visited once, so it's O(n) time and O(h) stack. Compare the brute 
 
 [Maximum path sum](/dsa/patterns/tree-dfs) and the diameter are already tree DP. They return "the best path going **down**" and update a global "best path **through** this node". House Robber III returns two states; cameras need three.
 
+
+The same "return one thing, record another" idea solves Binary Tree Maximum Path Sum (return the best downward branch, record the best bend) and the Longest Zigzag (carry the arriving direction and length down):
+
+<TreeWalkViz examples={['maxpath', 'zigzag']} />
+
 ### Binary tree cameras
 
 > Place the fewest cameras so every node is watched. A camera watches its node, its parent and its children.
@@ -86,6 +91,9 @@ static int cover(TreeNode n) {
 ```
 
 This is a greedy argument on top of the tree-DP shape: a leaf never needs a camera of its own, because its parent's camera covers strictly more. The reference solution checks it against trying every subset of nodes.
+
+
+<TreeWalkViz examples={['cameras']} />
 
 ## Interval DP: choose the last action in a range
 
@@ -161,6 +169,9 @@ static int minCost(int n, int[] cuts) {
 
 O(m³) in the number of cuts, independent of the stick's length.
 
+
+<DpGridViz examples={['cuts', 'triangulate']} />
+
 ### Two-player games on a range
 
 > Players take turns removing a number from **either end**; each wants the larger total. Can player 1 win (or tie)?
@@ -190,6 +201,9 @@ static boolean predictTheWinner(int[] nums) {
 - **Off-by-one in splits**: decide whether `l` and `r` are inside the subproblem, write it as a comment, then stick to it.
 
 </Callout>
+
+
+<DpGridViz examples={['winner', 'winnerNo', 'stonegame', 'stone2']} />
 
 ## Practice ladder
 

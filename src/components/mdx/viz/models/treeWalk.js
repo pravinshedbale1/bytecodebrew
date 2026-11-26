@@ -31,6 +31,9 @@ export const TREE_WALK = {
   build: { label: 'Build from pre + in', input: { mode: 'build', pre: [3, 9, 20, 15, 7], ino: [9, 3, 15, 20, 7] } },
   delete: { label: 'Delete leaves = 2', input: { mode: 'delete', tree: [1, 2, 3, 2, null, 2, 4], target: 2 } },
   serialize: { label: 'Serialize', input: { mode: 'serialize', tree: [1, 2, 3, null, null, 4, 5] } },
+  zigzag: { label: 'Longest zigzag', input: { mode: 'zigzag', tree: [1, null, 2, 3, 4, null, null, 5, 6, null, 7] } },
+  maxpath: { label: 'Maximum path sum', input: { mode: 'maxpath', tree: [-10, 9, 20, null, null, 15, 7] } },
+  cameras: { label: 'Cameras', input: { mode: 'cameras', tree: [0, 0, null, 0, null, 0, null, null, 0] } },
 };
 
 const ORDER = { in: 'inorder', pre: 'preorder', post: 'postorder' };
@@ -91,6 +94,25 @@ export const treeWalkCode = (input) => ({
     ['ser', '    out.add(n.val); ser(n.left); ser(n.right); }'],
     ['des', 'TreeNode des() { String s = tokens[next++]; if (s.equals("#")) return null;'],
     ['des', '    TreeNode n = new TreeNode(s); n.left = des(); n.right = des(); return n; }'],
+  ],
+  zigzag: [
+    ['start', 'go(root.left, LEFT, 1); go(root.right, RIGHT, 1);'],
+    ['visit', 'go(n, dir, len): best = max(best, len);'],
+    ['turn', '  go(n.left, LEFT, dir == RIGHT ? len + 1 : 1);   // turning extends, going straight restarts'],
+    ['turn', '  go(n.right, RIGHT, dir == LEFT ? len + 1 : 1);'],
+  ],
+  maxpath: [
+    ['base', 'gain(null) = 0;'],
+    ['gain', 'l = max(0, gain(n.left)); r = max(0, gain(n.right));     // a negative branch is dropped'],
+    ['bend', 'best = max(best, n.val + l + r);                          // the path that bends here'],
+    ['ret', 'return n.val + max(l, r);                                  // a path through the parent can use one side'],
+  ],
+  cameras: [
+    ['base', 'state(null) = COVERED;'],
+    ['need', 'a child NEEDS cover → put a camera here: cameras++, return CAMERA;'],
+    ['cov', 'a child has a CAMERA → return COVERED;'],
+    ['ask', 'otherwise → return NEEDS (let the parent cover me)'],
+    ['root', 'if (state(root) == NEEDS) cameras++;'],
   ],
 })[input.mode];
 
@@ -413,8 +435,92 @@ function serializeRun({ tree }) {
   return R.steps;
 }
 
+
+// ---------------------------------------------------------------- tree DP: zigzag, maximum path sum, cameras
+
+function zigzagRun({ tree }) {
+  const R = recorder();
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const cls = {}, badge = {};
+  const T = () => [{ t, label: 'tree', cls, badge }];
+  let best = 0;
+  R.snap({ kind: 'start', trees: T(), lines: ['start'], title: 'The longest zigzag', text: 'Walk down from every node, passing along two things: the direction of the step that arrived here (← came as a left child, → as a right child) and the zigzag length so far. Turning the other way extends the zigzag by 1; going the same way starts a new zigzag of length 1 from the parent. Badges show the length arriving at each node.', calc: [`tree = [${tree.join(', ')}]`] });
+  if (t.root !== null) { cls[t.root] = ['done']; badge[t.root] = { text: 'start' }; }
+  const go = (id, dir, len) => {
+    if (id === null) return;
+    const better = len > best;
+    best = Math.max(best, len);
+    cls[id] = [better ? 'hit' : 'cur']; badge[id] = { text: `${dir === 'L' ? '←' : '→'}${len}`, tone: better ? 'success' : undefined };
+    R.snap({ kind: 'turn', trees: T(), card: { q: `arrived ${dir === 'L' ? 'as a left child' : 'as a right child'}`, a: `zigzag length ${len}`, tone: better ? 'yes' : 'info' }, lines: ['visit', 'turn'], title: `${N[id].v}: zigzag of ${len}`, text: `${better ? `A new longest: ${len}.` : `Not longer than ${best}.`} Going ${dir === 'L' ? 'right' : 'left'} next turns (length ${len + 1}); going ${dir === 'L' ? 'left' : 'right'} again starts over at 1.`, calc: [`best = ${best}`] });
+    cls[id] = ['done'];
+    go(N[id].left, 'L', dir === 'R' ? len + 1 : 1);
+    go(N[id].right, 'R', dir === 'L' ? len + 1 : 1);
+  };
+  if (t.root !== null) { go(N[t.root].left, 'L', 1); go(N[t.root].right, 'R', 1); }
+  R.snap({ kind: 'done', trees: T(), lines: [], answer: String(best), title: `Longest zigzag: ${best}`, text: 'Every node was visited once, carrying its arriving direction and length: O(n). Starting a separate walk from every node would be O(n · h).', calc: [`return ${best}`] });
+  return R.steps;
+}
+
+function maxpathRun({ tree }) {
+  const R = recorder();
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const cls = {}, badge = {};
+  const T = () => [{ t, label: 'tree', cls, badge }];
+  let best = -Infinity, bestAt = null;
+  R.snap({ kind: 'start', trees: T(), lines: [], title: 'The largest path sum', text: 'Every path has one highest node where it bends: it comes up from the left, through that node, and down to the right. So each node computes two things. Its gain: the best path going straight down from it (only one side, so the parent can extend it). And the best path bending at it: itself plus both gains. Negative gains are dropped (counted as 0).', calc: [`tree = [${tree.join(', ')}]`] });
+  const gain = (id) => {
+    if (id === null) return 0;
+    const lg = gain(N[id].left), rg = gain(N[id].right);
+    const l = Math.max(0, lg), r = Math.max(0, rg);
+    const bend = N[id].v + l + r;
+    const better = bend > best;
+    if (better) { if (bestAt !== null) { cls[bestAt] = ['done']; badge[bestAt] = { ...badge[bestAt], tone: undefined }; } best = bend; bestAt = id; }
+    const g = N[id].v + Math.max(l, r);
+    cls[id] = [better ? 'hit' : 'done']; badge[id] = { text: `g${g}`, tone: better ? 'success' : undefined };
+    R.snap({ kind: 'gain', trees: T(), card: { q: `bend at ${N[id].v}`, a: `${N[id].v} + ${l} + ${r} = ${bend}`, tone: better ? 'yes' : 'info' }, lines: ['gain', 'bend', 'ret'], title: `${N[id].v}: bend ${bend}, gain ${g}`, text: `${isLeaf(t, id) ? 'A leaf: no branches below.' : `Branch gains below: left ${lg}${lg < 0 ? ' (negative, dropped)' : ''}, right ${rg}${rg < 0 ? ' (negative, dropped)' : ''}.`} A path bending here sums to ${bend}${better ? ', the best so far' : ''}. Upwards it can only continue one side: gain ${g}.`, calc: [`best = ${best}`] });
+    if (!better) cls[id] = ['done'];
+    else { cls[id] = ['hit']; }
+    return g;
+  };
+  gain(t.root);
+  if (bestAt !== null) cls[bestAt] = ['hit'];
+  R.snap({ kind: 'done', trees: T(), lines: ['bend'], answer: String(best), title: `Maximum path sum: ${best}`, text: `The best path bends at ${N[bestAt].v}. Each node returned one number and updated the best once: O(n).`, calc: [`return ${best}`] });
+  return R.steps;
+}
+
+function camerasRun({ tree }) {
+  const R = recorder();
+  const t = buildTree(tree);
+  const N = t.nodes;
+  const cls = {}, badge = {};
+  const T = () => [{ t, label: 'tree', cls, badge }];
+  let cams = 0;
+  const depth = {};
+  const dw = (id, d) => { if (id === null) return; depth[id] = d; dw(N[id].left, d + 1); dw(N[id].right, d + 1); };
+  dw(t.root, 0);
+  const where = (id) => (id === t.root ? 'the root' : isLeaf(t, id) ? `a leaf at depth ${depth[id]}` : `a node at depth ${depth[id]}`);
+  R.snap({ kind: 'start', trees: T(), lines: [], title: 'Fewest cameras to watch every node', text: 'A camera on a leaf watches only the leaf and its parent; on the parent it also watches the parent\'s other children and its own parent. So work from the leaves up and leave leaves uncovered for their parents. Each node reports one of three states: NEEDS (not watched yet), CAMERA (has one), COVERED (watched by a child\'s camera).', calc: [`tree = [${tree.join(', ')}]`] });
+  const st = (id) => {
+    if (id === null) return 'COV';
+    const a = st(N[id].left), b = st(N[id].right);
+    let res, text, line;
+    if (a === 'NEED' || b === 'NEED') { res = 'CAM'; cams++; line = 'need'; text = 'A child is not watched, and only this node can still cover it: put a camera here. It also watches this node\'s parent.'; }
+    else if (a === 'CAM' || b === 'CAM') { res = 'COV'; line = 'cov'; text = 'A child has a camera, which watches this node too. No camera needed.'; }
+    else { res = 'NEED'; line = 'ask'; text = isLeaf(t, id) ? 'A leaf: don\'t put a camera here. Its parent can cover it and more.' : 'Its children are covered but have no camera, so nothing watches this node yet. Leave it for its parent.'; }
+    cls[id] = [res === 'CAM' ? 'hit' : res === 'COV' ? 'done' : 'cur']; badge[id] = { text: { CAM: 'cam', COV: 'ok', NEED: 'need' }[res], tone: res === 'CAM' ? 'success' : res === 'NEED' ? 'danger' : undefined };
+    R.snap({ kind: res === 'CAM' ? 'record' : 'state', trees: T(), card: { q: `children: ${[N[id].left, N[id].right].filter((x) => x !== null).length ? [a, b].join(', ') : 'none'}`, a: { CAM: 'camera here', COV: 'covered', NEED: 'needs cover' }[res], tone: res === 'CAM' ? 'yes' : 'info' }, lines: [line], title: `${{ CAM: 'Camera on', COV: 'Covered:', NEED: 'Needs cover:' }[res]} ${where(id)}`, text, calc: [`cameras = ${cams}`] });
+    return res;
+  };
+  const top = st(t.root);
+  if (top === 'NEED') { cams++; cls[t.root] = ['hit']; badge[t.root] = { text: 'cam', tone: 'success' }; R.snap({ kind: 'record', trees: T(), lines: ['root'], title: 'The root still needs cover: camera', text: 'Nobody above the root can watch it, so it gets its own camera.', calc: [`cameras = ${cams}`] }); }
+  R.snap({ kind: 'done', trees: T(), lines: [], answer: String(cams), title: `${cams} camera${cams === 1 ? '' : 's'}`, text: 'Delaying each camera to the parent of an uncovered node always covers at least as much as putting it lower. O(n), one pass from the leaves up.', calc: [`return ${cams}`] });
+  return R.steps;
+}
+
 export function treeWalk(input) {
-  return { same: sameRun, symmetric: symmetricRun, invert: invertRun, balanced: balancedRun, order: orderRun, subtree: subtreeRun, build: buildRun, delete: deleteRun, serialize: serializeRun }[input.mode](input);
+  return { same: sameRun, symmetric: symmetricRun, invert: invertRun, balanced: balancedRun, order: orderRun, subtree: subtreeRun, build: buildRun, delete: deleteRun, serialize: serializeRun, zigzag: zigzagRun, maxpath: maxpathRun, cameras: camerasRun }[input.mode](input);
 }
 
 // ---------------------------------------------------------------- reference answers
@@ -442,6 +548,36 @@ export function treeWalkAnswer(input) {
     }
     case 'subtree': { const S = buildTree(input.sub); return String(ids(t, t.root).some((id) => eq(t, id, S, S.root))); }
     case 'build': return 'check-traversals';
+    case 'zigzag': {
+      let best = 0;
+      ids(t, t.root).forEach((id) => ['left', 'right'].forEach((side) => { let len = 0, cur = t.nodes[id][side], d = side; while (cur !== null) { len++; d = d === 'left' ? 'right' : 'left'; cur = t.nodes[cur][d]; } best = Math.max(best, len); }));
+      return String(best);
+    }
+    case 'maxpath': {
+      const all = ids(t, t.root);
+      const par = {};
+      all.forEach((id) => { const n = t.nodes[id]; if (n.left !== null) par[n.left] = id; if (n.right !== null) par[n.right] = id; });
+      const up = (id) => { const p = [id]; while (par[p.at(-1)] !== undefined) p.push(par[p.at(-1)]); return p; };
+      let best = -Infinity;
+      for (const a of all) for (const b of all) {
+        const pa = up(a), pb = up(b), sb = new Set(pb);
+        const meet = pa.find((x) => sb.has(x));
+        const nodes = [...pa.slice(0, pa.indexOf(meet) + 1), ...pb.slice(0, pb.indexOf(meet))];
+        best = Math.max(best, nodes.reduce((acc, x) => acc + t.nodes[x].v, 0));
+      }
+      return String(best);
+    }
+    case 'cameras': {
+      const all = ids(t, t.root);
+      let best = Infinity;
+      for (let m = 0; m < 1 << all.length; m++) {
+        const cam = new Set(all.filter((_, k) => (m >> k) & 1));
+        if (cam.size >= best) continue;
+        const ok = all.every((id) => { const n = t.nodes[id]; return cam.has(id) || cam.has(n.left) || cam.has(n.right) || all.some((p) => cam.has(p) && (t.nodes[p].left === id || t.nodes[p].right === id)); });
+        if (ok) best = cam.size;
+      }
+      return String(best);
+    }
     case 'delete': {
       const c = cloneTree(t);
       for (let changed = true; changed;) {
@@ -492,6 +628,8 @@ export function randomTreeWalk(input, rand = Math.random) {
   const g = rng(rand);
   const { mode } = input;
   const arr = (opts = {}) => randomTreeArr(rand, { n: g.int(1, 7), lo: 1, hi: 5, maxDepth: 4, ...opts });
+  if (mode === 'maxpath') return { mode, tree: arr({ lo: -6, hi: 9, n: g.int(1, 9) }) };
+  if (mode === 'zigzag' || mode === 'cameras') return { mode, tree: arr({ n: g.int(1, 10) }) };
   if (mode === 'same') { const p = arr(); return { mode, p, q: g.bool(0.5) ? [...p] : arr() }; }
   if (mode === 'symmetric') {
     if (g.bool(0.5)) { const a = g.int(1, 4), b = g.int(1, 4), c = g.int(1, 4); return { mode, tree: [g.int(1, 9), a, a, b, c, c, b] }; }

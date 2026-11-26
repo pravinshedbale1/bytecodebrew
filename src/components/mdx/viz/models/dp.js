@@ -7,6 +7,7 @@ import { list, parseInt1, parseInts, plural, rng } from './util.js';
 import { LIN, linAnswer, linCode, linParse, linRandom, linSteps } from './dpLinear.js';
 import { GRID, gridAnswer, gridCode, gridParse, gridRandom, gridSteps, gridValues } from './dpGrid.js';
 import { STR, strAnswer, strCode, strParse, strRandom, strSteps, strValues } from './dpStrings.js';
+import { INTV, intvAnswer, intvCode, intvParse, intvRandom, intvSteps, intvValues } from './dpInterval.js';
 import { buildTree, showTree } from './trees.js';
 
 // ---------------------------------------------------------------- the recursion tree: why plain recursion is slow
@@ -335,6 +336,7 @@ export const DP2D = {
   stock: { label: 'Stock with cooldown', input: { mode: 'stock', prices: [1, 2, 3, 0, 2] } },
   ...GRID,
   ...STR,
+  ...INTV,
 };
 
 export const dp2dCode = (mode) => ({
@@ -348,9 +350,10 @@ export const dp2dCode = (mode) => ({
   edit: [['base', 'dp[i][0] = i;  dp[0][j] = j;                     // delete all / insert all'], ['match', 'if (a[i-1] == b[j-1]) dp[i][j] = dp[i-1][j-1];  // free'], ['fill', 'else 1 + min(replace ↖, delete ↑, insert ←)']],
   balloons: [['len', 'for len = 2…: for each (l, r) with r = l + len'], ['fill', 'dp[l][r] = max over l<k<r of dp[l][k] + a[l]·a[k]·a[r] + dp[k][r]   // k bursts LAST']],
   stock: [['sold', 'sold = hold + price;                              // sell today'], ['hold', 'hold = max(hold, rest − price);                   // keep, or buy (only after resting)'], ['rest', 'rest = max(rest, yesterday\'s sold);               // cooldown ends']],
-})[mode] ?? gridCode(mode) ?? strCode(mode);
+})[mode] ?? gridCode(mode) ?? strCode(mode) ?? intvCode(mode);
 
 export function dp2dAnswer(input) {
+  if (INTV[input.mode]) return intvAnswer(input);
   if (STR[input.mode]) return strAnswer(input);
   if (GRID[input.mode]) return gridAnswer(input);
   const { mode } = input;
@@ -409,6 +412,7 @@ export function dp2dAnswer(input) {
 }
 
 export function dp2d(input) {
+  if (INTV[input.mode]) return intvSteps(input);
   if (STR[input.mode]) return strSteps(input);
   if (GRID[input.mode]) return gridSteps(input);
   const { mode } = input;
@@ -623,6 +627,7 @@ export function dp2d(input) {
 }
 
 export function parseDp2d(values, input) {
+  if (INTV[input.mode]) return intvParse(values, input);
   if (STR[input.mode]) return strParse(values, input);
   if (GRID[input.mode]) return gridParse(values, input);
   const { mode } = input;
@@ -670,6 +675,7 @@ export function parseDp2d(values, input) {
 }
 
 export function dp2dValues(input) {
+  if (INTV[input.mode]) return intvValues(input);
   if (STR[input.mode]) return strValues(input);
   if (GRID[input.mode]) return gridValues(input);
   const { mode } = input;
@@ -684,6 +690,7 @@ export function dp2dValues(input) {
 }
 
 export function randomDp2d(input, rand = Math.random) {
+  if (INTV[input.mode]) return intvRandom(input, rand);
   if (STR[input.mode]) return strRandom(input, rand);
   if (GRID[input.mode]) return gridRandom(input, rand);
   const g = rng(rand);

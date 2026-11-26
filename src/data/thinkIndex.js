@@ -307,6 +307,17 @@ export const THINK_INDEX = {
   "edit-distance": { title: "Edit Distance", level: 'Medium', lesson: 'dp-strings', free: false },
   "distinct-subsequences": { title: "Distinct Subsequences", level: 'Hard', lesson: 'dp-strings', free: false },
   "regular-expression-matching": { title: "Regular Expression Matching", level: 'Hard', lesson: 'dp-strings', free: false },
+  "diameter-of-binary-tree": { title: "Diameter of Binary Tree", level: 'Easy', lesson: 'dp-trees-intervals', free: true },
+  "house-robber-iii": { title: "House Robber III", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "longest-zigzag-path-in-a-binary-tree": { title: "Longest ZigZag Path in a Binary Tree", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "predict-the-winner": { title: "Predict the Winner", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "minimum-score-triangulation-of-polygon": { title: "Minimum Score Triangulation of Polygon", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "binary-tree-maximum-path-sum": { title: "Binary Tree Maximum Path Sum", level: 'Hard', lesson: 'dp-trees-intervals', free: false },
+  "binary-tree-cameras": { title: "Binary Tree Cameras", level: 'Hard', lesson: 'dp-trees-intervals', free: false },
+  "burst-balloons": { title: "Burst Balloons", level: 'Hard', lesson: 'dp-trees-intervals', free: false },
+  "minimum-cost-to-cut-a-stick": { title: "Minimum Cost to Cut a Stick", level: 'Hard', lesson: 'dp-trees-intervals', free: false },
+  "stone-game": { title: "Stone Game", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
+  "stone-game-ii": { title: "Stone Game II", level: 'Medium', lesson: 'dp-trees-intervals', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -339,7 +350,7 @@ export const PATTERN_ORDER = [
   ['dp-knapsack', "Knapsack DP", 8, 8],
   ['dp-grid', "Grid DP", 10, 10],
   ['dp-strings', "String DP (two indexes)", 9, 9],
-  ['dp-trees-intervals', "Tree & interval DP", 0, 11],
+  ['dp-trees-intervals', "Tree & interval DP", 11, 11],
   ['dp-state-machine', "State-machine / bitmask DP", 0, 10],
   ['greedy', "Greedy", 0, 17],
   ['tries', "Trie", 0, 8],

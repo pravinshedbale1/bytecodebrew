@@ -32,6 +32,7 @@ export const COMPLETE = [
   'dp-knapsack',
   'dp-grid',
   'dp-strings',
+  'dp-trees-intervals',
 ];
 
 /**
@@ -73,4 +74,5 @@ export const POLISHED = [
   'dp-knapsack',
   'dp-grid',
   'dp-strings',
+  'dp-trees-intervals',
 ];
