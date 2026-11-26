@@ -24,6 +24,7 @@ export const COMPLETE = [
   'graph-traversal',
   'topological-sort',
   'union-find',
+  'shortest-paths',
 ];
 
 /**
@@ -57,4 +58,5 @@ export const POLISHED = [
   'graph-traversal',
   'topological-sort',
   'union-find',
+  'shortest-paths',
 ];

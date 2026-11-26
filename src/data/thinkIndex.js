@@ -233,6 +233,14 @@ export const THINK_INDEX = {
   "number-of-connected-components-in-an-undirected-graph": { title: "Number of Connected Components in an Undirected Graph", level: 'Medium', lesson: 'union-find', free: false },
   "find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree": { title: "Find Critical and Pseudo-Critical Edges in Minimum Spanning Tree", level: 'Hard', lesson: 'union-find', free: false },
   "greatest-common-divisor-traversal": { title: "Greatest Common Divisor Traversal", level: 'Hard', lesson: 'union-find', free: false },
+  "network-delay-time": { title: "Network Delay Time", level: 'Medium', lesson: 'shortest-paths', free: false },
+  "path-with-minimum-effort": { title: "Path With Minimum Effort", level: 'Medium', lesson: 'shortest-paths', free: false },
+  "cheapest-flights-within-k-stops": { title: "Cheapest Flights Within K Stops", level: 'Medium', lesson: 'shortest-paths', free: false },
+  "path-with-maximum-probability": { title: "Path with Maximum Probability", level: 'Medium', lesson: 'shortest-paths', free: false },
+  "minimum-obstacle-removal-to-reach-corner": { title: "Minimum Obstacle Removal to Reach Corner", level: 'Hard', lesson: 'shortest-paths', free: false },
+  "minimum-cost-to-make-at-least-one-valid-path-in-a-grid": { title: "Minimum Cost to Make at Least One Valid Path in a Grid", level: 'Hard', lesson: 'shortest-paths', free: false },
+  "swim-in-rising-water": { title: "Swim in Rising Water", level: 'Hard', lesson: 'shortest-paths', free: false },
+  "find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance": { title: "Find the City With the Smallest Number of Neighbors at a Threshold Distance", level: 'Medium', lesson: 'shortest-paths', free: false },
   "house-robber": { title: "House Robber", level: 'Medium', lesson: 'dp-linear', free: false },
 };
 
@@ -258,7 +266,7 @@ export const PATTERN_ORDER = [
   ['graph-traversal', "Graph / grid BFS & DFS", 17, 17],
   ['topological-sort', "Topological sort", 9, 9],
   ['union-find', "Union-find", 12, 12],
-  ['shortest-paths', "Shortest paths (Dijkstra, 0-1 BFS)", 0, 8],
+  ['shortest-paths', "Shortest paths (Dijkstra, 0-1 BFS)", 8, 8],
   ['advanced-graphs', "Advanced graphs (two-colouring, bridges, Euler paths)", 0, 4],
   ['backtracking', "Backtracking", 0, 17],
   ['dp-made-easy', "Basic DP (memo, then table)", 0, 4],

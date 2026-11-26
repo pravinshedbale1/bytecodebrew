@@ -2,6 +2,7 @@ import { StepViz, Key } from './StepViz';
 import { Chips } from './prims';
 import { Arrow, ArrowDefs, GridCells, forest } from './GraphsViz';
 import { UF_WALK, parseUfWalk, randomUfWalk, ufWalk, ufWalkCode } from './models/ufWalk';
+import { SP_WALK, parseSpWalk, randomSpWalk, spWalk, spWalkCode } from './models/spWalk';
 import styles from './GraphsViz.module.css';
 import { GRAPH_WALK, graphWalk, graphWalkCode, gridToText, parseGraphWalk, randomGraphWalk } from './models/graphWalk';
 import { TOPO_WALK, parseTopoWalk, randomTopoWalk, topoWalk, topoWalkCode } from './models/topoWalk';
@@ -110,7 +111,7 @@ function GraphWalkStage({ step: f, width, seq }) {
       {f.grid && (
         <GridCells
           grid={f.grid} width={width} min={f.grid[0].length > 7 ? 22 : 30}
-          cell={(r, c) => ({ cls: f.grid[r][c].c.filter(Boolean), label: f.grid[r][c].l, pop: f.grid[r][c].c.includes('cellNew'), key: f.grid[r][c].c.includes('cellNew') ? `n${seq}` : 'v' })}
+          cell={(r, c) => ({ cls: f.grid[r][c].c.filter(Boolean), label: f.grid[r][c].l, badge: f.grid[r][c].b, pop: f.grid[r][c].c.includes('cellNew'), key: f.grid[r][c].c.includes('cellNew') ? `n${seq}` : 'v' })}
         />
       )}
       {f.forest && <Forest fo={f.forest} width={width} />}
@@ -399,4 +400,68 @@ const ufSpec = {
 
 export function UfWalkViz(props) {
   return <StepViz spec={ufSpec} {...props} />;
+}
+
+// ---------------------------------------------------------------- shortest-path problems (same stage)
+
+const SP_FIELDS = {
+  delay: [{ name: 'n', label: 'n', placeholder: '5', short: true }, { name: 'edges', label: 'times (u>v:w)', placeholder: 'e.g. 1>2:2, 1>3:6, 2>3:3' }, { name: 'k', label: 'k', placeholder: '1', short: true }],
+  flights: [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'edges', label: 'flights (a>b:price)', placeholder: 'e.g. 0>1:100, 1>3:600' }, { name: 'src', label: 'src', placeholder: '0', short: true }, { name: 'dst', label: 'dst', placeholder: '3', short: true }, { name: 'k', label: 'k', placeholder: '1', short: true }],
+  prob: [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'edges', label: 'edges (a-b:prob)', placeholder: 'e.g. 0-1:0.5, 1-2:0.5, 0-2:0.2' }, { name: 'start', label: 'start', placeholder: '0', short: true }, { name: 'end', label: 'end', placeholder: '2', short: true }],
+  city: [{ name: 'n', label: 'n', placeholder: '4', short: true }, { name: 'edges', label: 'roads (a-b:length)', placeholder: 'e.g. 0-1:3, 1-2:1, 1-3:4, 2-3:1' }, { name: 'threshold', label: 'threshold', placeholder: '4', short: true }],
+  effort: [{ name: 'grid', label: 'heights (rows separated by ;)', placeholder: 'e.g. 1 2 2; 3 8 2; 5 3 5' }],
+  swim: [{ name: 'grid', label: 'heights 0..n²−1 (rows separated by ;)', placeholder: 'e.g. 0 2; 1 3' }],
+  obstacles: [{ name: 'grid', label: 'grid of 0 and 1 (rows separated by ;)', placeholder: 'e.g. 0 1 1; 1 1 0; 1 1 0' }],
+  signs: [{ name: 'grid', label: 'signs 1→ 2← 3↓ 4↑ (rows separated by ;)', placeholder: 'e.g. 1 1 3; 3 2 2; 1 1 4' }],
+};
+const tri = (es, sep = '>') => es.map(([a, b, w]) => `${a}${sep}${b}:${w}`).join(', ');
+const SP_VALUES = {
+  delay: (i) => ({ n: String(i.n), edges: tri(i.times), k: String(i.k) }),
+  flights: (i) => ({ n: String(i.n), edges: tri(i.flights), src: String(i.src), dst: String(i.dst), k: String(i.k) }),
+  prob: (i) => ({ n: String(i.n), edges: tri(i.edges, '-'), start: String(i.start), end: String(i.end) }),
+  city: (i) => ({ n: String(i.n), edges: tri(i.edges, '-'), threshold: String(i.threshold) }),
+  effort: (i) => ({ grid: i.grid.map((r) => r.join(' ')).join('; ') }),
+  swim: (i) => ({ grid: i.grid.map((r) => r.join(' ')).join('; ') }),
+  obstacles: (i) => ({ grid: i.grid.map((r) => r.join(' ')).join('; ') }),
+  signs: (i) => ({ grid: i.grid.map((r) => r.join(' ')).join('; ') }),
+};
+const SP_RULE = {
+  delay: 'Settle the closest unsettled node; its time is final. Relax its edges.',
+  flights: 'Round r = routes with ≤ r flights; each round reads a copy of the last.',
+  prob: 'Settle the most likely node first; multiplying by ≤ 1 never helps later.',
+  city: 'Each city in turn may be a middle stop: i → k → j.',
+  effort: 'A route costs its biggest step; expand the smallest cost first.',
+  swim: 'A route costs its highest cell; expand the smallest cost first.',
+  obstacles: 'Empty: +0, push front. Obstacle: +1, push back.',
+  signs: 'Follow the sign: +0, push front. Any other way: +1, push back.',
+};
+
+const spSpec = {
+  title: 'Shortest-path problems, step by step',
+  examples: SP_WALK,
+  simulate: spWalk,
+  code: (input) => spWalkCode(input.mode),
+  kinds: { start: ['Start', 'neutral'], settle: ['Settle', 'success'], stale: ['Stale', 'warn'], round: ['Round', 'accent'], found: ['Reached', 'success'], mid: ['Middle', 'accent'], done: ['Answer', 'success'] },
+  describe: (input) => ({
+    delay: () => `n = ${input.n}, from ${input.k}`,
+    flights: () => `${input.src} → ${input.dst}, k = ${input.k}`,
+    prob: () => `${input.start} → ${input.end}`,
+    city: () => `n = ${input.n}, threshold ${input.threshold}`,
+  }[input.mode] ?? (() => `${input.grid.length} × ${input.grid[0].length} grid`))(),
+  rule: (input) => SP_RULE[input.mode],
+  stats: () => [],
+  legend: (f, input) => (input.grid
+    ? [[<Key shape="box" tone="accent">2</Key>, 'final (corner badge = cost)'], [<Key shape="dashed">5</Key>, 'the target']]
+    : [[<Key shape="box" tone="success">3</Key>, 'final'], [<Key shape="box">4</Key>, 'badge = best so far']]),
+  fields: (input) => SP_FIELDS[input.mode],
+  values: (input) => SP_VALUES[input.mode](input),
+  parse: parseSpWalk,
+  random: (input) => randomSpWalk(input),
+  hint: (input) => (input.grid ? 'Up to 5 × 6 cells.' : 'Up to 7 nodes and 10 edges.'),
+  delay: () => 2400,
+  Stage: GraphWalkStage,
+};
+
+export function SpWalkViz(props) {
+  return <StepViz spec={spSpec} {...props} />;
 }
