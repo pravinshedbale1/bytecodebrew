@@ -41,6 +41,7 @@ import * as ufw from '../src/components/mdx/viz/models/ufWalk.js';
 import * as spw from '../src/components/mdx/viz/models/spWalk.js';
 import * as agw from '../src/components/mdx/viz/models/agWalk.js';
 import * as btw from '../src/components/mdx/viz/models/btWalk.js';
+import * as gyw from '../src/components/mdx/viz/models/greedyWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1033,6 +1034,22 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(btw.BT_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(btw.randomBtWalk({ mode }, rand));
   const a = (k) => btw.btWalk(btw.BT_WALK[k].input).at(-1);
   ok(a('xor').answer === '28' && a('parens').found.length === 5 && a('wordbreak').found.length === 2 && a('wordbreakNo').found.length === 0 && a('matchsticks').answer === 'true' && a('matchsticksNo').answer === 'false' && a('wordsearch').answer === 'true', 'btWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- greedy problems (GreedyWalkViz)
+{
+  const kinds = ['start', 'sort', 'match', 'skip', 'better', 'low', 'scan', 'pair', 'alone', 'take', 'raise', 'keep', 'fail', 'use', 'open', 'close', 'star', 'duel', 'move', 'done'];
+  const run = (input) => {
+    const steps = gyw.greedyWalk(input);
+    common(`greedyWalk ${JSON.stringify(input)}`, steps, gyw.greedyWalkCode(input.mode), kinds);
+    ok(String(steps.at(-1).out) === String(gyw.greedyWalkAnswer(input)), `greedyWalk ${JSON.stringify(input)}: answer`);
+    ok(same(gyw.parseGreedyWalk(gyw.greedyWalkValues(input), input).input, input), `greedyWalk ${input.mode}: values parse back`);
+  };
+  Object.values(gyw.GREEDY_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(gyw.GREEDY_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(gyw.randomGreedyWalk({ mode }, rand));
+  const a = (k) => String(gyw.greedyWalk(gyw.GREEDY_WALK[k].input).at(-1).out);
+  ok(a('cookies') === '1' || a('cookies') === '2', 'greedyWalk: cookies example');
+  ok(a('stock') === '5' && a('boats') === '3' && a('boats2') === '4' && a('twocity') === '110' && a('candy') === '5' && a('senate') === 'Dire' && a('orderly1') === 'acb' && a('wildcard') === 'true', 'greedyWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

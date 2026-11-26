@@ -84,6 +84,8 @@ static int findContentChildren(int[] greed, int[] cookies) {
 }
 ```
 
+<GreedyWalkViz examples={['cookies', 'cookies2']} />
+
 ### Boats to save people
 
 > Each boat holds at most two people and a weight limit. Fewest boats?
@@ -102,6 +104,8 @@ static int numRescueBoats(int[] people, int limit) {
     return boats;
 }
 ```
+
+<GreedyWalkViz examples={['boats', 'boats2']} />
 
 Exchange argument: if the heaviest person is paired with someone else in an optimal plan, swapping that partner for the lightest person keeps both boats valid (the lightest fits wherever the other did).
 
@@ -195,6 +199,8 @@ static int candy(int[] r) {
 }
 ```
 
+<GreedyWalkViz examples={['candy', 'candy2']} />
+
 ## Shape 5: what can the moves reach?
 
 Some problems give you a move and ask for the best result after **any number of moves**. Before searching, work out which configurations the move can reach at all. Often it is "only a few" or "all of them", and the answer is then a one-liner.
@@ -223,6 +229,23 @@ public String orderlyQueue(String s, int k) {
 ```
 
 The way to find this in an interview: brute-force the reachable strings for a tiny input (a BFS over strings), notice that for k = 2 it reaches all of them, and then prove it with the swap.
+
+<GreedyWalkViz examples={['orderly1', 'orderly2']} />
+
+## More greedy choices, step by step
+
+Each of these has one rule that never needs undoing:
+
+- **One trade (121):** sell today against the lowest price so far.
+- **Lemonade change (860):** for a $20, give $10 + $5 before three $5s; the $5s pay anyone's change.
+- **Two city scheduling (1029):** sort by aCost − bCost and send the first half to A.
+- **Merge triplets (1899):** skip any triplet that overshoots the target; the rest are harmless, and together they must hit x, y and z.
+- **Valid parenthesis string (678):** track the fewest and the most "(" that could be open.
+- **Hand of straights (846):** the smallest card left must start a group.
+- **Dota2 senate (649):** ban the opponent who acts next; two queues of turn numbers.
+- **Jump game VII (1871):** count reachable indexes in a sliding window of jump origins.
+
+<GreedyWalkViz examples={['stock', 'lemonade', 'lemonadeNo', 'twocity', 'triplets', 'wildcard', 'wildcardNo', 'straights', 'straightsNo', 'senate', 'senate2', 'jump7']} />
 
 ## When greedy fails
 

@@ -99,6 +99,7 @@ const DijkstraViz = lazyViz(() => import('./viz/GraphsViz'), 'DijkstraViz');
 const BacktrackViz = lazyViz(() => import('./viz/BacktrackViz'), 'BacktrackViz');
 const QueensViz = lazyViz(() => import('./viz/BacktrackViz'), 'QueensViz');
 const BtWalkViz = lazyViz(() => import('./viz/BacktrackViz'), 'BtWalkViz');
+const GreedyWalkViz = lazyViz(() => import('./viz/GreedyWalkViz'), 'GreedyWalkViz');
 const FibTreeViz = lazyViz(() => import('./viz/DpViz'), 'FibTreeViz');
 const Dp1dViz = lazyViz(() => import('./viz/DpViz'), 'Dp1dViz');
 const DpGridViz = lazyViz(() => import('./viz/DpViz'), 'DpGridViz');
@@ -311,6 +312,7 @@ export const mdxComponents = {
   SpWalkViz,
   AgWalkViz,
   BtWalkViz,
+  GreedyWalkViz,
   CallStackViz,
   StackQueueViz,
   HistogramViz,

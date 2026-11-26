@@ -34,6 +34,7 @@ export const COMPLETE = [
   'dp-strings',
   'dp-trees-intervals',
   'dp-state-machine',
+  'greedy',
 ];
 
 /**
@@ -77,4 +78,5 @@ export const POLISHED = [
   'dp-strings',
   'dp-trees-intervals',
   'dp-state-machine',
+  'greedy',
 ];
