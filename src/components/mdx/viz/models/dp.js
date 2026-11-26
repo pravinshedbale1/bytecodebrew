@@ -5,6 +5,7 @@
  */
 import { list, parseInt1, parseInts, plural, rng } from './util.js';
 import { LIN, linAnswer, linCode, linParse, linRandom, linSteps } from './dpLinear.js';
+import { GRID, gridAnswer, gridCode, gridParse, gridRandom, gridSteps, gridValues } from './dpGrid.js';
 import { buildTree, showTree } from './trees.js';
 
 // ---------------------------------------------------------------- the recursion tree: why plain recursion is slow
@@ -331,6 +332,7 @@ export const DP2D = {
   edit: { label: 'Edit distance', input: { mode: 'edit', a: 'horse', b: 'ros' } },
   balloons: { label: 'Burst balloons', input: { mode: 'balloons', nums: [3, 1, 5, 8] } },
   stock: { label: 'Stock with cooldown', input: { mode: 'stock', prices: [1, 2, 3, 0, 2] } },
+  ...GRID,
 };
 
 export const dp2dCode = (mode) => ({
@@ -344,9 +346,10 @@ export const dp2dCode = (mode) => ({
   edit: [['base', 'dp[i][0] = i;  dp[0][j] = j;                     // delete all / insert all'], ['match', 'if (a[i-1] == b[j-1]) dp[i][j] = dp[i-1][j-1];  // free'], ['fill', 'else 1 + min(replace ↖, delete ↑, insert ←)']],
   balloons: [['len', 'for len = 2…: for each (l, r) with r = l + len'], ['fill', 'dp[l][r] = max over l<k<r of dp[l][k] + a[l]·a[k]·a[r] + dp[k][r]   // k bursts LAST']],
   stock: [['sold', 'sold = hold + price;                              // sell today'], ['hold', 'hold = max(hold, rest − price);                   // keep, or buy (only after resting)'], ['rest', 'rest = max(rest, yesterday\'s sold);               // cooldown ends']],
-})[mode];
+})[mode] ?? gridCode(mode);
 
 export function dp2dAnswer(input) {
+  if (GRID[input.mode]) return gridAnswer(input);
   const { mode } = input;
   if (mode === 'paths') { const { R, C } = input; let f = 1; for (let k = 1; k < R; k++) f = (f * (C - 1 + k)) / k; return Math.round(f); }
   if (mode === 'obstacles' || mode === 'minsum') {
@@ -403,6 +406,7 @@ export function dp2dAnswer(input) {
 }
 
 export function dp2d(input) {
+  if (GRID[input.mode]) return gridSteps(input);
   const { mode } = input;
   const steps = [];
   let rows, cols, cells, given = null, blocked = null;
@@ -615,6 +619,7 @@ export function dp2d(input) {
 }
 
 export function parseDp2d(values, input) {
+  if (GRID[input.mode]) return gridParse(values, input);
   const { mode } = input;
   if (mode === 'paths') {
     const R = parseInt1(values.R, { min: 2, max: 6, name: 'rows' }); if (R.error) return R;
@@ -660,6 +665,7 @@ export function parseDp2d(values, input) {
 }
 
 export function dp2dValues(input) {
+  if (GRID[input.mode]) return gridValues(input);
   const { mode } = input;
   if (mode === 'paths') return { R: String(input.R), C: String(input.C) };
   if (mode === 'obstacles' || mode === 'square') return { grid: input.grid.map((r) => r.join('')).join('; ') };
@@ -672,6 +678,7 @@ export function dp2dValues(input) {
 }
 
 export function randomDp2d(input, rand = Math.random) {
+  if (GRID[input.mode]) return gridRandom(input, rand);
   const g = rng(rand);
   const { mode } = input;
   const word = (n) => Array.from({ length: n }, () => g.pick('abcde'.split(''))).join('');

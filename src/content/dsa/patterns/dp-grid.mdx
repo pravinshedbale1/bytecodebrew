@@ -77,6 +77,11 @@ Step through it; at the end the cheapest path is traced back.
 
 <DpGridViz examples={['minsum']} />
 
+
+The same idea with a different shape: Triangle fills from the bottom row up, and a falling path takes the cheapest of three cells above.
+
+<DpGridViz examples={['triangle', 'falling']} />
+
 ## Maximal square — a three-neighbour recurrence
 
 > Largest square containing only 1s.
@@ -103,6 +108,11 @@ Step through it: each cell looks at its top, left and top-left neighbours.
 
 <DpGridViz examples={['square']} />
 
+
+Counting every square uses the same table: the side at a cell is also the number of squares ending there.
+
+<DpGridViz examples={['countsq']} />
+
 ## Dungeon game — fill backwards
 
 > A knight starts at the top-left and must reach the princess at the bottom-right, moving right or down. Cells add or subtract health; health must stay at least 1. Minimum starting health?
@@ -123,6 +133,13 @@ static int calculateMinimumHP(int[][] d) {
 ```
 
 When the forward state would need two numbers, check whether the **reverse** direction needs only one. The reference solution checks this by trying every starting health on every path for small grids.
+
+
+<DpGridViz examples={['dungeon']} />
+
+Two harder relatives: Cherry Pickup moves two walkers together (one table per step), and the Longest Increasing Path fills cells in increasing order of value because moves go in every direction.
+
+<DpGridViz examples={['cherry', 'lip']} />
 
 ## Saving memory
 

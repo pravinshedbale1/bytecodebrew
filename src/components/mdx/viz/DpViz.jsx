@@ -8,6 +8,7 @@ import {
   robberTree, robberTreeCode,
 } from './models/dp';
 import { LIN, linDescribe, linFields, linRule, linValues } from './models/dpLinear';
+import { GRID, gridDescribe, gridFields, gridRule } from './models/dpGrid';
 
 /**
  * Step-throughs for the Dynamic Programming module:
@@ -247,7 +248,7 @@ const dp2dSpec = {
     edit: () => `"${input.a}" → "${input.b}"`,
     balloons: () => `balloons ${list(input.nums)}`,
     stock: () => `prices ${list(input.prices)}`,
-  })[input.mode](),
+  })[input.mode]?.() ?? gridDescribe(input),
   rule: (input) => ({
     paths: 'ways = from above + from the left',
     obstacles: 'blocked → 0; otherwise above + left',
@@ -259,7 +260,7 @@ const dp2dSpec = {
     edit: 'match: diagonal; otherwise 1 + min(replace, delete, insert)',
     balloons: 'best k to burst last between l and r',
     stock: 'each state from yesterday\'s states',
-  })[input.mode],
+  })[input.mode] ?? gridRule[input.mode],
   stats: () => [],
   legend: (f) => [
     [<Key shape="box" tone="warn">3</Key>, 'being filled'],
@@ -267,7 +268,7 @@ const dp2dSpec = {
     [<Key shape="box">→</Key>, 'considered, lost'],
     ...(f.given ? [[<Key shape="box"><small>5</small></Key>, 'small number: the input in that cell']] : []),
   ],
-  fields: (input) => DP2D_FIELDS[input.mode],
+  fields: (input) => DP2D_FIELDS[input.mode] ?? gridFields(input),
   values: dp2dValues,
   parse: parseDp2d,
   random: (input) => randomDp2d(input),

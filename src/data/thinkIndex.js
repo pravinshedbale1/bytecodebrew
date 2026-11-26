@@ -288,6 +288,16 @@ export const THINK_INDEX = {
   "combination-sum-iv": { title: "Combination Sum IV", level: 'Medium', lesson: 'dp-knapsack', free: false },
   "perfect-squares": { title: "Perfect Squares", level: 'Medium', lesson: 'dp-knapsack', free: false },
   "ones-and-zeroes": { title: "Ones and Zeroes", level: 'Medium', lesson: 'dp-knapsack', free: false },
+  "unique-paths": { title: "Unique Paths", level: 'Medium', lesson: 'dp-grid', free: false },
+  "unique-paths-ii": { title: "Unique Paths II", level: 'Medium', lesson: 'dp-grid', free: false },
+  "minimum-path-sum": { title: "Minimum Path Sum", level: 'Medium', lesson: 'dp-grid', free: false },
+  "triangle": { title: "Triangle", level: 'Medium', lesson: 'dp-grid', free: false },
+  "minimum-falling-path-sum": { title: "Minimum Falling Path Sum", level: 'Medium', lesson: 'dp-grid', free: false },
+  "maximal-square": { title: "Maximal Square", level: 'Medium', lesson: 'dp-grid', free: false },
+  "count-square-submatrices-with-all-ones": { title: "Count Square Submatrices with All Ones", level: 'Medium', lesson: 'dp-grid', free: false },
+  "dungeon-game": { title: "Dungeon Game", level: 'Hard', lesson: 'dp-grid', free: false },
+  "cherry-pickup": { title: "Cherry Pickup", level: 'Hard', lesson: 'dp-grid', free: false },
+  "longest-increasing-path-in-a-matrix": { title: "Longest Increasing Path in a Matrix", level: 'Hard', lesson: 'dp-grid', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -318,7 +328,7 @@ export const PATTERN_ORDER = [
   ['dp-made-easy', "Basic DP (memo, then table)", 4, 4],
   ['dp-linear', "1D DP", 14, 14],
   ['dp-knapsack', "Knapsack DP", 8, 8],
-  ['dp-grid', "Grid DP", 0, 10],
+  ['dp-grid', "Grid DP", 10, 10],
   ['dp-strings', "String DP (two indexes)", 0, 9],
   ['dp-trees-intervals', "Tree & interval DP", 0, 11],
   ['dp-state-machine', "State-machine / bitmask DP", 0, 10],
