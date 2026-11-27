@@ -113,8 +113,29 @@ function paymentsDevApi() {
   };
 }
 
+/**
+ * The app's stylesheets would block the first paint, so on a slow connection the loading screen in
+ * index.html couldn't appear until the CSS had downloaded. Load them without blocking instead
+ * (media="print", switched to "all" once loaded); src/main.jsx keeps the loading screen up until
+ * they have arrived, so the app is never seen unstyled.
+ */
+function nonBlockingCss() {
+  return {
+    name: 'non-blocking-css',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html) => html.replace(
+        /<link rel="stylesheet" crossorigin href="(\/assets\/[^"]+\.css)">/g,
+        '<link rel="stylesheet" crossorigin href="$1" media="print" onload="this.media=\'all\'"><noscript><link rel="stylesheet" href="$1"></noscript>',
+      ),
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
+    nonBlockingCss(),
     dsaLadders('src/content/dsa/patterns'),
     lessonContent('src/content'),
     leetcodeDevApi(),

@@ -15,15 +15,53 @@ function set(next) {
   listeners.forEach((l) => l());
 }
 
+/**
+ * A sign-in lasts 7 days. Firebase would otherwise keep a user signed in forever (it refreshes
+ * its tokens silently), so the app signs them out itself once 7 days have passed since they last
+ * signed in with Google, counted from Firebase's own record of that sign-in (the same on every device).
+ */
+export const SESSION_DAYS = 7;
+const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
+export const EXPIRED_MESSAGE = `For your security, sign-ins last ${SESSION_DAYS} days. Sign in again to keep your progress syncing.`;
+let expiryTimer = null;
+
+/** When this user's sign-in expires (ms since 1970), or null if Firebase doesn't say when they signed in. */
+export function expiresAt(u) {
+  const t = Date.parse(u?.metadata?.lastSignInTime ?? '');
+  return Number.isFinite(t) ? t + SESSION_MS : null;
+}
+
+function watchExpiry(u) {
+  clearTimeout(expiryTimer);
+  expiryTimer = null;
+  const at = expiresAt(u);
+  if (at === null) return false;
+  if (Date.now() >= at) {
+    signOutUser({ expired: true });
+    return true;
+  }
+  // setTimeout can't wait more than ~24.8 days; 7 days fits. Sleeping devices are covered by the
+  // visibility check below, since timers don't run while a laptop is closed.
+  expiryTimer = setTimeout(() => signOutUser({ expired: true }), at - Date.now());
+  return false;
+}
+
 function start() {
   if (started || !firebaseEnabled) return;
   started = true;
   loadAuth().then((fb) => {
     fb.authMod.onAuthStateChanged(fb.auth, (u) => {
+      if (u && watchExpiry(u)) return;    // expired: signOut() will report signed-out
+      if (!u) { clearTimeout(expiryTimer); expiryTimer = null; }
       set(u
         ? { status: 'signed-in', user: { uid: u.uid, name: u.displayName, email: u.email, emailVerified: u.emailVerified, photo: u.photoURL }, error: null }
         : { status: 'signed-out', user: null });
     });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && fb.auth.currentUser) watchExpiry(fb.auth.currentUser);
+      });
+    }
   }).catch(() => set({ status: 'signed-out', error: 'Could not reach the sign-in service.' }));
 }
 
@@ -50,9 +88,10 @@ export async function signIn() {
   }
 }
 
-export async function signOutUser() {
+export async function signOutUser({ expired = false } = {}) {
   const fb = await loadAuth();
   if (fb) await fb.authMod.signOut(fb.auth);
+  if (expired) set({ status: 'signed-out', user: null, error: EXPIRED_MESSAGE });
   // the Claude API key belongs to the account (src/lib/claude.js): don't leave a copy in this browser
   try { localStorage.removeItem('bcb:anthropic-key'); } catch { /* ignore */ }
 }

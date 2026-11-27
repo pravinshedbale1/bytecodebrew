@@ -35,7 +35,11 @@ const TermsPage = policy('TermsPage');
 const PrivacyPage = policy('PrivacyPage');
 const RefundPage = policy('RefundPage');
 const DeliveryPage = policy('DeliveryPage');
-const page = (el) => <Suspense fallback={null}>{el}</Suspense>;
+/** Shown while a page's code downloads on its first visit (it fades in after a moment, so fast loads never flash it). */
+function PageLoading() {
+  return <div className="page-loading" role="status" aria-label="Loading"><i /></div>;
+}
+const page = (el) => <Suspense fallback={<PageLoading />}>{el}</Suspense>;
 
 export function App() {
   return (

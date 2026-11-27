@@ -87,3 +87,10 @@ p {
     background: #fff;
   }
 }
+
+/* Suspense fallback for pages loaded on first visit (App.jsx). Hidden for the first 150 ms so fast loads don't flash. */
+.page-loading { display: grid; place-items: center; min-height: 50vh; }
+.page-loading i { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--color-border); border-top-color: var(--color-accent); animation: page-loading-in 0.2s ease-out 0.15s backwards, page-loading-spin 0.8s linear infinite; }
+@keyframes page-loading-in { from { opacity: 0; } }
+@keyframes page-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .page-loading i { animation: none; } }
