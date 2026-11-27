@@ -985,6 +985,7 @@ export default {
       budget: '10⁵ values in O(1) extra space. What does a hash set cost, and what does trying 1, 2, 3, … cost?',
       brute: 'Trying 1, 2, 3, … with a full scan each works. How many scans can that take?',
       watch: 'Watch each value 1 … n swap into its own seat, then the first wrong seat give the answer.',
+      read: 'The answer has a hidden upper bound, some values can be ignored, and the space limit bans the obvious tool. Which phrase gives each?',
     },
     read: [
       {

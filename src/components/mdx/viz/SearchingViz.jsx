@@ -238,7 +238,7 @@ function AnswerAxis({ f, W }) {
 }
 
 function AnswerStage({ step: f, input, width, jump }) {
-  const W = Math.max(300, Math.min(width, 640));
+  const W = Math.max(240, Math.min(width, 640));
   const c = f.check;
   let body = null;
   let bodyH = 0;

@@ -883,6 +883,7 @@ export default {
       budget: '2 × 10⁴ values. What does extending from every start cost?',
       brute: 'Extending from every start while counting different values works. What is rebuilt?',
       watch: 'Watch "at most 2" and "at most 1" get counted, then subtracted.',
+      read: 'Why is "exactly k" awkward for a sliding window, and which phrase hands you the way around it?',
     },
     read: [
       {

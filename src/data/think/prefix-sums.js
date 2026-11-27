@@ -71,7 +71,7 @@ export default {
         },
       ],
     },
-    edges: ['A single value: [5] → [5].', 'Negative values: [3, −1, −2] → [3, 2, 0].'],
+    edges: ['A single value: [5] → [5].', 'Negative values: [3, −1, −2] → [3, 2, 0].', 'Zeros keep the total: [1, 0, 0, 2] → [1, 1, 1, 3].'],
     not: { '0': [] },
   },
 
