@@ -37,6 +37,7 @@ export const COMPLETE = [
   'greedy',
   'tries',
   'bit-manipulation',
+  'contribution-technique',
 ];
 
 /**
@@ -83,4 +84,5 @@ export const POLISHED = [
   'greedy',
   'tries',
   'bit-manipulation',
+  'contribution-technique',
 ];

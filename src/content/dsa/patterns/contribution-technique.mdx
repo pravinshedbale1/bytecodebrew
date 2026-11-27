@@ -77,6 +77,8 @@ public long countVowels(String word) {
 }
 ```
 
+<ContribWalkViz examples={['vowels', 'vowels2']} />
+
 ### Credit each subarray to its right end
 
 Sometimes it's easier to count subarrays by **where they end**. In **Number of Zero-Filled Subarrays (2348)**, if the current run of zeros has length `run`, then exactly `run` all-zero subarrays end here (start anywhere in the run). Adding `run` at each index counts every all-zero subarray exactly once, at its right end. Keep this "credit the right end" view in mind; the sliding-window section uses it again.
@@ -91,6 +93,10 @@ public long zeroFilledSubarray(int[] nums) {
     return total;
 }
 ```
+
+<ContribWalkViz examples={['zeros', 'maxk']} />
+
+The second example uses the same right-end view: in **Count Subarrays Where Max Element Appears at Least K Times (2962)**, a subarray ending at r qualifies when it starts at or before the k-th last maximum, so r adds that position + 1.
 
 ## With bit manipulation: one column at a time
 
@@ -141,6 +147,8 @@ public int xorAllNums(int[] nums1, int[] nums2) {
     return x;
 }
 ```
+
+<ContribWalkViz examples={['pairings', 'pairingsEven']} />
 
 ## With sorting and prefix sums
 
@@ -204,6 +212,8 @@ public long[] distance(int[] nums) {
     return res;
 }
 ```
+
+<ContribWalkViz examples={['groups']} />
 
 ### Sum of Subsequence Widths (891)
 
@@ -346,6 +356,10 @@ public int totalStrength(int[] strength) {
 }
 ```
 
+Step through the counting on a small line of wizards: the band is the span where a wizard is the weakest (ties go to the rightmost, as in the code), and the small ×c under each wizard is how many of those groups include it.
+
+<ContribWalkViz examples={['wizards']} />
+
 ## With a sliding window: credit every subarray to its right end
 
 Counting subarrays with a property (rather than adding values) uses the same idea with a different unit: **the right end**. If all values are positive, shrinking a valid subarray keeps it valid. So for each right end `r`, the valid subarrays ending at `r` are exactly those starting at `l … r`, where `l` is the leftmost valid start. A [sliding window](/dsa/patterns/sliding-window) finds `l`, and `r` contributes **`r − l + 1`**. Every subarray is counted once, at its right end.
@@ -450,6 +464,8 @@ public int[] sumOfDistancesInTree(int n, int[][] edges) {
     return ans;
 }
 ```
+
+<EdgeContribViz examples={['reroot']} />
 
 ## With counting subsets
 

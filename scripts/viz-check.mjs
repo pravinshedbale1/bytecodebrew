@@ -44,6 +44,7 @@ import * as btw from '../src/components/mdx/viz/models/btWalk.js';
 import * as gyw from '../src/components/mdx/viz/models/greedyWalk.js';
 import * as trw from '../src/components/mdx/viz/models/trieWalk.js';
 import * as biw from '../src/components/mdx/viz/models/bitWalk.js';
+import * as cww from '../src/components/mdx/viz/models/contribWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -818,15 +819,16 @@ function common(name, steps, code, kinds) {
   ok(ct.windowCount(ct.WINDOW.product.input).at(-1).answer === '8', 'window: LeetCode 713 example is 8');
   ok(ct.windowCount(ct.WINDOW.score.input).at(-1).answer === '6', 'window: LeetCode 2302 example is 6');
 
-  const E = (input) => run(`edges ${JSON.stringify(input)}`, ct.edgesModel(input), ct.edgesCode(input.mode), ['start', 'edge', 'done'], `${ct.edgesAnswer(input)}`);
+  const E = (input) => run(`edges ${JSON.stringify(input)}`, ct.edgesModel(input), ct.edgesCode(input.mode), ['start', 'edge', 'root', 'move', 'done'], `${ct.edgesAnswer(input)}`);
   for (const e of Object.values(ct.EDGES)) E(e.input);
-  for (const mode of ['pairs', 'fuel']) for (let t = 0; t < 800; t++) {
+  for (const mode of ['pairs', 'fuel', 'reroot']) for (let t = 0; t < 800; t++) {
     const input = ct.randomEdges({ mode }, rand);
     E(input);
     const back = ct.parseEdges({ edges: ct.edgesText(input.edges), seats: String(input.seats ?? '') }, input);
     ok(back.input && back.input.n === input.n, 'edges: random input parses back');
   }
   ok(ct.edgesModel(ct.EDGES.fuel.input).at(-1).answer === '7', 'edges: LeetCode 2477 example is 7');
+  ok(ct.edgesModel(ct.EDGES.reroot.input).at(-1).answer === '[8, 12, 6, 10, 10, 10]', 'edges: LeetCode 834 example');
 }
 
 // ---------------------------------------------------------------- min / max queue, 1438, lazy heaps, 2294
@@ -1087,6 +1089,21 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(biw.BIT_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(biw.randomBitWalk({ mode }, rand));
   const a = (k) => biw.bitWalk(biw.BIT_WALK[k].input).at(-1).out;
   ok(a('pow2') === 'true' && a('single2') === 3 && a('sum') === 12 && same(a('single3'), [3, 5]) && a('rangeand') === 4 && a('arrayend') === 6, 'bitWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- contribution problems (ContribWalkViz)
+{
+  const kinds = ['start', 'add', 'skip', 'take', 'done'];
+  const run = (input) => {
+    const steps = cww.contribWalk(input);
+    common(`contribWalk ${JSON.stringify(input)}`, steps, cww.contribWalkCode(input.mode), kinds);
+    ok(same(steps.at(-1).out, cww.contribWalkAnswer(input)), `contribWalk ${JSON.stringify(input)}: answer`);
+    ok(same(cww.parseContribWalk(cww.contribWalkValues(input), input).input, input), `contribWalk ${input.mode}: values parse back`);
+  };
+  Object.values(cww.CONTRIB_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(cww.CONTRIB_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(cww.randomContribWalk({ mode }, rand));
+  const a = (k) => cww.contribWalk(cww.CONTRIB_WALK[k].input).at(-1).out;
+  ok(a('wizards') === 44 && same(a('groups'), [5, 0, 3, 4, 0]) && a('maxk') === 6 && a('pairings') === 13 && a('vowels') === 6, 'contribWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

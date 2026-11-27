@@ -421,10 +421,11 @@ function EdgeStage({ step: f, input, width }) {
             <circle cx={px(v)} cy={py(v)} r={16} />
             <text x={px(v)} y={py(v) + 4} textAnchor="middle">{v}</text>
             {f.size[v] > 0 && <text x={px(v) + 20} y={py(v) - 12} className={styles.sizeLabel}>{f.size[v]}</text>}
+            {f.ans && f.ans[v] !== null && <text x={px(v)} y={py(v) + 31} textAnchor="middle" className={styles.edgeLabel}>{`Σ ${f.ans[v]}`}</text>}
           </g>
         ))}
       </svg>
-      <p className={styles.note}>small numbers = subtree sizes found so far{input.mode === 'fuel' ? ` · ${input.seats} seat${input.seats === 1 ? '' : 's'} per car` : ''}</p>
+      <p className={styles.note}>small numbers = subtree sizes found so far{input.mode === 'fuel' ? ` · ${input.seats} seat${input.seats === 1 ? '' : 's'} per car` : ''}{input.mode === 'reroot' ? ' · Σ under a node = its sum of distances' : ''}</p>
       <Parts label="per edge" parts={f.parts} kind={f.kind} />
     </div>
   );
@@ -435,9 +436,9 @@ const edgeSpec = {
   examples: EDGES,
   simulate: edgesModel,
   code: (input) => edgesCode(input.mode),
-  kinds: { start: ['Start', 'neutral'], edge: ['Edge', 'accent'], done: ['Answer', 'success'] },
+  kinds: { start: ['Start', 'neutral'], edge: ['Edge', 'accent'], root: ['Root', 'note'], move: ['Reroot', 'accent'], done: ['Answer', 'success'] },
   describe: (input) => `edges = ${edgesText(input.edges)}${input.mode === 'fuel' ? `, seats = ${input.seats}` : ''}`,
-  rule: (input) => (input.mode === 'fuel' ? 'road above v costs ⌈size(v) / seats⌉' : 'edge above v adds size(v) × (n − size(v))'),
+  rule: (input) => (input.mode === 'fuel' ? 'road above v costs ⌈size(v) / seats⌉' : input.mode === 'reroot' ? 'ans[0] = Σ sizes; ans[c] = ans[p] − size(c) + (n − size(c))' : 'edge above v adds size(v) × (n − size(v))'),
   stats: (f) => [['total', String(f.total)]],
   legend: () => [[<Key shape="box" tone="success">v</Key>, 'the subtree below the edge'], [<Key shape="box" tone="warn">—</Key>, 'the edge counted'], [<Key shape="box" tone="accent">v</Key>, 'the rest of the tree']],
   fields: (input) => [{ name: 'edges', label: 'edges', placeholder: '0-1, 0-2, 2-3' }, ...(input.mode === 'fuel' ? [{ name: 'seats', label: 'seats', placeholder: '2', short: true }] : [])],

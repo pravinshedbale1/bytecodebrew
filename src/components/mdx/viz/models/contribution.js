@@ -582,9 +582,17 @@ export function randomWindow(input, rand = Math.random) {
 export const EDGES = {
   pairs: { label: 'Sum of distances over all pairs', input: { mode: 'pairs', n: 6, edges: [[0, 1], [0, 2], [2, 3], [2, 4], [2, 5]] } },
   fuel: { label: 'Fuel to reach the capital (2477)', input: { mode: 'fuel', n: 7, edges: [[0, 1], [0, 4], [0, 5], [1, 3], [3, 2], [5, 6]], seats: 2 } },
+  reroot: { label: 'Sum of distances from every node (834)', input: { mode: 'reroot', n: 6, edges: [[0, 1], [0, 2], [2, 3], [2, 4], [2, 5]] } },
 };
 
-export const edgesCode = (mode) => [
+export const edgesCode = (mode) => (mode === 'reroot' ? [
+  ['dfs', 'int size(int v, int parent) {           // nodes in v\'s subtree'],
+  ['kids', '    int s = 1;  for (int c : adj[v]) if (c != parent) s += size(c, v);'],
+  ['add', '    if (v != 0) ans[0] += s;      // everyone below v is 1 edge further from 0 through this edge'],
+  ['ret', '    return s;'],
+  ['end', '}'],
+  ['move', 'ans[c] = ans[p] − size[c] + (n − size[c]);   // c\'s subtree is 1 closer, the rest 1 further'],
+] : [
   ['dfs', 'int size(int v, int parent) {           // nodes in v\'s subtree'],
   ['kids', '    int s = 1;  for (int c : adj[v]) if (c != parent) s += size(c, v);'],
   mode === 'fuel'
@@ -592,7 +600,7 @@ export const edgesCode = (mode) => [
     : ['add', '    if (v != 0) total += (long) s * (n - s);       // pairs whose path uses edge v — parent'],
   ['ret', '    return s;'],
   ['end', '}'],
-];
+]);
 
 /** Parent array, children and a post-order of a tree rooted at 0. */
 export function rootTree(n, edges) {
@@ -618,6 +626,7 @@ export function edgesAnswer({ mode, n, edges, seats }) {
   for (const [u, v] of edges) { adj[u].push(v); adj[v].push(u); }
   const dist = (s) => { const d = Array(n).fill(-1); d[s] = 0; const qq = [s]; while (qq.length) { const v = qq.shift(); for (const c of adj[v]) if (d[c] < 0) { d[c] = d[v] + 1; qq.push(c); } } return d; };
   if (mode === 'pairs') { let t = 0; for (let i = 0; i < n; i++) { const d = dist(i); for (let j = i + 1; j < n; j++) t += d[j]; } return t; }
+  if (mode === 'reroot') return `[${Array.from({ length: n }, (_, i) => dist(i).reduce((a, b) => a + b, 0)).join(', ')}]`;
   // fuel, simulated: representatives move up level by level, merging into cars at each city
   let t = 0;
   const people = Array(n).fill(1);
@@ -627,6 +636,7 @@ export function edgesAnswer({ mode, n, edges, seats }) {
 }
 
 export function edgesModel(input) {
+  if (input.mode === 'reroot') return rerootModel(input);
   const { mode, n, edges, seats } = input;
   const { parent, order, kids, depth } = rootTree(n, edges);
   const size = Array(n).fill(0);
@@ -669,6 +679,39 @@ export function edgesModel(input) {
   return steps;
 }
 
+/** 834: the sum of distances from node 0 by edge contributions, then rerooted to every node. */
+function rerootModel(input) {
+  const { n, edges } = input;
+  const { parent, order, kids, depth } = rootTree(n, edges);
+  const size = Array(n).fill(0);
+  const ans = Array(n).fill(null);
+  const steps = [];
+  const parts = [];
+  let total = 0;
+  const push = (x) => steps.push({ mode: 'reroot', size: [...size], total, parts: [...parts], ans: [...ans], ...x });
+  push({ kind: 'start', v: null, lines: ['dfs'], title: `Sum of distances from every one of the ${n} nodes`, text: `A BFS from each node is O(n²). Do two cheap passes instead. First, node 0's answer: through the edge above v, every node in v's subtree is one step further from 0, so ans[0] = the sum of all subtree sizes. Then move the root one edge at a time: going from p to its child c brings c's size(c) nodes one step closer and pushes the other n − size(c) one step further.`, calc: [`${n} nodes`] });
+  for (const v of order) {
+    size[v] = 1 + kids[v].reduce((a, c) => a + size[c], 0);
+    if (v === 0) continue;
+    total += size[v]; parts.push(size[v]);
+    push({ kind: 'edge', v, p: parent[v], s: size[v], c: size[v], lines: ['kids', 'add', 'ret'], title: `Edge ${parent[v]} — ${v}: ${size[v]} node${size[v] === 1 ? '' : 's'} below`, text: `The ${size[v]} shaded node${size[v] === 1 ? '' : 's'} reach 0 through this edge, so it adds 1 to each of their distances from 0: ${size[v]} in total.`, calc: [`ans[0] += ${size[v]}`, `ans[0] = ${total}`] });
+  }
+  ans[0] = total;
+  push({ kind: 'root', v: null, lines: ['end'], title: `ans[0] = ${total}`, text: `Every edge has been counted once for node 0: the sum of the subtree sizes is ${total}, the same as adding up the depths.`, calc: [`${parts.join(' + ')} = ${total}`] });
+  const pre = [];
+  const walk = (v) => { pre.push(v); kids[v].forEach(walk); };
+  walk(0);
+  for (const c of pre.slice(1)) {
+    const p = parent[c], s = size[c];
+    ans[c] = ans[p] - s + (n - s);
+    push({ kind: 'move', v: c, p, s, c: `−${s} +${n - s}`, lines: ['move'], title: `ans[${c}] = ${ans[p]} − ${s} + ${n - s} = ${ans[c]}`, text: `Move the root from ${p} to ${c}. The ${s} shaded node${s === 1 ? '' : 's'} in ${c}'s subtree are each one step closer; the other ${n - s} are each one step further.`, calc: [`ans[${c}] = ${ans[c]}`] });
+  }
+  const out = `[${ans.join(', ')}]`;
+  push({ kind: 'done', v: null, lines: [], answer: out, title: `answer = ${out}`, text: 'Two DFS passes, O(n). Each answer was derived from its parent\'s in O(1), with no BFS from any node.', calc: [out] });
+  steps.forEach((st) => { st.parent = parent; st.depth = depth; st.kids = kids; });
+  return steps;
+}
+
 export function parseEdges(values, input) {
   const pairs = String(values.edges ?? '').match(/\d+\s*[-–]\s*\d+/g) ?? [];
   const edges = pairs.map((t) => t.split(/[-–]/).map((x) => Number(x.trim())));
@@ -681,14 +724,14 @@ export function parseEdges(values, input) {
     if (s.error) return s;
     return { input: { mode: 'fuel', n, edges, seats: s.v } };
   }
-  return { input: { mode: 'pairs', n, edges } };
+  return { input: { mode: input.mode === 'reroot' ? 'reroot' : 'pairs', n, edges } };
 }
 
 export function randomEdges(input, rand = Math.random) {
   const g = rng(rand);
   const n = g.int(3, 9);
   const edges = Array.from({ length: n - 1 }, (_, k) => [g.int(0, k), k + 1]);
-  return input.mode === 'fuel' ? { mode: 'fuel', n, edges, seats: g.int(1, 4) } : { mode: 'pairs', n, edges };
+  return input.mode === 'fuel' ? { mode: 'fuel', n, edges, seats: g.int(1, 4) } : { mode: input.mode === 'reroot' ? 'reroot' : 'pairs', n, edges };
 }
 
 export const edgesText = (edges) => edges.map(([u, v]) => `${u}-${v}`).join(', ');
