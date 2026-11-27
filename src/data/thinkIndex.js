@@ -413,6 +413,14 @@ export const THINK_INDEX = {
   "design-most-recently-used-queue": { title: "Design Most Recently Used Queue", level: 'Medium', lesson: 'design-data-structures', free: false },
   "design-ride-sharing-system": { title: "Design Ride Sharing System", level: 'Medium', lesson: 'design-data-structures', free: false },
   "design-bounded-blocking-queue": { title: "Design Bounded Blocking Queue", level: 'Medium', lesson: 'design-data-structures', free: false },
+  "transpose-matrix": { title: "Transpose Matrix", level: 'Easy', lesson: 'matrix-simulation', free: true },
+  "spiral-matrix": { title: "Spiral Matrix", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "spiral-matrix-ii": { title: "Spiral Matrix II", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "rotate-image": { title: "Rotate Image", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "set-matrix-zeroes": { title: "Set Matrix Zeroes", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "game-of-life": { title: "Game of Life", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "search-a-2d-matrix-ii": { title: "Search a 2D Matrix II", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "diagonal-traverse": { title: "Diagonal Traverse", level: 'Medium', lesson: 'matrix-simulation', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -452,7 +460,7 @@ export const PATTERN_ORDER = [
   ['bit-manipulation', "Bit manipulation", 12, 12],
   ['contribution-technique', "Contribution (what each element adds)", 17, 17],
   ['design-data-structures', "Design a data structure", 31, 31],
-  ['matrix-simulation', "Matrix simulation", 0, 8],
+  ['matrix-simulation', "Matrix simulation", 8, 8],
   ['math-for-interviews', "Math", 0, 15],
   ['string-matching', "String matching (KMP, rolling hash)", 0, 8],
   ['range-queries', "Range queries (Fenwick / segment tree)", 0, 7],

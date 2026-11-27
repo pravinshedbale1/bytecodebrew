@@ -3,6 +3,7 @@
  * <MathViz>, <KmpViz>, <FenwickViz> and <SegTreeViz>). Pure, so scripts/viz-check.mjs can test them.
  */
 import { list, parseInt1, parseInts, plural, rng } from './util.js';
+import { MATRIX_MORE, matrixMore, matrixMoreAnswer, matrixMoreCode, matrixMoreParse, matrixMoreRandom } from './matrixMore.js';
 
 // ---------------------------------------------------------------- LRU cache
 
@@ -99,15 +100,18 @@ export const MATRIX = {
   thin: { label: 'Spiral: 3 × 1', input: { mode: 'spiral', m: [[1], [2], [3]] } },
   rotate: { label: 'Rotate 90°', input: { mode: 'rotate', m: seq(4, 4) } },
   zeroes: { label: 'Set matrix zeroes', input: { mode: 'zeroes', m: [[0, 1, 2, 0], [3, 4, 5, 2], [1, 3, 1, 5]] } },
+  ...MATRIX_MORE,
 };
 
-export const matrixCode = (mode) => ({
+export const matrixCode = (mode) => matrixMoreCode(mode) ?? ({
   spiral: [['top', 'walk the top row, left → right;  top++'], ['right', 'walk the right column, down;  right--'], ['bottom', 'if (top <= bottom) walk the bottom row, right → left;  bottom--'], ['left', 'if (left <= right) walk the left column, up;  left++']],
   rotate: [['transpose', 'for (r) for (c = r + 1) swap(m[r][c], m[c][r]);   // transpose: rows become columns'], ['reverse', 'for (row) reverse(row);                        // mirror left ↔ right']],
   zeroes: [['flags', 'remember: does row 0 / column 0 contain a 0?'], ['mark', 'inner zero at (r, c) → m[r][0] = 0, m[0][c] = 0      // markers'], ['apply', 'inner cell: zero if its row or column marker is 0'], ['last', 'finally clear row 0 / column 0 if their flags say so']],
 })[mode];
 
-export function matrixAnswer({ mode, m }) {
+export function matrixAnswer(input) {
+  if (MATRIX_MORE[input.mode] || input.mode === 'search2d' || input.mode === 'diagonal') return matrixMoreAnswer(input);
+  const { mode, m } = input;
   const R = m.length, C = m[0].length;
   if (mode === 'spiral') {
     const seen = m.map((r) => r.map(() => false)), out = [];
@@ -127,7 +131,9 @@ export function matrixAnswer({ mode, m }) {
   return m.map((row, r) => row.map((v, c) => (rows.has(r) || cols.has(c) ? 0 : v)));
 }
 
-export function matrix({ mode, m: m0 }) {
+export function matrix(input) {
+  if (matrixMoreCode(input.mode)) return matrixMore(input);
+  const { mode, m: m0 } = input;
   const R = m0.length, C = m0[0].length;
   const steps = [];
   if (mode === 'spiral') {
@@ -202,6 +208,7 @@ export function matrix({ mode, m: m0 }) {
 }
 
 export function parseMatrix(values, input) {
+  if (matrixMoreCode(input.mode)) return matrixMoreParse(values, input);
   const rows = String(values.m ?? '').split(/[;\n|]/).map((r) => r.trim()).filter(Boolean);
   const m = [];
   for (const r of rows) { const p = parseInts(r, { min: -9, max: 99, minLen: 1, maxLen: 6, name: 'each row' }); if (p.error) return p; m.push(p.arr); }
@@ -211,6 +218,7 @@ export function parseMatrix(values, input) {
 }
 
 export function randomMatrix(input, rand = Math.random) {
+  if (matrixMoreCode(input.mode)) return matrixMoreRandom(input, rand);
   const g = rng(rand);
   if (input.mode === 'rotate') { const n = g.int(3, 4); return { mode: 'rotate', m: seq(n, n) }; }
   if (input.mode === 'spiral') return { mode: 'spiral', m: seq(g.int(1, 5), g.int(1, 5)) };

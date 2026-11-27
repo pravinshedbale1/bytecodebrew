@@ -1,6 +1,8 @@
 import { StepViz, Key } from './StepViz';
 import { ArrayStrip, Chips, Float, RowLabel, Stage, pitchFor } from './prims';
 import styles from './AdvancedViz.module.css';
+import { GridCells } from './GraphsViz';
+import { matrixMoreRule } from './models/matrixMore';
 import {
   FENWICK, KMP, LRU, MATH, MATRIX, SEGTREE, fenwick, fenwickCode, kmp, kmpAlign, kmpCode, lowbit, lru, lruCode, lruOpsText, math, mathCode,
   matrix, matrixCode, parseFenwick, parseKmp, parseLru, parseMath, parseMatrix, parseSeg, randomFenwick, randomKmp, randomLru, randomMath,
@@ -82,7 +84,24 @@ export function LruViz(props) {
 
 // ---------------------------------------------------------------- matrices
 
+function MatrixGrids({ f, width }) {
+  return (
+    <div className={styles.wrap}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center' }}>
+        {f.grids.map((g) => (
+          <div key={g.label} style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
+            <small style={{ color: 'var(--color-text-muted)' }}>{g.label}</small>
+            <GridCells grid={g.cells} width={Math.min(width, f.grids.length > 1 ? 260 : 360)} min={28} cell={(r, c) => ({ cls: g.cells[r][c].c.filter(Boolean), label: g.cells[r][c].l, badge: g.cells[r][c].b })} />
+          </div>
+        ))}
+      </div>
+      {(f.chips ?? []).map((c) => <Chips key={c.label} label={c.label} chips={c.chips} empty="empty" />)}
+    </div>
+  );
+}
+
 function MatrixStage({ step: f, width }) {
+  if (f.grids) return <MatrixGrids f={f} width={width} />;
   const R = f.cells.length, C = f.cells[0].length;
   const size = Math.max(36, Math.min(54, Math.floor((Math.min(width, 440) - 20) / C)));
   const W = C * size, H = R * size;
@@ -129,18 +148,26 @@ function MatrixStage({ step: f, width }) {
   );
 }
 
+const MATRIX_LEGEND = {
+  transpose: [['accent', '4', 'the row being copied'], ['note', '1', 'already copied']],
+  spiral2: [['accent', '5', 'written in this step'], ['note', '1', 'written earlier']],
+  life: [['warn', '1', 'alive'], ['neutral', '1→0', 'alive now, dies'], ['accent', '0→1', 'dead now, born']],
+  search2d: [['neutral', '7', 'faded: ruled out'], ['note', '11', 'compared']],
+  diagonal: [['accent', '5', 'this diagonal'], ['note', '2', 'small number = reading order']],
+};
+
 const matrixSpec = {
   title: 'Matrix tricks without the index bugs',
   examples: MATRIX,
   simulate: matrix,
   code: (input) => matrixCode(input.mode),
-  kinds: { start: ['Start', 'neutral'], top: ['Top', 'accent'], right: ['Right', 'accent'], bottom: ['Bottom', 'accent'], left: ['Left', 'accent'], skip: ['Skip', 'warn'], transpose: ['Transpose', 'accent'], reverse: ['Reverse', 'note'], flags: ['Flags', 'neutral'], mark: ['Mark', 'warn'], apply: ['Clear', 'accent'], last: ['Markers', 'note'], done: ['Done', 'success'] },
-  describe: (input) => `${input.m.length} × ${input.m[0].length} matrix`,
-  rule: (input) => ({ spiral: 'Walk a side, then move that boundary in.', rotate: 'Transpose, then reverse each row = 90° clockwise.', zeroes: 'Row 0 and column 0 store the markers; clear them last.' })[input.mode],
+  kinds: { fill: ['Fill', 'accent'], found: ['Found', 'success'], up: ['Up', 'accent'], down: ['Down', 'accent'], start: ['Start', 'neutral'], top: ['Top', 'accent'], right: ['Right', 'accent'], bottom: ['Bottom', 'accent'], left: ['Left', 'accent'], skip: ['Skip', 'warn'], transpose: ['Transpose', 'accent'], reverse: ['Reverse', 'note'], flags: ['Flags', 'neutral'], mark: ['Mark', 'warn'], apply: ['Clear', 'accent'], last: ['Markers', 'note'], done: ['Done', 'success'] },
+  describe: (input) => (input.mode === 'spiral2' ? `n = ${input.n}` : `${input.m.length} × ${input.m[0].length} matrix${input.mode === 'search2d' ? `, target ${input.target}` : ''}`),
+  rule: (input) => ({ spiral: 'Walk a side, then move that boundary in.', rotate: 'Transpose, then reverse each row = 90° clockwise.', zeroes: 'Row 0 and column 0 store the markers; clear them last.', ...matrixMoreRule })[input.mode],
   stats: () => [],
-  legend: (f, input) => (input.mode === 'spiral' ? [[<Key shape="box" tone="accent">5</Key>, 'read in this step'], [<Key shape="box">2</Key>, 'small number = reading order']] : input.mode === 'rotate' ? [[<Key shape="box" tone="warn">6</Key>, 'moved in this step']] : [[<Key shape="box" tone="warn">0</Key>, 'touched in this step'], [<Key shape="box" tone="note">3</Key>, 'row 0 / column 0: markers']]),
-  fields: () => [{ name: 'm', label: 'matrix rows, separated by ;', placeholder: 'e.g. 1 2 3; 4 5 6; 7 8 9' }],
-  values: (input) => ({ m: input.m.map((r) => r.join(' ')).join('; ') }),
+  legend: (f, input) => (MATRIX_LEGEND[input.mode] ? MATRIX_LEGEND[input.mode].map(([t, v, x]) => [<Key shape="box" tone={t}>{v}</Key>, x]) : input.mode === 'spiral' ? [[<Key shape="box" tone="accent">5</Key>, 'read in this step'], [<Key shape="box">2</Key>, 'small number = reading order']] : input.mode === 'rotate' ? [[<Key shape="box" tone="warn">6</Key>, 'moved in this step']] : [[<Key shape="box" tone="warn">0</Key>, 'touched in this step'], [<Key shape="box" tone="note">3</Key>, 'row 0 / column 0: markers']]),
+  fields: (input) => (input.mode === 'spiral2' ? [{ name: 'n', label: 'n (1 to 6)', placeholder: '4', short: true }] : [{ name: 'm', label: input.mode === 'life' ? 'board rows (0/1), separated by ;' : 'matrix rows, separated by ;', placeholder: input.mode === 'life' ? 'e.g. 010; 001; 111' : 'e.g. 1 2 3; 4 5 6; 7 8 9' }, ...(input.mode === 'search2d' ? [{ name: 'target', label: 'target', placeholder: '5', short: true }] : [])]),
+  values: (input) => (input.mode === 'spiral2' ? { n: String(input.n) } : { m: input.m.map((r) => r.join(' ')).join('; '), ...(input.mode === 'search2d' ? { target: String(input.target) } : {}) }),
   parse: parseMatrix,
   random: (input) => randomMatrix(input),
   hint: (input) => (input.mode === 'rotate' ? 'A square matrix, up to 6 × 6.' : 'Up to 6 rows of up to 6 numbers.'),

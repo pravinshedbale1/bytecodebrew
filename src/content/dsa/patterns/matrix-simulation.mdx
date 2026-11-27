@@ -71,6 +71,10 @@ static int[][] generateMatrix(int n) {
 }
 ```
 
+The same boundaries fill a matrix in spiral order (Spiral Matrix II): write the next number instead of reading.
+
+<MatrixViz examples={['spiral2']} />
+
 ## Rotate 90° in place: transpose, then reverse each row
 
 Tracing where each cell goes during a four-way swap is error-prone. Two simple passes do the same job:
@@ -166,6 +170,8 @@ static void gameOfLife(int[][] b) {
 
 The same idea works with bits: keep "now" in bit 0, write "next" into bit 1, and shift right at the end. "Store the next state where the current state can still be read" is the general lesson for any simultaneous-update simulation.
 
+<MatrixViz examples={['life']} />
+
 ## Sorted rows and columns: the staircase search
 
 > Every row and every column is sorted. Is `target` in the matrix?
@@ -194,6 +200,15 @@ O(R + C). The bottom-left corner works too. The top-left doesn't, because both m
 - **Transposing the whole matrix** with `c` starting at 0, which swaps every pair twice.
 
 </Callout>
+
+<MatrixViz examples={['search2d', 'search2dNo']} />
+
+## Two more index patterns: transpose and diagonals
+
+- **Transpose (867):** `t[c][r] = m[r][c]`. For a non-square matrix the shape flips, so build a new array; only a square matrix can be transposed in place.
+- **Diagonal traverse (498):** every cell on an anti-diagonal has the same `r + c`. Loop `d` from 0 to `rows + cols − 2`, read the cells with `r + c = d`, and alternate the direction by parity.
+
+<MatrixViz examples={['transpose', 'diagonal', 'diagonalWide']} />
 
 ## Practice ladder
 

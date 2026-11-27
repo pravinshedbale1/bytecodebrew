@@ -39,6 +39,7 @@ export const COMPLETE = [
   'bit-manipulation',
   'contribution-technique',
   'design-data-structures',
+  'matrix-simulation',
 ];
 
 /**
@@ -87,4 +88,5 @@ export const POLISHED = [
   'bit-manipulation',
   'contribution-technique',
   'design-data-structures',
+  'matrix-simulation',
 ];

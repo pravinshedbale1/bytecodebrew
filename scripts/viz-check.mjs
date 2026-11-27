@@ -1325,13 +1325,18 @@ function common(name, steps, code, kinds) {
 
   const runM = (input) => {
     const steps = adv.matrix(input);
-    common(`matrix ${JSON.stringify(input)}`, steps, adv.matrixCode(input.mode), ['start', 'top', 'right', 'bottom', 'left', 'skip', 'transpose', 'reverse', 'flags', 'mark', 'apply', 'last', 'done']);
+    common(`matrix ${JSON.stringify(input)}`, steps, adv.matrixCode(input.mode), ['start', 'top', 'right', 'bottom', 'left', 'skip', 'transpose', 'reverse', 'flags', 'mark', 'apply', 'last', 'done', 'fill', 'found', 'up', 'down']);
     const want = adv.matrixAnswer(input);
-    const got = input.mode === 'spiral' ? steps.at(-1).out : steps.at(-1).cells.map((row) => row.map((c) => c.v));
+    const got = steps.at(-1).grids || input.mode === 'spiral' ? steps.at(-1).out : steps.at(-1).cells.map((row) => row.map((c) => c.v));
     ok(same(got, want), `matrix ${JSON.stringify(input)}: result`);
   };
   for (const e of Object.values(adv.MATRIX)) runM(e.input);
-  for (const mode of ['spiral', 'rotate', 'zeroes']) for (let t = 0; t < 1000; t++) runM(adv.randomMatrix({ mode }, rand));
+  for (const mode of ['spiral', 'rotate', 'zeroes', 'transpose', 'spiral2', 'life', 'search2d', 'diagonal']) for (let t = 0; t < 1000; t++) {
+    const input = adv.randomMatrix({ mode }, rand);
+    runM(input);
+    if (adv.MATRIX[mode] && !['spiral', 'rotate', 'zeroes'].includes(mode)) ok(same(adv.parseMatrix(mode === 'spiral2' ? { n: String(input.n) } : { m: input.m.map((r) => r.join(' ')).join('; '), target: String(input.target) }, input).input, input), `matrix ${mode}: random input parses back`);
+  }
+  ok(same(adv.matrix(adv.MATRIX.life.input).at(-1).out, [[0, 0, 0], [1, 0, 1], [0, 1, 1], [0, 1, 0]]) && adv.matrix(adv.MATRIX.search2d.input).at(-1).out === true && adv.matrix(adv.MATRIX.search2dNo.input).at(-1).out === false && same(adv.matrix(adv.MATRIX.diagonal.input).at(-1).out, [1, 2, 4, 7, 5, 3, 6, 8, 9]), 'matrix: LeetCode examples');
 
   const runMa = (input) => {
     const steps = adv.math(input);
