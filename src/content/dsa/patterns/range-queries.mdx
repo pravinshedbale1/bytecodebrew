@@ -93,6 +93,10 @@ static List<Integer> countSmaller(int[] nums) {
 
 That's O(n log n). The total of these counts is the number of **inversions** (pairs `i < j` with `a[i] > a[j]`).
 
+Step through it: counts by value fill in from the right, and each element asks for the prefix below it. The same counts price each insertion in Create Sorted Array through Instructions: min(values below, values above).
+
+<RangeWalkViz examples={['smaller', 'smallerDup', 'instructions']} />
+
 ### The other classic: count inversions during merge sort
 
 When merging two sorted halves, if a right-half element `a[j]` goes out before a left-half element `a[i]`, then `a[j]` is smaller than **every** remaining left element. That adds `mid − i + 1` inversions in one step:
@@ -117,6 +121,10 @@ private static long sortCount(int[] a, int[] tmp, int lo, int hi) {
 ```
 
 Both approaches are O(n log n). The reference solution checks them against each other and against an O(n²) count. The merge-sort version needs no extra structure; the Fenwick version extends more easily, for example to "count pairs where a[i] > 2·a[j]".
+
+The same merge-sort counting handles Reverse Pairs (count left > 2 · right before each merge) and Count of Range Sum (merge sort the prefix sums; for each left value, count right values inside a window).
+
+<RangeWalkViz examples={['reverse', 'rangesum']} />
 
 ## Segment tree
 
@@ -201,6 +209,10 @@ To "add v to every element of l..r", updating each leaf would be O(n). Instead, 
 - **Reaching for these structures when prefix sums suffice** (no updates): that's more code and more bugs for nothing.
 
 </Callout>
+
+When every update is known before any query, no tree is needed: a **difference array** records +v where a range starts and −v after it ends, and one running sum recovers every value. Car Pooling is exactly that, with a capacity check during the sweep. Falling Squares needs range "assign max" updates interleaved with range max queries, which is where a lazy segment tree earns its keep; for 1000 squares, comparing each square with every earlier one is enough.
+
+<RangeWalkViz examples={['carpool', 'carpoolNo', 'squares']} />
 
 ## Practice ladder
 

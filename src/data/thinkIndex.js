@@ -444,6 +444,13 @@ export const THINK_INDEX = {
   "longest-happy-prefix": { title: "Longest Happy Prefix", level: 'Hard', lesson: 'string-matching', free: false },
   "shortest-palindrome": { title: "Shortest Palindrome", level: 'Hard', lesson: 'string-matching', free: false },
   "longest-duplicate-substring": { title: "Longest Duplicate Substring", level: 'Hard', lesson: 'string-matching', free: false },
+  "car-pooling": { title: "Car Pooling", level: 'Medium', lesson: 'range-queries', free: false },
+  "range-sum-query-mutable": { title: "Range Sum Query - Mutable", level: 'Medium', lesson: 'range-queries', free: false },
+  "count-of-smaller-numbers-after-self": { title: "Count of Smaller Numbers After Self", level: 'Hard', lesson: 'range-queries', free: false },
+  "reverse-pairs": { title: "Reverse Pairs", level: 'Hard', lesson: 'range-queries', free: false },
+  "count-of-range-sum": { title: "Count of Range Sum", level: 'Hard', lesson: 'range-queries', free: false },
+  "create-sorted-array-through-instructions": { title: "Create Sorted Array through Instructions", level: 'Hard', lesson: 'range-queries', free: false },
+  "falling-squares": { title: "Falling Squares", level: 'Hard', lesson: 'range-queries', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -486,5 +493,5 @@ export const PATTERN_ORDER = [
   ['matrix-simulation', "Matrix simulation", 8, 8],
   ['math-for-interviews', "Math", 15, 15],
   ['string-matching', "String matching (KMP, rolling hash)", 8, 8],
-  ['range-queries', "Range queries (Fenwick / segment tree)", 0, 7],
+  ['range-queries', "Range queries (Fenwick / segment tree)", 7, 7],
 ];

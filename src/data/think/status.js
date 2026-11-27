@@ -42,6 +42,7 @@ export const COMPLETE = [
   'matrix-simulation',
   'math-for-interviews',
   'string-matching',
+  'range-queries',
 ];
 
 /**
@@ -93,4 +94,5 @@ export const POLISHED = [
   'matrix-simulation',
   'math-for-interviews',
   'string-matching',
+  'range-queries',
 ];

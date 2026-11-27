@@ -48,6 +48,7 @@ import * as cww from '../src/components/mdx/viz/models/contribWalk.js';
 import * as dsw from '../src/components/mdx/viz/models/designWalk.js';
 import * as mtw from '../src/components/mdx/viz/models/mathWalk.js';
 import * as stw from '../src/components/mdx/viz/models/strWalk.js';
+import * as rgw from '../src/components/mdx/viz/models/rangeWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1152,6 +1153,21 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(stw.STR_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(stw.randomStrWalk({ mode }, rand));
   const o = (k) => stw.strWalk(stw.STR_WALK[k].input).at(-1).out;
   ok(o('shortpal') === 'dcbabcd' && o('repmatch') === 3 && o('repmatchNo') === -1 && o('lds') === 'ana' && o('ldsNone') === '', 'strWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- range problems (RangeWalkViz)
+{
+  const kinds = ['start', 'move', 'add', 'take', 'skip', 'found', 'fail', 'done'];
+  const run = (input) => {
+    const steps = rgw.rangeWalk(input);
+    common(`rangeWalk ${JSON.stringify(input)}`, steps, rgw.rangeWalkCode(input.mode), kinds);
+    ok(same(steps.at(-1).out, rgw.rangeWalkAnswer(input)), `rangeWalk ${JSON.stringify(input)}: answer`);
+    ok(same(rgw.parseRangeWalk(rgw.rangeWalkValues(input), input).input, input), `rangeWalk ${input.mode}: values parse back`);
+  };
+  Object.values(rgw.RANGE_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(rgw.RANGE_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(rgw.randomRangeWalk({ mode }, rand));
+  const o = (k) => rgw.rangeWalk(rgw.RANGE_WALK[k].input).at(-1).out;
+  ok(same(o('smaller'), [2, 1, 1, 0]) && o('reverse') === 3 && o('rangesum') === 3 && same(o('squares'), [2, 5, 5]) && o('instructions') === 4 && o('carpoolNo') === false, 'rangeWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)
