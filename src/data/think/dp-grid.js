@@ -1,7 +1,5 @@
 /** Practice thinking walkthroughs: dp-grid (format: src/data/think/index.js). */
 
-const notGraph = { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' };
-
 export default {
   'unique-paths': {
     aha: 'Every path into a cell arrives from above or from the left, never both, so the counts add: paths(r, c) = paths(r − 1, c) + paths(r, c − 1). The top row and left column have exactly one path each. (It is also a single binomial coefficient: choose which of the m + n − 2 moves go down.)',
@@ -17,7 +15,12 @@ export default {
       { phrase: 'It can only move right or down, one cell at a time', says: 'A cell is entered from above or from the left: two terms to add.' },
       { phrase: 'The answer is at most `2 × 10^9`', says: 'Fits in an int; no big numbers.' },
     ],
-    budget: { from: 'm, n ≤ 100', rows: [['walk every path', 'C(198, 99) ≈ 10⁵⁸', 'bad', 'impossible'], ['fill the grid', '10⁴', 'ok', 'tiny']], aim: 'O(m · n)', note: 'One row of memory suffices: dp[c] += dp[c − 1].' },
+    budget: {
+      from: 'm, n ≤ 100',
+      rows: [['walk every path', 'C(198, 99) ≈ 10⁵⁸', 'bad', 'impossible'], ['fill the grid', '10⁴', 'ok', 'tiny']],
+      aim: 'O(m · n)',
+      note: 'One row of memory suffices: dp[c] += dp[c − 1].',
+    },
     observe: [
       {
         title: 'Edges have one way',
@@ -27,21 +30,31 @@ export default {
       {
         title: 'Above + left',
         text: 'The centre of a 3 × 3 grid: 1 way from above + 1 from the left = 2. The bottom-right: 3 + 3 = 6.',
-        sketch: { kind: 'array', rows: [{ items: [1, 1, 1] }, { items: [1, 2, 3] }, { items: [1, 3, 6], marks: { 2: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 1, 1] }, { items: [1, 2, 3] }, { items: [1, 3, 6], marks: { '2': 'hit' } }] },
       },
       {
         title: 'Or count the moves',
         text: 'Every path makes m − 1 downs and n − 1 rights in some order: C(m + n − 2, m − 1).',
-        sketch: { kind: 'array', rows: [{ items: ['3 × 3', 'C(4, 2)', '= 6'], marks: { 2: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: ['3 × 3', 'C(4, 2)', '= 6'], marks: { '2': 'hit' } }] },
       },
     ],
-    brute: { idea: 'Recursively try right and down from every cell and count arrivals at the corner.', cost: 'O(2^(m+n))', waste: 'The number of ways from each cell is recomputed by every path that passes through it.' },
+    brute: {
+      idea: 'Recursively try right and down from every cell and count arrivals at the corner.',
+      cost: 'O(2^(m+n))',
+      waste: 'The number of ways from each cell is recomputed by every path that passes through it.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'paths[r][c] = paths[r−1][c] + paths[r][c−1], edges 1. O(m · n) time, O(n) memory.',
-      not: [{ id: 'math-for-interviews', why: 'The binomial coefficient gives it in O(min(m, n)) too.' }, notGraph],
+      not: [
+        { id: 'math-for-interviews', why: 'The binomial coefficient gives it in O(min(m, n)) too.' },
+        { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: '4 × 5', input: { mode: 'paths', R: 4, C: 5 } }, { label: '3 × 3', input: { mode: 'paths', R: 3, C: 3 } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [{ label: '4 × 5', input: { mode: 'paths', R: 4, C: 5 } }, { label: '3 × 3', input: { mode: 'paths', R: 3, C: 3 } }],
+    },
     edges: ['One row: m = 1 → 1.', '3 × 7 → 28.', '3 × 2 → 3.'],
   },
 
@@ -59,32 +72,51 @@ export default {
       { phrase: 'the robot cannot enter obstacles', says: 'An obstacle cell gets 0 paths.' },
       { phrase: 'If the start or end is blocked, the answer is `0`', says: 'Handle it naturally: a blocked start gives 0 everywhere.' },
     ],
-    budget: { from: 'grid ≤ 100 × 100', n: 1e4, aim: 'O(m · n)', note: 'One row of memory suffices.' },
+    budget: { from: 'grid ≤ 100 × 100', n: 10000, aim: 'O(m · n)', note: 'One row of memory suffices.' },
     observe: [
       {
         title: 'Blocked = 0',
         text: '3 × 3 with the centre blocked: only the two border routes remain, so the corner gets 1 + 1 = 2.',
-        sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 1, 0], [0, 0, 0]], marks: { '1,1': 'wall', '2,2': 'hit' }, labels: { '0,0': '1', '0,1': '1', '0,2': '1', '1,0': '1', '1,1': '0', '1,2': '1', '2,0': '1', '2,1': '1', '2,2': '2' } },
+        sketch: {
+          kind: 'grid',
+          grid: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+          marks: { '1,1': 'wall', '2,2': 'hit' },
+          labels: { '0,0': '1', '0,1': '1', '0,2': '1', '1,0': '1', '1,1': '0', '1,2': '1', '2,0': '1', '2,1': '1', '2,2': '2' },
+        },
       },
       {
         title: 'Edges can be cut off',
         text: 'An obstacle in the top row makes every cell to its right 0: the only way there was straight along the row.',
-        sketch: { kind: 'array', rows: [{ label: 'row 0', items: [1, '■', 0, 0], marks: { 1: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'row 0', items: [1, '■', 0, 0], marks: { '1': 'bad' } }] },
       },
       {
         title: 'Start blocked',
-        text: 'If (0, 0) is an obstacle, it gets 0 and so does everything else.',
-        sketch: { kind: 'array', rows: [{ items: ['start ■', '→ 0'], marks: { 1: 'bad' } }] },
+        text: 'If (0, 0) is an obstacle, it gets 0 paths. Every other cell adds up counts that all trace back to (0, 0), so they all stay 0: no special case is needed beyond starting from dp[0][0] = 0.',
+        sketch: { kind: 'array', rows: [{ items: ['start ■', '→ 0'], marks: { '1': 'bad' } }] },
       },
     ],
-    brute: { idea: 'Walk every right/down path that avoids obstacles and count those reaching the corner.', cost: 'O(2^(m+n))', waste: 'Each cell\'s count is recomputed by every path through it.' },
+    brute: {
+      idea: 'Walk every right/down path that avoids obstacles and count those reaching the corner.',
+      cost: 'O(2^(m+n))',
+      waste: 'A cell\'s path count is recomputed by every route that passes through it, though it is just the sum of the counts above and to the left.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'dp[r][c] = 0 on obstacles, else dp[r−1][c] + dp[r][c−1]; dp[0][0] = 1 if open. O(m · n).',
-      not: [{ id: 'graph-traversal', why: 'BFS can test reachability, not count paths.' }, notGraph],
+      not: [
+        { id: 'graph-traversal', why: 'BFS can test reachability, not count paths.' },
+        { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'with obstacles', input: { mode: 'obstacles', grid: [[0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]] } }, { label: 'centre blocked', input: { mode: 'obstacles', grid: [[0, 0, 0], [0, 1, 0], [0, 0, 0]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'with obstacles', input: { mode: 'obstacles', grid: [[0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0]] } },
+        { label: 'centre blocked', input: { mode: 'obstacles', grid: [[0, 0, 0], [0, 1, 0], [0, 0, 0]] } },
+      ],
+    },
     edges: ['Start blocked: [[1]] → 0.', 'Centre blocked 3 × 3 → 2.', 'One open cell: [[0]] → 1.'],
+    not: { '0': [] },
   },
 
   'minimum-path-sum': {
@@ -98,38 +130,54 @@ export default {
       watch: 'Watch each cell take the cheaper of its two ways in.',
     },
     read: [
-      { phrase: 'moving only right or down', says: 'Two ways into each cell.' },
+      {
+        phrase: 'moving only right or down',
+        says: 'Only right or down: every cell is entered from above or from the left, so its best cost depends on just those two.',
+      },
       { phrase: 'the smallest possible sum of the numbers along it', says: 'Min over the two, plus this cell.' },
     ],
-    budget: { from: 'grid ≤ 200 × 200', n: 4e4, aim: 'O(m · n)', note: 'The grid itself can hold the DP.' },
+    budget: { from: 'grid ≤ 200 × 200', n: 40000, aim: 'O(m · n)', note: 'The grid itself can hold the DP.' },
     observe: [
       {
         title: 'Cheaper of two',
         text: 'Cell (1, 1) holding 5: from above costs 4, from the left 2; take 2, add 5: 7.',
-        sketch: { kind: 'array', rows: [{ items: [1, 4, 5] }, { items: [2, 7, 6] }, { items: [6, 8, 7], marks: { 2: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 4, 5] }, { items: [2, 7, 6] }, { items: [6, 8, 7], marks: { '2': 'hit' } }] },
       },
       {
         title: 'The best path',
-        text: '1 → 3 → 1 → 1 → 1 = 7, going round the 5.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, 1, 1, 1], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit', 4: 'hit' } }] },
+        text: 'Following the cheaper arrival at each cell back from the corner gives 1 → 3 → 1 → 1 → 1 = 7: the path goes around the 5 rather than through it.',
+        sketch: { kind: 'array', rows: [{ items: [1, 3, 1, 1, 1], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit', '4': 'hit' } }] },
       },
       {
         title: 'Edges have one way in',
-        text: 'Top row: only from the left. Left column: only from above.',
+        text: 'Cells in the top row can only be entered from the left, and cells in the left column only from above, so they are running sums; every other cell takes the cheaper of two.',
         sketch: { kind: 'array', rows: [{ label: 'row 0', items: [1, 4, 5] }] },
       },
     ],
-    brute: { idea: 'Try every right/down path and keep the cheapest sum.', cost: 'O(2^(m+n))', waste: 'The cheapest way to reach each cell is recomputed by every path through it.' },
+    brute: {
+      idea: 'Try every right/down path and keep the cheapest sum.',
+      cost: 'O(2^(m+n))',
+      waste: 'The cheapest way to reach each cell is recomputed by every path through it.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'cost[r][c] = grid[r][c] + min(cost[r−1][c], cost[r][c−1]). O(m · n), can reuse the grid.',
-      not: [{ id: 'greedy', why: 'Always stepping to the cheaper neighbour walks into the 5 later.' }, notGraph],
+      not: [
+        { id: 'greedy', why: 'Always stepping to the cheaper neighbour walks into the 5 later.' },
+        { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: '[[1,3,1],[1,5,1],[4,2,1]]', input: { mode: 'minsum', grid: [[1, 3, 1], [1, 5, 1], [4, 2, 1]] } }, { label: '[[1,2,3],[4,5,6]]', input: { mode: 'minsum', grid: [[1, 2, 3], [4, 5, 6]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: '[[1,3,1],[1,5,1],[4,2,1]]', input: { mode: 'minsum', grid: [[1, 3, 1], [1, 5, 1], [4, 2, 1]] } },
+        { label: '[[1,2,3],[4,5,6]]', input: { mode: 'minsum', grid: [[1, 2, 3], [4, 5, 6]] } },
+      ],
+    },
     edges: ['One cell: [[7]] → 7.', 'One row: [[1, 2, 3]] → 6.', '[[1,2,3],[4,5,6]] → 12.'],
   },
 
-  triangle: {
+  'triangle': {
     aha: 'From the top, the best route depends on choices further down. Turn it around: in the bottom row the best path from a cell is just its value; each cell above adds the cheaper of the two cells below it. After filling upwards, the top cell holds the answer.',
     asks: {
       read: 'From index i, which positions in the next row can you reach?',
@@ -143,31 +191,49 @@ export default {
       { phrase: 'from index `i` you can go to index `i` or `i + 1`', says: 'Two children per cell: below and below-right.' },
       { phrase: 'Return the minimum sum of a path from the top to the bottom row', says: 'Minimise; any bottom cell can end the path.' },
     ],
-    budget: { from: 'rows ≤ 200', rows: [['every path', '2¹⁹⁹', 'bad', 'impossible'], ['bottom-up DP', '200² / 2', 'ok', 'tiny']], aim: 'O(n²)', note: 'One row of memory (the row below) suffices.' },
+    budget: {
+      from: 'rows ≤ 200',
+      rows: [['every path', '2¹⁹⁹', 'bad', 'impossible'], ['bottom-up DP', '200² / 2', 'ok', 'tiny']],
+      aim: 'O(n²)',
+      note: 'One row of memory (the row below) suffices.',
+    },
     observe: [
       {
         title: 'Start at the bottom',
-        text: 'Bottom row [4, 1, 8, 3]: the best from each cell is itself.',
+        text: 'Work from the bottom up. On the bottom row [4, 1, 8, 3] the path ends right there, so the best path from each cell is just its own value.',
         sketch: { kind: 'array', rows: [{ items: [4, 1, 8, 3] }] },
       },
       {
         title: 'Each cell takes the cheaper child',
         text: 'Row [6, 5, 7]: 6 + min(4, 1) = 7, 5 + min(1, 8) = 6, 7 + min(8, 3) = 10.',
-        sketch: { kind: 'array', rows: [{ items: [7, 6, 10], marks: { 1: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: [7, 6, 10], marks: { '1': 'hit' } }] },
       },
       {
         title: 'The top is the answer',
-        text: 'Next row: 3 + 6 = 9, 4 + 6 = 10. Top: 2 + 9 = 11 (2 → 3 → 5 → 1).',
-        sketch: { kind: 'array', rows: [{ items: [2, 3, 5, 1, '= 11'], marks: { 4: 'hit' } }] },
+        text: 'Row [3, 4]: 3 + min(7, 6) = 9 and 4 + min(6, 10) = 10. Top: 2 + min(9, 10) = 11, the path 2 → 3 → 5 → 1. No need to choose a bottom cell: the top cell already holds the best.',
+        sketch: { kind: 'array', rows: [{ items: [2, 3, 5, 1, '= 11'], marks: { '4': 'hit' } }] },
       },
     ],
-    brute: { idea: 'Recursively try both children from every cell and keep the cheapest total.', cost: 'O(2ⁿ)', waste: 'Each cell is reached from two parents, so its best path is recomputed exponentially often.' },
+    brute: {
+      idea: 'Recursively try both children from every cell and keep the cheapest total.',
+      cost: 'O(2ⁿ)',
+      waste: 'Each cell is reached from two parents, so its best path is recomputed exponentially often.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'Bottom-up: best[r][i] = tri[r][i] + min(best[r+1][i], best[r+1][i+1]); answer best[0][0]. O(n²), O(n) memory.',
-      not: [{ id: 'greedy', why: 'Taking the cheaper child at each step can lead into an expensive row later.' }, { id: 'tree-dfs', why: 'It looks like a tree, but children are shared, so plain DFS repeats work.' }],
+      not: [
+        { id: 'greedy', why: 'Taking the cheaper child at each step can lead into an expensive row later.' },
+        { id: 'tree-dfs', why: 'It looks like a tree, but children are shared, so plain DFS repeats work.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'the example', input: { mode: 'triangle', tri: [[2], [3, 4], [6, 5, 7], [4, 1, 8, 3]] } }, { label: '[[-10]]', input: { mode: 'triangle', tri: [[-10]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'the example', input: { mode: 'triangle', tri: [[2], [3, 4], [6, 5, 7], [4, 1, 8, 3]] } },
+        { label: '[[-10]]', input: { mode: 'triangle', tri: [[-10]] } },
+      ],
+    },
     edges: ['One row: [[-10]] → −10.', 'Two rows: [[1],[2,3]] → 3.', 'The example → 11.'],
   },
 
@@ -185,32 +251,51 @@ export default {
       { phrase: 'directly below, below-left or below-right', says: 'Three parents per cell (two at the edges).' },
       { phrase: 'starts at any cell of the first row', says: 'First row = the values; answer = min of the last row.' },
     ],
-    budget: { from: 'n ≤ 100', rows: [['every path', '100 · 3⁹⁹', 'bad', 'impossible'], ['row DP', '3 · 10⁴', 'ok', 'tiny']], aim: 'O(n²)', note: 'Two rows of memory.' },
+    budget: {
+      from: 'n ≤ 100',
+      rows: [['every path', '100 · 3⁹⁹', 'bad', 'impossible'], ['row DP', '3 · 10⁴', 'ok', 'tiny']],
+      aim: 'O(n²)',
+      note: 'Two rows of memory.',
+    },
     observe: [
       {
         title: 'Three ways in',
-        text: '(1, 1) holding 5 can be reached from 2, 1 or 3 above: 5 + 1 = 6.',
-        sketch: { kind: 'array', rows: [{ items: [2, 1, 3] }, { items: [7, 6, 5], marks: { 1: 'hit' } }] },
+        text: 'In [[2, 1, 3], [6, 5, 4], [7, 8, 9]], cell (1, 1) holding 5 can be entered from 2, 1 or 3 above it. The cheapest is 1, so its best falling sum is 5 + 1 = 6.',
+        sketch: { kind: 'array', rows: [{ items: [2, 1, 3] }, { items: [7, 6, 5], marks: { '1': 'hit' } }] },
       },
       {
         title: 'Edges have two',
-        text: '(1, 0) only from above (2) or above-right (1): 6 + 1 = 7.',
+        text: 'Cell (1, 0) holding 6 is on the edge: only from above (2) or above-right (1). 6 + 1 = 7. Edge cells just have one fewer option.',
         sketch: { kind: 'array', rows: [{ items: ['(1,0): 6 + min(2, 1)', '= 7'] }] },
       },
       {
         title: 'Minimum of the last row',
         text: 'Row 1 is [7, 6, 5]. Last row: 7 + min(7, 6) = 13, 8 + min(7, 6, 5) = 13, 9 + min(6, 5) = 14. The answer is the smallest: 13.',
-        sketch: { kind: 'array', rows: [{ items: [13, 13, 14], marks: { 0: 'hit', 1: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: [13, 13, 14], marks: { '0': 'hit', '1': 'hit' } }] },
       },
     ],
-    brute: { idea: 'From every start cell, recursively try all three moves down and keep the cheapest sum.', cost: 'O(n · 3ⁿ)', waste: 'Each cell is reached from up to three parents, so its best is recomputed exponentially often.' },
+    brute: {
+      idea: 'From every start cell, recursively try all three moves down and keep the cheapest sum.',
+      cost: 'O(n · 3ⁿ)',
+      waste: 'Each cell is reached from up to three parents, so its best is recomputed exponentially often.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'dp[r][c] = m[r][c] + min(dp[r−1][c−1], dp[r−1][c], dp[r−1][c+1]); answer min(dp[last]). O(n²).',
-      not: [{ id: 'greedy', why: 'The cheapest cell now may lead into expensive rows.' }, notGraph],
+      not: [
+        { id: 'greedy', why: 'The cheapest cell now may lead into expensive rows.' },
+        { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: '[[2,1,3],[6,5,4],[7,8,9]]', input: { mode: 'falling', m: [[2, 1, 3], [6, 5, 4], [7, 8, 9]] } }, { label: '[[-19,57],[-40,-5]]', input: { mode: 'falling', m: [[-19, 57], [-40, -5]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: '[[2,1,3],[6,5,4],[7,8,9]]', input: { mode: 'falling', m: [[2, 1, 3], [6, 5, 4], [7, 8, 9]] } },
+        { label: '[[-19,57],[-40,-5]]', input: { mode: 'falling', m: [[-19, 57], [-40, -5]] } },
+      ],
+    },
     edges: ['One cell: [[7]] → 7.', 'Negatives: [[-19,57],[-40,-5]] → −59.', 'The example → 13.'],
+    not: { '1': [] },
   },
 
   'maximal-square': {
@@ -227,32 +312,51 @@ export default {
       { phrase: 'Return the area of the largest square that contains only `\'1\'`s', says: 'Track the largest side; return side².' },
       { phrase: 'every cell inside it must be `\'1\'`', says: 'A 0 makes side 0 at that cell.' },
     ],
-    budget: { from: 'grid ≤ 300 × 300', rows: [['every square, checked cell by cell', 'n⁵ ≈ 10¹²', 'bad', 'too slow'], ['side DP', '9 × 10⁴', 'ok', 'fits']], aim: 'O(m · n)', note: 'One row of memory plus the diagonal value.' },
+    budget: {
+      from: 'grid ≤ 300 × 300',
+      rows: [['every square, checked cell by cell', 'n⁵ ≈ 10¹²', 'bad', 'too slow'], ['side DP', '9 × 10⁴', 'ok', 'fits']],
+      aim: 'O(m · n)',
+      note: 'One row of memory plus the diagonal value.',
+    },
     observe: [
       {
         title: 'Limited by the weakest neighbour',
-        text: 'If top and left allow side 2 but top-left only 1, the 3 × 3 square would need a full 2 × 2 at top-left: it isn\'t there. Side 1 + 1 = 2.',
-        sketch: { kind: 'array', rows: [{ items: ['top 2', 'left 2', 'diag 1', '→ 2'], marks: { 2: 'bad', 3: 'hit' } }] },
+        text: 'Say the cells above and to the left each end a 2 × 2 square of ones, but the top-left cell only ends a 1 × 1. A 3 × 3 square ending here would need a 2 × 2 ending at the top-left, which isn\'t there. So side = 1 + min(2, 2, 1) = 2: the weakest neighbour decides.',
+        sketch: { kind: 'array', rows: [{ items: ['top 2', 'left 2', 'diag 1', '→ 2'], marks: { '2': 'bad', '3': 'hit' } }] },
       },
       {
         title: 'Zeros reset',
-        text: 'A cell holding 0 has side 0: no square of ones ends there.',
+        text: 'A cell holding 0 can\'t be the corner of any square of ones, so its side is 0. That 0 then limits its right, lower and lower-right neighbours too.',
         sketch: { kind: 'array', rows: [{ items: ['0', '→ 0'] }] },
       },
       {
         title: 'Area at the end',
-        text: 'The largest side in the example is 2, so the area is 4.',
-        sketch: { kind: 'array', rows: [{ items: ['side 2', 'area 4'], marks: { 1: 'hit' } }] },
+        text: 'In the example the largest side found anywhere is 2, so the answer is the area 2 × 2 = 4. Track the largest side while filling; square it at the end.',
+        sketch: { kind: 'array', rows: [{ items: ['side 2', 'area 4'], marks: { '1': 'hit' } }] },
       },
     ],
-    brute: { idea: 'For every cell as a top-left corner, grow the square while all its cells are 1.', cost: 'O((m·n)²)', waste: 'Each square is rechecked cell by cell; neighbours already know how large a square they support.' },
+    brute: {
+      idea: 'For every cell as a top-left corner, grow the square while all its cells are 1.',
+      cost: 'O((m·n)²)',
+      waste: 'Each square is rechecked cell by cell; neighbours already know how large a square they support.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'side[r][c] = m ? 1 + min(top, left, top-left) : 0; answer max side². O(m · n).',
-      not: [{ id: 'monotonic-stack', why: 'Maximal rectangle uses histograms and a stack; squares only need this DP.' }, { id: 'prefix-sums', why: '2-D prefix sums can test a square in O(1) but still try every size.' }],
+      not: [
+        { id: 'monotonic-stack', why: 'Maximal rectangle uses histograms and a stack; squares only need this DP.' },
+        { id: 'prefix-sums', why: '2-D prefix sums can test a square in O(1) but still try every size.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'the example', input: { mode: 'square', grid: [[1, 0, 1, 0, 0], [1, 0, 1, 1, 1], [1, 1, 1, 1, 1], [1, 0, 0, 1, 0]] } }, { label: '[[0,1],[1,0]]', input: { mode: 'square', grid: [[0, 1], [1, 0]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'the example', input: { mode: 'square', grid: [[1, 0, 1, 0, 0], [1, 0, 1, 1, 1], [1, 1, 1, 1, 1], [1, 0, 0, 1, 0]] } },
+        { label: '[[0,1],[1,0]]', input: { mode: 'square', grid: [[0, 1], [1, 0]] } },
+      ],
+    },
     edges: ['No ones: [["0"]] → 0.', 'Diagonal ones: [["0","1"],["1","0"]] → 1.', 'All ones 3 × 3 → 9.'],
+    why: 'side[r][c] = 0 for a \'0\', else 1 + min(top, left, top-left): the largest square of ones whose bottom-right corner is here. The answer is (largest side)². O(m · n) time, O(n) space with one row.',
   },
 
   'count-square-submatrices-with-all-ones': {
@@ -267,34 +371,51 @@ export default {
     },
     read: [
       { phrase: 'Count every square submatrix, of any size', says: 'Sizes 1 up to the largest, at every position.' },
-      { phrase: 'the number of squares whose bottom-right corner is a given cell equals the side of the largest one there', says: 'count += side[r][c].' },
+      {
+        phrase: 'the number of squares whose bottom-right corner is a given cell equals the side of the largest one there',
+        says: 'If the largest square ending at a cell has side k, then squares of side 1, 2, …, k all end there: that cell contributes exactly k. So count += side[r][c].',
+      },
     ],
-    budget: { from: 'grid ≤ 300 × 300', n: 9e4, aim: 'O(m · n)', note: 'The matrix itself can store the sides.' },
+    budget: { from: 'grid ≤ 300 × 300', n: 90000, aim: 'O(m · n)', note: 'The matrix itself can store the sides.' },
     observe: [
       {
         title: 'Side k means k squares',
         text: 'A 2 × 2 block of ones: the bottom-right cell has side 2, so a 1 × 1 and a 2 × 2 end there.',
-        sketch: { kind: 'array', rows: [{ label: 'sides', items: [1, 1] }, { items: [1, 2], marks: { 1: 'hit' } }], caption: '1 + 1 + 1 + 2 = 5 squares' },
+        sketch: { kind: 'array', rows: [{ label: 'sides', items: [1, 1] }, { items: [1, 2], marks: { '1': 'hit' } }], caption: '1 + 1 + 1 + 2 = 5 squares' },
       },
       {
         title: 'The example',
         text: '[[0,1,1,1],[1,1,1,1],[0,1,1,1]]: sides add up to 15 (10 of size 1, 4 of size 2, 1 of size 3).',
-        sketch: { kind: 'array', rows: [{ items: ['size 1: 10', 'size 2: 4', 'size 3: 1', '= 15'], marks: { 3: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: ['size 1: 10', 'size 2: 4', 'size 3: 1', '= 15'], marks: { '3': 'hit' } }] },
       },
       {
         title: 'Same recurrence',
-        text: 'Only the final step differs from Maximal Square: sum instead of max.',
+        text: 'The recurrence is exactly Maximal Square\'s: side = 1 + min(top, left, top-left). Only the last step changes: add up all the sides instead of taking the largest.',
         sketch: { kind: 'array', rows: [{ items: ['max → largest square', 'sum → all squares'] }] },
       },
     ],
-    brute: { idea: 'For every top-left corner and every size, check that the whole square is ones.', cost: 'O(m · n · min(m,n)³)', waste: 'Each square is checked cell by cell; the side DP counts them all at once.' },
+    brute: {
+      idea: 'For every top-left corner and every size, check that the whole square is ones.',
+      cost: 'O(m · n · min(m,n)³)',
+      waste: 'Each square is checked cell by cell; the side DP counts them all at once.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'side[r][c] = m ? 1 + min(top, left, top-left) : 0; answer = Σ side. O(m · n).',
-      not: [{ id: 'prefix-sums', why: '2-D prefix sums test a square in O(1) but must still try every size and position.' }, { id: 'contribution-technique', why: 'Counting by bottom-right corner is a contribution count, but the DP supplies each corner\'s count.' }],
+      not: [
+        { id: 'prefix-sums', why: '2-D prefix sums test a square in O(1) but must still try every size and position.' },
+        { id: 'contribution-technique', why: 'Counting by bottom-right corner is a contribution count, but the DP supplies each corner\'s count.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'the example', input: { mode: 'countsq', grid: [[0, 1, 1, 1], [1, 1, 1, 1], [0, 1, 1, 1]] } }, { label: '[[1,0,1],[1,1,0],[1,1,0]]', input: { mode: 'countsq', grid: [[1, 0, 1], [1, 1, 0], [1, 1, 0]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'the example', input: { mode: 'countsq', grid: [[0, 1, 1, 1], [1, 1, 1, 1], [0, 1, 1, 1]] } },
+        { label: '[[1,0,1],[1,1,0],[1,1,0]]', input: { mode: 'countsq', grid: [[1, 0, 1], [1, 1, 0], [1, 1, 0]] } },
+      ],
+    },
     edges: ['All zeros → 0.', '2 × 2 of ones → 5.', '[[1,0,1],[1,1,0],[1,1,0]] → 7.'],
+    why: 'side[r][c] = 0 for a 0, else 1 + min(top, left, top-left). Each cell contributes side[r][c] squares (sides 1 … side), so the answer is the sum of all sides. O(m · n).',
   },
 
   'dungeon-game': {
@@ -311,12 +432,17 @@ export default {
       { phrase: 'If his health ever drops to 0 or below, he dies', says: 'Health must stay at least 1 after every room.' },
       { phrase: 'Return the minimum health he needs at the start', says: 'A requirement, computed backwards.' },
     ],
-    budget: { from: 'grid ≤ 200 × 200', rows: [['every route', 'C(398, 199)', 'bad', 'impossible'], ['backwards DP', '4 × 10⁴', 'ok', 'tiny']], aim: 'O(m · n)', note: 'Binary search on the start health + forward check also works, slower.' },
+    budget: {
+      from: 'grid ≤ 200 × 200',
+      rows: [['every route', 'C(398, 199)', 'bad', 'impossible'], ['backwards DP', '4 × 10⁴', 'ok', 'tiny']],
+      aim: 'O(m · n)',
+      note: 'Binary search on the start health + forward check also works, slower.',
+    },
     observe: [
       {
         title: 'Forwards is misleading',
         text: 'A route that gains lots of health early might still need more at the start than a route with a smaller worst moment. What matters is the lowest point along the route, which forwards DP can\'t combine.',
-        sketch: { kind: 'array', rows: [{ items: ['best so far', '≠', 'safest'], marks: { 1: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ items: ['best so far', '≠', 'safest'], marks: { '1': 'bad' } }] },
       },
       {
         title: 'Backwards, needs are exact',
@@ -326,16 +452,33 @@ export default {
       {
         title: 'The example needs 7',
         text: 'The best route is right, right, down, down: −2, −3, +3, +1, −5. Starting with 7 he never drops below 1.',
-        sketch: { kind: 'array', rows: [{ items: [-2, -3, 3, 1, -5], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit', 4: 'hit' } }], caption: 'start with 7' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [-2, -3, 3, 1, -5], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit', '4': 'hit' } }],
+          caption: 'start with 7',
+        },
       },
     ],
-    brute: { idea: 'Try every right/down route, compute the health it needs (one more than its deepest dip), and take the smallest.', cost: 'O(2^(m+n) · (m+n))', waste: 'The requirement from each room to the end is recomputed by every route through it.' },
+    brute: {
+      idea: 'Try every right/down route, compute the health it needs (one more than its deepest dip), and take the smallest.',
+      cost: 'O(2^(m+n) · (m+n))',
+      waste: 'The requirement from each room to the end is recomputed by every route through it.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'Backwards DP: need[r][c] = max(1, min(need[r][c+1], need[r+1][c]) − d[r][c]); answer need[0][0]. O(m · n).',
-      not: [{ id: 'binary-search-on-answer', why: 'Binary search on the start health with a forward check works, slower.' }, notGraph],
+      not: [
+        { id: 'binary-search-on-answer', why: 'Binary search on the start health with a forward check works, slower.' },
+        { id: 'shortest-paths', why: 'Moves only go right or down, so cells have a fixed fill order: no Dijkstra needed.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'the example', input: { mode: 'dungeon', d: [[-2, -3, 3], [-5, -10, 1], [10, 30, -5]] } }, { label: '[[0]]', input: { mode: 'dungeon', d: [[0]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'the example', input: { mode: 'dungeon', d: [[-2, -3, 3], [-5, -10, 1], [10, 30, -5]] } },
+        { label: '[[0]]', input: { mode: 'dungeon', d: [[0]] } },
+      ],
+    },
     edges: ['One harmless room: [[0]] → 1.', 'One healing room: [[5]] → 1.', 'One deadly room: [[-5]] → 6.'],
   },
 
@@ -354,12 +497,17 @@ export default {
       { phrase: 'a cell\'s cherry can be picked only once', says: 'If both walkers are on one cell, count it once.' },
       { phrase: 'or `0` if there is no valid trip', says: 'Unreachable states stay −∞; return max(0, …).' },
     ],
-    budget: { from: 'n ≤ 50', rows: [['every pair of paths', 'C(98, 49)²', 'bad', 'impossible'], ['(step, r1, r2) DP', '2n · n² ≈ 2.5 × 10⁵', 'ok', 'fits']], aim: 'O(n³)', note: 'Keep only the previous step\'s table.' },
+    budget: {
+      from: 'n ≤ 50',
+      rows: [['every pair of paths', 'C(98, 49)²', 'bad', 'impossible'], ['(step, r1, r2) DP', '2n · n² ≈ 2.5 × 10⁵', 'ok', 'fits']],
+      aim: 'O(n³)',
+      note: 'Keep only the previous step\'s table.',
+    },
     observe: [
       {
         title: 'Greedy trips fail',
-        text: 'The best single trip can grab cherries in a way that splits the rest awkwardly; two best-in-turn trips can collect less than two coordinated ones.',
-        sketch: { kind: 'array', rows: [{ items: ['best trip 1', '+ best trip 2', '≠ best pair'], marks: { 2: 'bad' } }] },
+        text: 'Taking the best single trip first, then the best trip on what is left, can fail: the first trip may pick a route that leaves the remaining cherries on both sides of it, so the second trip can reach only one side. Two trips planned together can cover both.',
+        sketch: { kind: 'array', rows: [{ items: ['best trip 1', '+ best trip 2', '≠ best pair'], marks: { '2': 'bad' } }] },
       },
       {
         title: 'Move together',
@@ -372,14 +520,28 @@ export default {
         sketch: { kind: 'array', rows: [{ items: ['↓↓', '↓→', '→↓', '→→'] }] },
       },
     ],
-    brute: { idea: 'Enumerate every valid path there and every valid path back, and count the union of cherries for each pair.', cost: 'O(C(2n, n)² · n)', waste: 'Pairs of paths share prefixes; the DP merges all pairs reaching the same two cells at the same step.' },
+    brute: {
+      idea: 'Enumerate every valid path there and every valid path back, and count the union of cherries for each pair.',
+      cost: 'O(C(2n, n)² · n)',
+      waste: 'Pairs of paths share prefixes; the DP merges all pairs reaching the same two cells at the same step.',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'dp[k][r1][r2] = cherries at both cells (once if equal) + max of four predecessors; thorns −∞; answer max(0, dp[2n−2][n−1][n−1]). O(n³).',
-      not: [{ id: 'greedy', why: 'Two greedy trips can miss cherries one coordinated pair would get.' }, { id: 'backtracking', why: 'Enumerating path pairs is exponential.' }],
+      not: [
+        { id: 'greedy', why: 'Two greedy trips can miss cherries one coordinated pair would get.' },
+        { id: 'backtracking', why: 'Enumerating path pairs is exponential.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: 'the example', input: { mode: 'cherry', g: [[0, 1, -1], [1, 0, -1], [1, 1, 1]] } }, { label: 'blocked', input: { mode: 'cherry', g: [[1, 1, -1], [1, -1, 1], [-1, 1, 1]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: 'the example', input: { mode: 'cherry', g: [[0, 1, -1], [1, 0, -1], [1, 1, 1]] } },
+        { label: 'blocked', input: { mode: 'cherry', g: [[1, 1, -1], [1, -1, 1], [-1, 1, 1]] } },
+      ],
+    },
     edges: ['No valid trip: [[1,1,-1],[1,-1,1],[-1,1,1]] → 0.', 'One cell: [[1]] → 1.', 'The example → 5.'],
+    not: { '1': [] },
   },
 
   'longest-increasing-path-in-a-matrix': {
@@ -396,12 +558,17 @@ export default {
       { phrase: 'each step must go to a strictly larger value', says: 'No cycles: a DAG, so DP works.' },
       { phrase: 'left, right, up or down', says: 'Four neighbours; no fixed direction, so order the cells by value.' },
     ],
-    budget: { from: 'grid ≤ 200 × 200', rows: [['DFS without memo', 'exponential', 'bad', 'too slow'], ['memo / value order', '4 × 10⁴ · 4', 'ok', 'fits']], aim: 'O(m · n)', note: 'O(m · n log(m · n)) if you sort instead of DFS.' },
+    budget: {
+      from: 'grid ≤ 200 × 200',
+      rows: [['DFS without memo', 'exponential', 'bad', 'too slow'], ['memo / value order', '4 × 10⁴ · 4', 'ok', 'fits']],
+      aim: 'O(m · n)',
+      note: 'O(m · n log(m · n)) if you sort instead of DFS.',
+    },
     observe: [
       {
         title: 'The path',
-        text: '1 → 2 → 6 → 9 has length 4.',
-        sketch: { kind: 'array', rows: [{ items: [1, 2, 6, 9], marks: { 3: 'hit' } }] },
+        text: 'In [[9, 9, 4], [6, 6, 8], [2, 1, 1]], the longest path is 1 → 2 → 6 → 9 (length 4). Notice it can turn in any direction, so there is no fixed row-by-row fill order.',
+        sketch: { kind: 'array', rows: [{ items: [1, 2, 6, 9], marks: { '3': 'hit' } }] },
       },
       {
         title: 'Smaller neighbours first',
@@ -414,13 +581,26 @@ export default {
         sketch: { kind: 'array', rows: [{ items: ['a < b < c', '≠ back to a'] }] },
       },
     ],
-    brute: { idea: 'From every cell, DFS through all strictly increasing paths and keep the longest.', cost: 'O(4^(m·n))', waste: 'The longest path from a cell is recomputed every time a path reaches it; memoising it makes each cell O(1).' },
+    brute: {
+      idea: 'From every cell, DFS through all strictly increasing paths and keep the longest.',
+      cost: 'O(4^(m·n))',
+      waste: 'The longest path from a cell is recomputed every time a path reaches it; memoising it makes each cell O(1).',
+    },
     pattern: {
       pick: 'dp-grid',
       why: 'DP on a DAG: len = 1 + max len of a smaller neighbour, in increasing value order (or memoised DFS). O(m · n).',
-      not: [{ id: 'topological-sort', why: 'Kahn-style peeling from local minima also works: the number of layers is the answer.' }, { id: 'graph-traversal', why: 'Plain DFS without memo repeats work exponentially.' }],
+      not: [
+        { id: 'topological-sort', why: 'Kahn-style peeling from local minima also works: the number of layers is the answer.' },
+        { id: 'graph-traversal', why: 'Plain DFS without memo repeats work exponentially.' },
+      ],
     },
-    watch: { viz: 'DpGridViz', inputs: [{ label: '[[9,9,4],[6,6,8],[2,1,1]]', input: { mode: 'lip', m: [[9, 9, 4], [6, 6, 8], [2, 1, 1]] } }, { label: '[[3,4,5],[3,2,6],[2,2,1]]', input: { mode: 'lip', m: [[3, 4, 5], [3, 2, 6], [2, 2, 1]] } }] },
+    watch: {
+      viz: 'DpGridViz',
+      inputs: [
+        { label: '[[9,9,4],[6,6,8],[2,1,1]]', input: { mode: 'lip', m: [[9, 9, 4], [6, 6, 8], [2, 1, 1]] } },
+        { label: '[[3,4,5],[3,2,6],[2,2,1]]', input: { mode: 'lip', m: [[3, 4, 5], [3, 2, 6], [2, 2, 1]] } },
+      ],
+    },
     edges: ['One cell: [[1]] → 1.', 'All equal: [[7,7],[7,7]] → 1.', '[[3,4,5],[3,2,6],[2,2,1]] → 4.'],
   },
 };
