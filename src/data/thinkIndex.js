@@ -421,6 +421,21 @@ export const THINK_INDEX = {
   "game-of-life": { title: "Game of Life", level: 'Medium', lesson: 'matrix-simulation', free: false },
   "search-a-2d-matrix-ii": { title: "Search a 2D Matrix II", level: 'Medium', lesson: 'matrix-simulation', free: false },
   "diagonal-traverse": { title: "Diagonal Traverse", level: 'Medium', lesson: 'matrix-simulation', free: false },
+  "find-greatest-common-divisor-of-array": { title: "Find Greatest Common Divisor of Array", level: 'Easy', lesson: 'math-for-interviews', free: true },
+  "palindrome-number": { title: "Palindrome Number", level: 'Easy', lesson: 'math-for-interviews', free: false },
+  "count-primes": { title: "Count Primes", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "powx-n": { title: "Pow(x, n)", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "reverse-integer": { title: "Reverse Integer", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "factorial-trailing-zeroes": { title: "Factorial Trailing Zeroes", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "count-good-numbers": { title: "Count Good Numbers", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "shuffle-an-array": { title: "Shuffle an Array", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "linked-list-random-node": { title: "Linked List Random Node", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "implement-rand10-using-rand7": { title: "Implement Rand10() Using Rand7()", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "plus-one": { title: "Plus One", level: 'Easy', lesson: 'math-for-interviews', free: false },
+  "roman-to-integer": { title: "Roman to Integer", level: 'Easy', lesson: 'math-for-interviews', free: false },
+  "excel-sheet-column-title": { title: "Excel Sheet Column Title", level: 'Easy', lesson: 'math-for-interviews', free: false },
+  "greatest-common-divisor-of-strings": { title: "Greatest Common Divisor of Strings", level: 'Easy', lesson: 'math-for-interviews', free: false },
+  "multiply-strings": { title: "Multiply Strings", level: 'Medium', lesson: 'math-for-interviews', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -461,7 +476,7 @@ export const PATTERN_ORDER = [
   ['contribution-technique', "Contribution (what each element adds)", 17, 17],
   ['design-data-structures', "Design a data structure", 31, 31],
   ['matrix-simulation', "Matrix simulation", 8, 8],
-  ['math-for-interviews', "Math", 0, 15],
+  ['math-for-interviews', "Math", 15, 15],
   ['string-matching', "String matching (KMP, rolling hash)", 0, 8],
   ['range-queries', "Range queries (Fenwick / segment tree)", 0, 7],
 ];

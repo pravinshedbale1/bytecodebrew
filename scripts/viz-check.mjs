@@ -46,6 +46,7 @@ import * as trw from '../src/components/mdx/viz/models/trieWalk.js';
 import * as biw from '../src/components/mdx/viz/models/bitWalk.js';
 import * as cww from '../src/components/mdx/viz/models/contribWalk.js';
 import * as dsw from '../src/components/mdx/viz/models/designWalk.js';
+import * as mtw from '../src/components/mdx/viz/models/mathWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1120,6 +1121,21 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(dsw.DESIGN_WALK).map((e) => e.input.mode))) for (let t = 0; t < 400; t++) run(dsw.randomDesignWalk({ mode }, rand));
   const o = (k) => dsw.designWalk(dsw.DESIGN_WALK[k].input).at(-1).out;
   ok(same(o('lfu'), [1, -1, 3, -1, 3, 4]) && same(o('freqstack'), [5, 7, 5, 4]) && same(o('exam'), [0, 9, 4, 2, 5]) && same(o('fmb'), [1, 3, 4, 2, -1]) && same(o('mru'), [3, 6, 2, 2]) && o('tickets') === 6 && o('lunch') === 3 && o('secret') === 5 && same(o('minstack'), [-3, 0, -2]), 'designWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- math problems (MathWalkViz)
+{
+  const kinds = ['start', 'move', 'add', 'take', 'skip', 'found', 'fail', 'done'];
+  const run = (input) => {
+    const steps = mtw.mathWalk(input);
+    common(`mathWalk ${JSON.stringify(input)}`, steps, mtw.mathWalkCode(input.mode), kinds);
+    ok(mtw.mathWalkCheck(input, steps.at(-1).out), `mathWalk ${JSON.stringify(input)}: answer`);
+    ok(same(mtw.parseMathWalk(mtw.mathWalkValues(input), input).input, input), `mathWalk ${input.mode}: values parse back`);
+  };
+  Object.values(mtw.MATH_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(mtw.MATH_WALK).map((e) => e.input.mode))) for (let t = 0; t < 400; t++) run(mtw.randomMathWalk({ mode }, rand));
+  const o = (k) => mtw.mathWalk(mtw.MATH_WALK[k].input).at(-1).out;
+  ok(o('roman') === 1994 && o('excel') === 'ZY' && o('multiply') === '56088' && o('good') === 400 && o('reverse') === -321 && o('reverseOverflow') === 0 && o('trailing') === 7, 'mathWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

@@ -16,7 +16,8 @@ import {
 
 const CARD = { success: 'yes', warn: 'no', accent: 'info', danger: 'bad' };
 
-function Parts({ parts, width, jump, seq }) {
+/** The parts renderer (piles, lanes, chips, strips, grids); also used by <MathWalkViz>. */
+export function Parts({ parts, width, jump, seq }) {
   const out = [];
   let row = [];
   const flush = () => { if (row.length) { out.push(<div key={`r${out.length}`} className={kit.sideRow}>{row}</div>); row = []; } };

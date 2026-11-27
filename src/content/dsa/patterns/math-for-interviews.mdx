@@ -170,6 +170,10 @@ static int reverse(int x) {
 
 The digit loop `d = x % 10; x /= 10` is the core of every digit problem: palindrome numbers, digit sums, happy numbers, adding numbers stored as digits. When a language-level shortcut is allowed, using a `long` and checking the range at the end is also fine. Say which you're doing.
 
+Step through it: the digit loop for reversing (with the overflow check before each push), and for a palindrome check that reverses only the second half.
+
+<MathWalkViz examples={['reverse', 'reverseOverflow', 'palindrome', 'palindromeOdd']} />
+
 **Trailing zeros of n!** Each trailing zero needs a factor of 10, which means a 2 and a 5. There are always more 2s than 5s, so count the 5s: multiples of 5 contribute one, multiples of 25 another, multiples of 125 another, and so on.
 
 ```java
@@ -179,6 +183,8 @@ static int trailingZeroes(int n) {
     return count;
 }
 ```
+
+<MathWalkViz examples={['trailing']} />
 
 ## Randomness
 
@@ -192,6 +198,10 @@ static void shuffle(int[] a, Random rnd) {
     }
 }
 ```
+
+The step-through runs the same algorithm from the left (swap `a[i]` with a random index in `i..n−1`): the shaded prefix is final after each swap.
+
+<MathWalkViz examples={['shuffle']} />
 
 **Reservoir sampling.** To pick one item uniformly from a stream of unknown length in O(1) memory, keep the k-th item with probability 1/k:
 
@@ -211,6 +221,10 @@ Why it's uniform: item i is chosen when it arrives (probability 1/i) and then su
 
 > 1/i · i/(i+1) · (i+1)/(i+2) · … · (n−1)/n = **1/n**.
 
+<MathWalkViz examples={['reservoir', 'rand10']} />
+
+The second example is **rand10 from rand7**: two rolls pick one of 49 equally likely cells, the first 40 map evenly onto 1..10, and the rest are rejected (roll again).
+
 **Probability basics** come up in follow-ups:
 
 - P(A and B) = P(A) · P(B) only when A and B are **independent**.
@@ -229,6 +243,17 @@ The reference solution tests both the shuffle and reservoir sampling for uniform
 - **Comparing doubles with `==`**: use a tolerance.
 
 </Callout>
+
+## More digit problems, step by step
+
+- **Plus one (66):** carry left while the digit is 9; all 9s grow by a digit.
+- **Roman to integer (13):** subtract a symbol that is smaller than its right neighbour.
+- **Excel column title (168):** base 26 with no zero digit: subtract 1, then `% 26` and `/ 26`.
+- **GCD of strings (1071):** `a + b == b + a` tells whether a common piece exists; its length is `gcd(len a, len b)`.
+- **Multiply strings (43):** `a[i] · b[j]` lands at positions `i + j` and `i + j + 1`.
+- **Count good numbers (1922):** independent choices multiply: `5^⌈n/2⌉ · 4^⌊n/2⌋`, with fast power mod 10⁹ + 7.
+
+<MathWalkViz examples={['plusone', 'plusoneAll', 'roman', 'excel', 'excelZ', 'gcdstr', 'gcdstrNo', 'multiply', 'good']} />
 
 ## Practice ladder
 
