@@ -103,6 +103,7 @@ const GreedyWalkViz = lazyViz(() => import('./viz/GreedyWalkViz'), 'GreedyWalkVi
 const TrieWalkViz = lazyViz(() => import('./viz/TrieWalkViz'), 'TrieWalkViz');
 const BitWalkViz = lazyViz(() => import('./viz/BitWalkViz'), 'BitWalkViz');
 const ContribWalkViz = lazyViz(() => import('./viz/ContribWalkViz'), 'ContribWalkViz');
+const DesignWalkViz = lazyViz(() => import('./viz/DesignWalkViz'), 'DesignWalkViz');
 const FibTreeViz = lazyViz(() => import('./viz/DpViz'), 'FibTreeViz');
 const Dp1dViz = lazyViz(() => import('./viz/DpViz'), 'Dp1dViz');
 const DpGridViz = lazyViz(() => import('./viz/DpViz'), 'DpGridViz');
@@ -319,6 +320,7 @@ export const mdxComponents = {
   TrieWalkViz,
   BitWalkViz,
   ContribWalkViz,
+  DesignWalkViz,
   CallStackViz,
   StackQueueViz,
   HistogramViz,

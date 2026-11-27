@@ -17,7 +17,7 @@ const H = 42;
 /** Labelled rows of cells (see models/greedyWalk.js for the strip shape); also used by <TrieWalkViz>. */
 export function Strips({ strips, width, jump }) {
   const n = Math.max(1, ...strips.map((s) => s.items.length));
-  const pitch = pitchFor(width - 8, n, 34, 60);
+  const pitch = pitchFor(width - 8, n, 28, 60);   // cells shrink to 28px before a long row overflows a phone
   const W = Math.max(n * pitch, 180);
   let y = 0;
   const placed = strips.map((s) => {

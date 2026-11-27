@@ -159,6 +159,8 @@ Why `minFreq` never needs a search:
 - It only changes in two ways. A new key resets it to 1.
 - Touching a key moves it from count f to f + 1. If that empties the bucket for the minimum, the new minimum is exactly f + 1.
 
+<DesignWalkViz examples={['lfu', 'lfuTie']} />
+
 ## Insert, delete, get random, all in O(1)
 
 - A hash set can't pick a random element in O(1).
@@ -196,6 +198,8 @@ static class RandomizedSet {
 
 The order of the two `index` updates matters when `val` *is* the last element. Writing `index.put(last, i)` first and `index.remove(val)` second handles that case correctly. The tests in the reference solution cover it.
 
+<DesignWalkViz examples={['randset', 'randcoll']} />
+
 ## Time-based key-value store: map + sorted list
 
 > `set(key, value, timestamp)`; `get(key, timestamp)` returns the value with the largest timestamp **≤ the given one**.
@@ -228,6 +232,8 @@ static class TimeMap {
 ```
 
 If timestamps could arrive out of order, use `Map<String, TreeMap<Integer, String>>` and `floorEntry(timestamp)`. That costs O(log n) per `set` too, and it's a good follow-up to mention.
+
+<DesignWalkViz examples={['timemap']} />
 
 ## Iterators: hold the next element
 
@@ -288,6 +294,8 @@ static class NestedIterator implements Iterator<Integer> {
 ```
 
 `hasNext()` does the work and must be **safe to call twice**: it only searches when nothing is buffered. Empty inner lists such as `[[], [[]]]` are the classic test, and the loop skips them naturally.
+
+<DesignWalkViz examples={['peeking', 'flatten']} />
 
 ## Designing with a heap: lazy deletion
 
@@ -353,6 +361,8 @@ class NumberContainers {
 }
 ```
 
+<DesignWalkViz examples={['containers']} />
+
 ### Design a Food Rating System (2353): a heap per group, with tie-breaks
 
 `highestRated(cuisine)` returns the best-rated food of that cuisine (alphabetically first on a tie), and ratings change. Same recipe: a map `food → rating` is the truth, and each cuisine has a heap ordered by rating, then name. An entry is stale when its rating isn't the food's current rating.
@@ -386,6 +396,8 @@ class FoodRatings {
 }
 ```
 
+<DesignWalkViz examples={['food']} />
+
 ### Seat Reservation Manager (1845) and Smallest Number in Infinite Set (2336): a counter plus a heap
 
 Seats `1 … n` start free, and `reserve` must hand out the **lowest** free seat. Putting all n seats in a heap up front costs O(n log n) (or O(n) with heapify). But until a seat is returned, the free seats are exactly "`next` and everything after it". So keep a counter `next` and a min-heap holding only the seats that were **given back**.
@@ -412,6 +424,8 @@ class SmallestInfiniteSet {
     public void addBack(int num) { if (num < next) added.add(num); }   // ≥ next is already in; the set ignores repeats
 }
 ```
+
+<DesignWalkViz examples={['seats', 'infinite']} />
 
 ### Exam Room (855): a sorted set of who's seated
 
@@ -443,6 +457,8 @@ class ExamRoom {
 
 `seat` is O(k) for k seated students, fine for 10⁴ calls. The O(log n) version keeps the **gaps** in a heap (widest first, then lowest seat) with lazy deletion: `leave` merges two gaps into one, and the two old gaps go stale. The Solution tab has it.
 
+<DesignWalkViz examples={['exam']} />
+
 ## Designing with queues
 
 A queue is the right structure when **order of arrival is the rule**: first come, first served, or "drop whatever is oldest". Most queue design questions add one twist to that rule: a sliding time window, a middle you can reach, an element that jumps to the back, someone leaving the line early, or several threads sharing it. Each twist has a standard answer.
@@ -472,6 +488,8 @@ class RecentCounter {
 ```
 
 Each request is added once and removed once: O(1) amortised. The same shape (a queue of timestamps) is the sliding-window rate limiter in system design.
+
+<DesignWalkViz examples={['recent']} />
 
 ### Design Front Middle Back Queue (1670): two balanced halves
 
@@ -515,6 +533,8 @@ class FrontMiddleBackQueue {
 
 The same "two halves, balanced" idea is behind the running median ([Heaps](/dsa/patterns/heap-patterns)), with heaps instead of deques.
 
+<DesignWalkViz examples={['fmb']} />
+
 ### Design Most Recently Used Queue (1756): positions that only grow
 
 `MRUQueue(n)` starts as `[1 … n]`; `fetch(k)` moves the k-th element to the end. A list (`remove(k − 1)`, then `add`) is O(n) per fetch and passes; the follow-up asks for better.
@@ -536,6 +556,8 @@ public int fetch(int k) {
 ```
 
 Square-root decomposition (blocks of about √n elements, skip whole blocks when counting to k) is the other standard answer, at O(√n) per fetch.
+
+<DesignWalkViz examples={['mru']} />
 
 ### Design Ride Sharing System: leaving the line early
 
@@ -559,6 +581,8 @@ class RideSharingSystem {
     }
 }
 ```
+
+<DesignWalkViz examples={['rides']} />
 
 ### Design Bounded Blocking Queue (1188): producers and consumers
 
@@ -613,6 +637,8 @@ The solver runs your class on one thread, so its tests never call `enqueue` on a
 
 </Callout>
 
+<DesignWalkViz examples={['blocking']} />
+
 ### Time Needed to Buy Tickets (2073): count instead of simulating
 
 Some "queue" problems describe a line of people and invite you to simulate it. Often the rotation doesn't change the answer, and counting does the same work in one pass.
@@ -625,6 +651,8 @@ for (int i = 0; i < tickets.length; i++)
     t += Math.min(tickets[i], i <= k ? tickets[k] : tickets[k] - 1);
 return t;
 ```
+
+<DesignWalkViz examples={['tickets']} />
 
 ### Number of Students Unable to Eat Lunch (1700): only the counts matter
 
@@ -639,6 +667,8 @@ for (int i = 0; i < sandwiches.length; i++) {
 }
 return 0;
 ```
+
+<DesignWalkViz examples={['lunch', 'lunchAll']} />
 
 ### Number of People Aware of a Secret (2327): a queue of cohorts
 
@@ -656,6 +686,22 @@ for (int d = 2; d <= n; d++) {
 ```
 
 [Dota2 Senate](/dsa/patterns/greedy) is the counter-example: there the order of the queue decides who bans whom, so you do simulate it, with two queues of indexes.
+
+<DesignWalkViz examples={['secret']} />
+
+## More designs, step by step
+
+The classic warm-ups and a few more, each replayed one call at a time:
+
+- **Queue from two stacks (232)** and **stack from a queue (225):** reverse once, or rotate after each push.
+- **Min stack (155):** each element remembers the minimum below it.
+- **Hash map / hash set (706, 705):** an array of buckets, each a short chain.
+- **Snapshot array (1146):** each index stores only its changes, tagged with the snap id.
+- **Design Twitter (355):** per-user tweet lists merged newest first.
+- **Detect squares (2013):** count points; fix the diagonal corner, multiply the other counts.
+- **Maximum frequency stack (895):** one stack per frequency level.
+
+<DesignWalkViz examples={['queue2', 'stack1', 'minstack', 'hashmap', 'hashmapCollide', 'hashset', 'snapshot', 'twitter', 'squares', 'freqstack']} />
 
 ## Design problems at a glance
 
