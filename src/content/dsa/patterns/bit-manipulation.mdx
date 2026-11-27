@@ -68,6 +68,10 @@ static int[] countBits(int n) {
 }
 ```
 
+The same identity tests for a power of two in one step: `n > 0 && (n & (n − 1)) == 0`.
+
+<BitWalkViz examples={['countbits', 'pow2', 'pow2No']} />
+
 ## Identity 2: XOR cancels pairs
 
 `x ^ x = 0` and `x ^ 0 = x`, and XOR is commutative. XOR everything together and every pair cancels, leaving the odd one out:
@@ -118,6 +122,14 @@ static int singleNumberII(int[] a) {
 
 O(32 · n), O(1) space, and it generalises to "appears k times".
 
+<BitWalkViz examples={['single2', 'single2b']} />
+
+### Two singles (Single Number III)
+
+> Every value appears twice except **two**. XOR of everything gives `x = p ^ q`. Any 1-bit of x is a column where p and q differ, so split the numbers on it (`x & −x` picks the lowest): pairs stay together, p and q go to different groups, and each group XORs down to one of them.
+
+<BitWalkViz examples={['single3']} />
+
 ## Other classics
 
 ### Reverse bits
@@ -147,6 +159,17 @@ static int getSum(int a, int b) {
     return a;                                    // works for negatives too (two's complement)
 }
 ```
+
+Reverse bits and add-without-plus, step by step (reverse is shown with 8 bits), plus adding binary strings column by column:
+
+<BitWalkViz examples={['reverse', 'sum', 'addbinary']} />
+
+### AND of a range, and the smallest array end
+
+- **AND of every number in [left, right]:** every bit below the first column where left and right differ flips somewhere in the range, so only their common prefix survives. Shift both right until equal, then shift back.
+- **Increasing array whose AND is x:** every number must contain x's 1-bits; its 0-bits are free slots that count 0, 1, 2, … So the smallest last element writes n − 1 into x's free slots.
+
+<BitWalkViz examples={['rangeand', 'rangeand2', 'arrayend', 'arrayend2']} />
 
 ## Quick tricks cheat sheet
 

@@ -36,6 +36,7 @@ export const COMPLETE = [
   'dp-state-machine',
   'greedy',
   'tries',
+  'bit-manipulation',
 ];
 
 /**
@@ -81,4 +82,5 @@ export const POLISHED = [
   'dp-state-machine',
   'greedy',
   'tries',
+  'bit-manipulation',
 ];

@@ -43,6 +43,7 @@ import * as agw from '../src/components/mdx/viz/models/agWalk.js';
 import * as btw from '../src/components/mdx/viz/models/btWalk.js';
 import * as gyw from '../src/components/mdx/viz/models/greedyWalk.js';
 import * as trw from '../src/components/mdx/viz/models/trieWalk.js';
+import * as biw from '../src/components/mdx/viz/models/bitWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1067,6 +1068,25 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(trw.TRIE_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(trw.randomTrieWalk({ mode }, rand));
   const a = (k) => trw.trieWalk(trw.TRIE_WALK[k].input).at(-1).out;
   ok(a('lcp') === 'fl' && a('replace') === 'the cat was rat by the bat' && a('maxxor') === 15 && same(a('boggle'), ['eat', 'oath']) && a('extra') === 1, 'trieWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- bit problems (BitWalkViz)
+{
+  const kinds = ['start', 'sub', 'fail', 'match', 'fill', 'move', 'add', 'xor', 'carry', 'place', 'done'];
+  const run = (input) => {
+    const steps = biw.bitWalk(input);
+    common(`bitWalk ${JSON.stringify(input)}`, steps, biw.bitWalkCode(input.mode), kinds);
+    ok(same(steps.at(-1).out, biw.bitWalkAnswer(input)), `bitWalk ${JSON.stringify(input)}: answer`);
+    ok(same(biw.parseBitWalk(biw.bitWalkValues(input), input).input, input), `bitWalk ${input.mode}: values parse back`);
+    for (const x of steps) for (const row of x.rows) {
+      if (x.heads) ok(row.cells.length === x.heads.length, `bitWalk ${input.mode}: every row lines up with the place values`);
+      for (const k of Object.keys(row.tags ?? {})) ok(Number(k) >= 0 && Number(k) < row.cells.length, `bitWalk ${input.mode}: tags point at real columns`);
+    }
+  };
+  Object.values(biw.BIT_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(biw.BIT_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(biw.randomBitWalk({ mode }, rand));
+  const a = (k) => biw.bitWalk(biw.BIT_WALK[k].input).at(-1).out;
+  ok(a('pow2') === 'true' && a('single2') === 3 && a('sum') === 12 && same(a('single3'), [3, 5]) && a('rangeand') === 4 && a('arrayend') === 6, 'bitWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

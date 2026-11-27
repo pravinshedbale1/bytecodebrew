@@ -353,6 +353,18 @@ export const THINK_INDEX = {
   "maximum-xor-of-two-numbers-in-an-array": { title: "Maximum XOR of Two Numbers in an Array", level: 'Medium', lesson: 'tries', free: false },
   "word-search-ii": { title: "Word Search II", level: 'Hard', lesson: 'tries', free: false },
   "extra-characters-in-a-string": { title: "Extra Characters in a String", level: 'Medium', lesson: 'tries', free: false },
+  "single-number": { title: "Single Number", level: 'Easy', lesson: 'bit-manipulation', free: true },
+  "number-of-1-bits": { title: "Number of 1 Bits", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "power-of-two": { title: "Power of Two", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "missing-number": { title: "Missing Number", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "counting-bits": { title: "Counting Bits", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "reverse-bits": { title: "Reverse Bits", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "single-number-ii": { title: "Single Number II", level: 'Medium', lesson: 'bit-manipulation', free: false },
+  "sum-of-two-integers": { title: "Sum of Two Integers", level: 'Medium', lesson: 'bit-manipulation', free: false },
+  "single-number-iii": { title: "Single Number III", level: 'Medium', lesson: 'bit-manipulation', free: false },
+  "add-binary": { title: "Add Binary", level: 'Easy', lesson: 'bit-manipulation', free: false },
+  "bitwise-and-of-numbers-range": { title: "Bitwise AND of Numbers Range", level: 'Medium', lesson: 'bit-manipulation', free: false },
+  "minimum-array-end": { title: "Minimum Array End", level: 'Medium', lesson: 'bit-manipulation', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -389,7 +401,7 @@ export const PATTERN_ORDER = [
   ['dp-state-machine', "State-machine / bitmask DP", 10, 10],
   ['greedy', "Greedy", 17, 17],
   ['tries', "Trie", 8, 8],
-  ['bit-manipulation', "Bit manipulation", 0, 12],
+  ['bit-manipulation', "Bit manipulation", 12, 12],
   ['contribution-technique', "Contribution (what each element adds)", 0, 17],
   ['design-data-structures', "Design a data structure", 0, 31],
   ['matrix-simulation', "Matrix simulation", 0, 8],
