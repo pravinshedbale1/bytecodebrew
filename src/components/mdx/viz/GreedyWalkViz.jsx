@@ -14,12 +14,13 @@ import {
 const CARD = { success: 'yes', danger: 'bad', warn: 'no', accent: 'info' };
 const H = 42;
 
-function GreedyWalkStage({ step: f, width, jump }) {
-  const n = Math.max(1, ...f.strips.map((s) => s.items.length));
+/** Labelled rows of cells (see models/greedyWalk.js for the strip shape); also used by <TrieWalkViz>. */
+export function Strips({ strips, width, jump }) {
+  const n = Math.max(1, ...strips.map((s) => s.items.length));
   const pitch = pitchFor(width - 8, n, 34, 60);
   const W = Math.max(n * pitch, 180);
   let y = 0;
-  const placed = f.strips.map((s) => {
+  const placed = strips.map((s) => {
     const hasSub = Object.keys(s.sub).length > 0;
     const start = y;
     const top = y + 18 + (s.bands.some((b) => b.label) ? 18 : s.bands.length ? 8 : 2);   // band labels sit above the band
@@ -27,8 +28,7 @@ function GreedyWalkStage({ step: f, width, jump }) {
     return { s, top, start, hasSub };
   });
   return (
-    <div>
-      <Stage width={W} height={y} jump={jump} label={f.strips.map((s) => `${s.label}: ${s.items.join(' ')}`).join('; ')}>
+    <Stage width={W} height={y} jump={jump} label={strips.map((s) => `${s.label}: ${s.items.join(' ')}`).join('; ')}>
         {placed.map(({ s, top, start }, r) => (
           <div key={`${r}-${s.label}`}>
             <RowLabel x={0} y={start}>{s.label}</RowLabel>
@@ -43,7 +43,14 @@ function GreedyWalkStage({ step: f, width, jump }) {
             />
           </div>
         ))}
-      </Stage>
+    </Stage>
+  );
+}
+
+function GreedyWalkStage({ step: f, width, jump }) {
+  return (
+    <div>
+      <Strips strips={f.strips} width={width} jump={jump} />
       {(f.lanes || f.card) && (
         <div className={kit.sideRow}>
           {(f.lanes ?? []).map((l) => <Lane key={l.label} label={l.label} front="next" back="" items={l.items} empty="empty" />)}

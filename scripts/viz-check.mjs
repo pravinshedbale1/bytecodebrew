@@ -42,6 +42,7 @@ import * as spw from '../src/components/mdx/viz/models/spWalk.js';
 import * as agw from '../src/components/mdx/viz/models/agWalk.js';
 import * as btw from '../src/components/mdx/viz/models/btWalk.js';
 import * as gyw from '../src/components/mdx/viz/models/greedyWalk.js';
+import * as trw from '../src/components/mdx/viz/models/trieWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
 import * as st from '../src/components/mdx/viz/models/hldStorage.js';
@@ -1050,6 +1051,22 @@ function common(name, steps, code, kinds) {
   const a = (k) => String(gyw.greedyWalk(gyw.GREEDY_WALK[k].input).at(-1).out);
   ok(a('cookies') === '1' || a('cookies') === '2', 'greedyWalk: cookies example');
   ok(a('stock') === '5' && a('boats') === '3' && a('boats2') === '4' && a('twocity') === '110' && a('candy') === '5' && a('senate') === 'Dire' && a('orderly1') === 'acb' && a('wildcard') === 'true', 'greedyWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- trie problems (TrieWalkViz)
+{
+  const kinds = ['build', 'walk', 'stop', 'found', 'missing', 'done'];
+  const run = (input) => {
+    const steps = trw.trieWalk(input);
+    common(`trieWalk ${JSON.stringify(input)}`, steps, trw.trieWalkCode(input.mode), kinds);
+    ok(same(steps.at(-1).out, trw.trieWalkAnswer(input)), `trieWalk ${JSON.stringify(input)}: answer`);
+    ok(same(trw.parseTrieWalk(trw.trieWalkValues(input), input).input, input), `trieWalk ${input.mode}: values parse back`);
+    for (const x of steps) if (x.trie) for (const id of [...x.trie.path, ...x.trie.hits]) ok(x.trie.all[id], `trieWalk ${input.mode}: highlighted nodes exist`);
+  };
+  Object.values(trw.TRIE_WALK).forEach((e) => run(e.input));
+  for (const mode of new Set(Object.values(trw.TRIE_WALK).map((e) => e.input.mode))) for (let t = 0; t < 500; t++) run(trw.randomTrieWalk({ mode }, rand));
+  const a = (k) => trw.trieWalk(trw.TRIE_WALK[k].input).at(-1).out;
+  ok(a('lcp') === 'fl' && a('replace') === 'the cat was rat by the bat' && a('maxxor') === 15 && same(a('boggle'), ['eat', 'oath']) && a('extra') === 1, 'trieWalk: LeetCode examples');
 }
 
 // ---------------------------------------------------------------- DP + deque (DpDequeViz)

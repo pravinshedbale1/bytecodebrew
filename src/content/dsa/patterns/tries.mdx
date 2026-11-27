@@ -111,6 +111,22 @@ static void dfsBoard(char[][] b, int r, int c, TNode parent, List<String> out) {
 
 Storing the full word at its end node (instead of a boolean) means you don't need to rebuild the string from the path; setting it to `null` after reporting prevents duplicates. A further optimisation removes trie leaves once their words are found, so later searches prune even earlier.
 
+Step through it: each starting cell walks the board and the trie together, and the highlighted trie nodes are everything that cell's search reached.
+
+<TrieWalkViz examples={['boggle']} />
+
+## More ways to walk a trie
+
+The same structure answers several other questions with one walk:
+
+- **Longest common prefix:** follow the single-child chain from the root until it branches or a word ends.
+- **Replace words:** walk a word down a trie of roots and stop at the first root that ends: the shortest one.
+- **Search suggestions:** each typed letter moves one node down; the first three word ends below it, children in a..z order, are the suggestions.
+- **Maximum XOR:** store numbers as bits, highest first, and walk taking the opposite bit whenever it exists.
+- **Extra characters:** a right-to-left DP where one trie walk from s[i] finds every dictionary word starting at i.
+
+<TrieWalkViz examples={['lcp', 'lcpWord', 'replace', 'replaceShort', 'suggest', 'maxxor', 'extra']} />
+
 ## Trie or hash set?
 
 | Need | Hash set | Trie |

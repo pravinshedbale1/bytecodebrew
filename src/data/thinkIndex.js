@@ -345,6 +345,14 @@ export const THINK_INDEX = {
   "jump-game-vii": { title: "Jump Game VII", level: 'Medium', lesson: 'greedy', free: false },
   "partition-array-such-that-maximum-difference-is-k": { title: "Partition Array Such That Maximum Difference Is K", level: 'Medium', lesson: 'greedy', free: false },
   "orderly-queue": { title: "Orderly Queue", level: 'Hard', lesson: 'greedy', free: false },
+  "longest-common-prefix": { title: "Longest Common Prefix", level: 'Easy', lesson: 'tries', free: true },
+  "implement-trie-prefix-tree": { title: "Implement Trie (Prefix Tree)", level: 'Medium', lesson: 'tries', free: false },
+  "design-add-and-search-words-data-structure": { title: "Design Add and Search Words Data Structure", level: 'Medium', lesson: 'tries', free: false },
+  "replace-words": { title: "Replace Words", level: 'Medium', lesson: 'tries', free: false },
+  "search-suggestions-system": { title: "Search Suggestions System", level: 'Medium', lesson: 'tries', free: false },
+  "maximum-xor-of-two-numbers-in-an-array": { title: "Maximum XOR of Two Numbers in an Array", level: 'Medium', lesson: 'tries', free: false },
+  "word-search-ii": { title: "Word Search II", level: 'Hard', lesson: 'tries', free: false },
+  "extra-characters-in-a-string": { title: "Extra Characters in a String", level: 'Medium', lesson: 'tries', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -380,7 +388,7 @@ export const PATTERN_ORDER = [
   ['dp-trees-intervals', "Tree & interval DP", 11, 11],
   ['dp-state-machine', "State-machine / bitmask DP", 10, 10],
   ['greedy', "Greedy", 17, 17],
-  ['tries', "Trie", 0, 8],
+  ['tries', "Trie", 8, 8],
   ['bit-manipulation', "Bit manipulation", 0, 12],
   ['contribution-technique', "Contribution (what each element adds)", 0, 17],
   ['design-data-structures', "Design a data structure", 0, 31],

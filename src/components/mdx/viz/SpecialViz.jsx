@@ -129,7 +129,8 @@ function trieLayout(all, W) {
   return { pos, height: 22 + depth * 54 + 34 };
 }
 
-function TrieStage({ step: f, width }) {
+/** The trie drawing; also used by <TrieWalkViz>. f: { all, nodes, path, fresh?, hit?, hits?, broke?, kind, query?, caption? } */
+export function TrieTree({ step: f, width }) {
   const W = Math.max(280, Math.min(width, 560));
   const { pos, height } = trieLayout(f.all, W);
   const ids = Object.keys(f.nodes);
@@ -153,7 +154,7 @@ function TrieStage({ step: f, width }) {
               key={id}
               className={[
                 styles.tnode, id === '' && styles.root, n.end && styles.end, onPath.has(id) && styles.on, fresh.has(id) && styles.pop,
-                f.hit === id && styles.hit, f.kind === 'missing' && id === lastOnPath && f.broke !== undefined && f.broke !== null && styles.broke,
+                (f.hit === id || f.hits?.includes(id)) && styles.hit, f.kind === 'missing' && id === lastOnPath && f.broke !== undefined && f.broke !== null && styles.broke,
               ].filter(Boolean).join(' ')}
               style={{ left: pos[id].x, top: pos[id].y }}
               title={id === '' ? 'root' : `"${id}"${n.end ? ' (a word)' : ''}, pass ${n.pass}`}
@@ -164,10 +165,12 @@ function TrieStage({ step: f, width }) {
           );
         })}
       </div>
-      <p className={styles.caption}>ringed nodes end a word · small number = words passing through</p>
+      <p className={styles.caption}>{f.caption ?? 'ringed nodes end a word · small number = words passing through'}</p>
     </div>
   );
 }
+
+const TrieStage = TrieTree;
 
 const trieSpec = {
   title: 'Tries: words that share a prefix share a path',
