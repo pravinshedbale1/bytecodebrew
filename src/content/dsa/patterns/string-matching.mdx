@@ -93,6 +93,10 @@ Step through it: on a mismatch the pattern slides forward by just enough to keep
 
 - **Longest happy prefix** is just `lps[n − 1]`.
 
+Shortest Palindrome, step by step: the failure table of `s + "#" + reverse(s)` ends with the length of the longest palindromic prefix.
+
+<StrWalkViz examples={['shortpal', 'shortpal2']} />
+
 ## Rolling hash (Rabin–Karp)
 
 Treat a string as a number in base B, modulo a large prime: `hash("abc") = (a·B² + b·B + c) mod M`. The key property is that sliding the window one step is O(1):
@@ -162,6 +166,16 @@ static int repeatedStart(String s, int len) {
 ```
 
 That's O(n log n) expected. Verifying candidates makes it correct even when hashes collide.
+
+Two of these, step by step: a set of fixed-length windows (Repeated DNA Sequences, with short windows so the row fits), and binary search on the length with a rolling hash per length (Longest Duplicate Substring).
+
+<StrWalkViz examples={['dna', 'lds', 'ldsNone']} />
+
+### Repeated String Match: how many copies to try
+
+The repeated string must be at least as long as `b`, so start at `k = ⌈|b| / |a|⌉` copies. `b` may start partway into a copy, so `k + 1` is the last count worth trying; if neither contains `b`, the answer is −1. Each check is one substring search.
+
+<StrWalkViz examples={['repmatch', 'repmatchNo']} />
 
 ## Which tool when
 

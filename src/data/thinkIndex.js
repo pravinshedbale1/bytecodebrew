@@ -436,6 +436,14 @@ export const THINK_INDEX = {
   "excel-sheet-column-title": { title: "Excel Sheet Column Title", level: 'Easy', lesson: 'math-for-interviews', free: false },
   "greatest-common-divisor-of-strings": { title: "Greatest Common Divisor of Strings", level: 'Easy', lesson: 'math-for-interviews', free: false },
   "multiply-strings": { title: "Multiply Strings", level: 'Medium', lesson: 'math-for-interviews', free: false },
+  "find-the-index-of-the-first-occurrence-in-a-string": { title: "Find the Index of the First Occurrence in a String", level: 'Easy', lesson: 'string-matching', free: true },
+  "rotate-string": { title: "Rotate String", level: 'Easy', lesson: 'string-matching', free: false },
+  "repeated-substring-pattern": { title: "Repeated Substring Pattern", level: 'Easy', lesson: 'string-matching', free: false },
+  "repeated-string-match": { title: "Repeated String Match", level: 'Medium', lesson: 'string-matching', free: false },
+  "repeated-dna-sequences": { title: "Repeated DNA Sequences", level: 'Medium', lesson: 'string-matching', free: false },
+  "longest-happy-prefix": { title: "Longest Happy Prefix", level: 'Hard', lesson: 'string-matching', free: false },
+  "shortest-palindrome": { title: "Shortest Palindrome", level: 'Hard', lesson: 'string-matching', free: false },
+  "longest-duplicate-substring": { title: "Longest Duplicate Substring", level: 'Hard', lesson: 'string-matching', free: false },
 };
 
 export const PATTERN_ORDER = [
@@ -477,6 +485,6 @@ export const PATTERN_ORDER = [
   ['design-data-structures', "Design a data structure", 31, 31],
   ['matrix-simulation', "Matrix simulation", 8, 8],
   ['math-for-interviews', "Math", 15, 15],
-  ['string-matching', "String matching (KMP, rolling hash)", 0, 8],
+  ['string-matching', "String matching (KMP, rolling hash)", 8, 8],
   ['range-queries', "Range queries (Fenwick / segment tree)", 0, 7],
 ];

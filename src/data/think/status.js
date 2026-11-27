@@ -41,6 +41,7 @@ export const COMPLETE = [
   'design-data-structures',
   'matrix-simulation',
   'math-for-interviews',
+  'string-matching',
 ];
 
 /**
@@ -91,4 +92,5 @@ export const POLISHED = [
   'design-data-structures',
   'matrix-simulation',
   'math-for-interviews',
+  'string-matching',
 ];
