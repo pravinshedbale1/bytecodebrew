@@ -13,7 +13,7 @@ import styles from '../components/think/Think.module.css';
 
 const HOW = [
   [BookOpen, 'Read for clues', 'Words like "contiguous", "at most k", "sorted" or "minimum" point at a pattern.'],
-  [Gauge, 'Set the time budget', 'The input size says how fast the solution must be, before you write a line.'],
+  [Gauge, 'Find the target complexity', 'The input size says how fast the solution must be, before you write a line.'],
   [Search, 'Observe the example', 'Work it by hand and notice what a solution could exploit.'],
   [Swords, 'Brute force, and its waste', 'Start from the simple correct answer, and find the work it repeats.'],
   [Shapes, 'Pick the pattern', 'The pattern that removes the waste, and why not its look-alikes.'],
@@ -92,7 +92,7 @@ export function ThinkProblemPage() {
   }
   const locked = !meta.free && !premium;
   return (
-    <PageLayout contentWidth="900px">
+    <PageLayout contentWidth={locked ? '900px' : '1240px'}>
       <header className={page.header}>
         <p className={page.eyebrow}><Link to="/think">Practice thinking</Link> · {meta.level}</p>
         <h1 className={page.title}>{meta.title}</h1>
@@ -101,7 +101,7 @@ export function ThinkProblemPage() {
           <a href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noopener noreferrer">LeetCode</a>
         </div>
       </header>
-      {locked && <PremiumNotice feature="Practice thinking walkthroughs" blurb="Every problem taken from the statement to the pattern, one step at a time: clues, time budget, observations with sketches, brute force, the pattern and why not its look-alikes, then the idea running on the example. One walkthrough per pattern is free." />}
+      {locked && <PremiumNotice feature="Practice thinking walkthroughs" blurb="Every problem taken from the statement to the pattern, one step at a time: clues, target complexity, observations with sketches, brute force, the pattern and why not its look-alikes, then the idea running on the example. One walkthrough per pattern is free." />}
       {!locked && (problem && think ? <Walkthrough problem={problem} think={think} lesson={{ anchor: problem.anchor }} /> : <p aria-busy="true">Loading…</p>)}
     </PageLayout>
   );

@@ -2,7 +2,7 @@
  * Practice thinking: how an ideal problem solver gets from the statement to the pattern, per problem.
  * Six stages, revealed one at a time on /think/<slug>:
  *   read     clue phrases in the statement (each must appear in it verbatim) and what each suggests
- *   budget   the constraint that sets the time budget, and which complexities fit it
+ *   budget   the constraint that sets the target complexity (shown as "Complexity"), and which complexities fit it
  *   observe  2–3 observations, each with a small sketch of the example
  *   brute    the obvious solution, its cost, and the work it repeats
  *   pattern  the pattern (a DSA lesson id), why, and why not the patterns it is usually confused with
