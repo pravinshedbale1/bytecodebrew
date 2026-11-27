@@ -1,32 +1,66 @@
 /** Practice thinking walkthroughs: monotonic-stack (format: src/data/think/index.js). */
+
 export default {
   'daily-temperatures': {
-    aha: "Days still waiting for a warmer day form a falling staircase. Keep them on a stack: each new day pops every colder waiting day (it is their answer, i − j days later), then waits itself. Every day is pushed and popped at most once.",
-    asks: { observe: "In [73, 74, 75, 71, 69, 72, 76, 73], which days are still waiting when 72 arrives? Which of them does 72 answer?", pattern: "Waiting days are always colder than the waiting day before them. Which one can a new warm day answer first?" },
+    aha: 'Days still waiting for a warmer day form a falling staircase. Keep them on a stack: each new day pops every colder waiting day (it is their answer, i − j days later), then waits itself. Every day is pushed and popped at most once.',
+    asks: {
+      observe: 'In [73, 74, 75, 71, 69, 72, 76, 73], which days are still waiting when 72 arrives? Which of them does 72 answer?',
+      pattern: 'Waiting days are always colder than the waiting day before them. Which one can a new warm day answer first?',
+      read: 'Which phrase makes this a "next greater" question, and does an equal temperature count?',
+      budget: 'Scanning right from every day: how bad can that get for 10⁵ days?',
+      brute: 'What is the most direct answer for each day, and what does it rescan?',
+      watch: 'For [73, 74, 75, 71, 69, 72, 76, 73], which days will 76 answer when it arrives?',
+    },
     read: [
-      { phrase: 'the number of days you have to wait after day `i`', says: 'For each day, the distance to something on its right: a "next ..." question. Distances mean we keep indexes, not values.' },
+      {
+        phrase: 'the number of days you have to wait after day `i`',
+        says: 'For each day, the distance to something on its right: a "next ..." question. Distances mean we keep indexes, not values.',
+      },
       { phrase: 'strictly warmer', says: 'The next strictly greater element. An equal temperature does not count.' },
       { phrase: 'If no warmer day ever comes, `answer[i]` is `0`', says: 'Days still waiting at the end get the default.' },
     ],
-    budget: { from: 'temperatures.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Scanning right from every day is O(n²) = 10¹⁰ for a falling sequence: far too slow.' },
+    budget: {
+      from: 'temperatures.length ≤ 10⁵',
+      n: 100000,
+      aim: 'O(n)',
+      note: 'Scanning right from every day is O(n²) = 10¹⁰ for a falling sequence: far too slow.',
+    },
     observe: [
       {
         title: 'Waiting days form a falling run',
         text: 'After 75, the days 71 and 69 are also waiting for something warmer. Every day still waiting is colder than the waiting day before it.',
-        sketch: { kind: 'array', rows: [{ items: [73, 74, 75, 71, 69, 72, 76, 73], marks: { 2: 'kept', 3: 'kept', 4: 'kept', 5: 'dim', 6: 'dim', 7: 'dim' } }], caption: '75, 71, 69 are waiting, each colder than the last' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [73, 74, 75, 71, 69, 72, 76, 73], marks: { '2': 'kept', '3': 'kept', '4': 'kept', '5': 'dim', '6': 'dim', '7': 'dim' } }],
+          caption: '75, 71, 69 are waiting, each colder than the last',
+        },
       },
       {
         title: 'One warm day answers several waiting days at once',
         text: '72 is warmer than 69 and 71, so it answers both, but not 75. Because the waiting days fall, it answers them from the most recent backwards, and stops at the first one it can\'t beat.',
-        sketch: { kind: 'array', rows: [{ items: [73, 74, 75, 71, 69, 72, 76, 73], marks: { 3: 'hit', 4: 'hit', 5: 'cur', 2: 'target' } }, { label: 'answers written', items: ['·', '·', '·', 2, 1, '·', '·', '·'], marks: { 3: 'hit', 4: 'hit' } }] },
+        sketch: {
+          kind: 'array',
+          rows: [
+            { items: [73, 74, 75, 71, 69, 72, 76, 73], marks: { '2': 'target', '3': 'hit', '4': 'hit', '5': 'cur' } },
+            { label: 'answers written', items: ['·', '·', '·', 2, 1, '·', '·', '·'], marks: { '3': 'hit', '4': 'hit' } },
+          ],
+        },
       },
       {
         title: 'Keep the waiting days on a stack',
         text: 'Most recent waiting day on top: a new day pops every colder day (writing i − j for each), then waits itself. Each day is pushed once and popped once.',
-        sketch: { kind: 'array', rows: [{ label: 'stack of indexes (bottom → top)', items: [2, 3, 4], marks: { 2: 'target' } }], caption: 'temperatures 75, 71, 69: decreasing towards the top' },
+        sketch: {
+          kind: 'array',
+          rows: [{ label: 'stack of indexes (bottom → top)', items: [2, 3, 4], marks: { '2': 'target' } }],
+          caption: 'temperatures 75, 71, 69: decreasing towards the top',
+        },
       },
     ],
-    brute: { idea: 'For each day, scan to the right until a warmer day appears.', cost: 'O(n²)', waste: 'A long cold stretch is rescanned again for every day before it.' },
+    brute: {
+      idea: 'For each day, scan to the right until a warmer day appears.',
+      cost: 'O(n²)',
+      waste: 'A long cold stretch is rescanned again for every day before it.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: '"Next greater element" with distances: a stack of indexes whose temperatures decrease. Each new day pops the days it answers.',
@@ -36,29 +70,58 @@ export default {
         { id: 'sliding-window', why: 'There is no fixed or valid window here; each day waits an unknown distance.' },
       ],
     },
-    watch: { viz: 'StackSideViz', inputs: [{ label: '[73, 74, 75, 71, 69, 72, 76, 73]', input: { a: [73, 74, 75, 71, 69, 72, 76, 73], want: 'ng', store: 'index', dist: true } }] },
-    edges: ["Always falling: [5, 4, 3] → [0, 0, 0].", "Equal is not warmer: [70, 70] → [0, 0].", "A single day: [50] → [0]."],
+    watch: {
+      viz: 'StackSideViz',
+      inputs: [{ label: '[73, 74, 75, 71, 69, 72, 76, 73]', input: { a: [73, 74, 75, 71, 69, 72, 76, 73], want: 'ng', store: 'index', dist: true } }],
+    },
+    edges: ['Always falling: [5, 4, 3] → [0, 0, 0].', 'Equal is not warmer: [70, 70] → [0, 0].', 'A single day: [50] → [0].'],
   },
 
   'sliding-window-maximum': {
-    aha: "A value that is older and not bigger than a newer value can never be a window maximum again. Keep only the candidates in a deque (biggest at the front): drop beaten values from the back, drop expired ones from the front, and read the maximum at the front.",
-    asks: { observe: "Once 3 arrives after 1 in [1, 3, −1, …], can the 1 ever be the maximum of a window again?", pattern: "You need the maximum while values enter on the right and leave on the left. Which values are worth keeping?" },
+    aha: 'A value that is older and not bigger than a newer value can never be a window maximum again. Keep only the candidates in a deque (biggest at the front): drop beaten values from the back, drop expired ones from the front, and read the maximum at the front.',
+    asks: {
+      observe: 'Once 3 arrives after 1 in [1, 3, −1, …], can the 1 ever be the maximum of a window again?',
+      pattern: 'You need the maximum while values enter on the right and leave on the left. Which values are worth keeping?',
+      read: 'Which phrase rules out a heap, and why is removing the maximum the hard part?',
+      budget: 'n up to 10⁵ and k up to n. What does scanning every window cost?',
+      brute: 'What is the most direct answer per window, and what do neighbouring windows share?',
+      watch: 'For [1, 3, −1, −3, 5, 3, 6, 7] with k = 3, when does the front of the deque leave because it slid out of the window?',
+    },
     read: [
-      { phrase: 'A window of size `k` slides', says: 'A fixed-size sliding window: one element enters on the right and one leaves on the left at every step.' },
-      { phrase: 'the maximum value inside the window', says: 'We need the max of a set that changes at both ends. Adding is easy; removing the max is the hard part.' },
-      { phrase: 'Aim for O(n) time', says: 'A heap (O(n log n)) is not enough: each value should enter and leave the structure only once, for O(n) in total.' },
+      {
+        phrase: 'A window of size `k` slides',
+        says: 'A fixed-size sliding window: one element enters on the right and one leaves on the left at every step.',
+      },
+      {
+        phrase: 'the maximum value inside the window',
+        says: 'We need the max of a set that changes at both ends. Adding is easy; removing the max is the hard part.',
+      },
+      {
+        phrase: 'Aim for O(n) time',
+        says: 'A heap (O(n log n)) is not enough: each value should enter and leave the structure only once, for O(n) in total.',
+      },
     ],
-    budget: { from: 'nums.length ≤ 10⁵, k ≤ n', n: 1e5, aim: 'O(n)', note: 'Recomputing each window is O(nk), up to 10¹⁰ when k is about n/2.' },
+    budget: { from: 'nums.length ≤ 10⁵, k ≤ n', n: 100000, aim: 'O(n)', note: 'Recomputing each window is O(nk), up to 10¹⁰ when k is about n/2.' },
     observe: [
       {
         title: 'An older, smaller value can never win again',
         text: 'Once 3 arrives, the 1 before it will leave the window first and is smaller: it can never be a maximum again. Throw it away.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, -1, -3, 5, 3, 6, 7], marks: { 0: 'bad', 1: 'cur' }, tags: { 0: [['useless', 'danger']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 3, -1, -3, 5, 3, 6, 7], marks: { '0': 'bad', '1': 'cur' }, tags: { '0': [['useless', 'danger']] } }] },
       },
       {
         title: 'What survives is a falling list; its front is the max',
         text: 'After discarding useless values, the candidates decrease from front to back. The front is the window\'s maximum.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, -1, -3, 5, 3, 6, 7], bands: [{ from: 1, to: 3, tone: 'accent', label: 'window' }], marks: { 1: 'hit', 2: 'kept', 3: 'kept' } }, { label: 'candidates (front → back)', items: [3, -1, -3], marks: { 0: 'hit' } }] },
+        sketch: {
+          kind: 'array',
+          rows: [
+            {
+              items: [1, 3, -1, -3, 5, 3, 6, 7],
+              bands: [{ from: 1, to: 3, tone: 'accent', label: 'window' }],
+              marks: { '1': 'hit', '2': 'kept', '3': 'kept' },
+            },
+            { label: 'candidates (front → back)', items: [3, -1, -3], marks: { '0': 'hit' } },
+          ],
+        },
       },
       {
         title: 'Store indexes, so the front can expire',
@@ -66,18 +129,25 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'deque of indexes', items: [1, 2, 3] }], caption: 'index 1 leaves once i reaches 4 (with k = 3)' },
       },
     ],
-    brute: { idea: 'For each of the n − k + 1 windows, scan its k values for the maximum.', cost: 'O(n · k)', waste: 'Neighbouring windows share k − 1 values, and their maximum is recomputed from scratch.' },
+    brute: {
+      idea: 'For each of the n − k + 1 windows, scan its k values for the maximum.',
+      cost: 'O(n · k)',
+      waste: 'Neighbouring windows share k − 1 values, and their maximum is recomputed from scratch.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A monotonic deque: drop dominated values from the back, expired ones from the front, and read the max at the front. Every index enters and leaves once: O(n).',
       not: [
         { id: 'heap-patterns', why: 'A max-heap of (value, index) with lazy removal of expired tops works, but is O(n log n).' },
-        { id: 'sliding-window', why: 'The window itself is trivial (fixed size); the difficulty is its maximum, which the window template doesn\'t give you.' },
+        {
+          id: 'sliding-window',
+          why: 'The window itself is trivial (fixed size); the difficulty is its maximum, which the window template doesn\'t give you.',
+        },
         { id: 'range-queries', why: 'A sparse table answers range max in O(1) after O(n log n) preprocessing: correct, but heavier than needed.' },
       ],
     },
     watch: { viz: 'DequeSideViz', inputs: [{ label: '[1, 3, −1, −3, 5, 3, 6, 7], k = 3', input: { a: [1, 3, -1, -3, 5, 3, 6, 7], k: 3, mode: 'max' } }] },
-    edges: ["k = 1: [4, 2] → [4, 2].", "k = n: [1, 3, 2], k 3 → [3].", "A falling array: [5, 4, 3], k 2 → [5, 4]."],
+    edges: ['k = 1: [4, 2] → [4, 2].', 'k = n: [1, 3, 2], k 3 → [3].', 'A falling array: [5, 4, 3], k 2 → [5, 4].'],
   },
 
   'next-greater-element-i': {
@@ -92,7 +162,10 @@ export default {
       watch: 'Watch each value answer the smaller ones waiting, then wait itself.',
     },
     read: [
-      { phrase: 'return the first value to its right that is greater than `x`', says: '"Next greater element": for each value, the nearest bigger value to its right.' },
+      {
+        phrase: 'return the first value to its right that is greater than `x`',
+        says: '"Next greater element": for each value, the nearest bigger value to its right.',
+      },
       { phrase: '`nums2` has distinct values', says: 'Each value appears once, so answers can be stored in a map by value.' },
       { phrase: 'every value of `nums1` also appears in `nums2`', says: 'nums1 only asks questions; all the work happens on nums2.' },
     ],
@@ -106,20 +179,28 @@ export default {
       {
         title: 'Values wait for something bigger',
         text: 'Walking nums2 = [1, 3, 4, 2]: 1 waits until something bigger appears. 3 arrives and answers it. Then 3 waits, and 4 answers it.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, 4, 2], marks: { 0: 'target', 1: 'cur' }, tags: { 0: [['next greater: 3', 'success']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 3, 4, 2], marks: { '0': 'target', '1': 'cur' }, tags: { '0': [['next greater: 3', 'success']] } }] },
       },
       {
         title: 'One value can answer several waiting values',
         text: 'Waiting values always fall (a bigger one would already have answered the smaller ones before it). In [5, 3, 1, 4], 3 and 1 wait under 5; 4 answers 1, then 3, and stops at 5. Most recent first: a stack.',
-        sketch: { kind: 'array', rows: [{ items: [5, 3, 1, 4], marks: { 1: 'hit', 2: 'hit', 3: 'cur', 0: 'target' } }], caption: '4 answers 1 and 3; 5 keeps waiting' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [5, 3, 1, 4], marks: { '0': 'target', '1': 'hit', '2': 'hit', '3': 'cur' } }],
+          caption: '4 answers 1 and 3; 5 keeps waiting',
+        },
       },
       {
         title: 'Store the answers in a map',
         text: 'The values are distinct, so a map from value to next greater answers each x in nums1 in O(1). Values never answered get −1: nums1 = [4, 1, 2] → [−1, 3, −1].',
-        sketch: { kind: 'array', rows: [{ items: ['1 → 3', '3 → 4', '4 → −1', '2 → −1'], marks: { 0: 'hit', 1: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: ['1 → 3', '3 → 4', '4 → −1', '2 → −1'], marks: { '0': 'hit', '1': 'hit' } }] },
       },
     ],
-    brute: { idea: 'For each x in nums1, find it in nums2, then walk right until a bigger value appears.', cost: 'O(m · n)', waste: 'A falling stretch of nums2 is rescanned again for every x before it.' },
+    brute: {
+      idea: 'For each x in nums1, find it in nums2, then walk right until a bigger value appears.',
+      cost: 'O(m · n)',
+      waste: 'A falling stretch of nums2 is rescanned again for every x before it.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Next greater element: one pass over nums2 with a stack of values still waiting, falling towards the top; each new value pops and answers every smaller one. Store answers in a hash map and read them for nums1. O(n + m).',
@@ -128,7 +209,13 @@ export default {
         { id: 'two-pointers', why: 'Nothing moves towards anything; each value looks only to its right.' },
       ],
     },
-    watch: { viz: 'StackSideViz', inputs: [{ label: 'nums2 = [1, 3, 4, 2]', input: { a: [1, 3, 4, 2], want: 'ng', store: 'value' } }, { label: '[5, 3, 1, 4]', input: { a: [5, 3, 1, 4], want: 'ng', store: 'value' } }] },
+    watch: {
+      viz: 'StackSideViz',
+      inputs: [
+        { label: 'nums2 = [1, 3, 4, 2]', input: { a: [1, 3, 4, 2], want: 'ng', store: 'value' } },
+        { label: '[5, 3, 1, 4]', input: { a: [5, 3, 1, 4], want: 'ng', store: 'value' } },
+      ],
+    },
     edges: ['x is the last value: [2], [1, 2] → [−1].', 'Rising nums2: [1, 2], [1, 2, 3] → [2, 3].', 'Falling nums2: [3, 1], [3, 2, 1] → [−1, −1].'],
   },
 
@@ -143,16 +230,19 @@ export default {
       watch: 'Watch two laps: the second only answers, never waits.',
     },
     read: [
-      { phrase: '`nums` is circular: after the last element comes the first one again', says: 'Looking right may wrap around the end: every element can see all the others.' },
+      {
+        phrase: '`nums` is circular: after the last element comes the first one again',
+        says: 'Looking right may wrap around the end: every element can see all the others.',
+      },
       { phrase: 'Values can repeat', says: 'Equal is not greater: a value never answers an equal one.' },
       { phrase: 'or `-1` if no greater value exists', says: 'The maximum (and its equals) never get an answer.' },
     ],
-    budget: { from: 'nums.length ≤ 10⁴', n: 1e4, aim: 'O(n)', note: 'n² = 10⁸ is borderline; one stack pass over two laps is O(n).' },
+    budget: { from: 'nums.length ≤ 10⁴', n: 10000, aim: 'O(n)', note: 'n² = 10⁸ is borderline; one stack pass over two laps is O(n).' },
     observe: [
       {
         title: 'The answer may wrap around',
         text: 'In [1, 2, 1], the last 1 has nothing to its right, but walking on past the end reaches 2 at the start: its answer is 2.',
-        sketch: { kind: 'array', rows: [{ items: [1, 2, 1], marks: { 1: 'hit' }, tags: { 2: [['→ wraps to 2', 'accent']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 2, 1], marks: { '1': 'hit' }, tags: { '2': [['→ wraps to 2', 'accent']] } }] },
       },
       {
         title: 'Two laps show everything after each element',
@@ -162,10 +252,14 @@ export default {
       {
         title: 'The second lap only answers',
         text: 'Run the next-greater stack over both laps, but push only during the first; the second lap answers the elements still waiting. The maximum, 2, is never answered: −1.',
-        sketch: { kind: 'array', rows: [{ label: 'answers', items: [2, -1, 2], marks: { 1: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'answers', items: [2, -1, 2], marks: { '1': 'bad' } }] },
       },
     ],
-    brute: { idea: 'From each index, walk forward up to n − 1 steps (wrapping with % n) and stop at the first greater value.', cost: 'O(n²)', waste: 'A long falling stretch is rescanned from every element before it.' },
+    brute: {
+      idea: 'From each index, walk forward up to n − 1 steps (wrapping with % n) and stop at the first greater value.',
+      cost: 'O(n²)',
+      waste: 'A long falling stretch is rescanned from every element before it.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Next greater element over two laps: for i from 0 to 2n − 1, x = nums[i % n]; pop and answer every waiting index with a smaller value; push i only during the first lap. O(n).',
@@ -174,7 +268,13 @@ export default {
         { id: 'sliding-window', why: 'Each element looks a different distance ahead; there is no window to slide.' },
       ],
     },
-    watch: { viz: 'TokenStackViz', inputs: [{ label: '[1, 2, 1]', input: { mode: 'nge2', nums: [1, 2, 1] } }, { label: '[1, 2, 3, 4, 3]', input: { mode: 'nge2', nums: [1, 2, 3, 4, 3] } }] },
+    watch: {
+      viz: 'TokenStackViz',
+      inputs: [
+        { label: '[1, 2, 1]', input: { mode: 'nge2', nums: [1, 2, 1] } },
+        { label: '[1, 2, 3, 4, 3]', input: { mode: 'nge2', nums: [1, 2, 3, 4, 3] } },
+      ],
+    },
     edges: ['All equal: [5, 5, 5] → [−1, −1, −1]; equal is not greater.', 'One element: [7] → [−1].', 'Wrapping needed: [3, 1, 2] → [−1, 2, 3].'],
   },
 
@@ -190,7 +290,10 @@ export default {
     },
     read: [
       { phrase: 'records today\'s price and returns today\'s span', says: 'Answers come one day at a time, as the prices arrive: no looking ahead.' },
-      { phrase: 'consecutive days, ending with today and counting backwards', says: 'Count back from today until the first day with a higher price.' },
+      {
+        phrase: 'consecutive days, ending with today and counting backwards',
+        says: 'Count back from today until the first day with a higher price.',
+      },
       { phrase: 'less than or equal to today\'s price', says: 'Equal prices are included in the span.' },
     ],
     budget: {
@@ -203,12 +306,12 @@ export default {
       {
         title: 'A span counts back to the first higher price',
         text: 'On the day of 75: 60, 70 and 60 before it are ≤ 75; 80 is higher and stops the count. Span 4, today included.',
-        sketch: { kind: 'array', rows: [{ items: [100, 80, 60, 70, 60, 75], marks: { 2: 'hit', 3: 'hit', 4: 'hit', 5: 'cur', 1: 'target' } }] },
+        sketch: { kind: 'array', rows: [{ items: [100, 80, 60, 70, 60, 75], marks: { '1': 'target', '2': 'hit', '3': 'hit', '4': 'hit', '5': 'cur' } }] },
       },
       {
         title: 'A beaten day never stops anyone again',
         text: '70 beat the 60 before it. Any later price ≥ 70 also passes that 60, and a price < 70 stops at 70 first. So 60 can be folded into 70\'s span (2) and forgotten.',
-        sketch: { kind: 'array', rows: [{ items: [60, 70], marks: { 0: 'dim', 1: 'kept' }, tags: { 1: [['span 2', 'accent']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [60, 70], marks: { '0': 'dim', '1': 'kept' }, tags: { '1': [['span 2', 'accent']] } }] },
       },
       {
         title: 'Keep (price, span) for unbeaten days',
@@ -216,7 +319,11 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'stack after 75, bottom → top', items: ['100 (1)', '80 (1)', '75 (4)'] }] },
       },
     ],
-    brute: { idea: 'Keep every price; for each new one, walk back while the prices are ≤ today.', cost: 'O(n) per call, O(n²) in total', waste: 'Days already beaten by a later, higher day are walked over again by every later call.' },
+    brute: {
+      idea: 'Keep every price; for each new one, walk back while the prices are ≤ today.',
+      cost: 'O(n) per call, O(n²) in total',
+      waste: 'Days already beaten by a later, higher day are walked over again by every later call.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A stack of (price, span) with falling prices: today pops every day with price ≤ today and adds its span to today\'s, then pushes (price, span). Each day is pushed and popped once: O(1) per call on average.',
@@ -225,7 +332,13 @@ export default {
         { id: 'prefix-sums', why: 'A span isn\'t a sum of anything; it depends on comparisons.' },
       ],
     },
-    watch: { viz: 'TokenStackViz', inputs: [{ label: '100, 80, 60, 70, 60, 75, 85', input: { mode: 'span', prices: [100, 80, 60, 70, 60, 75, 85] } }, { label: '10, 20, 30', input: { mode: 'span', prices: [10, 20, 30] } }] },
+    watch: {
+      viz: 'TokenStackViz',
+      inputs: [
+        { label: '100, 80, 60, 70, 60, 75, 85', input: { mode: 'span', prices: [100, 80, 60, 70, 60, 75, 85] } },
+        { label: '10, 20, 30', input: { mode: 'span', prices: [10, 20, 30] } },
+      ],
+    },
     edges: ['Rising prices: 10, 20, 30 → spans 1, 2, 3.', 'Falling prices: 30, 20, 10 → spans 1, 1, 1.', 'Equal prices count: 5, 5 → spans 1, 2.'],
   },
 
@@ -240,29 +353,36 @@ export default {
       watch: 'Watch bigger digits leave when a smaller one arrives.',
     },
     read: [
-      { phrase: 'Remove exactly `k` digits so that the remaining number is as small as possible', says: 'Same number of digits left either way, so the number is smallest when its earliest digits are smallest.' },
+      {
+        phrase: 'Remove exactly `k` digits so that the remaining number is as small as possible',
+        says: 'Same number of digits left either way, so the number is smallest when its earliest digits are smallest.',
+      },
       { phrase: 'The result must not have leading zeros', says: 'Strip them at the end: "0200" is written "200".' },
       { phrase: 'if nothing is left, return `"0"`', says: 'Removing every digit (or leaving only zeros) gives "0".' },
     ],
-    budget: { from: 'num.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Removing one digit at a time with a rescan is O(k · n) ≈ 10¹⁰.' },
+    budget: { from: 'num.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'Removing one digit at a time with a rescan is O(k · n) ≈ 10¹⁰.' },
     observe: [
       {
         title: 'The leftmost digit matters most',
         text: '1219 < 1432 because they first differ at the second digit, and 2 < 4. Making an early digit smaller beats anything that happens later.',
-        sketch: { kind: 'array', rows: [{ items: [1, 4, 3, 2, 2, 1, 9], marks: { 1: 'bad' }, tags: { 1: [['too big this early', 'danger']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 4, 3, 2, 2, 1, 9], marks: { '1': 'bad' }, tags: { '1': [['too big this early', 'danger']] } }] },
       },
       {
         title: 'Remove a digit bigger than the next one',
         text: 'In 1432219, 4 is followed by the smaller 3: remove 4. Now 3 is followed by 2: remove 3. Later the second 2 is followed by 1: remove it. Left: 1219.',
-        sketch: { kind: 'array', rows: [{ items: [1, 4, 3, 2, 2, 1, 9], marks: { 1: 'bad', 2: 'bad', 4: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 4, 3, 2, 2, 1, 9], marks: { '1': 'bad', '2': 'bad', '4': 'bad' } }] },
       },
       {
         title: 'Kept digits never go down: a stack',
         text: 'Keep the kept digits on a stack; a smaller new digit pops bigger tops while removals are left. If removals remain at the end, cut from the end, where the digits are biggest. "10200" with k = 1 keeps "0200", written "200".',
-        sketch: { kind: 'array', rows: [{ label: 'kept from 1432219', items: [1, 2, 1, 9], marks: { 0: 'hit', 1: 'hit', 2: 'hit', 3: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'kept from 1432219', items: [1, 2, 1, 9], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit' } }] },
       },
     ],
-    brute: { idea: 'Remove one digit at a time, k times: each time delete the first digit that is bigger than the digit after it.', cost: 'O(k · n)', waste: 'Each removal rescans from the start, though the next peak is always right next to the last removal.' },
+    brute: {
+      idea: 'Remove one digit at a time, k times: each time delete the first digit that is bigger than the digit after it.',
+      cost: 'O(k · n)',
+      waste: 'Each removal rescans from the start, though the next peak is always right next to the last removal.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Greedy with a rising stack: for each digit, pop the top while removals are left and the top is bigger; push the digit. Then remove what is left from the end and strip leading zeros. Each digit is pushed and popped once: O(n).',
@@ -271,7 +391,13 @@ export default {
         { id: 'sorting-and-selection', why: 'Removing the k largest digits ignores position: from 1432219 it leaves 1221, not 1219.' },
       ],
     },
-    watch: { viz: 'TokenStackViz', inputs: [{ label: '"1432219", k = 3', input: { mode: 'removek', num: '1432219', k: 3 } }, { label: '"10200", k = 1', input: { mode: 'removek', num: '10200', k: 1 } }] },
+    watch: {
+      viz: 'TokenStackViz',
+      inputs: [
+        { label: '"1432219", k = 3', input: { mode: 'removek', num: '1432219', k: 3 } },
+        { label: '"10200", k = 1', input: { mode: 'removek', num: '10200', k: 1 } },
+      ],
+    },
     edges: ['Everything removed: "10", 2 → "0".', 'Leading zeros: "10200", 1 → "200".', 'Rising digits: "12345", 2 → "123"; cut from the end.'],
   },
 
@@ -286,21 +412,30 @@ export default {
       watch: 'Watch each value\'s reach, then its share of the sum.',
     },
     read: [
-      { phrase: 'For every contiguous subarray of `arr`, take its minimum value', says: 'About n²/2 subarrays: too many to list, so count each value\'s share instead.' },
-      { phrase: 'reaches no further than the nearest smaller value on its left and on its right', says: 'The counting rule, spelled out: find the previous and next smaller values.' },
+      {
+        phrase: 'For every contiguous subarray of `arr`, take its minimum value',
+        says: 'About n²/2 subarrays: too many to list, so count each value\'s share instead.',
+      },
+      {
+        phrase: 'reaches no further than the nearest smaller value on its left and on its right',
+        says: 'The counting rule, spelled out: find the previous and next smaller values.',
+      },
       { phrase: 'modulo `10^9 + 7`', says: 'The sum is huge: take the remainder as you add.' },
     ],
-    budget: { from: 'arr.length ≤ 3 × 10⁴', n: 3e4, aim: 'O(n)', note: 'n² = 9 × 10⁸ subarrays: far too many to visit one by one.' },
+    budget: { from: 'arr.length ≤ 3 × 10⁴', n: 30000, aim: 'O(n)', note: 'n² = 9 × 10⁸ subarrays: far too many to visit one by one.' },
     observe: [
       {
         title: 'Count, don\'t list',
         text: 'Ask the other way round: for each value, how many subarrays is it the minimum of? 1 in [3, 1, 2, 4] is the minimum of every subarray containing it: 2 starts × 3 ends = 6.',
-        sketch: { kind: 'array', rows: [{ items: [3, 1, 2, 4], marks: { 1: 'cur' }, bands: [{ from: 0, to: 3, tone: 'accent', label: '2 × 3 = 6' }] }] },
+        sketch: { kind: 'array', rows: [{ items: [3, 1, 2, 4], marks: { '1': 'cur' }, bands: [{ from: 0, to: 3, tone: 'accent', label: '2 × 3 = 6' }] }] },
       },
       {
         title: 'Each value reaches to the nearest smaller values',
         text: '2 stays the minimum while the subarray is between 1 (on the left) and the end: 1 start × 2 ends = 2 subarrays. 3 and 4 are each the minimum of only themselves.',
-        sketch: { kind: 'array', rows: [{ items: [3, 1, 2, 4], marks: { 2: 'cur', 1: 'target' }, bands: [{ from: 2, to: 3, tone: 'accent', label: '1 × 2' }] }] },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [3, 1, 2, 4], marks: { '1': 'target', '2': 'cur' }, bands: [{ from: 2, to: 3, tone: 'accent', label: '1 × 2' }] }],
+        },
       },
       {
         title: 'Add value × count',
@@ -308,16 +443,29 @@ export default {
         sketch: { kind: 'array', rows: [{ items: ['3 × 1', '1 × 6', '2 × 2', '4 × 1'] }], caption: 'sum = 17' },
       },
     ],
-    brute: { idea: 'For each start, extend the end keeping a running minimum, and add it each time.', cost: 'O(n²)', waste: 'n²/2 subarrays visited one by one, though each value\'s share can be counted in one go.' },
+    brute: {
+      idea: 'For each start, extend the end keeping a running minimum, and add it each time.',
+      cost: 'O(n²)',
+      waste: 'n²/2 subarrays visited one by one, though each value\'s share can be counted in one go.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'arr[i] is the minimum of left × right subarrays, where left and right reach to the previous smaller and next smaller values (strict on one side, ≤ on the other). Both come from a monotonic stack; add arr[i] × left × right. O(n).',
       not: [
-        { id: 'contribution-technique', why: 'The counting idea is the contribution technique; the boundaries come from the stack, so the work here is the stack.' },
+        {
+          id: 'contribution-technique',
+          why: 'The counting idea is the contribution technique; the boundaries come from the stack, so the work here is the stack.',
+        },
         { id: 'prefix-sums', why: 'Prefix sums add values, but a minimum can\'t be subtracted out of a range.' },
       ],
     },
-    watch: { viz: 'MinSpanViz', inputs: [{ label: '[3, 1, 2, 4]', input: { mode: 'min', nums: [3, 1, 2, 4] } }, { label: '[2, 4, 2, 3] (ties)', input: { mode: 'min', nums: [2, 4, 2, 3] } }] },
+    watch: {
+      viz: 'MinSpanViz',
+      inputs: [
+        { label: '[3, 1, 2, 4]', input: { mode: 'min', nums: [3, 1, 2, 4] } },
+        { label: '[2, 4, 2, 3] (ties)', input: { mode: 'min', nums: [2, 4, 2, 3] } },
+      ],
+    },
     edges: ['One value: [5] → 5.', 'Equal values: [2, 2] → 6 (2 + 2 + 2).', 'Rising: [1, 2, 3] → 10.'],
   },
 
@@ -333,9 +481,12 @@ export default {
     },
     read: [
       { phrase: 'every pair of its elements differs by at most `2`', says: 'The farthest-apart pair is the max and the min: check max − min ≤ 2.' },
-      { phrase: 'Return the total number of continuous subarrays', says: 'A count of windows, not the longest: add up the windows ending at each position.' },
+      {
+        phrase: 'Return the total number of continuous subarrays',
+        says: 'A count of windows, not the longest: add up the windows ending at each position.',
+      },
     ],
-    budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'n² = 10¹⁰ windows: far too many to check one by one.' },
+    budget: { from: 'nums.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'n² = 10¹⁰ windows: far too many to check one by one.' },
     observe: [
       {
         title: 'Every pair close means max − min ≤ 2',
@@ -345,7 +496,11 @@ export default {
       {
         title: 'Count all good windows ending at r at once',
         text: 'Inside a good window every window is good, so the good windows ending at r start anywhere in [l, r]. Ends 0, 1, 2, 3 give 1, 2, 2, 3 windows: 8.',
-        sketch: { kind: 'array', rows: [{ items: [5, 4, 2, 4], tags: { 0: [['1', 'accent']], 1: [['2', 'accent']], 2: [['2', 'accent']], 3: [['3', 'accent']] } }], caption: '1 + 2 + 2 + 3 = 8' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [5, 4, 2, 4], tags: { '0': [['1', 'accent']], '1': [['2', 'accent']], '2': [['2', 'accent']], '3': [['3', 'accent']] } }],
+          caption: '1 + 2 + 2 + 3 = 8',
+        },
       },
       {
         title: 'Max and min of a sliding window',
@@ -353,7 +508,11 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'window [1, 3]', items: [4, 2, 4] }], caption: 'max 4, min 2: spread 2, fine' },
       },
     ],
-    brute: { idea: 'Fix the start, extend the end tracking the running min and max, and stop when they differ by more than 2.', cost: 'O(n²)', waste: 'Neighbouring starts re-extend over the same values again and again.' },
+    brute: {
+      idea: 'Fix the start, extend the end tracking the running min and max, and stop when they differ by more than 2.',
+      cost: 'O(n²)',
+      waste: 'Neighbouring starts re-extend over the same values again and again.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Sliding-window counting with a max deque and a min deque: for each r, push nums[r] into both, move l while max − min > 2, then add r − l + 1. Every index enters and leaves each deque once: O(n).',
@@ -362,7 +521,13 @@ export default {
         { id: 'heap-patterns', why: 'Two heaps with lazy removal also give the max and min, in O(n log n).' },
       ],
     },
-    watch: { viz: 'LimitWindowViz', inputs: [{ label: '[5, 4, 2, 4]', input: { nums: [5, 4, 2, 4], limit: 2, goal: 'count' } }, { label: '[1, 2, 3]', input: { nums: [1, 2, 3], limit: 2, goal: 'count' } }] },
+    watch: {
+      viz: 'LimitWindowViz',
+      inputs: [
+        { label: '[5, 4, 2, 4]', input: { nums: [5, 4, 2, 4], limit: 2, goal: 'count' } },
+        { label: '[1, 2, 3]', input: { nums: [1, 2, 3], limit: 2, goal: 'count' } },
+      ],
+    },
     edges: ['All equal: [7, 7, 7] → 6.', 'One element: [9] → 1.', 'Big jumps: [1, 5, 9] → 3.'],
   },
 
@@ -380,7 +545,12 @@ export default {
       { phrase: 'its spread times its length', says: 'Both factors only shrink when the window shrinks: cheaper windows sit inside cheap ones.' },
       { phrase: 'Return the number of subarrays whose cost is at most `k`', says: 'A count: add the windows ending at each r.' },
     ],
-    budget: { from: 'nums.length ≤ 10⁵, k ≤ 10¹⁵', n: 1e5, aim: 'O(n)', note: 'n² windows is far too many. The cost can reach about 10¹⁴, so use 64-bit arithmetic.' },
+    budget: {
+      from: 'nums.length ≤ 10⁵, k ≤ 10¹⁵',
+      n: 100000,
+      aim: 'O(n)',
+      note: 'n² windows is far too many. The cost can reach about 10¹⁴, so use 64-bit arithmetic.',
+    },
     observe: [
       {
         title: 'Shrinking lowers the cost',
@@ -390,7 +560,11 @@ export default {
       {
         title: 'Count all cheap windows ending at r',
         text: 'r = 0: [1], 1 window. r = 1: [1, 3] costs 2 × 2 = 4 ≤ 4, so 2 windows. r = 2: the whole costs 6, so l moves to 1 and 2 windows count. Total 5.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, 2], tags: { 0: [['1', 'accent']], 1: [['2', 'accent']], 2: [['2', 'accent']] } }], caption: '1 + 2 + 2 = 5' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [1, 3, 2], tags: { '0': [['1', 'accent']], '1': [['2', 'accent']], '2': [['2', 'accent']] } }],
+          caption: '1 + 2 + 2 = 5',
+        },
       },
       {
         title: 'Max and min from two deques',
@@ -398,16 +572,29 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'window [1, 2]', items: [3, 2] }], caption: 'max 3, min 2: cost 1 × 2 = 2' },
       },
     ],
-    brute: { idea: 'Fix the start and extend the end tracking the min and max; the cost only grows, so stop at the first window over k.', cost: 'O(n²)', waste: 'Neighbouring starts re-extend over the same values.' },
+    brute: {
+      idea: 'Fix the start and extend the end tracking the min and max; the cost only grows, so stop at the first window over k.',
+      cost: 'O(n²)',
+      waste: 'Each start re-extends over values the previous start already scanned; one window whose left end only moves right visits each value twice in total.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Sliding-window counting with a max deque and a min deque: for each r, move l while (max − min) × (r − l + 1) > k, then add r − l + 1. O(n).',
       not: [
         { id: 'sliding-window', why: 'The window is the frame; its max and min as values leave come from the deques.' },
-        { id: 'range-queries', why: 'A sparse table answers any window\'s max and min in O(1) after O(n log n) building; the deques do it as the window moves.' },
+        {
+          id: 'range-queries',
+          why: 'A sparse table answers any window\'s max and min in O(1) after O(n log n) building; the deques do it as the window moves.',
+        },
       ],
     },
-    watch: { viz: 'LimitWindowViz', inputs: [{ label: '[1, 3, 2], k = 4', input: { nums: [1, 3, 2], limit: 4, goal: 'cost' } }, { label: '[5, 5, 1], k = 3', input: { nums: [5, 5, 1], limit: 3, goal: 'cost' } }] },
+    watch: {
+      viz: 'LimitWindowViz',
+      inputs: [
+        { label: '[1, 3, 2], k = 4', input: { nums: [1, 3, 2], limit: 4, goal: 'cost' } },
+        { label: '[5, 5, 1], k = 3', input: { nums: [5, 5, 1], limit: 3, goal: 'cost' } },
+      ],
+    },
     edges: ['k = 0: [2, 2, 3], 0 → 4; only windows of equal values.', 'Every window is cheap: [1, 1], 0 → 3.', 'One element: [9], 0 → 1.'],
   },
 
@@ -422,7 +609,10 @@ export default {
       watch: 'Watch primes enter the deques, the window shrink, and the count per end.',
     },
     read: [
-      { phrase: 'the difference between the largest and the smallest prime number in it is at most `k`', says: 'A spread condition, like max − min ≤ k, but only over the primes in the window.' },
+      {
+        phrase: 'the difference between the largest and the smallest prime number in it is at most `k`',
+        says: 'A spread condition, like max − min ≤ k, but only over the primes in the window.',
+      },
       { phrase: 'Repeated primes count separately', says: '[2, 2] has two primes: count primes by position, not by value.' },
     ],
     budget: {
@@ -435,7 +625,7 @@ export default {
       {
         title: 'Only the primes matter',
         text: 'In [1, 2, 3], 1 is not prime, so it never changes the prime spread; only 2 and 3 do. Mark the primes once with a sieve.',
-        sketch: { kind: 'array', rows: [{ items: [1, 2, 3], marks: { 1: 'kept', 2: 'kept' } }], caption: 'shaded: primes' },
+        sketch: { kind: 'array', rows: [{ items: [1, 2, 3], marks: { '1': 'kept', '2': 'kept' } }], caption: 'shaded: primes' },
       },
       {
         title: 'Shrinking can only lower the spread',
@@ -445,10 +635,18 @@ export default {
       {
         title: 'Two primes must stay inside',
         text: 'A start must also leave at least two primes in the window, so it must be at or before the second-last prime. For r = 2 the second-last prime is at index 1: starts 0 and 1 count. Total 2.',
-        sketch: { kind: 'array', rows: [{ items: [1, 2, 3], marks: { 1: 'hit' }, tags: { 0: [['start', 'accent']], 1: [['start', 'accent']] } }], caption: '[1, 2, 3] and [2, 3]' },
+        sketch: {
+          kind: 'array',
+          rows: [{ items: [1, 2, 3], marks: { '1': 'hit' }, tags: { '0': [['start', 'accent']], '1': [['start', 'accent']] } }],
+          caption: '[1, 2, 3] and [2, 3]',
+        },
       },
     ],
-    brute: { idea: 'For each start, extend the end tracking the number of primes and the smallest and largest prime; stop once the spread exceeds k.', cost: 'O(n²)', waste: 'Neighbouring starts re-extend over the same values.' },
+    brute: {
+      idea: 'For each start, extend the end tracking the number of primes and the smallest and largest prime; stop once the spread exceeds k.',
+      cost: 'O(n²)',
+      waste: 'Each start re-extends over values the previous start already scanned; a window whose ends only move right touches each value a constant number of times.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Sieve, then a sliding window where only primes enter a max deque and a min deque. For each r, move l while the prime spread > k; the counted windows ending at r start in [l, secondLastPrime], adding secondLastPrime − l + 1 when that is positive. O(n + M log log M).',
@@ -457,7 +655,13 @@ export default {
         { id: 'sliding-window', why: 'The window is the frame; the prime max and min as values leave come from the deques.' },
       ],
     },
-    watch: { viz: 'LimitWindowViz', inputs: [{ label: '[1, 2, 3], k = 1', input: { nums: [1, 2, 3], limit: 1, goal: 'prime' } }, { label: '[2, 3, 5, 7], k = 2', input: { nums: [2, 3, 5, 7], limit: 2, goal: 'prime' } }] },
+    watch: {
+      viz: 'LimitWindowViz',
+      inputs: [
+        { label: '[1, 2, 3], k = 1', input: { nums: [1, 2, 3], limit: 1, goal: 'prime' } },
+        { label: '[2, 3, 5, 7], k = 2', input: { nums: [2, 3, 5, 7], limit: 2, goal: 'prime' } },
+      ],
+    },
     edges: ['Fewer than two primes: [1, 4, 6], 5 → 0.', 'Repeated primes count: [2, 2], 0 → 1.', 'Primes too far apart: [2, 11], 3 → 0.'],
   },
 
@@ -472,10 +676,16 @@ export default {
       watch: 'Watch both deques change as the window slides.',
     },
     read: [
-      { phrase: 'the absolute difference between any two elements is at most `limit`', says: 'The farthest-apart pair is the max and the min: check max − min ≤ limit.' },
-      { phrase: 'return the length of the longest non-empty contiguous subarray', says: 'The longest valid window: a sliding window that keeps the best length.' },
+      {
+        phrase: 'the absolute difference between any two elements is at most `limit`',
+        says: 'The farthest-apart pair is the max and the min: check max − min ≤ limit.',
+      },
+      {
+        phrase: 'return the length of the longest non-empty contiguous subarray',
+        says: 'The longest valid window: a sliding window that keeps the best length.',
+      },
     ],
-    budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'n² = 10¹⁰ windows: far too many.' },
+    budget: { from: 'nums.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'n² = 10¹⁰ windows: far too many.' },
     observe: [
       {
         title: 'Any two elements: just check max and min',
@@ -493,7 +703,11 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'window [4, 7]: max deque', items: [7] }, { label: 'min deque', items: [4, 7] }] },
       },
     ],
-    brute: { idea: 'Fix the start, extend the end tracking the running min and max, and stop when they differ by more than the limit.', cost: 'O(n²)', waste: 'Neighbouring starts re-extend over the same values.' },
+    brute: {
+      idea: 'Fix the start, extend the end tracking the running min and max, and stop when they differ by more than the limit.',
+      cost: 'O(n²)',
+      waste: 'Each start re-extends over values the previous start already scanned, recomputing the same running min and max.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'Sliding window with a max deque and a min deque: push nums[r] into both (dropping beaten values from the backs), move l while front(max) − front(min) > limit, then record r − l + 1. O(n).',
@@ -502,7 +716,13 @@ export default {
         { id: 'sliding-window', why: 'The window is the frame; its max and min as values leave come from the deques.' },
       ],
     },
-    watch: { viz: 'LimitWindowViz', inputs: [{ label: '[8, 2, 4, 7], limit 4', input: { nums: [8, 2, 4, 7], limit: 4 } }, { label: '[10, 1, 2, 4, 7, 2], limit 5', input: { nums: [10, 1, 2, 4, 7, 2], limit: 5 } }] },
+    watch: {
+      viz: 'LimitWindowViz',
+      inputs: [
+        { label: '[8, 2, 4, 7], limit 4', input: { nums: [8, 2, 4, 7], limit: 4 } },
+        { label: '[10, 1, 2, 4, 7, 2], limit 5', input: { nums: [10, 1, 2, 4, 7, 2], limit: 5 } },
+      ],
+    },
     edges: ['limit 0: [4, 2, 2, 2, 4, 4, 2, 2], 0 → 3.', 'One element: [5], 0 → 1.', 'Everything fits: [1, 2, 3], 5 → 3.'],
   },
 
@@ -518,8 +738,14 @@ export default {
     },
     read: [
       { phrase: 'jump from index `i` to any index in', says: 'You reach i from one of the k indexes before it: dp over the last k.' },
-      { phrase: 'Your score is the sum of `nums[j]` over every index `j` you visit', says: 'Every visited index counts, negatives included: you may have to land on some.' },
-      { phrase: 'Return the maximum score you can get when you reach index `n − 1`', says: 'The answer is dp[n − 1].' },
+      {
+        phrase: 'Your score is the sum of `nums[j]` over every index `j` you visit',
+        says: 'Every visited index counts, negatives included: you may have to land on some.',
+      },
+      {
+        phrase: 'Return the maximum score you can get when you reach index `n − 1`',
+        says: 'The goal is the best score at the last index, so the answer is dp[n − 1], not the largest dp anywhere.',
+      },
     ],
     budget: {
       from: 'nums.length, k ≤ 10⁵',
@@ -531,20 +757,30 @@ export default {
       {
         title: 'The best at i comes from the best of the last k',
         text: 'You land on i from one of the k indexes before it, so dp[i] = nums[i] + max(dp[i − k … i − 1]). For the example: dp = [1, 0, −1, 4, −3, 7], and the answer is 7.',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [1, -1, -2, 4, -7, 3] }, { label: 'dp', items: [1, 0, -1, 4, -3, 7], marks: { 5: 'hit' } }] },
+        sketch: {
+          kind: 'array',
+          rows: [{ label: 'nums', items: [1, -1, -2, 4, -7, 3] }, { label: 'dp', items: [1, 0, -1, 4, -3, 7], marks: { '5': 'hit' } }],
+        },
       },
       {
         title: 'The max of the last k is a sliding-window maximum',
         text: 'As i moves right, the k candidates slide right by one: exactly Sliding Window Maximum, over dp values.',
-        sketch: { kind: 'array', rows: [{ label: 'dp', items: [1, 0, -1, 4, -3, 7], bands: [{ from: 3, to: 4, tone: 'accent', label: 'the last 2 for i = 5' }] }] },
+        sketch: {
+          kind: 'array',
+          rows: [{ label: 'dp', items: [1, 0, -1, 4, -3, 7], bands: [{ from: 3, to: 4, tone: 'accent', label: 'the last 2 for i = 5' }] }],
+        },
       },
       {
         title: 'A newer, better dp makes older ones useless',
         text: 'dp[3] = 4 beats dp[1] and dp[2] and stays in reach longer: they can never be the best again. So keep a deque with dp falling from front to back.',
-        sketch: { kind: 'array', rows: [{ label: 'deque after i = 3', items: ['3 (dp 4)'], marks: { 0: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'deque after i = 3', items: ['3 (dp 4)'], marks: { '0': 'hit' } }] },
       },
     ],
-    brute: { idea: 'DP: dp[i] = nums[i] + the max of dp[i − k … i − 1], found with a loop.', cost: 'O(n · k)', waste: 'Neighbouring steps share k − 1 candidates, and the max is recomputed from scratch each time.' },
+    brute: {
+      idea: 'DP: dp[i] = nums[i] + the max of dp[i − k … i − 1], found with a loop.',
+      cost: 'O(n · k)',
+      waste: 'Neighbouring steps share k − 1 candidates, and the max is recomputed from scratch each time.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'DP + max deque: drop the front if it is more than k back, set dp[i] = nums[i] + dp[front], pop the back while its dp ≤ dp[i], and push i. O(n).',
@@ -554,7 +790,13 @@ export default {
         { id: 'heap-patterns', why: 'A max-heap of (dp, index) with lazy removal works too, in O(n log n).' },
       ],
     },
-    watch: { viz: 'DpDequeViz', inputs: [{ label: '[1, −1, −2, 4, −7, 3], k = 2', input: { mode: 'jump', nums: [1, -1, -2, 4, -7, 3], k: 2 } }, { label: '[10, −5, −2, 4, 0, 3], k = 3', input: { mode: 'jump', nums: [10, -5, -2, 4, 0, 3], k: 3 } }] },
+    watch: {
+      viz: 'DpDequeViz',
+      inputs: [
+        { label: '[1, −1, −2, 4, −7, 3], k = 2', input: { mode: 'jump', nums: [1, -1, -2, 4, -7, 3], k: 2 } },
+        { label: '[10, −5, −2, 4, 0, 3], k = 3', input: { mode: 'jump', nums: [10, -5, -2, 4, 0, 3], k: 3 } },
+      ],
+    },
     edges: ['One element: [5], 1 → 5.', 'All negative, k = 1: [−1, −2, −3], 1 → −6; every index is visited.', 'Jump over a hole: [1, −5, 2], 2 → 3.'],
   },
 
@@ -569,16 +811,22 @@ export default {
       watch: 'Watch each person pop the people they see.',
     },
     read: [
-      { phrase: 'everybody standing between them is shorter than both of them', says: 'What i sees from the left is a rising staircase, ending at the first person taller than i.' },
+      {
+        phrase: 'everybody standing between them is shorter than both of them',
+        says: 'What i sees from the left is a rising staircase, ending at the first person taller than i.',
+      },
       { phrase: 'Everyone looks to the right', says: 'Each answer depends only on the people to the right: scan from the right.' },
-      { phrase: 'with distinct heights', says: 'No ties to worry about.' },
+      {
+        phrase: 'with distinct heights',
+        says: 'All heights are different, so "shorter than both" is never ambiguous: no equal heights to block or not block a view.',
+      },
     ],
-    budget: { from: 'heights.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Looking right from everyone is O(n²) on a falling queue.' },
+    budget: { from: 'heights.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'Looking right from everyone is O(n²) on a falling queue.' },
     observe: [
       {
         title: 'A taller person hides the shorter ones behind',
         text: 'Person 0 (10) sees 6, then 8 (taller than 6), then 11 (taller than both). 11 is taller than 10, so it blocks everything after it: 3 people.',
-        sketch: { kind: 'array', rows: [{ items: [10, 6, 8, 5, 11, 9], marks: { 0: 'cur', 1: 'hit', 2: 'hit', 4: 'hit', 3: 'dim', 5: 'dim' } }] },
+        sketch: { kind: 'array', rows: [{ items: [10, 6, 8, 5, 11, 9], marks: { '0': 'cur', '1': 'hit', '2': 'hit', '3': 'dim', '4': 'hit', '5': 'dim' } }] },
       },
       {
         title: 'Keep the people still visible from the left',
@@ -588,10 +836,14 @@ export default {
       {
         title: 'Each pop is one person seen',
         text: '10 pops 6 and 8 (both seen, and now hidden from everyone further left), then sees 11 still on top: 3. Then 10 is pushed.',
-        sketch: { kind: 'array', rows: [{ items: ['6 ✓', '8 ✓', '11 ✓'], marks: { 0: 'hit', 1: 'hit', 2: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: ['6 ✓', '8 ✓', '11 ✓'], marks: { '0': 'hit', '1': 'hit', '2': 'hit' } }] },
       },
     ],
-    brute: { idea: 'From each person, walk right keeping the tallest height so far; count everyone taller than all in between, and stop at the first person taller than you.', cost: 'O(n²)', waste: 'The same people are walked over from every person to their left.' },
+    brute: {
+      idea: 'From each person, walk right keeping the tallest height so far; count everyone taller than all in between, and stop at the first person taller than you.',
+      cost: 'O(n²)',
+      waste: 'The same people are walked over from every person to their left.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A stack scanned from the right, heights rising from top to bottom: person i pops everyone shorter (each one is seen), sees the next one on the stack too if there is one, then is pushed. O(n).',
@@ -600,7 +852,13 @@ export default {
         { id: 'two-pointers', why: 'Nothing moves towards anything; each person looks right over a staircase.' },
       ],
     },
-    watch: { viz: 'VisiblePeopleViz', inputs: [{ label: '[10, 6, 8, 5, 11, 9]', input: { heights: [10, 6, 8, 5, 11, 9] } }, { label: '[5, 1, 2, 3, 10]', input: { heights: [5, 1, 2, 3, 10] } }] },
+    watch: {
+      viz: 'VisiblePeopleViz',
+      inputs: [
+        { label: '[10, 6, 8, 5, 11, 9]', input: { heights: [10, 6, 8, 5, 11, 9] } },
+        { label: '[5, 1, 2, 3, 10]', input: { heights: [5, 1, 2, 3, 10] } },
+      ],
+    },
     edges: ['One person: [7] → [0].', 'Rising: [1, 2, 3] → [1, 1, 0].', 'Falling: [3, 2, 1] → [1, 1, 0].'],
   },
 
@@ -615,37 +873,65 @@ export default {
       watch: 'Watch the three positions move and each end add its count.',
     },
     read: [
-      { phrase: 'whose minimum value is exactly `minK` and whose maximum value is exactly `maxK`', says: 'Two conditions: nothing outside [minK, maxK], and both minK and maxK present.' },
+      {
+        phrase: 'whose minimum value is exactly `minK` and whose maximum value is exactly `maxK`',
+        says: 'Two conditions: nothing outside [minK, maxK], and both minK and maxK present.',
+      },
       { phrase: 'Return the number of fixed-bound subarrays', says: 'A count: add the good windows ending at each r.' },
     ],
-    budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'n² windows: far too many to check.' },
+    budget: { from: 'nums.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'n² windows: far too many to check.' },
     observe: [
       {
         title: 'A value outside the bounds is a wall',
         text: '7 > 5, so no counted window can contain it. It splits [1, 3, 5, 2, 7, 5] into [1, 3, 5, 2] and [5].',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, 5, 2, 7, 5], marks: { 4: 'bad' }, tags: { 4: [['wall', 'danger']] } }] },
+        sketch: { kind: 'array', rows: [{ items: [1, 3, 5, 2, 7, 5], marks: { '4': 'bad' }, tags: { '4': [['wall', 'danger']] } }] },
       },
       {
         title: 'Fix the end; which starts work?',
         text: 'For end r = 3 (value 2), a start works if no wall lies between and the window holds a 1 and a 5. The last 1 is at 0 and the last 5 at 2, so the start must be ≤ 0: only start 0.',
-        sketch: { kind: 'array', rows: [{ items: [1, 3, 5, 2, 7, 5], tags: { 0: [['last minK', 'accent']], 2: [['last maxK', 'warn']] }, bands: [{ from: 0, to: 3, tone: 'success' }] }] },
+        sketch: {
+          kind: 'array',
+          rows: [
+            {
+              items: [1, 3, 5, 2, 7, 5],
+              tags: { '0': [['last minK', 'accent']], '2': [['last maxK', 'warn']] },
+              bands: [{ from: 0, to: 3, tone: 'success' }],
+            },
+          ],
+        },
       },
       {
         title: 'Three positions are enough',
         text: 'Each end adds min(lastMin, lastMax) − lastBad when that is positive. Ends 2 and 3 add 1 each; after the wall nothing counts. Total 2. Since nothing outside the bounds is allowed, "minimum is minK" just means "a minK is inside": no deque needed.',
-        sketch: { kind: 'array', rows: [{ label: 'added at each end', items: [0, 0, 1, 1, 0, 0], marks: { 2: 'hit', 3: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'added at each end', items: [0, 0, 1, 1, 0, 0], marks: { '2': 'hit', '3': 'hit' } }] },
       },
     ],
-    brute: { idea: 'Fix the start and extend the end tracking the min and max; a value outside [minK, maxK] ends the extension.', cost: 'O(n²)', waste: 'Each start re-walks the same stretch to rediscover the same minK and maxK positions.' },
+    brute: {
+      idea: 'Fix the start and extend the end tracking the min and max; a value outside [minK, maxK] ends the extension.',
+      cost: 'O(n²)',
+      waste: 'Each start re-walks the same stretch to rediscover the same minK and maxK positions.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'One pass remembering the last bad index, the last minK and the last maxK; each end r adds max(0, min(lastMin, lastMax) − lastBad). This is the deque-free end of the min/max window family: the bounds are fixed, so only "seen minK and maxK" matters. O(n).',
       not: [
-        { id: 'sliding-window', why: '"Minimum exactly minK" isn\'t kept by shrinking (removing the minK breaks it), so plain shrink-while-invalid doesn\'t apply.' },
-        { id: 'two-pointers', why: 'The start isn\'t a single pointer: every start in a range counts, and the range comes from three remembered positions.' },
+        {
+          id: 'sliding-window',
+          why: '"Minimum exactly minK" isn\'t kept by shrinking (removing the minK breaks it), so plain shrink-while-invalid doesn\'t apply.',
+        },
+        {
+          id: 'two-pointers',
+          why: 'The start isn\'t a single pointer: every start in a range counts, and the range comes from three remembered positions.',
+        },
       ],
     },
-    watch: { viz: 'FixedBoundsViz', inputs: [{ label: '[1, 3, 5, 2, 7, 5], 1, 5', input: { nums: [1, 3, 5, 2, 7, 5], minK: 1, maxK: 5 } }, { label: '[1, 1, 1, 1], 1, 1', input: { nums: [1, 1, 1, 1], minK: 1, maxK: 1 } }] },
+    watch: {
+      viz: 'FixedBoundsViz',
+      inputs: [
+        { label: '[1, 3, 5, 2, 7, 5], 1, 5', input: { nums: [1, 3, 5, 2, 7, 5], minK: 1, maxK: 5 } },
+        { label: '[1, 1, 1, 1], 1, 1', input: { nums: [1, 1, 1, 1], minK: 1, maxK: 1 } },
+      ],
+    },
     edges: ['minK = maxK: [1, 1, 1, 1], 1, 1 → 10.', 'No minK at all: [2, 3], 1, 3 → 0.', 'A wall at the start: [7, 1, 5], 1, 5 → 1.'],
   },
 
@@ -674,20 +960,24 @@ export default {
       {
         title: 'Extend the best in reach, or start fresh',
         text: 'dp[i] = nums[i] + max(0, best dp among i − k … i − 1). Starting fresh is allowed because a subsequence can begin anywhere. dp = [10, 12, 2, 17, 37].',
-        sketch: { kind: 'array', rows: [{ label: 'nums', items: [10, 2, -10, 5, 20] }, { label: 'dp', items: [10, 12, 2, 17, 37], marks: { 4: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'nums', items: [10, 2, -10, 5, 20] }, { label: 'dp', items: [10, 12, 2, 17, 37], marks: { '4': 'hit' } }] },
       },
       {
         title: 'Skip what hurts',
         text: '−10 is skipped: 10, 2, 5, 20 uses gaps of 1, 2 and 1, all ≤ 2. Sum 37.',
-        sketch: { kind: 'array', rows: [{ items: [10, 2, -10, 5, 20], marks: { 0: 'hit', 1: 'hit', 2: 'dim', 3: 'hit', 4: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ items: [10, 2, -10, 5, 20], marks: { '0': 'hit', '1': 'hit', '2': 'dim', '3': 'hit', '4': 'hit' } }] },
       },
       {
         title: 'The same deque as Jump Game VI',
         text: 'The max of the last k dp values is a sliding-window maximum: a deque with dp falling from front to back. After i = 3, dp[3] = 17 has pushed out dp[1] and dp[2].',
-        sketch: { kind: 'array', rows: [{ label: 'deque after i = 3', items: ['3 (dp 17)'], marks: { 0: 'hit' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'deque after i = 3', items: ['3 (dp 17)'], marks: { '0': 'hit' } }] },
       },
     ],
-    brute: { idea: 'DP: dp[i] = nums[i] + max(0, the max of dp[i − k … i − 1]), found with a loop.', cost: 'O(n · k)', waste: 'Neighbouring steps share k − 1 candidates, and the max is recomputed each time.' },
+    brute: {
+      idea: 'DP: dp[i] = nums[i] + max(0, the max of dp[i − k … i − 1]), found with a loop.',
+      cost: 'O(n · k)',
+      waste: 'Neighbouring steps share k − 1 candidates, and the max is recomputed each time.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'DP + max deque: drop the front when it is more than k back, set dp[i] = nums[i] + max(0, dp[front]), pop the back while its dp ≤ dp[i], push i, and keep the best dp. O(n).',
@@ -696,8 +986,18 @@ export default {
         { id: 'heap-patterns', why: 'A max-heap of (dp, index) with lazy removal works too, in O(n log n).' },
       ],
     },
-    watch: { viz: 'DpDequeViz', inputs: [{ label: '[10, 2, −10, 5, 20], k = 2', input: { mode: 'csum', nums: [10, 2, -10, 5, 20], k: 2 } }, { label: '[−1, −2, −3], k = 1', input: { mode: 'csum', nums: [-1, -2, -3], k: 1 } }] },
-    edges: ['All negative: [−1, −2, −3], 1 → −1; take the single best.', 'k = 1, nothing to skip: [1, −1, 2], 1 → 2.', 'Skipping helps: [10, −10, 10], 2 → 20.'],
+    watch: {
+      viz: 'DpDequeViz',
+      inputs: [
+        { label: '[10, 2, −10, 5, 20], k = 2', input: { mode: 'csum', nums: [10, 2, -10, 5, 20], k: 2 } },
+        { label: '[−1, −2, −3], k = 1', input: { mode: 'csum', nums: [-1, -2, -3], k: 1 } },
+      ],
+    },
+    edges: [
+      'All negative: [−1, −2, −3], 1 → −1; take the single best.',
+      'k = 1, nothing to skip: [1, −1, 2], 1 → 2.',
+      'Skipping helps: [10, −10, 10], 2 → 20.',
+    ],
   },
 
   'shortest-subarray-with-sum-at-least-k': {
@@ -712,20 +1012,23 @@ export default {
     },
     read: [
       { phrase: '(which may contain negative numbers)', says: 'Shrinking a window can raise its sum: the usual sliding window breaks.' },
-      { phrase: 'shortest non-empty contiguous subarray whose sum is at least `k`', says: 'Subarray sums are differences of prefix sums: p[j] − p[i] ≥ k with j − i as small as possible.' },
+      {
+        phrase: 'shortest non-empty contiguous subarray whose sum is at least `k`',
+        says: 'Subarray sums are differences of prefix sums: p[j] − p[i] ≥ k with j − i as small as possible.',
+      },
       { phrase: 'If there is no such subarray, return `-1`', says: 'Start the best length at infinity and turn it into −1 if nothing is found.' },
     ],
-    budget: { from: 'nums.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Trying every start with a running sum is O(n²) = 10¹⁰.' },
+    budget: { from: 'nums.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'Trying every start with a running sum is O(n²) = 10¹⁰.' },
     observe: [
       {
         title: 'Negatives break the sliding window',
         text: 'With only positives, growing a window raises its sum and shrinking lowers it. In [2, −1, 2], shrinking [2, −1, 2] to [−1, 2] lowers the sum, but dropping −1 next raises it again: there is no safe rule for when to shrink.',
-        sketch: { kind: 'array', rows: [{ items: [2, -1, 2], marks: { 1: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ items: [2, -1, 2], marks: { '1': 'bad' } }] },
       },
       {
         title: 'Use prefix sums',
         text: 'p = [0, 2, 1, 3]. The subarray from i to j − 1 sums to p[j] − p[i], so we want the latest i before j with p[i] ≤ p[j] − k. For j = 3: p[3] − p[0] = 3 ≥ 3, length 3.',
-        sketch: { kind: 'array', rows: [{ label: 'prefix sums p', items: [0, 2, 1, 3], tags: { 0: [['i', 'accent']], 3: [['j', 'warn']] } }] },
+        sketch: { kind: 'array', rows: [{ label: 'prefix sums p', items: [0, 2, 1, 3], tags: { '0': [['i', 'accent']], '3': [['j', 'warn']] } }] },
       },
       {
         title: 'Keep only useful starts, in a deque',
@@ -733,7 +1036,11 @@ export default {
         sketch: { kind: 'array', rows: [{ label: 'deque of starts (p rising)', items: ['0 (p 0)', '2 (p 1)'] }] },
       },
     ],
-    brute: { idea: 'For every start, extend the end with a running sum and record the first end that reaches k.', cost: 'O(n²)', waste: 'Starts that can never win (an earlier, higher prefix sum) are extended anyway.' },
+    brute: {
+      idea: 'For every start, extend the end with a running sum and record the first end that reaches k.',
+      cost: 'O(n²)',
+      waste: 'Starts that can never win (an earlier, higher prefix sum) are extended anyway.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A monotonic deque over prefix sums: for each j, pop the front while p[j] − p[front] ≥ k (recording j − front), pop the back while p[back] ≥ p[j], then push j. O(n).',
@@ -743,7 +1050,13 @@ export default {
         { id: 'prefix-sums', why: 'The prefix sums are the base; the deque decides which starts are still worth keeping.' },
       ],
     },
-    watch: { viz: 'DpDequeViz', inputs: [{ label: '[2, −1, 2], k = 3', input: { mode: 'shortest', nums: [2, -1, 2], k: 3 } }, { label: '[84, −37, 32, 40, 95], k = 167', input: { mode: 'shortest', nums: [84, -37, 32, 40, 95], k: 167 } }] },
+    watch: {
+      viz: 'DpDequeViz',
+      inputs: [
+        { label: '[2, −1, 2], k = 3', input: { mode: 'shortest', nums: [2, -1, 2], k: 3 } },
+        { label: '[84, −37, 32, 40, 95], k = 167', input: { mode: 'shortest', nums: [84, -37, 32, 40, 95], k: 167 } },
+      ],
+    },
     edges: ['A single element: [1], 1 → 1.', 'Impossible: [1, 2], 4 → −1.', 'A negative in the middle: [84, −37, 32, 40, 95], 167 → 3.'],
   },
 
@@ -758,10 +1071,13 @@ export default {
       watch: 'Watch taller bars pop and measure their rectangles.',
     },
     read: [
-      { phrase: 'it may span several adjacent bars and is limited by the shortest of them', says: 'Height = the shortest bar inside. Try each bar as that shortest bar.' },
+      {
+        phrase: 'it may span several adjacent bars and is limited by the shortest of them',
+        says: 'Height = the shortest bar inside. Try each bar as that shortest bar.',
+      },
       { phrase: 'a bar of width 1', says: 'The width is just the number of bars covered.' },
     ],
-    budget: { from: 'heights.length ≤ 10⁵', n: 1e5, aim: 'O(n)', note: 'Every pair of ends is O(n²) = 10¹⁰.' },
+    budget: { from: 'heights.length ≤ 10⁵', n: 100000, aim: 'O(n)', note: 'Every pair of ends is O(n²) = 10¹⁰.' },
     observe: [
       {
         title: 'Every rectangle has a shortest bar',
@@ -771,20 +1087,27 @@ export default {
       {
         title: 'A bar stretches until a shorter bar on each side',
         text: 'The 5 stretches right over 6 and stops at 2; to the left it stops at 1. Width 2, area 10, the answer.',
-        sketch: { kind: 'array', rows: [{ items: [2, 1, 5, 6, 2, 3], marks: { 1: 'target', 4: 'target', 2: 'cur' } }] },
+        sketch: { kind: 'array', rows: [{ items: [2, 1, 5, 6, 2, 3], marks: { '1': 'target', '2': 'cur', '4': 'target' } }] },
       },
       {
         title: 'A shorter bar ends the taller ones before it',
         text: 'Keep bars in rising order on a stack. When 2 arrives, 6 and then 5 on top are taller: their right edge is here, their left edge is the bar below them on the stack. Pop and measure: 6 × 1, then 5 × 2.',
-        sketch: { kind: 'array', rows: [{ label: 'stack when 2 arrives, bottom → top', items: [1, 5, 6], marks: { 1: 'bad', 2: 'bad' } }] },
+        sketch: { kind: 'array', rows: [{ label: 'stack when 2 arrives, bottom → top', items: [1, 5, 6], marks: { '1': 'bad', '2': 'bad' } }] },
       },
     ],
-    brute: { idea: 'Fix the left end, extend the right end keeping the running minimum, and track the best height × width.', cost: 'O(n²)', waste: 'Each left end re-scans the bars to its right; each bar\'s reach is discovered over and over.' },
+    brute: {
+      idea: 'Fix the left end, extend the right end keeping the running minimum, and track the best height × width.',
+      cost: 'O(n²)',
+      waste: 'Each left end re-scans the bars to its right; each bar\'s reach is discovered over and over.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A rising stack of bar indexes: when a shorter bar arrives at i, pop each taller bar; its rectangle is height × (i − newTop − 1). A 0-height bar at the end empties the stack. O(n).',
       not: [
-        { id: 'two-pointers', why: 'Container With Most Water uses two pointers because only the two ends matter; here every bar in between limits the height.' },
+        {
+          id: 'two-pointers',
+          why: 'Container With Most Water uses two pointers because only the two ends matter; here every bar in between limits the height.',
+        },
         { id: 'divide-and-conquer', why: 'Splitting at the shortest bar works, but is O(n²) on sorted heights.' },
       ],
     },
@@ -805,7 +1128,10 @@ export default {
     read: [
       { phrase: 'the largest rectangle that contains only', says: 'Every such rectangle has a bottom row and is made of columns of 1s.' },
       { phrase: 'Treat each row as the floor of a histogram', says: 'Bar heights = consecutive 1s ending at that row in each column.' },
-      { phrase: 'apply the largest-rectangle-in-histogram method row by row', says: 'Each row is one Largest Rectangle in Histogram problem: O(n) each with a stack.' },
+      {
+        phrase: 'apply the largest-rectangle-in-histogram method row by row',
+        says: 'Each row is one Largest Rectangle in Histogram problem: O(n) each with a stack.',
+      },
     ],
     budget: {
       from: 'matrix ≤ 200 × 200',
@@ -817,12 +1143,20 @@ export default {
       {
         title: 'Every rectangle has a bottom row',
         text: 'Fix the bottom row; the rectangle reaches up through columns of 1s. Standing on row 2, the columns of 1s ending there have heights [3, 1, 3, 2, 2].',
-        sketch: { kind: 'grid', grid: [['1', '0', '1', '0', '0'], ['1', '0', '1', '1', '1'], ['1', '1', '1', '1', '1'], ['1', '0', '0', '1', '0']], marks: { '1,2': 'hit', '1,3': 'hit', '1,4': 'hit', '2,2': 'hit', '2,3': 'hit', '2,4': 'hit' }, caption: 'the answer: rows 1–2, columns 2–4, area 6' },
+        sketch: {
+          kind: 'grid',
+          grid: [['1', '0', '1', '0', '0'], ['1', '0', '1', '1', '1'], ['1', '1', '1', '1', '1'], ['1', '0', '0', '1', '0']],
+          marks: { '1,2': 'hit', '1,3': 'hit', '1,4': 'hit', '2,2': 'hit', '2,3': 'hit', '2,4': 'hit' },
+          caption: 'the answer: rows 1–2, columns 2–4, area 6',
+        },
       },
       {
         title: 'Heights update in O(1) per cell',
         text: 'Going down one row: a 1 adds one to its column\'s height, a 0 resets it to 0.',
-        sketch: { kind: 'array', rows: [{ label: 'row 1', items: [2, 0, 2, 1, 1] }, { label: 'row 2', items: [3, 1, 3, 2, 2] }, { label: 'row 3', items: [4, 0, 0, 3, 0] }] },
+        sketch: {
+          kind: 'array',
+          rows: [{ label: 'row 1', items: [2, 0, 2, 1, 1] }, { label: 'row 2', items: [3, 1, 3, 2, 2] }, { label: 'row 3', items: [4, 0, 0, 3, 0] }],
+        },
       },
       {
         title: 'Each row is Largest Rectangle in Histogram',
@@ -830,7 +1164,11 @@ export default {
         sketch: { kind: 'array', rows: [{ items: [3, 1, 3, 2, 2], bands: [{ from: 2, to: 4, tone: 'success', label: '2 × 3 = 6' }] }] },
       },
     ],
-    brute: { idea: 'For each cell as the bottom-right corner, look upwards row by row, keeping the narrowest run of 1s ending in that column.', cost: 'O(m² · n)', waste: 'Every corner re-walks the same rows above it.' },
+    brute: {
+      idea: 'For each cell as the bottom-right corner, look upwards row by row, keeping the narrowest run of 1s ending in that column.',
+      cost: 'O(m² · n)',
+      waste: 'Every corner walks up through the same rows its neighbours already walked; keeping running column heights per row avoids re-walking.',
+    },
     pattern: {
       pick: 'monotonic-stack',
       why: 'A histogram per row: heights[c] += 1 for a 1, = 0 for a 0; run the monotonic-stack largest rectangle on each row\'s heights and keep the best. O(m · n).',

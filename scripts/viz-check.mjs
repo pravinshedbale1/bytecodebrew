@@ -357,7 +357,13 @@ function common(name, steps, code, kinds) {
       want = Math.max(...input.weights);
       const days = (cap) => { let d = 1, ld = 0; for (const w of input.weights) { if (ld + w > cap) { d++; ld = 0; } ld += w; } return d; };
       while (days(want) > input.days) want++;
-    } else {
+    } else if (input.mode === 'divisor') { want = 1; while (input.nums.reduce((s, v) => s + Math.ceil(v / want), 0) > input.threshold) want++; }
+    else if (input.mode === 'bloom') {
+      // brute force: every day from 1 up, counting bouquets with a fresh scan
+      const made = (d) => { let n = 0; for (let i = 0; i + input.k <= input.bloom.length;) { if (input.bloom.slice(i, i + input.k).every((b) => b <= d)) { n++; i += input.k; } else i++; } return n; };
+      want = 1; while (made(want) < input.m) want++;
+    } else if (input.mode === 'trips') { want = 1; while (input.time.reduce((s, t) => s + Math.floor(want / t), 0) < input.total) want++; }
+    else {
       const pos = [...input.positions].sort((a, b) => a - b);
       // brute force over every subset of m positions: the best minimum gap
       want = 0;
@@ -372,7 +378,11 @@ function common(name, steps, code, kinds) {
     for (const st of steps) if (st.kind === 'works' || st.kind === 'fails') ok(as.check(input, st.mid).works === (st.kind === 'works'), 'answer: check result recorded');
   };
   for (const ex of Object.values(as.ANSWER)) run(ex.input);
-  for (let t = 0; t < 1200; t++) for (const mode of ['koko', 'ship', 'cows']) run(as.randomAnswer({ mode }, rand));
+  for (let t = 0; t < 1200; t++) for (const mode of ['koko', 'ship', 'cows', 'divisor', 'bloom', 'trips']) run(as.randomAnswer({ mode }, rand));
+  for (const [mode, values] of [['divisor', { nums: '1, 2, 5, 9', threshold: '6' }], ['bloom', { bloom: '1, 10, 3, 10, 2', m: '3', k: '1' }], ['trips', { time: '1, 2, 3', total: '5' }]]) {
+    const r = as.parseAnswer(values, { mode });
+    ok(!r.error && JSON.stringify(as.parseAnswer(Object.fromEntries(Object.entries(r.input).filter(([k]) => k !== 'mode').map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : String(v)])), { mode }).input) === JSON.stringify(r.input), `answer parse ${mode}`);
+  }
 }
 
 // ---------------------------------------------------------------- sorting as a tool

@@ -243,8 +243,8 @@ function AnswerStage({ step: f, input, width, jump }) {
   let body = null;
   let bodyH = 0;
   const top = AX_TOP + AX_H + 48;
-  if (input.mode === 'koko' || input.mode === 'ship') {
-    const items = input.mode === 'koko' ? input.piles : input.weights;
+  if (input.mode !== 'cows') {
+    const items = { koko: input.piles, ship: input.weights, divisor: input.nums, bloom: input.bloom, trips: input.time }[input.mode];
     const n = items.length;
     const pitch = pitchFor(W, n, 34, 62);
     const x0 = (W - n * pitch) / 2;
@@ -254,14 +254,29 @@ function AnswerStage({ step: f, input, width, jump }) {
         const ks = c.day.map((dd, k) => (dd === d ? k : -1)).filter((k) => k >= 0);
         return { from: ks[0], to: ks.at(-1), tone: DAY_TONES[d % DAY_TONES.length], label: `d${d + 1}: ${ld}` };
       })
-      : [];
+      : input.mode === 'bloom' && c
+        ? c.groups.map(([from, to], g) => ({ from, to, tone: DAY_TONES[g % DAY_TONES.length], label: `b${g + 1}` }))
+        : [];
+    const label = {
+      koko: `piles · hours at speed ${f.mid ?? 'k'}`,
+      ship: `packages in order · capacity ${f.mid ?? 'c'}`,
+      divisor: `numbers · ⌈v / ${f.mid ?? 'd'}⌉`,
+      bloom: `bloom day of each flower · open by day ${f.mid ?? 'd'}?`,
+      trips: `minutes per trip · trips done by ${f.mid ?? 't'}`,
+    }[input.mode];
+    const sub = !c ? undefined
+      : input.mode === 'koko' ? (k) => ({ text: `${c.per[k]}h`, tone: 'solid' })
+        : input.mode === 'divisor' ? (k) => ({ text: `${c.per[k]}`, tone: 'solid' })
+          : input.mode === 'trips' ? (k) => ({ text: `${c.per[k]}×`, tone: 'solid' })
+            : input.mode === 'bloom' ? (k) => ({ text: c.open[k] ? 'open' : '—', tone: c.open[k] ? 'solid' : 'muted' })
+              : undefined;
     body = (
       <>
-        <RowLabel y={top - 44}>{input.mode === 'koko' ? `piles · hours at speed ${f.mid ?? 'k'}` : `packages in order · capacity ${f.mid ?? 'c'}`}</RowLabel>
+        <RowLabel y={top - 44}>{label}</RowLabel>
         <ArrayStrip
           items={items} x0={x0} y={top} pitch={pitch} h={40} bands={bands}
-          index={input.mode === 'ship'}
-          sub={input.mode === 'koko' && c ? (k) => ({ text: `${c.per[k]}h`, tone: 'solid' }) : undefined}
+          index={input.mode === 'ship' || input.mode === 'bloom'}
+          sub={sub}
         />
       </>
     );
@@ -311,8 +326,18 @@ const answerSpec = {
     fails: ['Check fails', 'danger'],
     done: ['Answer', 'success'],
   },
-  describe: (input) => (input.mode === 'koko' ? `piles = ${list(input.piles)}, h = ${input.h}` : input.mode === 'ship' ? `weights = ${list(input.weights)}, days = ${input.days}` : `positions = ${list(input.positions)}, m = ${input.m}`),
+  describe: (input) => ({
+    koko: () => `piles = ${list(input.piles)}, h = ${input.h}`,
+    ship: () => `weights = ${list(input.weights)}, days = ${input.days}`,
+    cows: () => `positions = ${list(input.positions)}, m = ${input.m}`,
+    divisor: () => `nums = ${list(input.nums)}, threshold = ${input.threshold}`,
+    bloom: () => `bloomDay = ${list(input.bloom)}, m = ${input.m}, k = ${input.k}`,
+    trips: () => `time = ${list(input.time)}, totalTrips = ${input.total}`,
+  })[input.mode](),
   rule: (input) => ({
+    divisor: 'Smallest divisor whose rounded-up sum fits the threshold.',
+    bloom: 'Earliest day with m bouquets of k adjacent bloomed flowers.',
+    trips: 'Smallest time by which the buses finish totalTrips trips.',
     koko: 'Smallest speed whose hours fit in h.',
     ship: 'Smallest capacity that ships everything in time.',
     cows: 'Largest minimum gap that still fits m balls.',
@@ -323,20 +348,34 @@ const answerSpec = {
     [<Key shape="text" tone="success">✓</Key>, 'check passed'],
     [<Key shape="text" tone="danger">✗</Key>, 'check failed'],
     ...(input.mode === 'ship' ? [[<Key shape="box" tone="note">day</Key>, 'packages loaded on one day']] : []),
+    ...(input.mode === 'bloom' ? [[<Key shape="box" tone="note">b</Key>, 'one bouquet: k bloomed flowers in a row']] : []),
     ...(input.mode === 'cows' ? [[<Key shape="pill" tone="accent">●</Key>, 'a ball (greedy: earliest spot)']] : []),
   ],
   fields: (input) => ({
     koko: [{ name: 'piles', label: 'piles (1 to 30)', placeholder: 'e.g. 30, 11, 23, 4, 20' }, { name: 'h', label: 'h', placeholder: '6', short: true }],
     ship: [{ name: 'weights', label: 'weights (1 to 20)', placeholder: 'e.g. 3, 2, 2, 4, 1, 4' }, { name: 'days', label: 'days', placeholder: '3', short: true }],
     cows: [{ name: 'positions', label: 'positions (0 to 60)', placeholder: 'e.g. 1, 2, 3, 4, 7' }, { name: 'm', label: 'm', placeholder: '3', short: true }],
+    divisor: [{ name: 'nums', label: 'nums (1 to 40)', placeholder: 'e.g. 1, 2, 5, 9' }, { name: 'threshold', label: 'threshold', placeholder: '6', short: true }],
+    bloom: [{ name: 'bloom', label: 'bloom days (1 to 30)', placeholder: 'e.g. 1, 10, 3, 10, 2' }, { name: 'm', label: 'm', placeholder: '3', short: true }, { name: 'k', label: 'k', placeholder: '1', short: true }],
+    trips: [{ name: 'time', label: 'time per trip (1 to 9)', placeholder: 'e.g. 1, 2, 3' }, { name: 'total', label: 'totalTrips', placeholder: '5', short: true }],
   })[input.mode],
-  values: (input) => (input.mode === 'koko' ? { piles: input.piles.join(', '), h: String(input.h) } : input.mode === 'ship' ? { weights: input.weights.join(', '), days: String(input.days) } : { positions: input.positions.join(', '), m: String(input.m) }),
+  values: (input) => ({
+    koko: () => ({ piles: input.piles.join(', '), h: String(input.h) }),
+    ship: () => ({ weights: input.weights.join(', '), days: String(input.days) }),
+    cows: () => ({ positions: input.positions.join(', '), m: String(input.m) }),
+    divisor: () => ({ nums: input.nums.join(', '), threshold: String(input.threshold) }),
+    bloom: () => ({ bloom: input.bloom.join(', '), m: String(input.m), k: String(input.k) }),
+    trips: () => ({ time: input.time.join(', '), total: String(input.total) }),
+  })[input.mode](),
   parse: parseAnswer,
   random: (input) => randomAnswer(input),
   hint: (input) => ({
     koko: 'Up to 8 piles and h ≥ the number of piles (Koko eats from one pile per hour).',
     ship: 'Up to 10 package weights, shipped in order, and the number of days.',
     cows: 'Up to 8 distinct basket positions and m balls (2 or more).',
+    divisor: 'Up to 8 numbers and a threshold of at least one per number.',
+    bloom: 'Up to 10 bloom days; m bouquets of k adjacent flowers (m · k ≤ flowers).',
+    trips: 'Up to 6 buses (minutes per trip) and the trips needed.',
   })[input.mode],
   delay: () => 3200,
   Stage: AnswerStage,
