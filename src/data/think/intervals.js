@@ -57,22 +57,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Sort by start',
-          text: '[0, 30], [5, 10], [15, 20].',
-          sketch: { kind: 'array', rows: [{ items: ['[0,30]', '[5,10]', '[15,20]'] }] },
-        },
-        {
-          title: 'Compare [5, 10] with [0, 30]',
-          text: '5 < 30: the second meeting starts before the first ends.',
-          sketch: { kind: 'array', rows: [{ items: ['[0,30]', '[5,10]', '[15,20]'], marks: { '0': 'target', '1': 'cur' } }] },
-        },
-        {
-          title: 'A clash → false',
-          text: 'One person can\'t attend both.',
-          sketch: { kind: 'array', rows: [{ items: ['[0,30]', '[5,10]', '[15,20]'], marks: { '1': 'bad' } }] },
-        },
+      viz: 'IntervalWalkViz',
+      inputs: [
+        { label: '[0, 30], [5, 10], [15, 20]', input: { mode: 'rooms', list: [[0, 30], [5, 10], [15, 20]] } },
+        { label: '[7, 10], [2, 4]', input: { mode: 'rooms', list: [[7, 10], [2, 4]] } },
       ],
     },
     edges: ['No meetings: [] → true.', 'Back-to-back meetings: [[1, 5], [5, 8]] → true.', 'Unsorted but fine: [[7, 10], [2, 4]] → true.'],
@@ -210,49 +198,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '[1, 2] ends before 4: copy it',
-          text: 'It finishes before the new interval [4, 8] begins, so it can\'t overlap: copy it as it is.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: ['[1,2]', '[3,5]', '[6,7]', '[8,10]', '[12,16]'], marks: { '0': 'cur' } },
-              { label: 'new', items: ['[4,8]'] },
-              { label: 'out', items: ['[1,2]'], marks: { '0': 'kept' } },
-            ],
-          },
-        },
-        {
-          title: '[3, 5] overlaps: new = [3, 8]',
-          text: '3 ≤ 8 and 5 ≥ 4, so they overlap. Grow the new interval: smaller start 3, larger end 8.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: ['[1,2]', '[3,5]', '[6,7]', '[8,10]', '[12,16]'], marks: { '0': 'dim', '1': 'cur' } },
-              { label: 'new', items: ['[3,8]'], marks: { '0': 'hit' } },
-              { label: 'out', items: ['[1,2]'], marks: { '0': 'kept' } },
-            ],
-          },
-        },
-        {
-          title: '[6, 7] and [8, 10] overlap: new = [3, 10]',
-          text: '[6, 7] lies inside [3, 8]; [8, 10] touches at 8, which counts. The end grows to 10.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: ['[1,2]', '[3,5]', '[6,7]', '[8,10]', '[12,16]'], marks: { '0': 'dim', '1': 'dim', '2': 'cur', '3': 'cur' } },
-              { label: 'new', items: ['[3,10]'], marks: { '0': 'hit' } },
-              { label: 'out', items: ['[1,2]'], marks: { '0': 'kept' } },
-            ],
-          },
-        },
-        {
-          title: '[12, 16] starts after 10: add [3, 10], copy the rest',
-          text: 'Nothing later can overlap. Result: [[1, 2], [3, 10], [12, 16]], in one pass with no sort.',
-          sketch: { kind: 'array', rows: [{ label: 'out', items: ['[1,2]', '[3,10]', '[12,16]'], marks: { '0': 'kept', '1': 'hit', '2': 'kept' } }] },
-        },
-      ],
+      viz: 'IntervalWalkViz',
+      inputs: [{ label: 'insert [4, 8]', input: { mode: 'insert', list: [[1, 2], [3, 5], [6, 7], [8, 10], [12, 16]], nw: [[4, 8]] } }],
     },
     edges: [
       'An empty list: [], [5, 7] → [[5, 7]].',
@@ -380,23 +327,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Sort by end',
-          text: '[1, 6], [2, 8], [7, 12], [10, 16]. First arrow at 6.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,6]', '[2,8]', '[7,12]', '[10,16]'], marks: { '0': 'cur' } }] },
-        },
-        {
-          title: '[2, 8] starts at 2 ≤ 6',
-          text: 'Already burst by the arrow at 6.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,6]', '[2,8]', '[7,12]', '[10,16]'], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-        {
-          title: '[7, 12] starts after 6 → arrow 2 at 12',
-          text: 'It also bursts [10, 16]. Total: 2 arrows.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,6]', '[2,8]', '[7,12]', '[10,16]'], marks: { '2': 'hit', '3': 'hit' } }] },
-        },
-      ],
+      viz: 'IntervalWalkViz',
+      inputs: [{ label: '[10, 16], [2, 8], [1, 6], [7, 12]', input: { mode: 'arrows', list: [[10, 16], [2, 8], [1, 6], [7, 12]] } }],
     },
     edges: ['Touching balloons share one arrow: [[1, 2], [2, 3]] → 1.', 'No overlaps: [[1, 2], [3, 4]] → 2.', 'One balloon: [[5, 9]] → 1.'],
     not: { '0': [], '1': [] },
@@ -456,43 +388,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '[0, 2] & [1, 5] → [1, 2]',
-          text: '[0, 2] ends first: advance the first list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: '[5, 10] & [1, 5] → [5, 5]',
-          text: 'A single point. [1, 5] ends first: advance the second list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]'], marks: { '1': 'hit' } }] },
-        },
-        {
-          title: '[5, 10] & [8, 12] → [8, 10]',
-          text: '[5, 10] ends first: advance the first list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]', '[8,10]'], marks: { '2': 'hit' } }] },
-        },
-        {
-          title: '[13, 23] & [8, 12]: no overlap',
-          text: 'The larger start 13 is after the smaller end 12, so nothing is recorded. [8, 12] ends first: advance the second list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]', '[8,10]'] }] },
-        },
-        {
-          title: '[13, 23] & [15, 24] → [15, 23]',
-          text: 'Larger start 15, smaller end 23. [13, 23] ends first: advance the first list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]', '[8,10]', '[15,23]'], marks: { '3': 'hit' } }] },
-        },
-        {
-          title: '[24, 25] & [15, 24] → [24, 24]',
-          text: 'A single point. [15, 24] ends first: advance the second list.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]', '[8,10]', '[15,23]', '[24,24]'], marks: { '4': 'hit' } }] },
-        },
-        {
-          title: '[24, 25] & [25, 26] → [25, 25]',
-          text: 'Another single point. The first list then runs out: six overlaps, each pointer moved at most four times.',
-          sketch: { kind: 'array', rows: [{ label: 'found', items: ['[1,2]', '[5,5]', '[8,10]', '[15,23]', '[24,24]', '[25,25]'], marks: { '5': 'hit' } }] },
-        },
-      ],
+      viz: 'IntervalWalkViz',
+      inputs: [{ label: 'the LeetCode lists', input: { mode: 'inter', A: [[0, 2], [5, 10], [13, 23], [24, 25]], B: [[1, 5], [8, 12], [15, 24], [25, 26]] } }],
     },
     edges: [
       'One list empty: [[1, 3]], [] → [].',
@@ -550,22 +447,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Sorted: [1, 4], [2, 8], [3, 6]',
-          text: 'No interval has been seen yet, so [1, 4] is kept. The furthest end so far becomes 4.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,4]', '[2,8]', '[3,6]'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: '[2, 8]: 8 > 4',
-          text: 'Not covered. Furthest end = 8.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,4]', '[2,8]', '[3,6]'], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-        {
-          title: '[3, 6]: 6 ≤ 8 → covered',
-          text: 'Removed. Remaining: 2.',
-          sketch: { kind: 'array', rows: [{ items: ['[1,4]', '[2,8]', '[3,6]'], marks: { '0': 'hit', '1': 'hit', '2': 'bad' } }] },
-        },
+      viz: 'IntervalWalkViz',
+      inputs: [
+        { label: '[1, 4], [3, 6], [2, 8]', input: { mode: 'covered', list: [[1, 4], [3, 6], [2, 8]] } },
+        { label: 'equal starts: [1, 4], [1, 2]', input: { mode: 'covered', list: [[1, 4], [1, 2]] } },
       ],
     },
     edges: [
@@ -686,28 +571,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'q = 2: push [1, 4] and [2, 4]',
-          text: 'Smallest containing 2: [2, 4], size 3.',
-          sketch: { kind: 'array', rows: [{ label: 'heap', items: ['[2,4] 3', '[1,4] 4'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: 'q = 3: push [3, 6]',
-          text: 'The top is still [2, 4], size 3.',
-          sketch: { kind: 'array', rows: [{ label: 'heap', items: ['[2,4] 3', '[1,4] 4', '[3,6] 4'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: 'q = 4: push [4, 4]',
-          text: 'Size 1 goes on top.',
-          sketch: { kind: 'array', rows: [{ label: 'heap', items: ['[4,4] 1', '[2,4] 3', '[1,4] 4', '[3,6] 4'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: 'q = 5: drop the finished ones',
-          text: 'Pop tops that end before 5: [4, 4], then [2, 4]. Next on top is a size-4 interval: if it is [1, 4] it is popped too; [3, 6] contains 5 and gives 4. Answers: [3, 3, 1, 4].',
-          sketch: { kind: 'array', rows: [{ label: 'heap', items: ['[3,6] 4'], marks: { '0': 'hit' } }] },
-        },
-      ],
+      viz: 'IntervalWalkViz',
+      inputs: [{ label: '[1, 4], [2, 4], [3, 6], [4, 4]; 2, 3, 4, 5', input: { mode: 'queries', list: [[1, 4], [2, 4], [3, 6], [4, 4]], qs: [2, 3, 4, 5] } }],
     },
     edges: [
       'A query no interval contains: [[1, 2]], [5] → [−1].',
@@ -773,30 +638,7 @@ export default {
         { id: 'greedy', why: 'The rules are fixed by the statement; we simulate them efficiently rather than choose.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: '[0, 10] → room 0, [1, 5] → room 1',
-          text: 'Both rooms are now busy.',
-          sketch: { kind: 'array', rows: [{ label: 'busy (end, room)', items: ['(5, 1)', '(10, 0)'] }] },
-        },
-        {
-          title: '[2, 7]: no room free',
-          text: 'Room 1 frees first, at 5: the meeting runs 5 → 10 in room 1.',
-          sketch: { kind: 'array', rows: [{ label: 'busy (end, room)', items: ['(10, 0)', '(10, 1)'], marks: { '1': 'hit' } }] },
-        },
-        {
-          title: '[3, 4]: no room free',
-          text: 'Both free at 10; the lower number wins: room 0, 10 → 11.',
-          sketch: { kind: 'array', rows: [{ label: 'meetings held', items: ['room 0: 2', 'room 1: 2'] }] },
-        },
-        {
-          title: 'A tie → room 0',
-          text: 'Both rooms held 2 meetings; the lowest number wins.',
-          sketch: { kind: 'array', rows: [{ label: 'meetings held', items: ['room 0: 2', 'room 1: 2'], marks: { '0': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'IntervalWalkViz', inputs: [{ label: '2 rooms, 4 meetings', input: { mode: 'rooms3', n: 2, list: [[0, 10], [1, 5], [2, 7], [3, 4]] } }] },
     edges: [
       'More rooms than meetings: n 3, [[0, 1], [1, 2]] → 0.',
       'One room takes everything: n 1, [[0, 5], [1, 2]] → 0.',

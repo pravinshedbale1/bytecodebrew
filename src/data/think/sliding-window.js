@@ -196,22 +196,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Add 1, 2, 3',
-          text: 'The window {1, 2, 3} has no repeats yet.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], bands: [{ from: 0, to: 2, tone: 'accent' }] }] },
-        },
-        {
-          title: 'Next is 1: check the set',
-          text: 'The set holds 1, 2, 3, which are the last k = 3 values.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { '3': 'cur' }, bands: [{ from: 0, to: 2, tone: 'accent' }] }] },
-        },
-        {
-          title: '1 is there → true',
-          text: 'The earlier 1 is 3 positions back, which is ≤ k = 3.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { '0': 'hit', '3': 'hit' } }] },
-        },
+      viz: 'WindowWalkViz',
+      inputs: [
+        { label: '[1, 2, 3, 1], k = 3', input: { mode: 'dup2', nums: [1, 2, 3, 1], k: 3 } },
+        { label: '[1, 2, 3, 1, 2, 3], k = 2', input: { mode: 'dup2', nums: [1, 2, 3, 1, 2, 3], k: 2 } },
       ],
     },
     edges: ['k = 0: [1, 1], k 0 → false.', 'Repeats exactly k + 1 apart: [1, 2, 1], k 1 → false.', 'A single element: [7], k 3 → false.'],
@@ -345,37 +333,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Grow to index 4',
-          text: 'Zeros at 3 and 4: two zeros, still fine. Length 5.',
-          sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 0, to: 4, tone: 'accent' }] }] },
-        },
-        {
-          title: 'Index 5 is a third zero: shrink',
-          text: 'Move l past index 3 (the oldest zero): the window becomes [4, 5].',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0],
-                bands: [{ from: 4, to: 5, tone: 'accent' }],
-                marks: { '0': 'dim', '1': 'dim', '2': 'dim', '3': 'dim' },
-              },
-            ],
-          },
-        },
-        {
-          title: 'Grow to index 9: length 6',
-          text: 'Ones only: the window [4, 9] has two zeros. Best so far 6.',
-          sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 4, to: 9, tone: 'success' }] }] },
-        },
-        {
-          title: 'Index 10: shrink past index 4 → answer 6',
-          text: 'The window [5, 10] is also 6 long. Nothing longer appears: the answer is 6.',
-          sketch: { kind: 'array', rows: [{ items: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], bands: [{ from: 5, to: 10, tone: 'success' }] }] },
-        },
-      ],
+      viz: 'WindowWalkViz',
+      inputs: [{ label: '[1,1,1,0,0,0,1,1,1,1,0], k = 2', input: { mode: 'ones', nums: [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], k: 2 } }],
     },
     edges: ['k = 0: [1, 0, 1, 1] → 2 (the longest run as it is).', 'k at least the number of zeros: [0, 1, 0], k 2 → 3.', 'All zeros: [0, 0, 0], k 1 → 1.'],
   },
@@ -490,28 +449,7 @@ export default {
         { id: 'hashing', why: 'The letter counts are a table, but the window decides which range to look at.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: '"AABA": 4 − 3 = 1 change',
-          text: 'Within the budget k = 1. Best so far 4.',
-          sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 0, to: 3, tone: 'success' }] }] },
-        },
-        {
-          title: '"AABAB": 2 changes, too many',
-          text: 'Drop the first A: "ABAB" needs 4 − 2 = 2, still too many; drop another: "BAB" needs 1.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 2, to: 4, tone: 'accent' }], marks: { '0': 'dim', '1': 'dim' } }],
-          },
-        },
-        {
-          title: '"BABB": 4 − 3 = 1 change',
-          text: 'Another window of length 4 (change the A). Nothing reaches 5: the answer is 4.',
-          sketch: { kind: 'array', rows: [{ items: ['A', 'A', 'B', 'A', 'B', 'B', 'A'], bands: [{ from: 2, to: 5, tone: 'success' }] }] },
-        },
-      ],
-    },
+    watch: { viz: 'WindowWalkViz', inputs: [{ label: '"AABABBA", k = 1', input: { mode: 'replace', s: 'AABABBA', k: 1 } }] },
     edges: ['k at least the length: "ABC", k 3 → 3.', 'All the same letter: "AAAA", k 0 → 4.', 'k = 0: "AABBB" → 3 (the longest run as it is).'],
   },
 
@@ -684,28 +622,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Possible starts: 0 or 1',
-          text: 'With n = 5 and k = 4, the window starts at 0 ([1 … 4]) or 1 ([2 … 5]).',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: [1, 2, 3, 4, 5], bands: [{ from: 0, to: 3, tone: 'ghost' }] },
-              { items: [1, 2, 3, 4, 5], bands: [{ from: 1, to: 4, tone: 'ghost' }] },
-            ],
-          },
-        },
-        {
-          title: 'Compare 1 (inside) and 5 (outside)',
-          text: 'Both are 2 away from 3: a tie goes to the smaller value, so keep start 0.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { '0': 'target', '4': 'target' } }] },
-        },
-        {
-          title: 'Answer [1, 2, 3, 4]',
-          text: 'The window starting at 0.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], bands: [{ from: 0, to: 3, tone: 'success' }] }] },
-        },
+      viz: 'WindowWalkViz',
+      inputs: [
+        { label: '[1 … 5], k = 4, x = 3', input: { mode: 'closest', arr: [1, 2, 3, 4, 5], k: 4, x: 3 } },
+        { label: '[1, 1, 2, 3, 4, 5], k = 4, x = −1', input: { mode: 'closest', arr: [1, 1, 2, 3, 4, 5], k: 4, x: -1 } },
       ],
     },
     edges: ['x below every value: [1, 2, 3], k 2, x 0 → [1, 2].', 'x above every value: [1, 2, 3], k 2, x 9 → [2, 3].', 'A tie: [1, 3], k 1, x 2 → [1].'],
@@ -772,45 +692,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Grow to "ADOBEC"',
-          text: 'Now A, B and C are all inside (missing = 0). Shortest so far: 6.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 0, to: 5, tone: 'success' }] }],
-          },
-        },
-        {
-          title: 'Shrink: dropping A loses it',
-          text: 'missing becomes 1. Grow again until another A arrives at index 10.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'],
-                bands: [{ from: 1, to: 10, tone: 'accent' }],
-                marks: { '0': 'dim' },
-              },
-            ],
-          },
-        },
-        {
-          title: 'Shrink as far as possible: "CODEBA"',
-          text: 'From index 5 it still covers A, B, C: length 6, no better.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 5, to: 10, tone: 'accent' }] }],
-          },
-        },
-        {
-          title: 'Grow to the last C, shrink → "BANC"',
-          text: 'The window [9, 12] covers t and can\'t shrink further. The answer is "BANC" (length 4).',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['A', 'D', 'O', 'B', 'E', 'C', 'O', 'D', 'E', 'B', 'A', 'N', 'C'], bands: [{ from: 9, to: 12, tone: 'success' }] }],
-          },
-        },
+      viz: 'WindowWalkViz',
+      inputs: [
+        { label: '"ADOBECODEBANC", "ABC"', input: { mode: 'minwin', s: 'ADOBECODEBANC', t: 'ABC' } },
+        { label: '"A", "AA"', input: { mode: 'minwin', s: 'A', t: 'AA' } },
       ],
     },
     edges: ['t longer than s: "a", "aa" → "".', 'Repeats in t: "aa", "aa" → "aa".', 't is one letter: "abc", "b" → "b".'],
@@ -932,33 +817,7 @@ export default {
         { id: 'hashing', why: 'The value counts live in a map, but the window and the subtraction do the counting.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'At most 2: right ends 0 … 3',
-          text: 'The window [1, 2, 1, 2] never has more than 2 values: add 1, 2, 3, 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 0, to: 3, tone: 'accent' }] }] },
-        },
-        {
-          title: 'Right end 4 brings a 3: shrink',
-          text: 'Shrink until only 2 values remain: [2, 3]. Add 2. Total 12.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 3, to: 4, tone: 'accent' }], marks: { '0': 'dim', '1': 'dim', '2': 'dim' } }],
-          },
-        },
-        {
-          title: 'At most 1: 5',
-          text: 'Every window shrinks to one element: add 1 each time.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 2, 3], bands: [{ from: 4, to: 4, tone: 'accent' }] }] },
-        },
-        {
-          title: 'Exactly 2: 12 − 5 = 7',
-          text: 'The answer.',
-          sketch: { kind: 'array', rows: [{ label: 'answer', items: [7], marks: { '0': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'WindowWalkViz', inputs: [{ label: '[1, 2, 1, 2, 3], k = 2', input: { mode: 'kdiff', nums: [1, 2, 1, 2, 3], k: 2 } }] },
     edges: ['k = 1: [1, 1, 2], k 1 → 4.', 'k larger than the number of different values: [1, 2], k 3 → 0.', 'All values equal: [5, 5, 5], k 1 → 6.'],
   },
 };

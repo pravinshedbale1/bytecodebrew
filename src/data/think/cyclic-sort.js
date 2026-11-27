@@ -332,36 +332,7 @@ export default {
         { id: 'union-find', why: 'Joining i with nums[i] finds the loops too, with more machinery than needed.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Start at 0: loop of 4',
-          text: '0 → 5 → 6 → 2 → 0. Mark all four as visited. Best = 4.',
-          sketch: { kind: 'array', rows: [{ items: [5, 4, 0, 3, 1, 6, 2], marks: { '0': 'hit', '2': 'hit', '5': 'hit', '6': 'hit' } }] },
-        },
-        {
-          title: 'Start at 1: loop of 2',
-          text: '1 → 4 → 1. Index 2 is skipped later because it is already visited. Best stays 4.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [5, 4, 0, 3, 1, 6, 2], marks: { '0': 'muted', '1': 'hit', '2': 'muted', '4': 'hit', '5': 'muted', '6': 'muted' } }],
-          },
-        },
-        {
-          title: 'Start at 3: loop of 1',
-          text: '3 → 3. Every index is now visited. The answer is 4.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: [5, 4, 0, 3, 1, 6, 2],
-                marks: { '0': 'muted', '1': 'muted', '2': 'muted', '3': 'hit', '4': 'muted', '5': 'muted', '6': 'muted' },
-              },
-            ],
-          },
-        },
-      ],
-    },
+    watch: { viz: 'CycleWalkViz', inputs: [{ label: '[5, 4, 0, 3, 1, 6, 2]', input: { mode: 'nesting', nums: [5, 4, 0, 3, 1, 6, 2] } }] },
     edges: ['Already in place: [0, 1, 2] → 1.', 'One big loop: [1, 2, 0] → 3.', 'A single element: [0] → 1.'],
   },
 
@@ -429,28 +400,7 @@ export default {
         { id: 'sorting-and-selection', why: 'Sorting tells you where values should go; it doesn\'t count the fewest swaps.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Level 1: [4, 3]',
-          text: 'Target [3, 4]: one loop of 2 → 1 swap.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [4, 3], marks: { '0': 'target', '1': 'target' } }, { label: 'after', items: [3, 4], marks: { '0': 'hit', '1': 'hit' } }],
-          },
-        },
-        {
-          title: 'Level 2: [7, 6, 8, 5]',
-          text: 'Swap 7 to seat 2 (8 comes back), swap 8 to seat 3 (5 comes back): [5, 6, 7, 8] in 2 swaps.',
-          sketch: { kind: 'array', rows: [{ items: [7, 6, 8, 5] }, { label: 'after', items: [5, 6, 7, 8], marks: { '0': 'hit', '2': 'hit', '3': 'hit' } }] },
-        },
-        {
-          title: 'Level 3 is already sorted',
-          text: '[9, 10]: 0 swaps. Total 1 + 2 + 0 = 3.',
-          sketch: { kind: 'array', rows: [{ items: [9, 10], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'CycleWalkViz', inputs: [{ label: 'the example tree', input: { mode: 'levels', s: '1 | 4, 3 | 7, 6, 8, 5 | 9, 10' } }] },
     edges: ['A single node → 0.', 'Every level already sorted → 0.', 'A level in reverse order, [3, 2, 1] → 1 (swap 3 and 1).'],
   },
 
@@ -525,22 +475,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Seat pair 0 holds 0 and 2',
-          text: 'Partner of 0 is 0 ^ 1 = 1, sitting in seat 2.',
-          sketch: { kind: 'array', rows: [{ items: [0, 2, 1, 3], marks: { '0': 'cur', '2': 'target' }, tags: { '2': [['partner', 'warn']] } }] },
-        },
-        {
-          title: 'Swap seats 1 and 2',
-          text: 'Now [0, 1, 2, 3]. Swaps: 1.',
-          sketch: { kind: 'array', rows: [{ items: [0, 1, 2, 3], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-        {
-          title: 'Seat pair 1 holds 2 and 3',
-          text: 'Already a couple. Done: 1 swap.',
-          sketch: { kind: 'array', rows: [{ items: [0, 1, 2, 3], marks: { '2': 'hit', '3': 'hit' } }] },
-        },
+      viz: 'CycleWalkViz',
+      inputs: [
+        { label: '[0, 2, 1, 3]', input: { mode: 'couples', row: [0, 2, 1, 3] } },
+        { label: '[0, 2, 4, 1, 3, 5]', input: { mode: 'couples', row: [0, 2, 4, 1, 3, 5] } },
       ],
     },
     edges: [

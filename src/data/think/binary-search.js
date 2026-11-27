@@ -191,25 +191,7 @@ export default {
         { id: 'two-pointers', why: 'Walking pointers inwards still makes O(n) calls.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'lo 1, hi 5: version 3 is good',
-          text: 'The first bad version is after 3: lo = 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { '0': 'dim', '1': 'dim', '2': 'hit' } }] },
-        },
-        {
-          title: 'lo 4, hi 5: version 4 is bad',
-          text: 'It is 4 or earlier: hi = 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { '0': 'dim', '1': 'dim', '2': 'dim', '3': 'bad', '4': 'dim' } }] },
-        },
-        {
-          title: 'lo = hi = 4 → 4',
-          text: 'lo and hi meet: the first bad version is 4, found with 2 calls instead of 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5], marks: { '3': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'SearchWalkViz', inputs: [{ label: 'n = 5, first bad 4', input: { mode: 'bad', n: 5, first: 4 } }] },
     edges: [
       'The first version is bad: n 3, bad 1 → 1.',
       'Only the last is bad: n 3, bad 3 → 3.',
@@ -330,28 +312,7 @@ export default {
         { id: 'two-pointers', why: 'Moving the bounds one step at a time is linear.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'lo 1, hi 10: guess 5 → too low',
-          text: 'guess(5) says the pick is higher, so 1 … 5 are all out: lo = 6.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], marks: { '0': 'dim', '1': 'dim', '2': 'dim', '3': 'dim', '4': 'cur' } }],
-          },
-        },
-        {
-          title: 'lo 6, hi 10: guess 8 → too high',
-          text: 'The pick is lower than 8, so 8 … 10 are out: hi = 7.',
-          sketch: { kind: 'array', rows: [{ items: [6, 7, 8, 9, 10], marks: { '2': 'cur', '3': 'dim', '4': 'dim' } }] },
-        },
-        {
-          title: 'lo 6, hi 7: guess 6 → correct',
-          text: 'guess(6) returns 0: the pick is 6, found in 3 guesses instead of 6.',
-          sketch: { kind: 'array', rows: [{ items: [6, 7], marks: { '0': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'SearchWalkViz', inputs: [{ label: 'n = 10, pick 6', input: { mode: 'guess', n: 10, pick: 6 } }] },
     edges: ['The pick is 1: n 10, pick 1 → 1.', 'n = 1 → 1.', 'n = 2³¹ − 1, pick 2³¹ − 1 → found without overflow.'],
   },
 
@@ -474,35 +435,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'lo 0, hi 11: mid 5 → 11',
-          text: 'Position 5 is cell (5 / 4, 5 % 4) = (1, 1), value 11. 3 < 11, so 11 and everything after it is out: hi = 4.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: [1, 3, 5, 7, 10, 11, 16, 20, 23, 30, 34, 60],
-                marks: { '5': 'cur', '6': 'dim', '7': 'dim', '8': 'dim', '9': 'dim', '10': 'dim', '11': 'dim' },
-              },
-            ],
-          },
-        },
-        {
-          title: 'lo 0, hi 4: mid 2 → 5',
-          text: 'Position 2 is cell (0, 2), value 5. 3 < 5: hi = 1.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3, 5, 7, 10], marks: { '2': 'cur', '3': 'dim', '4': 'dim' } }] },
-        },
-        {
-          title: 'lo 0, hi 1: mid 0 → 1',
-          text: 'Cell (0, 0) holds 1. 3 > 1, so the target is to the right: lo = 1.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3], marks: { '0': 'cur' } }] },
-        },
-        {
-          title: 'lo 1, hi 1: mid 1 → 3',
-          text: 'Cell (0, 1) holds 3: found, true. Four looks instead of up to twelve.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3], marks: { '0': 'dim', '1': 'hit' } }] },
-        },
+      viz: 'SearchWalkViz',
+      inputs: [
+        { label: 'target 3', input: { mode: 'matrix', m: [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], target: 3 } },
+        { label: 'target 13', input: { mode: 'matrix', m: [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], target: 13 } },
       ],
     },
     edges: ['A single row: [[1, 3, 5]], 5 → true.', 'Smaller than the first cell: the example, 0 → false.', 'Between two rows: the example, 9 → false.'],
@@ -740,22 +676,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '[1, 0, 1, 1, 1], target 0: lo 0, hi 4, mid 2',
-          text: 'Left end 1, middle 1, right end 1: all equal, so we can\'t tell which half is in order. The middle isn\'t 0, so neither are the ends: lo = 1, hi = 3.',
-          sketch: { kind: 'array', rows: [{ items: [1, 0, 1, 1, 1], marks: { '0': 'dim', '2': 'cur', '4': 'dim' } }] },
-        },
-        {
-          title: 'lo 1, hi 3, mid 2',
-          text: 'nums[lo] = 0 ≤ nums[mid] = 1, so the left half [0, 1] is in order. 0 is in [0, 1): search it, hi = 1.',
-          sketch: { kind: 'array', rows: [{ items: [1, 0, 1, 1, 1], marks: { '0': 'dim', '2': 'cur', '3': 'dim', '4': 'dim' } }] },
-        },
-        {
-          title: 'lo 1, hi 1: found → true',
-          text: 'nums[1] = 0 is the target. The tie cost one extra step; with no ties this is the ordinary rotated search.',
-          sketch: { kind: 'array', rows: [{ items: [1, 0, 1, 1, 1], marks: { '0': 'dim', '1': 'hit', '2': 'dim', '3': 'dim', '4': 'dim' } }] },
-        },
+      viz: 'SearchWalkViz',
+      inputs: [
+        { label: '[1, 0, 1, 1, 1], target 0', input: { mode: 'rot2', nums: [1, 0, 1, 1, 1], target: 0 } },
+        { label: '[2, 5, 6, 0, 0, 1, 2], target 3', input: { mode: 'rot2', nums: [2, 5, 6, 0, 0, 1, 2], target: 3 } },
       ],
     },
     edges: ['All equal: [1, 1, 1], 1 → true.', 'Target missing: [2, 5, 6, 0, 0, 1, 2], 3 → false.', 'Duplicates at both ends: [1, 0, 1, 1, 1], 0 → true.'],
@@ -818,39 +742,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '11 values: the left side holds 6',
-          text: 'Search i = how many values come from the shorter array [1, 3, 8, 9, 15]; the other j = 6 − i come from [7, 11, 18, 19, 21, 25]. i can be 0 … 5.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3, 8, 9, 15] }, { items: [7, 11, 18, 19, 21, 25] }] },
-        },
-        {
-          title: 'i = 2, j = 4: too few from the first array',
-          text: 'Left gets 1, 3 and 7, 11, 18, 19. But 19 > 8, the first value left on the right: the cut is too far left in the first array. lo = 3.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: [1, 3, 8, 9, 15], marks: { '0': 'kept', '1': 'kept', '2': 'bad' } },
-              { items: [7, 11, 18, 19, 21, 25], marks: { '0': 'kept', '1': 'kept', '2': 'kept', '3': 'bad' } },
-            ],
-          },
-        },
-        {
-          title: 'i = 4, j = 2: the cut fits',
-          text: 'Left gets 1, 3, 8, 9 and 7, 11. Check across: 9 ≤ 18 and 11 ≤ 15, so every left value is ≤ every right value.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { items: [1, 3, 8, 9, 15], marks: { '0': 'kept', '1': 'kept', '2': 'kept', '3': 'hit', '4': 'dim' } },
-              { items: [7, 11, 18, 19, 21, 25], marks: { '0': 'kept', '1': 'hit', '2': 'dim', '3': 'dim', '4': 'dim', '5': 'dim' } },
-            ],
-          },
-        },
-        {
-          title: 'Odd total → the largest left value: 11',
-          text: 'max(9, 11) = 11. Check: merged, the list is 1, 3, 7, 8, 9, 11, 15, … and its 6th value is 11. Two tries instead of a merge.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3, 7, 8, 9, 11, 15, 18, 19, 21, 25], marks: { '5': 'target' } }] },
-        },
+      viz: 'SearchWalkViz',
+      inputs: [
+        { label: '[1, 3, 8, 9, 15] and [7, 11, 18, 19, 21, 25]', input: { mode: 'median', a: [1, 3, 8, 9, 15], b: [7, 11, 18, 19, 21, 25] } },
+        { label: '[1, 2] and [3, 4]', input: { mode: 'median', a: [1, 2], b: [3, 4] } },
       ],
     },
     edges: ['One array empty: [], [3] → 3.0.', 'All of one array smaller: [1, 2], [3, 4] → 2.5.', 'Equal values: [1, 1], [1, 1] → 1.0.'],
@@ -914,27 +809,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Peak search: lo 0, hi 6, mid 3',
-          text: 'arr[3] = 4 < arr[4] = 5: still climbing, so the peak is to the right: lo = 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5, 3, 1], marks: { '0': 'dim', '1': 'dim', '2': 'dim', '3': 'cur' } }] },
-        },
-        {
-          title: 'lo 4, hi 6: mid 5, then mid 4',
-          text: 'arr[5] = 3 > arr[6] = 1: going down, so the peak is mid or left: hi = 5. Then arr[4] = 5 > arr[5] = 3: hi = 4. The peak is index 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5, 3, 1], marks: { '4': 'target', '5': 'dim', '6': 'dim' } }] },
-        },
-        {
-          title: 'Rising side 0 … 4: mid 2 → 3',
-          text: 'An ordinary binary search on the rising slope finds 3 at index 2 on its first look.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5, 3, 1], marks: { '2': 'hit', '5': 'muted', '6': 'muted' } }] },
-        },
-        {
-          title: 'Answer: 2',
-          text: 'Found on the rising side, so the 3 at index 5 is never searched: the rising side always holds the smaller index.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 4, 5, 3, 1], marks: { '2': 'hit' } }] },
-        },
+      viz: 'SearchWalkViz',
+      inputs: [
+        { label: '[1, 2, 3, 4, 5, 3, 1], target 3', input: { mode: 'mountain', arr: [1, 2, 3, 4, 5, 3, 1], target: 3 } },
+        { label: 'only on the falling side', input: { mode: 'mountain', arr: [0, 5, 3, 1], target: 1 } },
       ],
     },
     edges: ['The target is the peak: [1, 5, 2], 5 → 1.', 'Only on the falling side: [1, 5, 2], 2 → 2.', 'Missing: [1, 5, 2], 7 → −1.'],

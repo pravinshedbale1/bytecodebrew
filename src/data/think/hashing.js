@@ -129,29 +129,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Index 0: add 1',
-          text: 'The set is empty, so 1 is new.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 1], marks: { '0': 'cur' } }, { label: 'set', items: ['1'] }] },
-        },
-        {
-          title: 'Index 1, 2: add 2 and 3',
-          text: 'Neither is in the set yet.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [1, 2, 3, 1], marks: { '0': 'kept', '1': 'kept', '2': 'cur' } }, { label: 'set', items: ['1', '2', '3'] }],
-          },
-        },
-        {
-          title: 'Index 3: 1 is already there → true',
-          text: 'The fourth value is in the set, so it appears at least twice. Stop early.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [1, 2, 3, 1], marks: { '0': 'target', '3': 'bad' } }, { label: 'set', items: ['1', '2', '3'], marks: { '0': 'hit' } }],
-          },
-        },
-      ],
+      viz: 'HashWalkViz',
+      inputs: [{ label: '[1, 2, 3, 1]', input: { mode: 'dup', nums: [1, 2, 3, 1] } }, { label: '[1, 2, 3, 4]', input: { mode: 'dup', nums: [1, 2, 3, 4] } }],
     },
     edges: ['A single element: [7] → false.', 'All values equal: [5, 5, 5] → true (found at index 1).', 'All distinct: [1, 2, 3, 4] → false.'],
   },
@@ -212,28 +191,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Lengths match (7 and 7)',
-          text: 'Different lengths would mean false straight away.',
-          sketch: {
-            kind: 'array',
-            rows: [{ label: 's', items: ['a', 'n', 'a', 'g', 'r', 'a', 'm'] }, { label: 't', items: ['n', 'a', 'g', 'a', 'r', 'a', 'm'] }],
-          },
-        },
-        {
-          title: 'Count up for s',
-          text: 'Each letter of "anagram" adds 1.',
-          sketch: { kind: 'array', rows: [{ items: ['a:3', 'g:1', 'm:1', 'n:1', 'r:1'], marks: { '0': 'cur' } }] },
-        },
-        {
-          title: 'Count down for t: all zero → true',
-          text: 'Each letter of "nagaram" removes 1, and every count returns to 0.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['a:0', 'g:0', 'm:0', 'n:0', 'r:0'], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit', '4': 'hit' } }],
-          },
-        },
+      viz: 'HashWalkViz',
+      inputs: [
+        { label: '"anagram", "nagaram"', input: { mode: 'anagram', s: 'anagram', t: 'nagaram' } },
+        { label: '"rat", "car"', input: { mode: 'anagram', s: 'rat', t: 'car' } },
       ],
     },
     edges: ['Different lengths: "ab", "a" → false.', 'The same string: "abc", "abc" → true.', 'Same letters, different counts: "aab", "abb" → false.'],
@@ -288,27 +249,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Pass 1: count every letter',
-          text: '"loveleetcode": l 2, o 2, v 1, e 4, t 1, c 1, d 1. Only now do we know which letters appear once.',
-          sketch: { kind: 'array', rows: [{ items: ['l', 'o', 'v', 'e', 'l', 'e', 'e', 't', 'c', 'o', 'd', 'e'] }], caption: 'l:2 o:2 v:1 e:4 t:1 c:1 d:1' },
-        },
-        {
-          title: 'Pass 2: l and o repeat',
-          text: 'Index 0 is l (count 2) and index 1 is o (count 2): both appear again later, so neither is the answer.',
-          sketch: { kind: 'array', rows: [{ items: ['l', 'o', 'v', 'e', 'l', 'e', 'e', 't', 'c', 'o', 'd', 'e'], marks: { '0': 'bad', '1': 'bad' } }] },
-        },
-        {
-          title: 'Index 2 is v, count 1 → 2',
-          text: 'The first letter, in string order, whose count is 1. Stop here: later unique letters (t, c, d) come after it.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['l', 'o', 'v', 'e', 'l', 'e', 'e', 't', 'c', 'o', 'd', 'e'], marks: { '0': 'dim', '1': 'dim', '2': 'hit' } }],
-            caption: 'answer 2',
-          },
-        },
-      ],
+      viz: 'HashWalkViz',
+      inputs: [{ label: '"loveleetcode"', input: { mode: 'unique', s: 'loveleetcode' } }, { label: '"aabb"', input: { mode: 'unique', s: 'aabb' } }],
     },
     edges: ['Every letter repeats: "aabb" → −1.', 'A single letter: "z" → 0.', 'The only unique letter is the last: "aabbc" → 4.'],
   },
@@ -362,25 +304,7 @@ export default {
         { id: 'prefix-sums', why: 'No sums or ranges are computed; every output position is copied straight from one input position.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'i = 0: write 1 at 0 and 3',
-          text: 'ans[0] = ans[3] = nums[0] = 1.',
-          sketch: { kind: 'array', rows: [{ items: [1, '·', '·', 1, '·', '·'], marks: { '0': 'hit', '3': 'hit' } }] },
-        },
-        {
-          title: 'i = 1: write 2 at 1 and 4',
-          text: 'ans[1] = ans[4] = 2.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, '·', 1, 2, '·'], marks: { '1': 'hit', '4': 'hit' } }] },
-        },
-        {
-          title: 'i = 2: write 1 at 2 and 5',
-          text: 'Done: [1, 2, 1, 1, 2, 1].',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 1, 1, 2, 1], marks: { '2': 'hit', '5': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'HashWalkViz', inputs: [{ label: '[1, 2, 1]', input: { mode: 'concat', nums: [1, 2, 1] } }] },
     edges: [
       'A single value: [7] → [7, 7].',
       'Repeated values are copied as they are: [1, 1] → [1, 1, 1, 1].',
@@ -447,30 +371,7 @@ export default {
         { id: 'two-pointers', why: 'There is no pair or window to steer; we are counting votes.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: '2, 2: candidate 2, count 2',
-          text: 'The first 2 becomes the candidate; the second adds a vote.',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 1, 1, 1, 2, 2], marks: { '0': 'kept', '1': 'cur' } }] },
-        },
-        {
-          title: '1, 1: count back to 0',
-          text: 'Each 1 cancels one vote for 2.',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 1, 1, 1, 2, 2], marks: { '2': 'cur', '3': 'cur' } }] },
-        },
-        {
-          title: '1: new candidate 1, count 1',
-          text: 'With the count at 0, the next value takes over.',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 1, 1, 1, 2, 2], marks: { '4': 'target' } }] },
-        },
-        {
-          title: '2, 2: candidate 2 wins',
-          text: 'The first 2 cancels the 1 (count 0); the last 2 becomes the candidate. Answer: 2.',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 1, 1, 1, 2, 2], marks: { '6': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'HashWalkViz', inputs: [{ label: '[2, 2, 1, 1, 1, 2, 2]', input: { mode: 'majority', nums: [2, 2, 1, 1, 1, 2, 2] } }] },
     edges: ['A single element: [5] → 5.', 'The majority only in the second half: [1, 2, 2] → 2.', 'Negative values: [−1, −1, 3] → −1.'],
   },
 
@@ -539,36 +440,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Build the rank table',
-          text: 'order = "hlabcdefgijk…": h → 0, l → 1, a → 2, …. Comparing two letters is now comparing two small numbers.',
-          sketch: { kind: 'array', rows: [{ label: 'rank', items: ['h 0', 'l 1', 'a 2', 'b 3', '…'] }] },
-        },
-        {
-          title: '"hello" vs "leetcode": h < l ✓',
-          text: 'They differ at the first letter: rank(h) = 0 < rank(l) = 1, so this pair is in order. The other letters don\'t matter.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { label: 'hello', items: ['h', 'e', 'l', 'l', 'o'], marks: { '0': 'hit' } },
-              { label: 'leetcode', items: ['l', 'e', 'e', 't', 'c', 'o', 'd', 'e'], marks: { '0': 'hit' } },
-            ],
-            caption: 'true',
-          },
-        },
-        {
-          title: 'Another order: "word" vs "world" fails',
-          text: 'With order = "worldabcef…", the words first differ at index 3: d (rank 4) vs l (rank 3). d is later, so "word" should come after "world": false.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { label: 'word', items: ['w', 'o', 'r', 'd'], marks: { '3': 'bad' } },
-              { label: 'world', items: ['w', 'o', 'r', 'l', 'd'], marks: { '3': 'bad' } },
-            ],
-            caption: 'rank(d) = 4 > rank(l) = 3 → false',
-          },
-        },
+      viz: 'HashWalkViz',
+      inputs: [
+        { label: '"hello", "leetcode"', input: { mode: 'alien', words: ['hello', 'leetcode'], order: 'hlabcdefgijkmnopqrstuvwxyz' } },
+        { label: '"word", "world"', input: { mode: 'alien', words: ['word', 'world', 'row'], order: 'worldabcefghijkmnpqstuvxyz' } },
       ],
     },
     edges: ['A word followed by its own prefix: ["apple", "app"] → false.', 'Identical neighbours: ["a", "a"] → true.', 'A single word → true.'],
@@ -638,23 +513,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '"eat" → key "aet"',
-          text: 'A new key: start the group ["eat"].',
-          sketch: { kind: 'array', rows: [{ label: 'map', items: ['aet → eat'] }] },
-        },
-        {
-          title: '"tea", "ate" → "aet" again',
-          text: 'Same key: the group grows to ["eat", "tea", "ate"].',
-          sketch: { kind: 'array', rows: [{ label: 'map', items: ['aet → eat, tea, ate'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: '"tan", "nat" → "ant"; "bat" → "abt"',
-          text: 'Two more groups: [["eat","tea","ate"], ["tan","nat"], ["bat"]].',
-          sketch: { kind: 'array', rows: [{ label: 'map', items: ['aet → 3 words', 'ant → 2 words', 'abt → 1 word'], marks: { '1': 'hit', '2': 'hit' } }] },
-        },
-      ],
+      viz: 'HashWalkViz',
+      inputs: [{ label: 'eat, tea, tan, ate, nat, bat', input: { mode: 'group', strs: ['eat', 'tea', 'tan', 'ate', 'nat', 'bat'] } }],
     },
     edges: ['The empty string: [""] → [[""]].', 'All anagrams of each other: ["ab", "ba"] → [["ab", "ba"]].', 'A single word: ["a"] → [["a"]].'],
   },
@@ -795,22 +655,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Cell (0, 0) = 5',
-          text: 'Not yet seen in row 0, column 0 or box 0: record 5 in all three.',
-          sketch: { kind: 'grid', grid: [[5, 3, 0], [6, 0, 0], [0, 9, 8]], marks: { '0,0': 'cur' } },
-        },
-        {
-          title: 'Cell (0, 1) = 3',
-          text: 'Not in row 0, column 1 or box 0: record it.',
-          sketch: { kind: 'grid', grid: [[5, 3, 0], [6, 0, 0], [0, 9, 8]], marks: { '0,0': 'hit', '0,1': 'cur' } },
-        },
-        {
-          title: 'Every filled cell, once → true',
-          text: 'If a digit were already in one of its three sets, the answer would be false. The pass ends with no clash: the example board is valid.',
-          sketch: { kind: 'grid', grid: [[5, 3, 0], [6, 0, 0], [0, 9, 8]], marks: { '0,0': 'hit', '0,1': 'hit', '1,0': 'hit', '2,1': 'hit', '2,2': 'hit' } },
-        },
+      viz: 'HashWalkViz',
+      inputs: [
+        { label: 'a valid 4 × 4 board', input: { mode: 'sudoku', board: [[1, 0, 0, 4], [0, 4, 1, 0], [2, 0, 4, 0], [0, 3, 0, 1]] } },
+        { label: 'two 1s in one box', input: { mode: 'sudoku', board: [[1, 2, 0, 0], [0, 1, 0, 0], [0, 0, 3, 0], [0, 0, 0, 4]] } },
       ],
     },
     edges: [
@@ -879,25 +727,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Encode',
-          text: '["neet","code","love","you"] → "4#neet4#code4#love3#you".',
-          sketch: { kind: 'array', rows: [{ items: ['4#neet', '4#code', '4#love', '3#you'] }] },
-        },
-        {
-          title: 'Decode: read 4, take "neet"',
-          text: 'Read digits up to "#", then take that many characters.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['4', '#', 'n', 'e', 'e', 't', '4', '#', '…'], marks: { '0': 'target', '2': 'hit', '3': 'hit', '4': 'hit', '5': 'hit' } }],
-          },
-        },
-        {
-          title: 'Repeat until the end',
-          text: 'Four strings come back, exactly as they went in.',
-          sketch: { kind: 'array', rows: [{ items: ['neet', 'code', 'love', 'you'], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit' } }] },
-        },
+      viz: 'HashWalkViz',
+      inputs: [
+        { label: 'neet, code, love, you', input: { mode: 'codec', strs: ['neet', 'code', 'love', 'you'] } },
+        { label: 'strings containing "#"', input: { mode: 'codec', strs: ['a#b', '12', '#'] } },
       ],
     },
     edges: ['An empty list: [] → "" → [].', 'An empty string inside: [""] → "0#" → [""].', 'Strings with "#" and digits: ["1#2"] → "3#1#2" → ["1#2"].'],
@@ -953,25 +786,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Vote: candidates 1 and 2',
-          text: 'The 1s and 2s gather votes; the 3s arrive when both candidates are set and cancel one vote from each.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [1, 1, 1, 3, 3, 2, 2, 2], marks: { '0': 'kept', '1': 'kept', '2': 'kept', '3': 'muted', '4': 'muted' } }],
-          },
-        },
-        {
-          title: 'Survivors: 1 and 2',
-          text: 'These are the only possible answers.',
-          sketch: { kind: 'array', rows: [{ label: 'candidates', items: ['1', '2'], marks: { '0': 'target', '1': 'target' } }] },
-        },
-        {
-          title: 'Verify by counting → [1, 2]',
-          text: '1 appears 3 times and 2 appears 3 times; ⌊8 / 3⌋ = 2, so both qualify.',
-          sketch: { kind: 'array', rows: [{ label: 'counts', items: ['1: 3', '2: 3'], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
+      viz: 'HashWalkViz',
+      inputs: [
+        { label: '[1, 1, 1, 3, 3, 2, 2, 2]', input: { mode: 'majority2', nums: [1, 1, 1, 3, 3, 2, 2, 2] } },
+        { label: '[3, 2, 3]', input: { mode: 'majority2', nums: [3, 2, 3] } },
       ],
     },
     edges: ['[3, 2, 3] → [3].', '[1, 2]: both appear once, more than ⌊2 / 3⌋ = 0 → [1, 2].', 'Nothing qualifies: [1, 2, 3] → [].'],

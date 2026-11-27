@@ -68,58 +68,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '"race a car": r = r',
-          text: 'Both ends are letters and match. Move both inwards.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: ['r', 'a', 'c', 'e', '␣', 'a', '␣', 'c', 'a', 'r'],
-                marks: { '0': 'hit', '9': 'hit' },
-                tags: { '0': [['L', 'accent']], '9': [['R', 'accent']] },
-              },
-            ],
-          },
-        },
-        {
-          title: 'a = a, then c = c',
-          text: 'Two more matching pairs: (1, 8) and (2, 7).',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: ['r', 'a', 'c', 'e', '␣', 'a', '␣', 'c', 'a', 'r'],
-                marks: { '0': 'dim', '1': 'hit', '2': 'hit', '7': 'hit', '8': 'hit', '9': 'dim' },
-              },
-            ],
-          },
-        },
-        {
-          title: 'Skip the space on the right',
-          text: 'R lands on a space at index 6: it doesn\'t count, so R moves on to index 5 before comparing.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: ['r', 'a', 'c', 'e', '␣', 'a', '␣', 'c', 'a', 'r'],
-                marks: { '3': 'cur', '5': 'cur', '6': 'muted' },
-                tags: { '3': [['L', 'accent']], '5': [['R', 'accent']] },
-              },
-            ],
-          },
-        },
-        {
-          title: 'e ≠ a → false',
-          text: 'The first real mismatch ends it: "raceacar" read backwards is "racaecar". No cleaned copy was ever built.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['r', 'a', 'c', 'e', '␣', 'a', '␣', 'c', 'a', 'r'], marks: { '3': 'bad', '5': 'bad' } }],
-            caption: 'false',
-          },
-        },
-      ],
+      viz: 'PairWalkViz',
+      inputs: [{ label: '"race a car"', input: { mode: 'palin', s: 'race a car' } }, { label: '"Taco cat!"', input: { mode: 'palin', s: 'Taco cat!' } }],
     },
     edges: [
       'Only punctuation: " " → true (nothing left to compare).',
@@ -299,30 +249,7 @@ export default {
         { id: 'binary-search', why: 'Finding the first non-negative and merging outwards also works in O(n), with more edge cases.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: '|−4| vs |10|: write 100 last',
-          text: 'The right end wins; move it left.',
-          sketch: { kind: 'array', rows: [{ items: ['·', '·', '·', '·', 100], marks: { '4': 'hit' } }] },
-        },
-        {
-          title: '|−4| vs |3|: write 16',
-          text: 'The left end wins this time; move it right.',
-          sketch: { kind: 'array', rows: [{ items: ['·', '·', '·', 16, 100], marks: { '3': 'hit' } }] },
-        },
-        {
-          title: '|−1| vs |3|: write 9',
-          text: 'Then 1 and 0 follow.',
-          sketch: { kind: 'array', rows: [{ items: ['·', '·', 9, 16, 100], marks: { '2': 'hit' } }] },
-        },
-        {
-          title: 'Done: [0, 1, 9, 16, 100]',
-          text: 'The pointers have crossed; every square is placed.',
-          sketch: { kind: 'array', rows: [{ items: [0, 1, 9, 16, 100], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '[−4, −1, 0, 3, 10]', input: { mode: 'squares', nums: [-4, -1, 0, 3, 10] } }] },
     edges: ['All negative: [−3, −2] → [4, 9].', 'All non-negative: [1, 2] → [1, 4].', 'Equal sizes: [−3, 3] → [9, 9].'],
   },
 
@@ -378,22 +305,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '3: skip',
-          text: 'Equal to val, so it is not copied. w stays 0.',
-          sketch: { kind: 'array', rows: [{ items: [3, 2, 2, 3], marks: { '0': 'bad' }, tags: { '0': [['w', 'accent']] } }] },
-        },
-        {
-          title: '2, 2: copy to slots 0 and 1',
-          text: 'w becomes 2.',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 2, 3], marks: { '0': 'hit', '1': 'hit' }, tags: { '2': [['w', 'accent']] } }] },
-        },
-        {
-          title: '3: skip → k = 2',
-          text: 'The first two slots hold [2, 2].',
-          sketch: { kind: 'array', rows: [{ items: [2, 2, 2, 3], marks: { '0': 'hit', '1': 'hit', '3': 'bad' } }] },
-        },
+      viz: 'PairWalkViz',
+      inputs: [
+        { label: '[3, 2, 2, 3], val 3', input: { mode: 'remove', nums: [3, 2, 2, 3], val: 3 } },
+        { label: '[0, 1, 2, 2, 3, 0, 4, 2], val 2', input: { mode: 'remove', nums: [0, 1, 2, 2, 3, 0, 4, 2], val: 2 } },
       ],
     },
     edges: ['An empty array: [] → 0.', 'Every value equals val: [3, 3] with val 3 → 0.', 'No value equals val: [1, 2] with val 3 → 2.'],
@@ -442,25 +357,7 @@ export default {
         { id: 'sliding-window', why: 'No window; the two ends meet in the middle.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Swap h and o',
-          text: 'The ends trade places.',
-          sketch: { kind: 'array', rows: [{ items: ['o', 'e', 'l', 'l', 'h'], marks: { '0': 'hit', '4': 'hit' } }] },
-        },
-        {
-          title: 'Swap e and l',
-          text: 'The next pair inwards.',
-          sketch: { kind: 'array', rows: [{ items: ['o', 'l', 'l', 'e', 'h'], marks: { '1': 'hit', '3': 'hit' } }] },
-        },
-        {
-          title: 'The pointers meet at the middle "l"',
-          text: 'Done after two swaps: ["o","l","l","e","h"].',
-          sketch: { kind: 'array', rows: [{ items: ['o', 'l', 'l', 'e', 'h'], marks: { '2': 'target' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '"hello"', input: { mode: 'reverse', s: 'hello' } }] },
     edges: [
       'A single character: ["a"] → ["a"] (no swap at all).',
       'Even length: ["a","b"] → ["b","a"] (the pointers cross).',
@@ -523,23 +420,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '"abca": a = a',
-          text: 'The ends match; move inwards.',
-          sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a'], marks: { '0': 'hit', '3': 'hit' } }] },
-        },
-        {
-          title: 'b ≠ c: the one mismatch',
-          text: 'One of b or c must be deleted.',
-          sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a'], marks: { '1': 'bad', '2': 'bad' } }] },
-        },
-        {
-          title: 'Skip b: "c" is a palindrome → true',
-          text: '(Skipping c would also work.)',
-          sketch: { kind: 'array', rows: [{ items: ['a', 'b', 'c', 'a'], marks: { '1': 'dim', '2': 'hit' } }] },
-        },
-      ],
+      viz: 'PairWalkViz',
+      inputs: [{ label: '"abca"', input: { mode: 'palin2', s: 'abca' } }, { label: '"abc"', input: { mode: 'palin2', s: 'abc' } }],
     },
     edges: ['Already a palindrome: "aba" → true.', 'Two mismatches needed: "abc" → false.', 'The extra letter at an end: "xaba" → true.'],
   },
@@ -596,25 +478,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'i = 0: a, p',
-          text: 'Take one letter from each word.',
-          sketch: { kind: 'array', rows: [{ items: ['a', 'p'], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-        {
-          title: 'i = 1, 2: b, q, c, r',
-          text: 'Keep alternating while both have letters.',
-          sketch: { kind: 'array', rows: [{ items: ['a', 'p', 'b', 'q', 'c', 'r'], marks: { '2': 'hit', '3': 'hit', '4': 'hit', '5': 'hit' } }] },
-        },
-        {
-          title: 'Both done → "apbqcr"',
-          text: 'Equal lengths: nothing left to append.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: ['a', 'p', 'b', 'q', 'c', 'r'], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit', '4': 'hit', '5': 'hit' } }],
-          },
-        },
+      viz: 'PairWalkViz',
+      inputs: [
+        { label: '"abc", "pqr"', input: { mode: 'mergeStr', w1: 'abc', w2: 'pqr' } },
+        { label: '"ab", "pqrs"', input: { mode: 'mergeStr', w1: 'ab', w2: 'pqrs' } },
       ],
     },
     edges: ['word2 longer: "ab", "pqrs" → "apbqrs".', 'word1 longer: "abcd", "pq" → "apbqcd".', 'Single letters: "a", "b" → "ab".'],
@@ -673,30 +540,7 @@ export default {
         { id: 'heap-patterns', why: 'A heap merges many lists; for two lists, direct comparison is simpler.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: '3 vs 6: write 6',
-          text: 'The larger last value goes into the last slot.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 0, 0, 6], marks: { '5': 'hit' } }] },
-        },
-        {
-          title: '3 vs 5: write 5',
-          text: 'nums2 still has the larger value.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 0, 5, 6], marks: { '4': 'hit' } }] },
-        },
-        {
-          title: '3 vs 2: write 3',
-          text: 'Now nums1\'s 3 is larger.',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 3, 3, 5, 6], marks: { '3': 'hit' } }] },
-        },
-        {
-          title: '2 vs 2: write 2 → done',
-          text: 'nums2 is used up; the rest of nums1 is already in place: [1, 2, 2, 3, 5, 6].',
-          sketch: { kind: 'array', rows: [{ items: [1, 2, 2, 3, 5, 6], marks: { '2': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '[1, 2, 3] + [2, 5, 6]', input: { mode: 'mergeArr', a: [1, 2, 3], b: [2, 5, 6] } }] },
     edges: [
       'nums1 = [0] with m = 0, nums2 = [1] → [1] (everything comes from nums2).',
       'nums2 empty (n = 0): nums1 = [1], m = 1 → [1] (nothing to do).',
@@ -864,52 +708,7 @@ export default {
         { id: 'binary-search', why: 'Binary-searching the third value is O(n² log n).' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Sort, then a = −4: need 4',
-          text: 'l starts just after a, r at the end. −1 + 2 = 1 < 4: too small, so l moves right. Every later sum is still too small, and the pointers meet with nothing found.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [-4, -1, -1, 0, 1, 2], marks: { '0': 'cur' }, tags: { '0': [['a', 'accent']], '1': [['l', 'warn']], '5': [['r', 'warn']] } }],
-            caption: '−1 + 2 = 1 < 4: l++',
-          },
-        },
-        {
-          title: 'a = −1: need 1. −1 + 2 = 1 ✓',
-          text: 'Record [−1, −1, 2], then move both pointers inwards (skipping any copies of the values just used).',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: [-4, -1, -1, 0, 1, 2],
-                marks: { '1': 'cur', '2': 'hit', '5': 'hit' },
-                tags: { '1': [['a', 'accent']], '2': [['l', 'warn']], '5': [['r', 'warn']] },
-              },
-            ],
-            caption: '[−1, −1, 2]',
-          },
-        },
-        {
-          title: '0 + 1 = 1 ✓, then the pointers meet',
-          text: 'Record [−1, 0, 1]. l and r cross, so this a is finished.',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [-4, -1, -1, 0, 1, 2], marks: { '1': 'cur', '3': 'hit', '4': 'hit' }, tags: { '3': [['l', 'warn']], '4': [['r', 'warn']] } }],
-            caption: '[−1, 0, 1]',
-          },
-        },
-        {
-          title: 'The second −1 is skipped as a',
-          text: 'It equals the previous a, so it could only rebuild the same triplets. a = 0 then needs 0 from [1, 2]: 1 + 2 = 3 > 0, r moves left and the pointers meet. Answer: [[−1, −1, 2], [−1, 0, 1]].',
-          sketch: {
-            kind: 'array',
-            rows: [{ items: [-4, -1, -1, 0, 1, 2], marks: { '2': 'muted' }, tags: { '2': [['skip', 'muted']] } }],
-            caption: 'O(n²): n values of a, one linear sweep each',
-          },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '[−1, 0, 1, 2, −1, −4]', input: { mode: 'three', nums: [-1, 0, 1, 2, -1, -4] } }] },
     edges: ['All zeros: [0, 0, 0] → [[0, 0, 0]].', 'No triplet: [1, 2, 3] → [].', 'Many repeats: [0, 0, 0, 0] → [[0, 0, 0]] (once).'],
   },
 
@@ -1020,26 +819,7 @@ export default {
         { id: 'backtracking', why: 'Choosing 4 of n by trying everything is far slower without the sorted two-pointer finish.' },
       ],
     },
-    watch: {
-      frames: [
-        { title: 'Sort: [−2, −1, 0, 0, 1, 2]', text: 'Target 0.', sketch: { kind: 'array', rows: [{ items: [-2, -1, 0, 0, 1, 2] }] } },
-        {
-          title: 'Fix −2, −1: need 3',
-          text: '1 + 2 = 3 → [−2, −1, 1, 2].',
-          sketch: { kind: 'array', rows: [{ items: [-2, -1, 0, 0, 1, 2], marks: { '0': 'cur', '1': 'cur', '4': 'hit', '5': 'hit' } }] },
-        },
-        {
-          title: 'Fix −2, 0: need 2',
-          text: '0 + 2 = 2 → [−2, 0, 0, 2].',
-          sketch: { kind: 'array', rows: [{ items: [-2, -1, 0, 0, 1, 2], marks: { '0': 'cur', '2': 'cur', '3': 'hit', '5': 'hit' } }] },
-        },
-        {
-          title: 'Fix −1, 0: need 1 → done',
-          text: '0 + 1 = 1 → [−1, 0, 0, 1]. Three quadruplets in total.',
-          sketch: { kind: 'array', rows: [{ items: [-2, -1, 0, 0, 1, 2], marks: { '1': 'cur', '2': 'cur', '3': 'hit', '4': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '[1, 0, −1, 0, −2, 2], target 0', input: { mode: 'four', nums: [1, 0, -1, 0, -2, 2], target: 0 } }] },
     edges: [
       'Large values: [10⁹, 10⁹, 10⁹, 10⁹], target −294967296 → [] (only overflow would "find" it).',
       'Fewer than four values: [1, 2, 3], 6 → [].',
@@ -1096,21 +876,7 @@ export default {
         { id: 'sliding-window', why: 'Nothing slides: two whole blocks are reversed in place, each with a pair of pointers from its ends.' },
       ],
     },
-    watch: {
-      frames: [
-        { title: 'k = 3 % 7 = 3. Reverse all', text: '[7, 6, 5, 4, 3, 2, 1].', sketch: { kind: 'array', rows: [{ items: [7, 6, 5, 4, 3, 2, 1] }] } },
-        {
-          title: 'Reverse the first 3',
-          text: '[5, 6, 7, 4, 3, 2, 1].',
-          sketch: { kind: 'array', rows: [{ items: [5, 6, 7, 4, 3, 2, 1], marks: { '0': 'hit', '1': 'hit', '2': 'hit' } }] },
-        },
-        {
-          title: 'Reverse the last 4 → done',
-          text: '[5, 6, 7, 1, 2, 3, 4].',
-          sketch: { kind: 'array', rows: [{ items: [5, 6, 7, 1, 2, 3, 4], marks: { '3': 'hit', '4': 'hit', '5': 'hit', '6': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PairWalkViz', inputs: [{ label: '[1 … 7], k = 3', input: { mode: 'rotate', nums: [1, 2, 3, 4, 5, 6, 7], k: 3 } }] },
     edges: ['k = 0: [1, 2] → [1, 2].', 'k larger than n: [1, 2], k 3 → [2, 1] (3 % 2 = 1).', 'A single element: [5], k 4 → [5].'],
   },
 

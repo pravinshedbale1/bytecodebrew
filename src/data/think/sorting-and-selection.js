@@ -53,26 +53,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        { title: 'Count', text: '{1: 2, 2: 3, 3: 1}.', sketch: { kind: 'array', rows: [{ items: ['1: 2', '2: 3', '3: 1'] }] } },
-        {
-          title: 'Order the values',
-          text: 'By count: 3 (once), then 1 (twice), then 2 (three times).',
-          sketch: { kind: 'array', rows: [{ items: ['3', '1', '2'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: 'Write out the copies → [3, 1, 1, 2, 2, 2]',
-          text: 'Each value with all of its copies.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              {
-                items: [3, 1, 1, 2, 2, 2],
-                bands: [{ from: 0, to: 0, tone: 'accent' }, { from: 1, to: 2, tone: 'ghost' }, { from: 3, to: 5, tone: 'accent' }],
-              },
-            ],
-          },
-        },
+      viz: 'SortWalkViz',
+      inputs: [
+        { label: '[1, 1, 2, 2, 2, 3]', input: { mode: 'freq', nums: [1, 1, 2, 2, 2, 3] } },
+        { label: '[2, 3, 1, 3, 2]', input: { mode: 'freq', nums: [2, 3, 1, 3, 2] } },
       ],
     },
     edges: [
@@ -194,22 +178,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: '[10, 2]',
-          text: '"2" + "10" = "210" > "102": 2 goes first → "210".',
-          sketch: { kind: 'array', rows: [{ items: ['2', '10'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: '3, 30 and 34',
-          text: '"34" + "3" = "343" > "334": 34 first. "3" + "30" = "330" > "303": 3 before 30.',
-          sketch: { kind: 'array', rows: [{ items: ['34', '3', '30'], marks: { '0': 'hit', '1': 'kept' } }] },
-        },
-        {
-          title: '[3, 30, 34, 5, 9] → "9534330"',
-          text: 'The rule sorts them as 9, 5, 34, 3, 30.',
-          sketch: { kind: 'array', rows: [{ items: ['9', '5', '34', '3', '30'], marks: { '0': 'hit', '1': 'hit', '2': 'hit', '3': 'hit', '4': 'hit' } }] },
-        },
+      viz: 'SortWalkViz',
+      inputs: [
+        { label: '[3, 30, 34, 5, 9]', input: { mode: 'largest', nums: [3, 30, 34, 5, 9] } },
+        { label: '[0, 0]', input: { mode: 'largest', nums: [0, 0] } },
       ],
     },
     edges: ['All zeros: [0, 0] → "0".', 'A shared first digit: [3, 30] → "330".', 'One number: [10] → "10".'],
@@ -274,25 +246,7 @@ export default {
         { id: 'hashing', why: 'Counting by citation level is the bucket idea; plain hashing doesn\'t give the order.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Level counts (capped at 5)',
-          text: 'Level 0: 1 paper, 1: 1, 3: 1, 5: 2 (the 6 is capped to 5).',
-          sketch: { kind: 'array', rows: [{ items: ['0: 1', '1: 1', '2: 0', '3: 1', '4: 0', '5: 2'] }] },
-        },
-        {
-          title: 'Walk down from 5',
-          text: 'At level 5: 2 papers (< 5). At 4: still 2 (< 4).',
-          sketch: { kind: 'array', rows: [{ items: ['5: 2', '4: 2'], marks: { '0': 'bad', '1': 'bad' } }] },
-        },
-        {
-          title: 'Level 3: 3 papers ≥ 3 → h = 3',
-          text: 'Three papers have at least 3 citations.',
-          sketch: { kind: 'array', rows: [{ items: ['3: 3'], marks: { '0': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'SortWalkViz', inputs: [{ label: '[3, 0, 6, 1, 5]', input: { mode: 'hindex', c: [3, 0, 6, 1, 5] } }] },
     edges: ['All zeros: [0, 0] → 0.', 'Every paper cited more than n times: [10, 10] → 2.', 'One paper: [100] → 1.'],
     not: { '1': [] },
   },
@@ -347,19 +301,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        { title: 'Count "tree"', text: 'e: 2, t: 1, r: 1.', sketch: { kind: 'array', rows: [{ items: ['e: 2', 't: 1', 'r: 1'] }] } },
-        {
-          title: 'Highest count first',
-          text: 'Write "ee".',
-          sketch: { kind: 'array', rows: [{ items: ['e', 'e'], marks: { '0': 'hit', '1': 'hit' } }] },
-        },
-        {
-          title: 'Then the rest → "eert"',
-          text: 't and r tie, so either order is fine: "eert" or "eetr".',
-          sketch: { kind: 'array', rows: [{ items: ['e', 'e', 'r', 't'], marks: { '2': 'hit', '3': 'hit' } }] },
-        },
-      ],
+      viz: 'SortWalkViz',
+      inputs: [{ label: '"tree"', input: { mode: 'chars', s: 'tree' } }, { label: '"Aabb"', input: { mode: 'chars', s: 'Aabb' } }],
     },
     edges: [
       'Ties in any order: "cccaaa" → "cccaaa" or "aaaccc".',
@@ -421,22 +364,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'min 1, max 9, n = 4',
-          text: 'Bucket width ⌊8 / 3⌋ = 2, no wider than the average gap.',
-          sketch: { kind: 'array', rows: [{ items: [3, 6, 9, 1] }] },
-        },
-        {
-          title: 'Drop each value into its bucket',
-          text: 'Buckets [1, 2], [3, 4], [5, 6], [7, 8], [9, 10] hold 1, 3, 6, nothing, 9.',
-          sketch: { kind: 'array', rows: [{ items: ['1', '3', '6', '·', '9'], marks: { '3': 'dim' } }] },
-        },
-        {
-          title: 'Compare across buckets → 3',
-          text: 'Gaps between neighbouring non-empty buckets: 3 − 1 = 2, 6 − 3 = 3, 9 − 6 = 3. The answer is 3.',
-          sketch: { kind: 'array', rows: [{ label: 'gaps', items: [2, 3, 3], marks: { '1': 'hit', '2': 'hit' } }] },
-        },
+      viz: 'SortWalkViz',
+      inputs: [
+        { label: '[3, 6, 9, 1]', input: { mode: 'gap', nums: [3, 6, 9, 1] } },
+        { label: '[1, 10, 5, 22, 3]', input: { mode: 'gap', nums: [1, 10, 5, 22, 3] } },
       ],
     },
     edges: ['Fewer than two numbers: [10] → 0.', 'All equal: [5, 5, 5] → 0.', 'Two numbers: [1, 100] → 99.'],

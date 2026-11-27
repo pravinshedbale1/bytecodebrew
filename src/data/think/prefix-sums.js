@@ -52,25 +52,7 @@ export default {
         { id: 'dp-linear', why: 'It is technically a tiny DP (each answer from the previous one), and that DP is exactly a prefix sum.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'running[0] = 1',
-          text: 'The first total is the first number.',
-          sketch: { kind: 'array', rows: [{ items: [1, '·', '·', '·'], marks: { '0': 'hit' } }] },
-        },
-        {
-          title: 'running[1] = 1 + 2 = 3',
-          text: 'Previous total plus the new number.',
-          sketch: { kind: 'array', rows: [{ items: [1, 3, '·', '·'], marks: { '1': 'hit' } }] },
-        },
-        {
-          title: 'running[2] = 6, running[3] = 10',
-          text: '3 + 3 = 6, then 6 + 4 = 10: [1, 3, 6, 10].',
-          sketch: { kind: 'array', rows: [{ items: [1, 3, 6, 10], marks: { '2': 'hit', '3': 'hit' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PrefixWalkViz', inputs: [{ label: '[1, 2, 3, 4]', input: { mode: 'running', nums: [1, 2, 3, 4] } }] },
     edges: ['A single value: [5] → [5].', 'Negative values: [3, −1, −2] → [3, 2, 0].', 'Zeros keep the total: [1, 0, 0, 2] → [1, 1, 1, 3].'],
     not: { '0': [] },
   },
@@ -204,18 +186,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        { title: 'total = 28', text: 'One pass to add everything up.', sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6] }] } },
-        {
-          title: 'Indexes 0, 1, 2: no balance',
-          text: 'Left sums 0, 1, 8 against right sums 28 − 0 − 1 = 27, 28 − 1 − 7 = 20, 28 − 8 − 3 = 17. None match.',
-          sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], marks: { '0': 'dim', '1': 'dim', '2': 'dim' } }] },
-        },
-        {
-          title: 'Index 3: left 11, right 11 → 3',
-          text: 'Balanced: the answer is 3.',
-          sketch: { kind: 'array', rows: [{ items: [1, 7, 3, 6, 5, 6], marks: { '3': 'hit' } }] },
-        },
+      viz: 'PrefixWalkViz',
+      inputs: [
+        { label: '[1, 7, 3, 6, 5, 6]', input: { mode: 'pivot', nums: [1, 7, 3, 6, 5, 6] } },
+        { label: '[1, 2, 3]', input: { mode: 'pivot', nums: [1, 2, 3] } },
       ],
     },
     edges: ['Index 0 when the rest sums to 0: [2, 1, −1] → 0.', 'No pivot: [1, 2, 3] → −1.', 'The last index: [−1, 1, 5] → 2.'],
@@ -345,31 +319,7 @@ export default {
         { id: 'hashing', why: 'The counts are a table, but the insight is about prefix remainders.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Prefix sums',
-          text: 'Start with 0 (the empty prefix), then add each value: 0, 4, 9, 9, 7, 4, 5.',
-          sketch: { kind: 'array', rows: [{ label: 'nums', items: [4, 5, 0, -2, -3, 1] }, { label: 'prefix', items: [0, 4, 9, 9, 7, 4, 5] }] },
-        },
-        {
-          title: 'Remainders mod 5',
-          text: '0, 4, 4, 4, 2, 4, 0. Every pair of equal remainders marks a subarray divisible by 5.',
-          sketch: {
-            kind: 'array',
-            rows: [
-              { label: 'prefix', items: [0, 4, 9, 9, 7, 4, 5] },
-              { label: 'mod 5', items: [0, 4, 4, 4, 2, 4, 0], marks: { '1': 'hit', '2': 'hit', '3': 'hit', '5': 'hit' } },
-            ],
-          },
-        },
-        {
-          title: 'Count pairs → 7',
-          text: 'Remainder 4 appears 4 times: 4 × 3 / 2 = 6 pairs. Remainder 0 appears twice: 1 pair (the whole array). Remainder 2 once: none. 6 + 1 = 7.',
-          sketch: { kind: 'array', rows: [{ label: 'count', items: ['0: 2', '2: 1', '4: 4'], marks: { '0': 'kept', '2': 'kept' } }] },
-        },
-      ],
-    },
+    watch: { viz: 'PrefixWalkViz', inputs: [{ label: '[4, 5, 0, −2, −3, 1], k = 5', input: { mode: 'divisible', nums: [4, 5, 0, -2, -3, 1], k: 5 } }] },
     edges: ['Negative sums: use ((s % k) + k) % k, e.g. [−1, 2, 9], k 2 → 2.', 'All zeros: [0, 0], k 3 → 3.', 'Nothing divisible: [1], k 2 → 0.'],
     not: { '1': [] },
   },
@@ -418,25 +368,7 @@ export default {
         { id: 'hashing', why: 'The first-position map is a hash map, but it works on prefix balances.' },
       ],
     },
-    watch: {
-      frames: [
-        {
-          title: 'Seed: balance 0 at index −1',
-          text: 'So a balanced stretch starting at index 0 is found too.',
-          sketch: { kind: 'array', rows: [{ label: 'first seen', items: ['0 → −1'] }] },
-        },
-        {
-          title: 'Balances −1, −2, −1, −2, −1',
-          text: '−1 first appears at index 0 and −2 at index 1. Repeats give lengths: 2 − 0 = 2, 3 − 1 = 2, 4 − 0 = 4.',
-          sketch: { kind: 'array', rows: [{ items: [-1, -2, -1, -2, -1], marks: { '0': 'target', '2': 'hit', '4': 'hit' } }] },
-        },
-        {
-          title: 'Index 5: balance 0 again → 6',
-          text: '5 − (−1) = 6: the whole array.',
-          sketch: { kind: 'array', rows: [{ items: [0, 0, 1, 0, 1, 1], bands: [{ from: 0, to: 5, tone: 'success' }] }] },
-        },
-      ],
-    },
+    watch: { viz: 'PrefixWalkViz', inputs: [{ label: '[0, 0, 1, 0, 1, 1]', input: { mode: 'contiguous', nums: [0, 0, 1, 0, 1, 1] } }] },
     edges: ['All 0s: [0, 0] → 0.', '[0, 1] → 2.', 'Only the first position of each balance is stored: [0, 1, 0] → 2.'],
     not: { '1': [] },
   },
@@ -487,22 +419,10 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Left pass',
-          text: 'answer[i] = product of everything left of i: [1, 1, 2, 6].',
-          sketch: { kind: 'array', rows: [{ items: [1, 1, 2, 6], marks: { '0': 'kept', '1': 'kept', '2': 'kept', '3': 'kept' } }] },
-        },
-        {
-          title: 'Right pass starts at the end',
-          text: 'right = 1: answer[3] = 6 · 1 = 6. Then right = 4.',
-          sketch: { kind: 'array', rows: [{ items: [1, 1, 2, 6], marks: { '3': 'hit' } }] },
-        },
-        {
-          title: 'Finish: [24, 12, 8, 6]',
-          text: 'answer[2] = 2 · 4 = 8, answer[1] = 1 · 12 = 12, answer[0] = 1 · 24 = 24.',
-          sketch: { kind: 'array', rows: [{ items: [24, 12, 8, 6], marks: { '0': 'hit', '1': 'hit', '2': 'hit' } }] },
-        },
+      viz: 'PrefixWalkViz',
+      inputs: [
+        { label: '[1, 2, 3, 4]', input: { mode: 'product', nums: [1, 2, 3, 4] } },
+        { label: '[−1, 1, 0, −3, 3]', input: { mode: 'product', nums: [-1, 1, 0, -3, 3] } },
       ],
     },
     edges: ['One zero: [1, 0, 3] → [0, 3, 0].', 'Two zeros: [0, 0, 2] → [0, 0, 0].', 'Negative values: [−1, 2] → [2, −1].'],
@@ -566,26 +486,15 @@ export default {
       ],
     },
     watch: {
-      frames: [
+      viz: 'PrefixWalkViz',
+      inputs: [
         {
-          title: 'Build P once',
-          text: 'One pass over the grid with the formula; P gets an extra row and column of zeros.',
-          sketch: {
-            kind: 'grid',
-            grid: [[0, 0, 0], [0, 3, 3], [0, 8, 14]],
-            labels: { '1,1': '3', '1,2': '3', '2,1': '8', '2,2': '14' },
-            caption: 'the top-left 2 × 2 of P for the example',
-          },
+          label: 'the example, (2, 1) to (4, 3)',
+          input: { mode: 'range2d', m: [[3, 0, 1, 4, 2], [5, 6, 3, 2, 1], [1, 2, 0, 1, 5], [4, 1, 0, 1, 7], [1, 0, 3, 0, 5]], q: [2, 1, 4, 3] },
         },
         {
-          title: 'Query (2, 1) to (4, 3)',
-          text: 'Take P[5][4], subtract P[2][4] and P[5][1], add back P[2][1].',
-          sketch: { kind: 'grid', grid: [[0, 0, 0], [0, 1, 1], [0, 1, 1]], marks: { '1,1': 'hit', '1,2': 'hit', '2,1': 'hit', '2,2': 'hit' } },
-        },
-        {
-          title: 'Result: 8',
-          text: 'P[5][4] − P[2][4] − P[5][1] + P[2][1] = 8. Four lookups, however big the rectangle.',
-          sketch: { kind: 'array', rows: [{ items: [8], marks: { '0': 'hit' } }] },
+          label: 'from the corner, (0, 0) to (1, 1)',
+          input: { mode: 'range2d', m: [[3, 0, 1, 4, 2], [5, 6, 3, 2, 1], [1, 2, 0, 1, 5], [4, 1, 0, 1, 7], [1, 0, 3, 0, 5]], q: [0, 0, 1, 1] },
         },
       ],
     },
@@ -722,28 +631,8 @@ export default {
       ],
     },
     watch: {
-      frames: [
-        {
-          title: 'Single rows',
-          text: 'Row 0 [0, 1, 0]: two zero-sum stretches. Row 1 [1, 1, 1]: none. Row 2 [0, 1, 0]: two more.',
-          sketch: { kind: 'grid', grid: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], marks: { '0,0': 'hit', '0,2': 'hit', '2,0': 'hit', '2,2': 'hit' } },
-        },
-        {
-          title: 'Bands of two or three rows',
-          text: 'Column sums [1, 2, 1] or [1, 3, 1]: no stretch sums to 0.',
-          sketch: { kind: 'array', rows: [{ label: 'rows 0–1 and 1–2', items: [1, 2, 1] }, { label: 'rows 0–2', items: [1, 3, 1] }] },
-        },
-        {
-          title: 'Total: 4',
-          text: 'The four single zero cells are the only rectangles that sum to 0.',
-          sketch: {
-            kind: 'grid',
-            grid: [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
-            marks: { '0,0': 'hit', '0,2': 'hit', '2,0': 'hit', '2,2': 'hit' },
-            labels: { '0,0': '✓', '0,2': '✓', '2,0': '✓', '2,2': '✓' },
-          },
-        },
-      ],
+      viz: 'PrefixWalkViz',
+      inputs: [{ label: '[[0,1,0],[1,1,1],[0,1,0]], target 0', input: { mode: 'submatrix', m: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], target: 0 } }],
     },
     edges: ['A 1 × 1 grid: [[5]], target 5 → 1.', 'Negative values: [[1, −1]], target 0 → 1.', 'All zeros: [[0, 0]], target 0 → 3.'],
     not: { '1': [] },

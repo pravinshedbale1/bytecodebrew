@@ -48,6 +48,16 @@ import * as cww from '../src/components/mdx/viz/models/contribWalk.js';
 import * as dsw from '../src/components/mdx/viz/models/designWalk.js';
 import * as mtw from '../src/components/mdx/viz/models/mathWalk.js';
 import * as stw from '../src/components/mdx/viz/models/strWalk.js';
+import { KINDS as WALK_KINDS } from '../src/components/mdx/viz/models/walkKit.js';
+import { hashWalk } from '../src/components/mdx/viz/models/hashWalk.js';
+import { pairWalk } from '../src/components/mdx/viz/models/pairWalk.js';
+import { windowWalk } from '../src/components/mdx/viz/models/windowWalk.js';
+import { prefixWalk } from '../src/components/mdx/viz/models/prefixWalk.js';
+import { intervalWalk } from '../src/components/mdx/viz/models/intervalWalk.js';
+import { searchWalk } from '../src/components/mdx/viz/models/searchWalk.js';
+import { sortWalk } from '../src/components/mdx/viz/models/sortWalk.js';
+import { cycleWalk } from '../src/components/mdx/viz/models/cycleWalk.js';
+import { quadWalk } from '../src/components/mdx/viz/models/quadWalk.js';
 import * as rgw from '../src/components/mdx/viz/models/rangeWalk.js';
 import * as hf from '../src/components/mdx/viz/models/hldFoundations.js';
 import * as hs from '../src/components/mdx/viz/models/hldScaling.js';
@@ -1148,6 +1158,23 @@ function common(name, steps, code, kinds) {
   for (const mode of new Set(Object.values(mtw.MATH_WALK).map((e) => e.input.mode))) for (let t = 0; t < 400; t++) run(mtw.randomMathWalk({ mode }, rand));
   const o = (k) => mtw.mathWalk(mtw.MATH_WALK[k].input).at(-1).out;
   ok(o('roman') === 1994 && o('excel') === 'ZY' && o('multiply') === '56088' && o('good') === 400 && o('reverse') === -321 && o('reverseOverflow') === 0 && o('trailing') === 7, 'mathWalk: LeetCode examples');
+}
+
+// ---------------------------------------------------------------- walkKit models (BasicsWalkViz: Practice thinking step-throughs)
+{
+  const kinds = Object.keys(WALK_KINDS);
+  const models = { hashWalk, pairWalk, windowWalk, prefixWalk, intervalWalk, searchWalk, sortWalk, cycleWalk, quadWalk };
+  for (const [name, model] of Object.entries(models)) {
+    const run = (input) => {
+      const steps = model.walk(input);
+      common(`${name} ${JSON.stringify(input)}`, steps, model.code(input.mode), kinds);
+      ok(!/undefined|NaN|\[object/.test(JSON.stringify(steps.map((x) => x.parts))), `${name} ${JSON.stringify(input)}: broken parts`);
+      ok(model.check(input, steps.at(-1).out), `${name} ${JSON.stringify(input)}: answer ${JSON.stringify(steps.at(-1).out)} vs brute force ${JSON.stringify(model.answer(input))}`);
+      ok(same(model.parse(model.values(input), input).input, input), `${name} ${input.mode}: values parse back`);
+    };
+    for (const ex of Object.values(model.EXAMPLES)) { ok(!model.MODES[ex.input.mode].valid?.(ex.input), `${name}: example ${JSON.stringify(ex.input)} is invalid`); run(ex.input); }
+    for (const mode of Object.keys(model.MODES)) for (let t = 0; t < 400; t++) run(model.random({ mode }, rand));
+  }
 }
 
 // ---------------------------------------------------------------- string problems (StrWalkViz)
